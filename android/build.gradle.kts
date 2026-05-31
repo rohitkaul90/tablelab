@@ -40,6 +40,17 @@ gradle.afterProject {
     }
 }
 
+// KGP 2.3+ dropped support for Kotlin language/api version 1.6.
+// Force all plugin subprojects (posthog_flutter, share_plus, etc.) to 2.0.
+gradle.afterProject {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions {
+            languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+            apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
