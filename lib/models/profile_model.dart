@@ -9,6 +9,7 @@ class ProfileModel {
   final double? hourlyRateGoal;
   final double? startingBankroll;
   final String startingBankrollCurrency;
+  final bool hasSeenOnboarding;
 
   const ProfileModel({
     required this.id,
@@ -21,6 +22,7 @@ class ProfileModel {
     this.hourlyRateGoal,
     this.startingBankroll,
     this.startingBankrollCurrency = 'CAD',
+    this.hasSeenOnboarding = false,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) => ProfileModel(
@@ -35,6 +37,8 @@ class ProfileModel {
         startingBankroll: (json['starting_bankroll'] as num?)?.toDouble(),
         startingBankrollCurrency:
             (json['starting_bankroll_currency'] as String?) ?? 'CAD',
+        hasSeenOnboarding:
+            (json['has_seen_onboarding'] as bool?) ?? false,
       );
 
   Map<String, dynamic> toUpsert() => {
@@ -48,6 +52,7 @@ class ProfileModel {
         'hourly_rate_goal': hourlyRateGoal,
         'starting_bankroll': startingBankroll,
         'starting_bankroll_currency': startingBankrollCurrency,
+        'has_seen_onboarding': hasSeenOnboarding,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -75,5 +80,6 @@ class ProfileModel {
         hourlyRateGoal: hourlyRateGoal ?? this.hourlyRateGoal,
         startingBankroll: clearStartingBankroll ? null : (startingBankroll ?? this.startingBankroll),
         startingBankrollCurrency: startingBankrollCurrency ?? this.startingBankrollCurrency,
+        hasSeenOnboarding: hasSeenOnboarding,
       );
 }

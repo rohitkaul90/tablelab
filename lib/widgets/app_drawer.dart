@@ -285,13 +285,17 @@ class AppDrawer extends ConsumerWidget {
     );
     if (confirmed == true) {
       await Supabase.instance.client.auth.signOut();
-      // Invalidate regardless of mounted — stale data must not persist for
-      // a different account that signs in next.
-      ref.invalidate(sessionsProvider);
-      ref.invalidate(handsProvider);
-      ref.invalidate(filterProvider);
-      ref.invalidate(readsProvider);
-      ref.invalidate(profileProvider);
+      // Providers watch authUserIdProvider and restart automatically on sign-out.
+      // Explicit invalidation below is a belt-and-suspenders guard for edge cases
+      // (e.g. rapid account switching). Swallow errors if the widget was already
+      // disposed by the time AuthGate switches to LoginScreen.
+      try {
+        ref.invalidate(sessionsProvider);
+        ref.invalidate(handsProvider);
+        ref.invalidate(filterProvider);
+        ref.invalidate(readsProvider);
+        ref.invalidate(profileProvider);
+      } catch (_) {}
     }
   }
 }

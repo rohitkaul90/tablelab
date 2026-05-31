@@ -260,4 +260,281 @@ void main() {
       expect(fieldSizeBucket(1000), equals('Massive (500+)'));
     });
   });
+
+  // ── currencyFromCountry ──────────────────────────────────────────────────────
+
+  group('currencyFromCountry', () {
+    test('returns null for null or empty', () {
+      expect(currencyFromCountry(null), isNull);
+      expect(currencyFromCountry(''), isNull);
+    });
+
+    test('returns correct currency for known countries', () {
+      expect(currencyFromCountry('Canada'), equals('CAD'));
+      expect(currencyFromCountry('USA'), equals('USD'));
+      expect(currencyFromCountry('United States'), equals('USD'));
+      expect(currencyFromCountry('online'), equals('USD'));
+      expect(currencyFromCountry('United Kingdom'), equals('GBP'));
+      expect(currencyFromCountry('Australia'), equals('AUD'));
+      expect(currencyFromCountry('New Zealand'), equals('NZD'));
+      expect(currencyFromCountry('India'), equals('INR'));
+      expect(currencyFromCountry('France'), equals('EUR'));
+      expect(currencyFromCountry('Germany'), equals('EUR'));
+    });
+
+    test('is case-insensitive', () {
+      expect(currencyFromCountry('CANADA'), equals('CAD'));
+      expect(currencyFromCountry('canada'), equals('CAD'));
+    });
+
+    test('returns null for unknown country', () {
+      expect(currencyFromCountry('Mars'), isNull);
+    });
+  });
+
+  // ── formatAmount ─────────────────────────────────────────────────────────────
+
+  group('formatAmount', () {
+    test('formats USD with dollar sign', () {
+      expect(formatAmount(100, 'USD'), equals(r'$100'));
+      expect(formatAmount(1500, 'USD'), equals(r'$1,500'));
+    });
+
+    test('formats CAD with CA\$ prefix', () {
+      expect(formatAmount(200, 'CAD'), equals(r'CA$200'));
+    });
+
+    test('formats GBP with pound sign', () {
+      expect(formatAmount(50, 'GBP'), equals('£50'));
+    });
+
+    test('rounds to nearest whole unit', () {
+      expect(formatAmount(99.6, 'USD'), equals(r'$100'));
+      expect(formatAmount(99.4, 'USD'), equals(r'$99'));
+    });
+  });
+
+  // ── formatPLWithCurrency ─────────────────────────────────────────────────────
+
+  group('formatPLWithCurrency', () {
+    test('positive amount with currency symbol', () {
+      expect(formatPLWithCurrency(100, 'USD'), equals(r'+$100'));
+      expect(formatPLWithCurrency(100, 'GBP'), equals('+£100'));
+    });
+
+    test('negative amount with currency symbol', () {
+      expect(formatPLWithCurrency(-50, 'EUR'), equals('-€50'));
+    });
+  });
+
+  // ── calcROI ──────────────────────────────────────────────────────────────────
+
+  group('calcROI', () {
+    test('returns correct ROI percentage', () {
+      expect(calcROI(100, 200), closeTo(50.0, 0.001));
+      expect(calcROI(-50, 100), closeTo(-50.0, 0.001));
+    });
+
+    test('returns 0 when buyIn is zero', () {
+      expect(calcROI(100, 0), equals(0.0));
+    });
+
+    test('returns 0 when buyIn is negative', () {
+      expect(calcROI(100, -100), equals(0.0));
+    });
+
+    test('100% ROI when profit equals buy-in', () {
+      expect(calcROI(200, 200), closeTo(100.0, 0.001));
+    });
+  });
+
+  // ── formatROI ────────────────────────────────────────────────────────────────
+
+  group('formatROI', () {
+    test('positive ROI has + prefix', () {
+      expect(formatROI(50.0), equals('+50%'));
+      expect(formatROI(0.0), equals('+0%'));
+    });
+
+    test('negative ROI has - prefix', () {
+      expect(formatROI(-25.0), equals('-25%'));
+    });
+
+    test('rounds to whole number', () {
+      expect(formatROI(33.7), equals('+34%'));
+    });
+  });
+
+  // ── tournamentBuyInBucket ────────────────────────────────────────────────────
+
+  group('tournamentBuyInBucket', () {
+    test('buckets low buy-ins', () {
+      expect(tournamentBuyInBucket(20), equals(r'< $50'));
+      expect(tournamentBuyInBucket(49), equals(r'< $50'));
+    });
+
+    test('buckets mid-range buy-ins', () {
+      expect(tournamentBuyInBucket(50), equals(r'$50–$100'));
+      expect(tournamentBuyInBucket(75), equals(r'$50–$100'));
+      expect(tournamentBuyInBucket(100), equals(r'$100–$200'));
+      expect(tournamentBuyInBucket(150), equals(r'$100–$200'));
+    });
+
+    test('buckets high buy-ins', () {
+      expect(tournamentBuyInBucket(200), equals(r'$200–$500'));
+      expect(tournamentBuyInBucket(499), equals(r'$200–$500'));
+      expect(tournamentBuyInBucket(500), equals(r'> $500'));
+      expect(tournamentBuyInBucket(1000), equals(r'> $500'));
+    });
+  });
+
+  // ── isSessionItm ─────────────────────────────────────────────────────────────
+
+  group('isSessionItm', () {
+    test('ITM when prizeWon > 0', () {
+      expect(isSessionItm(500, -100), isTrue);
+    });
+
+    test('not ITM when prizeWon == 0', () {
+      expect(isSessionItm(0, -100), isFalse);
+    });
+
+    test('not ITM when prizeWon < 0 (should not happen, but safe)', () {
+      expect(isSessionItm(-1, 100), isFalse);
+    });
+
+    test('falls back to profitLoss > 0 when prizeWon is null', () {
+      expect(isSessionItm(null, 50), isTrue);
+      expect(isSessionItm(null, -50), isFalse);
+      expect(isSessionItm(null, 0), isFalse);
+    });
+  });
+
+  // ── gameTypeLabel ────────────────────────────────────────────────────────────
+
+  group('gameTypeLabel', () {
+    test('known types return labels', () {
+      expect(gameTypeLabel('cash'), equals('Cash Game'));
+      expect(gameTypeLabel('tournament'), equals('Tournament'));
+      expect(gameTypeLabel('sit_and_go'), equals('Tournament'));
+    });
+
+    test('unknown type returns raw value', () {
+      expect(gameTypeLabel('plo5'), equals('plo5'));
+    });
+  });
+
+  // ── tableQualityLabel ────────────────────────────────────────────────────────
+
+  group('tableQualityLabel', () {
+    test('returns labels for ratings 1–5', () {
+      expect(tableQualityLabel(1), equals('Very Tough'));
+      expect(tableQualityLabel(2), equals('Tough'));
+      expect(tableQualityLabel(3), equals('Average'));
+      expect(tableQualityLabel(4), equals('Soft'));
+      expect(tableQualityLabel(5), equals('Very Soft'));
+    });
+
+    test('returns Not rated for null or out-of-range', () {
+      expect(tableQualityLabel(null), equals('Not rated'));
+      expect(tableQualityLabel(0), equals('Not rated'));
+      expect(tableQualityLabel(6), equals('Not rated'));
+    });
+  });
+
+  // ── timeOfDayBucket ──────────────────────────────────────────────────────────
+
+  group('timeOfDayBucket', () {
+    test('morning bucket', () {
+      expect(timeOfDayBucket('06:00'), equals('Morning (6am–12pm)'));
+      expect(timeOfDayBucket('11:59'), equals('Morning (6am–12pm)'));
+    });
+
+    test('afternoon bucket', () {
+      expect(timeOfDayBucket('12:00'), equals('Afternoon (12pm–6pm)'));
+      expect(timeOfDayBucket('17:30'), equals('Afternoon (12pm–6pm)'));
+    });
+
+    test('evening bucket', () {
+      expect(timeOfDayBucket('18:00'), equals('Evening (6pm–11pm)'));
+      expect(timeOfDayBucket('22:59'), equals('Evening (6pm–11pm)'));
+    });
+
+    test('late night bucket', () {
+      expect(timeOfDayBucket('23:00'), equals('Late Night (11pm–6am)'));
+      expect(timeOfDayBucket('02:00'), equals('Late Night (11pm–6am)'));
+      expect(timeOfDayBucket('05:59'), equals('Late Night (11pm–6am)'));
+    });
+  });
+
+  // ── sessionLengthBucket ──────────────────────────────────────────────────────
+
+  group('sessionLengthBucket', () {
+    test('short sessions', () {
+      expect(sessionLengthBucket(60), equals('< 2 hours'));
+      expect(sessionLengthBucket(119), equals('< 2 hours'));
+    });
+
+    test('medium sessions', () {
+      expect(sessionLengthBucket(120), equals('2–4 hours'));
+      expect(sessionLengthBucket(239), equals('2–4 hours'));
+    });
+
+    test('long sessions', () {
+      expect(sessionLengthBucket(240), equals('4–6 hours'));
+      expect(sessionLengthBucket(359), equals('4–6 hours'));
+    });
+
+    test('marathon sessions', () {
+      expect(sessionLengthBucket(360), equals('> 6 hours'));
+      expect(sessionLengthBucket(720), equals('> 6 hours'));
+    });
+  });
+
+  // ── dayOfWeekLabel ───────────────────────────────────────────────────────────
+
+  group('dayOfWeekLabel', () {
+    test('returns correct day abbreviations', () {
+      expect(dayOfWeekLabel('2026-05-31'), equals('Sun')); // 2026-05-31 is a Sunday
+      expect(dayOfWeekLabel('2026-06-01'), equals('Mon'));
+      expect(dayOfWeekLabel('2026-06-06'), equals('Sat'));
+    });
+
+    test('falls back to today on invalid date', () {
+      // Should not throw — just returns some valid day
+      expect(() => dayOfWeekLabel('invalid'), returnsNormally);
+    });
+  });
+
+  // ── monthLabel ───────────────────────────────────────────────────────────────
+
+  group('monthLabel', () {
+    test('returns month and year', () {
+      expect(monthLabel('2026-01-15'), equals('Jan 2026'));
+      expect(monthLabel('2026-12-31'), equals('Dec 2026'));
+      expect(monthLabel('2025-06-01'), equals('Jun 2025'));
+    });
+
+    test('does not throw on invalid date', () {
+      expect(() => monthLabel('bad-date'), returnsNormally);
+    });
+  });
+
+  // ── formatBB100 ──────────────────────────────────────────────────────────────
+
+  group('formatBB100', () {
+    test('positive value has + prefix', () {
+      expect(formatBB100(12.0), equals('+12'));
+      expect(formatBB100(0.0), equals('+0'));
+    });
+
+    test('negative value has - prefix', () {
+      expect(formatBB100(-8.0), equals('-8'));
+    });
+
+    test('rounds to nearest integer', () {
+      expect(formatBB100(12.6), equals('+13'));
+      expect(formatBB100(-3.4), equals('-3'));
+    });
+  });
 }

@@ -76,7 +76,9 @@ Start any new session on launch work with `/release-orchestrator` — it reads t
 
 `MainNavigation` is an `IndexedStack` with a `NavigationBar` (5 tabs: Dashboard, Sessions, Hands, Reads, Tournaments). The `AppDrawer` is mounted via `mainScaffoldKey` (a `GlobalKey<ScaffoldState>` exported from `app_drawer.dart`) so any screen can call `mainScaffoldKey.currentState?.openDrawer()`.
 
-Drawer sections: **Home** (Navigator.popUntil isFirst) → **Profile** → **TOOLS** (Equity Calculator, ICM Calculator) → **APP** (Settings, Help, About, Terms of Service, Data & Privacy, Feedback) → **Sign Out** (pinned). Tool screens pushed via Navigator.push must include `drawer: const AppDrawer()` on their Scaffold.
+Drawer sections: **Home** (Navigator.popUntil isFirst) → **Profile** → **APP** (Tournament Calendar, Settings, Help, About, Terms of Service, Data & Privacy, Feedback) → **Sign Out** (pinned). Screens pushed via Navigator.push must include `drawer: const AppDrawer()` on their Scaffold if they need drawer access; alternatively call `mainScaffoldKey.currentState?.openDrawer()` from a custom leading button.
+
+Bottom nav tabs: Dashboard, Sessions, Hands, Reads, **Tools**. The Tools tab hosts `ToolsScreen` — a `SegmentedButton` pill toggle switching between `EquityCalculatorScreen(showScaffold: false)` and `IcmCalculatorScreen(showScaffold: false)` via `IndexedStack` (state preserved on tab switch). Both calculator screens accept `showScaffold: bool` (default `true`) — when `false` they return body content only, no Scaffold/AppBar, suitable for embedding.
 
 `AuthGate` also handles `AuthChangeEvent.passwordRecovery` → shows `ResetPasswordScreen` (set new password + auto sign-out on success).
 
@@ -106,8 +108,8 @@ All data is user-scoped via Row Level Security. Credentials live in `lib/config/
 **Note:** `sessions`, `hands`, and `rake_presets` were created directly in the Supabase dashboard before the migration workflow was established — their DDL is not in `supabase/migrations/`. All other tables have migration files.
 
 **Edge Functions** (Deno, `supabase/functions/`):
-- `analyze-session` — Claude Sonnet call via tool use; result cached in `ai_analyses`; limit 5/day per user; 25s timeout
-- `analyze-hand` — Claude Sonnet call via tool use; result cached in `ai_hand_analyses`; limit 20/day per user; 25s timeout
+- `analyze-session` — Claude Sonnet call via tool use; result cached in `ai_analyses`; limit 5/day per user; **120s timeout**; caps at **3 linked hands** (not 6 — larger cap causes 504s due to token volume)
+- `analyze-hand` — Claude Sonnet call via tool use; result cached in `ai_hand_analyses`; limit 20/day per user; **50s timeout**
 - `scrape-tournaments` — scrapes PokerNews, triggered by weekly GitHub Actions cron
 - `delete-account` — verifies JWT, deletes all user data from every table in FK order, then deletes auth user via service role key
 - Rate limits in `ai_usage_log`; `rhtk.1234@gmail.com` is exempt
@@ -196,7 +198,7 @@ All models are plain immutable classes — no code generation.
 
 ### Android build
 
-- `compileSdk = 36`, `minSdk = 23` (flutter_secure_storage requires API 23+), `targetSdk = 35` (Play Store mandates ≥34) — all explicit in `android/app/build.gradle.kts`
+- `compileSdk = 36`, `minSdk = maxOf(flutter.minSdkVersion, 23)` (flutter_secure_storage requires API 23+; `maxOf` prevents Android Studio/Flutter Gradle plugin from silently reverting to 21), `targetSdk = 35` — all in `android/app/build.gradle.kts`
 - Release signing reads `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` from env vars; falls back to debug signing locally when `tablelab-release.jks` is absent
 - `tablelab-release.jks` is gitignored — CI decodes it from `ANDROID_KEYSTORE_BASE64` secret
 - ProGuard enabled on release builds (`android/app/proguard-rules.pro`)

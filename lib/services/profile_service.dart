@@ -35,4 +35,13 @@ class ProfileService {
             .single();
         return ProfileModel.fromJson(data);
       });
+
+  Future<void> markOnboardingComplete() async {
+    final id = uid;
+    if (id == null) return;
+    await withSupabaseRetry(() => _client.from('profiles').upsert(
+          {'id': id, 'has_seen_onboarding': true},
+          onConflict: 'id',
+        ));
+  }
 }

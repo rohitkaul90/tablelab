@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
+import '../providers/profile_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
+import '../screens/onboarding_screen.dart';
 import '../widgets/splash_screen.dart';
 
 class AuthGate extends ConsumerWidget {
@@ -32,7 +34,7 @@ class AuthGate extends ConsumerWidget {
           } else if (event == AuthChangeEvent.passwordRecovery) {
             child = const ResetPasswordScreen(key: ValueKey('reset'));
           } else {
-            child = const MainNavigation(key: ValueKey('main'));
+            child = const _OnboardingGate(key: ValueKey('authed'));
           }
         }
 
@@ -50,5 +52,26 @@ class AuthGate extends ConsumerWidget {
     final expiresAt = session.expiresAt;
     if (expiresAt == null) return false;
     return DateTime.now().millisecondsSinceEpoch >= expiresAt * 1000;
+  }
+}
+
+// Checks onboarding state after auth resolves.
+// New users (no profile row) and users with hasSeenOnboarding=false see OnboardingScreen.
+class _OnboardingGate extends ConsumerWidget {
+  const _OnboardingGate({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    return profileAsync.when(
+      loading: () => const SplashScreen(key: ValueKey('splash-profile')),
+      error: (_, _) => const MainNavigation(key: ValueKey('main')),
+      data: (profile) {
+        if (profile == null || !profile.hasSeenOnboarding) {
+          return const OnboardingScreen(key: ValueKey('onboarding'));
+        }
+        return const MainNavigation(key: ValueKey('main'));
+      },
+    );
   }
 }

@@ -109,7 +109,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             )
           : ListView(
               children: [
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('Version'),
+                  trailing: Text(
+                    '1.1.0',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Text(

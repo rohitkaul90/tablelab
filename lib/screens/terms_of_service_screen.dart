@@ -88,9 +88,9 @@ class TermsOfServiceScreen extends StatelessWidget {
             icon: Icons.cancel_outlined,
             title: 'Termination',
             body:
-                'You may delete your account at any time by contacting us. We '
-                'reserve the right to suspend or terminate accounts that violate '
-                'these terms.',
+                'You may delete your account at any time via Settings → '
+                'Delete Account in the app. We reserve the right to suspend '
+                'or terminate accounts that violate these terms.',
           ),
           _Section(
             icon: Icons.balance_outlined,
