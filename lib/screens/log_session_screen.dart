@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../data/poker_rooms.dart';
 import '../models/session_model.dart';
 import '../providers/providers.dart';
+import '../services/analytics_service.dart';
 import '../utils/helpers.dart';
 import '../widgets/star_rating_widget.dart';
 
@@ -295,6 +296,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       }
       if (widget.session == null) {
         await service.insertSession(data);
+        AnalyticsService.sessionLogged(
+          gameType: _gameType,
+          currency: _currency,
+          hasNotes: _notesCtrl.text.trim().isNotEmpty,
+        );
       } else {
         await service.updateSession(widget.session!.id, data);
       }

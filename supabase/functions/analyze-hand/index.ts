@@ -1,12 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Anthropic from "npm:@anthropic-ai/sdk@0.24.3";
+import Anthropic from "npm:@anthropic-ai/sdk@0.36.3";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+const allowedOrigins = new Set([
+  "https://tablelab.app",
+  "https://www.tablelab.app",
+]);
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = allowedOrigins.has(origin) ? origin : "https://tablelab.app";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -501,7 +510,7 @@ ACCURACY RULES:
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: cors });
+    return new Response("ok", { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -509,7 +518,7 @@ serve(async (req: Request) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
         status: 401,
-        headers: { ...cors, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -523,7 +532,7 @@ serve(async (req: Request) => {
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...cors, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -538,7 +547,7 @@ serve(async (req: Request) => {
     if (!hand?.id) {
       return new Response(JSON.stringify({ error: "Missing required field: hand" }), {
         status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -560,7 +569,7 @@ serve(async (req: Request) => {
 
       if (cached) {
         return new Response(JSON.stringify(cached.analysis_json), {
-          headers: { ...cors, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
     }
@@ -569,7 +578,7 @@ serve(async (req: Request) => {
     if (await isRateLimited(supabase, user.id, user.email ?? undefined)) {
       return new Response(
         JSON.stringify({ error: "Daily analysis limit reached. Please try again tomorrow." }),
-        { status: 429, headers: { ...cors, "Content-Type": "application/json" } },
+        { status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -581,16 +590,15 @@ serve(async (req: Request) => {
     const claudeCall = anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2000,
+      temperature: 0,
       system: [
         {
           type: "text",
           text: SYSTEM_PROMPT,
-          // @ts-ignore — cache_control valid but not in SDK types
           cache_control: { type: "ephemeral" },
         },
       ],
       tools: [COACHING_TOOL],
-      // @ts-ignore — tool_choice valid but may not be in SDK v0.24.3 types
       tool_choice: { type: "tool", name: "provide_hand_coaching" },
       messages: [{ role: "user", content: buildPrompt(hand, relevantReads) }],
     });
@@ -619,12 +627,14 @@ serve(async (req: Request) => {
         analysis_json: analysis,
         model_used: "claude-sonnet-4-6",
         tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+        cache_read_tokens: message.usage.cache_read_input_tokens ?? 0,
+        cache_write_tokens: message.usage.cache_creation_input_tokens ?? 0,
       },
       { onConflict: "user_id,hand_id" },
     );
 
     return new Response(JSON.stringify(analysis), {
-      headers: { ...cors, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -632,12 +642,12 @@ serve(async (req: Request) => {
     if (msg === "CLAUDE_TIMEOUT") {
       return new Response(
         JSON.stringify({ error: "Analysis timed out. Please try again." }),
-        { status: 504, headers: { ...cors, "Content-Type": "application/json" } },
+        { status: 504, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
       );
     }
     return new Response(
       JSON.stringify({ error: "Analysis failed. Please try again." }),
-      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
     );
   }
 });

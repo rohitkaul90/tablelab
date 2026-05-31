@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/profile_provider.dart';
+import '../services/analytics_service.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -20,9 +21,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  Future<void> _complete() async {
+  Future<void> _complete({bool skipped = false}) async {
     if (_completing) return;
     setState(() => _completing = true);
+    if (skipped) {
+      AnalyticsService.onboardingSkipped();
+    } else {
+      AnalyticsService.onboardingCompleted();
+    }
     try {
       await ref.read(profileServiceProvider).markOnboardingComplete();
     } catch (_) {
@@ -101,7 +107,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     if (_page == 2) ...[
                       const SizedBox(height: 8),
                       TextButton(
-                        onPressed: _completing ? null : _complete,
+                        onPressed: _completing ? null : () => _complete(skipped: true),
                         child: const Text('Skip'),
                       ),
                     ],

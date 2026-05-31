@@ -3,6 +3,7 @@ import '../models/session_model.dart';
 import '../models/ai_analysis_model.dart';
 import '../models/player_read.dart';
 import '../models/hand_model.dart';
+import 'analytics_service.dart';
 
 class AiService {
   final _client = Supabase.instance.client;
@@ -27,9 +28,15 @@ class AiService {
 
     final data = res.data;
     if (data is Map<String, dynamic> && data.containsKey('error')) {
+      if (res.status == 429) {
+        AnalyticsService.aiRateLimitHit(featureType: 'session');
+      } else {
+        AnalyticsService.aiSessionAnalysisRequested();
+      }
       throw Exception(data['error']);
     }
 
+    AnalyticsService.aiSessionAnalysisRequested();
     return SessionAnalysis.fromJson(data as Map<String, dynamic>);
   }
 
@@ -51,9 +58,15 @@ class AiService {
 
     final data = res.data;
     if (data is Map<String, dynamic> && data.containsKey('error')) {
+      if (res.status == 429) {
+        AnalyticsService.aiRateLimitHit(featureType: 'hand');
+      } else {
+        AnalyticsService.aiHandAnalysisRequested();
+      }
       throw Exception(data['error']);
     }
 
+    AnalyticsService.aiHandAnalysisRequested();
     return HandCoachingAnalysis.fromJson(data as Map<String, dynamic>);
   }
 

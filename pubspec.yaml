@@ -47,6 +47,7 @@ dependencies:
   url_launcher: ^6.3.0
   firebase_core: ^4.9.0
   firebase_crashlytics: ^5.2.2
+  posthog_flutter: ^4.0.0
 
 dev_dependencies:
   flutter_test:

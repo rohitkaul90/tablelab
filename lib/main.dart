@@ -3,8 +3,10 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth/auth_gate.dart';
+import 'config/analytics_config.dart';
 import 'config/supabase_config.dart';
 import 'firebase_options.dart';
 import 'screens/dashboard_screen.dart';
@@ -31,6 +33,19 @@ void main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
+
+  // PostHog analytics — no-op until posthogApiKey is replaced in analytics_config.dart.
+  // Not supported on Windows desktop (skipped automatically by AnalyticsService).
+  if (posthogApiKey != 'phc_REPLACE_WITH_YOUR_KEY' &&
+      defaultTargetPlatform != TargetPlatform.windows) {
+    try {
+      final phConfig = PostHogConfig(posthogApiKey)..host = posthogHost;
+      await Posthog().setup(phConfig);
+    } catch (_) {
+      // Non-fatal — analytics failure must never crash the app.
+    }
+  }
+
   runApp(const ProviderScope(child: PokerTrackerApp()));
 }
 
