@@ -72,7 +72,7 @@ Start any new session on launch work with `/release-orchestrator` — it reads t
 
 `main.dart → AuthGate → MainNavigation`
 
-`AuthGate` uses `StreamBuilder<AuthState>` + `AnimatedSwitcher` to fade between `SplashScreen` (while auth resolves), `LoginScreen`, and `MainNavigation`. The splash is shown until Supabase emits the first valid auth event — no minimum timer.
+`AuthGate` uses `StreamBuilder<AuthState>` + `AnimatedSwitcher` to fade between `SplashScreen` (while auth resolves), `LoginScreen`, and `_OnboardingGate`. `_OnboardingGate` watches `profileProvider` — if `profile == null || !profile.hasSeenOnboarding` it shows `OnboardingScreen`, otherwise `MainNavigation`. The splash is shown until Supabase emits the first valid auth event — no minimum timer.
 
 `MainNavigation` is an `IndexedStack` with a `NavigationBar` (5 tabs: Dashboard, Sessions, Hands, Reads, Tournaments). The `AppDrawer` is mounted via `mainScaffoldKey` (a `GlobalKey<ScaffoldState>` exported from `app_drawer.dart`) so any screen can call `mainScaffoldKey.currentState?.openDrawer()`.
 
@@ -117,13 +117,16 @@ All data is user-scoped via Row Level Security. Credentials live in `lib/config/
 **Edge Function patterns:**
 - `SYSTEM_PROMPT` is a `const` string with `cache_control: { type: "ephemeral" }` — must stay static (no per-user data) for Anthropic prompt caching to work
 - Cache check → rate limit check → Claude API call (this order is critical — cache hits are free)
-- Both AI functions use `Promise.race()` with a 25s timeout to guard against Claude API hangs
+- Both AI functions use `Promise.race()` with explicit timeouts: 120s for `analyze-session`, 50s for `analyze-hand`
+- CORS locked to `https://tablelab.app` / `https://www.tablelab.app` with `Vary: Origin` header — do not revert to `*`
+- `temperature: 0` on both functions for deterministic coaching output
 - `computeDrawSummary()` injects deterministic `[FACT —` annotations into the user prompt — do not remove; these ground the model's hand-reading
 - Error responses return generic user-facing messages; raw exceptions are logged server-side only
+- Both functions store `cache_read_tokens` + `cache_write_tokens` per call (columns added to `ai_analyses` + `ai_hand_analyses`) for cost modeling
 
 ### CI/CD — GitHub Actions
 
-Three active workflows in `.github/workflows/`:
+Four active workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -199,6 +202,7 @@ All models are plain immutable classes — no code generation.
 ### Android build
 
 - `compileSdk = 36`, `minSdk = maxOf(flutter.minSdkVersion, 23)` (flutter_secure_storage requires API 23+; `maxOf` prevents Android Studio/Flutter Gradle plugin from silently reverting to 21), `targetSdk = 35` — all in `android/app/build.gradle.kts`
+- `android/build.gradle.kts` has a `gradle.afterProject` block that forces `languageVersion` and `apiVersion` to `KOTLIN_2_0` for all plugin subprojects — required because KGP 2.3+ dropped support for Kotlin 1.6 (used by `posthog_flutter` and others)
 - Release signing reads `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` from env vars; falls back to debug signing locally when `tablelab-release.jks` is absent
 - `tablelab-release.jks` is gitignored — CI decodes it from `ANDROID_KEYSTORE_BASE64` secret
 - ProGuard enabled on release builds (`android/app/proguard-rules.pro`)
@@ -214,13 +218,18 @@ All models are plain immutable classes — no code generation.
 - `ios/ExportOptions.plist` exists for App Store export; update `teamID` before use
 - iOS builds require a macOS machine; cannot be built on Windows
 
-### Pending work (pre-launch)
+### Analytics — PostHog
 
-| Item | Blocker for |
-|---|---|
-| Store screenshots (8 phone screenshots) | Play Store submission |
-| Play Console app creation + data safety form | Play Store submission |
-| Onboarding flow (3-screen first-run, needs `has_seen_onboarding` DB column) | Phase 2 gate |
-| Analytics instrumentation (provider TBD) | Phase 3 gate |
-| Supabase Pro upgrade (no daily backups on free tier) | Risk mitigation |
-| Google Play gambling policy confirmation | Production track approval |
+`posthog_flutter: ^4.0.0` is installed. API key lives in `lib/config/analytics_config.dart` (committed — PostHog project keys are public by design). Initialized in `main.dart` after Supabase, guarded by a placeholder check and a Windows platform check (PostHog Flutter SDK does not support Windows desktop).
+
+All analytics calls go through `lib/services/analytics_service.dart` — static fire-and-forget methods with a Windows no-op guard. Events wired: `onboarding_completed`, `onboarding_skipped`, `session_logged`, `hand_recorded`, `ai_session_analysis_requested`, `ai_hand_analysis_requested`, `ai_rate_limit_hit`.
+
+### Onboarding
+
+`lib/screens/onboarding_screen.dart` — 3-page `PageView` with `PopScope(canPop: false)`. Completion calls `ProfileService.markOnboardingComplete()` which upserts `has_seen_onboarding = true` on `profiles`. `_OnboardingGate` in `auth_gate.dart` gates on `profile.hasSeenOnboarding`. Existing users are grandfathered (`DEFAULT true` on column add, reset to `false` for new inserts via second migration).
+
+### Pre-launch status (as of 2026-05-31)
+
+**Done:** Play Store screenshots (8 phone + 8×7" + 8×10" tablet), Play Console internal track live, data safety form, onboarding flow, PostHog analytics, delete-account, GDPR polish, all Supabase migrations applied, Edge Functions hardened and deployed, RLS hardened, UptimeRobot monitors, Anthropic spend alerts ($80 alert / $100 hard limit).
+
+**Remaining:** Add ≥5 testers to Play Console internal track → collect beta feedback → promote to production. Supabase Pro upgrade at ~400 MAU.
