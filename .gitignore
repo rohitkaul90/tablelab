@@ -54,3 +54,6 @@ app.*.map.json
 android/app/tablelab-release.jks
 android/build/
 supabase/.temp/
+
+# Cursor IDE
+.cursor/

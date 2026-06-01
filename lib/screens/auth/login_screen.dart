@@ -36,10 +36,19 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final client = Supabase.instance.client;
       if (_isRegister) {
-        await client.auth.signUp(
+        final res = await client.auth.signUp(
           email: _emailCtrl.text.trim(),
           password: _passwordCtrl.text,
+          emailRedirectTo: 'io.supabase.pokertracker://login-callback/',
         );
+        if (res.session == null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Check your inbox — confirmation link sent.'),
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
       } else {
         await client.auth.signInWithPassword(
           email: _emailCtrl.text.trim(),
