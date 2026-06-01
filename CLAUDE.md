@@ -82,6 +82,8 @@ Bottom nav tabs: Dashboard, Sessions, Hands, Reads, **Tools**. The Tools tab hos
 
 `AuthGate` also handles `AuthChangeEvent.passwordRecovery` → shows `ResetPasswordScreen` (set new password + auto sign-out on success).
 
+**Email confirmation** — `signUp` in `login_screen.dart` sets `emailRedirectTo: 'https://tablelab.app/confirmed.html'` for **all** platforms. It must be an `https` URL, never the `io.supabase.pokertracker://` custom scheme — browsers/email clients can't open a custom scheme, which renders a blank page. `web/confirmed.html` is a static page (deployed to `docs/`) that shows a verified message and, on mobile, an "Open the TableLab app" deep-link button (the deep link is still used for Google OAuth and the button). The redirect URL must be allowlisted in Supabase → Authentication → URL Configuration (`https://tablelab.app/**`).
+
 ### State management — Riverpod
 
 Service classes are plain Dart, wrapped in `Provider<>` at the provider layer. All providers live in `lib/providers/`.
@@ -89,15 +91,17 @@ Service classes are plain Dart, wrapped in `Provider<>` at the provider layer. A
 | Provider | Type | Notes |
 |---|---|---|
 | `authUserIdProvider` | `StreamProvider<String?>` | emits current user ID on auth change |
-| `sessionsProvider` | `StreamProvider` | Supabase stream; watches `authUserIdProvider` |
+| `sessionsProvider` | `FutureProvider` | fetch-once via `fetchAllSessions`; watches `authUserIdProvider` |
 | `filteredSessionsProvider` | `Provider` | derived from sessions + filter |
 | `filterProvider` | `StateProvider<SessionFilter>` | global session filter state |
 | `handsProvider` | `FutureProvider` | fetch-once; watches `authUserIdProvider` |
 | `tournamentListingsProvider` | `FutureProvider.autoDispose` | |
-| `readsProvider` | `StreamProvider` | in `reads_provider.dart` |
+| `readsProvider` | `FutureProvider` | fetch-once via `fetchReads`; watches `authUserIdProvider`; in `reads_provider.dart` |
 | `profileProvider` | `FutureProvider` | in `profile_provider.dart`; watches `authUserIdProvider` |
 
-**Cross-account scoping** — every user-scoped provider must `ref.watch(authUserIdProvider)` so it restarts when a different account signs in. After any write (insert/update/delete), call `ref.invalidate(sessionsProvider)` — Supabase `.stream()` requires Realtime enabled to push live changes; explicit invalidation is the reliable fallback.
+**Cross-account scoping** — every user-scoped provider must `ref.watch(authUserIdProvider)` so it restarts when a different account signs in.
+
+**No Realtime — invalidate after writes.** `sessionsProvider`, `readsProvider`, and `handsProvider` are all one-shot `FutureProvider`s. Supabase `.stream()` was deliberately removed (no `.stream()` calls remain in `lib/`) because a flaky Realtime channel surfaced `RealtimeSubscribeException(channelError)` directly to users on the Sessions/Reads screens. Because there is no live push, **every write path (insert/update/delete/bulk-import) must call `ref.invalidate(...)`** on the relevant provider — this is the *only* refresh mechanism, not a fallback. Easy to miss in new write sites (the CSV import path was a past offender).
 
 ### Backend — Supabase
 
@@ -137,11 +141,17 @@ Four active workflows in `.github/workflows/`:
 
 Required GitHub Secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`.
 
-CI generates `lib/config/supabase_config.dart` at build time from secrets — it is never committed. The `deploy-web.yml` commit uses `[skip ci]` in its message to prevent loops.
+CI generates `lib/config/supabase_config.dart` at build time from secrets — it is never committed. The `deploy-web.yml` commit uses `[skip ci]` in its message to prevent loops (note: pushing a tag also fires `deploy-web.yml` + `ci.yml` if `lib/`/`pubspec` changed, so a tag push commonly produces a `[skip ci]` deploy commit on `main` — rebase before subsequent pushes).
+
+`build-android.yml` requires `permissions: contents: write` for the "Create GitHub Release" step (otherwise it fails with "Resource not accessible by integration"; the AAB still builds + uploads as an artifact). Actions are pinned to Node-24 majors (`checkout@v5`, `upload-artifact@v6`, `gh-release@v3`) — Node 20 runtimes are deprecated (forced switch 2026-06-16).
+
+**Releasing to Play:** `bash scripts/bump-version.sh X.Y.Z` → push `main` + the `vX.Y.Z` tag → CI builds the signed AAB and attaches it to a GitHub Release. The AAB is then **manually uploaded** to the Play Console internal track. Google requires the *first* upload of an app to be manual; subsequent uploads can be automated via the Play Developer API + a service-account secret (not yet wired up).
 
 ### Firebase Crashlytics
 
 Active on Android only. `lib/firebase_options.dart` is generated (not a stub) — do not overwrite it. `main.dart` routes `FlutterError` and `PlatformDispatcher` errors to Crashlytics, guarded by `if (!kIsWeb)` — Crashlytics throws on web. `android/app/google-services.json` is committed and required for Android builds.
+
+The Crashlytics Gradle plugin (`firebase-crashlytics-gradle:3.0.3`) requires the **Google Services plugin ≥ 4.4.1**. Keep the version in sync across both declarations: `settings.gradle.kts` plugins block and `build.gradle.kts` classpath (both `4.4.2`). A mismatch only fails **release** builds (the `uploadCrashlyticsMappingFileRelease` task), not debug — so `flutter run` won't catch it.
 
 ### Splash screen
 
@@ -197,7 +207,7 @@ All models are plain immutable classes — no code generation.
 - `docs/CNAME` must contain `tablelab.app` — preserve it on every deploy
 - `docs/.nojekyll` must exist — recreate after every wipe
 - PowerShell for the flutter build command; bash for the file copy
-- `web/privacy.html` is served at `tablelab.app/privacy` — required by Apple App Store review
+- Static pages in `web/` are copied into the build and served at the root: `privacy.html` (`/privacy`, required by Apple review), `about.html` (`/about`), `confirmed.html` (`/confirmed.html`, the email-verification landing page — see Email confirmation above). Match their dark theme (`#111811` bg, `#4CAF50` accents) when adding more.
 
 ### Android build
 
@@ -205,8 +215,9 @@ All models are plain immutable classes — no code generation.
 - `android/build.gradle.kts` has a `gradle.afterProject` block that forces `languageVersion` and `apiVersion` to `KOTLIN_2_0` for all plugin subprojects — required because KGP 2.3+ dropped support for Kotlin 1.6 (used by `posthog_flutter` and others)
 - Release signing reads `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` from env vars; falls back to debug signing locally when `tablelab-release.jks` is absent
 - `tablelab-release.jks` is gitignored — CI decodes it from `ANDROID_KEYSTORE_BASE64` secret
-- ProGuard enabled on release builds (`android/app/proguard-rules.pro`)
+- ProGuard enabled on release builds (`android/app/proguard-rules.pro`). Must keep `-dontwarn`/`-keep` rules for `com.google.android.play.core.**` — Flutter's `PlayStoreDeferredComponentManager` references those classes but they aren't bundled, so R8 fails `minifyRelease` with "Missing class … Compilation failed" without them. Release-only (debug skips R8).
 - `INTERNET` permission explicitly declared in `AndroidManifest.xml`
+- `io.supabase.pokertracker` deep-link intent filter in `AndroidManifest.xml` — used by Google OAuth callback and the email-confirmation "Open app" button
 - Package ID: `com.pokertracker.poker_tracker` (tied to Google OAuth — do not rename)
 
 ### iOS build
@@ -228,8 +239,10 @@ All analytics calls go through `lib/services/analytics_service.dart` — static 
 
 `lib/screens/onboarding_screen.dart` — 3-page `PageView` with `PopScope(canPop: false)`. Completion calls `ProfileService.markOnboardingComplete()` which upserts `has_seen_onboarding = true` on `profiles`. `_OnboardingGate` in `auth_gate.dart` gates on `profile.hasSeenOnboarding`. Existing users are grandfathered (`DEFAULT true` on column add, reset to `false` for new inserts via second migration).
 
-### Pre-launch status (as of 2026-05-31)
+### Pre-launch status (as of 2026-06-01)
 
-**Done:** Play Store screenshots (8 phone + 8×7" + 8×10" tablet), Play Console internal track live, data safety form, onboarding flow, PostHog analytics, delete-account, GDPR polish, all Supabase migrations applied, Edge Functions hardened and deployed, RLS hardened, UptimeRobot monitors, Anthropic spend alerts ($80 alert / $100 hard limit).
+**Done:** Play Store screenshots (8 phone + 8×7" + 8×10" tablet), Play Console internal track live, data safety form, onboarding flow, PostHog analytics, delete-account, GDPR polish, all Supabase migrations applied, Edge Functions hardened and deployed, RLS hardened, UptimeRobot monitors, Anthropic spend alerts ($80 alert / $100 hard limit). **v1.1.2 (build +4)** AAB uploaded to internal testing — first submission, in Google's one-time initial review (subsequent internal releases publish in minutes).
 
-**Remaining:** Add ≥5 testers to Play Console internal track → collect beta feedback → promote to production. Supabase Pro upgrade at ~400 MAU.
+**Remaining:** Get testers onto the internal track → collect beta feedback → promote to production. Note: internal testing has **no minimum tester count**; the binding gate for production (if the developer account is personal, created after 2023-11-13) is a **closed test with ≥12 testers opted-in for ≥14 days** — verify account type + requirement in Play Console. Supabase Pro upgrade at ~400 MAU.
+
+**Deferred:** Separate staging environment / local Supabase migration validation — not worth it until real users + Supabase Pro (preview branches). The 3 dashboard-created tables (`sessions`, `hands`, `rake_presets`) should be baseline-dumped into a migration before there is real prod data, so migration history can rebuild the schema.
