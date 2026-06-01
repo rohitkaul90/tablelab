@@ -57,3 +57,6 @@ supabase/.temp/
 
 # Cursor IDE
 .cursor/
+
+# Logo design files
+logo_concepts/
