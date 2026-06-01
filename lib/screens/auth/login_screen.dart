@@ -36,10 +36,14 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final client = Supabase.instance.client;
       if (_isRegister) {
+        // Confirmation links redirect to an https page (works on every device
+        // and email client — a browser cannot open the io.supabase.pokertracker://
+        // custom scheme, which is what rendered a blank page). confirmed.html
+        // shows a verified message and, on mobile, an "Open the app" deep link.
         final res = await client.auth.signUp(
           email: _emailCtrl.text.trim(),
           password: _passwordCtrl.text,
-          emailRedirectTo: 'io.supabase.pokertracker://login-callback/',
+          emailRedirectTo: 'https://tablelab.app/confirmed.html',
         );
         if (res.session == null && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
