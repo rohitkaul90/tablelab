@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/providers.dart';
 import '../providers/reads_provider.dart';
 import '../providers/profile_provider.dart';
@@ -73,9 +74,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _deleting = true);
     try {
       await ref.read(supabaseServiceProvider).deleteAccount();
+      await Supabase.instance.client.auth.signOut();
       if (!mounted) return;
-      // Auth state change will route to LoginScreen via AuthGate.
-      // Invalidate local caches immediately.
       ref.invalidate(sessionsProvider);
       ref.invalidate(handsProvider);
       ref.invalidate(filterProvider);
