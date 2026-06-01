@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -64,7 +64,7 @@ jobs:
         run: echo "VERSION=${GITHUB_REF_NAME:-manual-build}" >> $GITHUB_OUTPUT
 
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: tablelab-${{ steps.version.outputs.VERSION }}.aab
           path: build/app/outputs/bundle/release/app-release.aab
@@ -72,7 +72,7 @@ jobs:
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: build/app/outputs/bundle/release/app-release.aab
           generate_release_notes: true
