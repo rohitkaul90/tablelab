@@ -711,7 +711,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
 
       Set<String>? existingKeys;
       if (_skipDuplicates && !_overwrite) {
-        final existing = await service.watchAllSessions().first;
+        final existing = await service.fetchAllSessions();
         existingKeys = existing
             .map((s) => '${s.date}_${s.buyIn.toStringAsFixed(2)}')
             .toSet();
@@ -910,6 +910,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
 
       if (_overwrite) await service.clearAllSessions();
       await service.bulkInsertSessions(sessions);
+      ref.invalidate(sessionsProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

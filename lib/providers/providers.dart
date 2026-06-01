@@ -21,9 +21,9 @@ final authUserIdProvider = StreamProvider<String?>((ref) {
       .map((event) => event.session?.user.id);
 });
 
-final sessionsProvider = StreamProvider<List<SessionModel>>((ref) {
-  ref.watch(authUserIdProvider); // restart stream when user changes
-  return ref.watch(supabaseServiceProvider).watchAllSessions();
+final sessionsProvider = FutureProvider<List<SessionModel>>((ref) {
+  ref.watch(authUserIdProvider); // re-fetch when user changes
+  return ref.watch(supabaseServiceProvider).fetchAllSessions();
 });
 
 final filterProvider = StateProvider<SessionFilter>((ref) => const SessionFilter());

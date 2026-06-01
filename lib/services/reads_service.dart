@@ -7,16 +7,21 @@ class ReadsService {
 
   String? get _uid => _client.auth.currentUser?.id;
 
-  Stream<List<PlayerRead>> watchReads() {
+  // One-shot fetch (no Realtime websocket). Realtime `.stream()` was dropped
+  // because a flaky channel surfaced RealtimeSubscribeException(channelError)
+  // to users; the list is kept fresh via explicit ref.invalidate after writes.
+  Future<List<PlayerRead>> fetchReads() => withSupabaseRetry(() async {
     final uid = _uid;
-    if (uid == null) { return const Stream.empty(); }
-    return _client
+    if (uid == null) return <PlayerRead>[];
+    final rows = await _client
         .from('player_reads')
-        .stream(primaryKey: ['id'])
+        .select()
         .eq('user_id', uid)
-        .order('updated_at', ascending: false)
-        .map((rows) => rows.map((r) => PlayerRead.fromJson(r)).toList());
-  }
+        .order('updated_at', ascending: false);
+    return (rows as List)
+        .map((r) => PlayerRead.fromJson(r as Map<String, dynamic>))
+        .toList();
+  });
 
   Future<List<PlayerReadNote>> fetchNotes(String readId) => withSupabaseRetry(() async {
     final data = await _client

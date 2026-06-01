@@ -78,13 +78,18 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
               );
             }
             if (!mounted) return;
+            ref.invalidate(readsProvider);
             await _loadNotes();
-            // Refresh the read (tags may have changed)
-            final reads = ref.read(readsProvider).valueOrNull;
-            if (reads != null) {
-              final updated = reads.where((r) => r.id == _read.id).firstOrNull;
-              if (updated != null && mounted) { setState(() => _read = updated); }
-            }
+            if (!mounted) return;
+            // Reflect label/tag edits locally — provider re-fetch is async.
+            setState(() => _read = PlayerRead(
+                  id: _read.id,
+                  userId: _read.userId,
+                  playerLabel: label,
+                  tags: tags,
+                  createdAt: _read.createdAt,
+                  updatedAt: DateTime.now(),
+                ));
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -202,7 +207,9 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
     );
     if (confirmed == true && mounted) {
       await ref.read(readsServiceProvider).deleteRead(_read.id);
-      if (mounted) { Navigator.pop(context); }
+      if (!mounted) return;
+      ref.invalidate(readsProvider);
+      Navigator.pop(context);
     }
   }
 

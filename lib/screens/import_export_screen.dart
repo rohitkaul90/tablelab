@@ -64,7 +64,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
     setState(() => _busy = true);
     try {
       final sessions =
-          await ref.read(supabaseServiceProvider).watchAllSessions().first;
+          await ref.read(supabaseServiceProvider).fetchAllSessions();
       if (sessions.isEmpty) {
         _showSnack('No sessions to export.');
         return;
@@ -93,7 +93,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
     setState(() => _busy = true);
     try {
       final sessions =
-          await ref.read(supabaseServiceProvider).watchAllSessions().first;
+          await ref.read(supabaseServiceProvider).fetchAllSessions();
       if (sessions.isEmpty) {
         _showSnack('No sessions to export.');
         return;

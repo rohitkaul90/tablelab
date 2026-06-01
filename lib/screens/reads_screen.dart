@@ -54,6 +54,7 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
                 cardsShown: note.cardsShown,
               );
             }
+            if (mounted) ref.invalidate(readsProvider);
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(

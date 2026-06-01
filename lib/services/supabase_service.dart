@@ -8,22 +8,25 @@ class SupabaseService {
 
   String? get _uid => _client.auth.currentUser?.id;
 
-  Stream<List<SessionModel>> watchAllSessions() {
+  // One-shot fetch (no Realtime websocket). Realtime `.stream()` was dropped
+  // because a flaky channel surfaced RealtimeSubscribeException(channelError)
+  // to users; the list is kept fresh via explicit ref.invalidate after writes.
+  Future<List<SessionModel>> fetchAllSessions() async {
     final uid = _uid;
-    if (uid == null) return const Stream.empty();
-    return _client
+    if (uid == null) return [];
+    final rows = await withSupabaseRetry(() => _client
         .from('sessions')
-        .stream(primaryKey: ['id'])
+        .select()
         .eq('user_id', uid)
-        .order('date', ascending: false)
-        .map((rows) {
-          final sessions = rows.map(SessionModel.fromMap).toList();
-          sessions.sort((a, b) {
-            final d = b.date.compareTo(a.date);
-            return d != 0 ? d : b.startTime.compareTo(a.startTime);
-          });
-          return sessions;
-        });
+        .order('date', ascending: false));
+    final sessions = (rows as List)
+        .map((r) => SessionModel.fromMap(r as Map<String, dynamic>))
+        .toList();
+    sessions.sort((a, b) {
+      final d = b.date.compareTo(a.date);
+      return d != 0 ? d : b.startTime.compareTo(a.startTime);
+    });
+    return sessions;
   }
 
   Future<void> insertSession(Map<String, dynamic> data) {
