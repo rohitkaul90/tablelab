@@ -33,6 +33,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await ref.read(profileServiceProvider).markOnboardingComplete();
     } catch (_) {
       // Non-fatal — proceed regardless so user is never stuck.
+    } finally {
+      if (mounted) setState(() => _completing = false);
     }
     if (!mounted) return;
     ref.invalidate(profileProvider);
