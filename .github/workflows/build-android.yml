@@ -64,7 +64,7 @@ jobs:
         run: echo "VERSION=${GITHUB_REF_NAME:-manual-build}" >> $GITHUB_OUTPUT
 
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: tablelab-${{ steps.version.outputs.VERSION }}.aab
           path: build/app/outputs/bundle/release/app-release.aab
