@@ -2,6 +2,12 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
+# Play Core — Flutter's embedding (PlayStoreDeferredComponentManager) references
+# these classes, but they aren't bundled and the app uses no deferred components.
+# Without these rules R8 fails minifyRelease with "Missing class ... Compilation failed".
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }
+
 # Supabase / OkHttp
 -keep class com.squareup.okhttp3.** { *; }
 -dontwarn com.squareup.okhttp3.**
