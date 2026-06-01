@@ -170,6 +170,10 @@ void main() {
       expect(currencySymbol('INR'), equals('₹'));
     });
 
+    test('returns NZ\$ for NZD', () {
+      expect(currencySymbol('NZD'), equals(r'NZ$'));
+    });
+
     test('defaults to dollar sign for unknown currency', () {
       expect(currencySymbol('XYZ'), equals(r'$'));
     });
@@ -196,6 +200,15 @@ void main() {
       final cad = convertCurrency(100, 'USD', 'CAD');
       final usd = convertCurrency(cad, 'CAD', 'USD');
       expect(usd, closeTo(100.0, 0.01));
+    });
+
+    test('unknown from-currency falls back to 1.0 rate', () {
+      // XYZ is treated as 1:1 with USD
+      expect(convertCurrency(100, 'XYZ', 'USD'), closeTo(100.0, 0.01));
+    });
+
+    test('unknown to-currency falls back to 1.0 rate', () {
+      expect(convertCurrency(100, 'USD', 'XYZ'), closeTo(100.0, 0.01));
     });
   });
 
