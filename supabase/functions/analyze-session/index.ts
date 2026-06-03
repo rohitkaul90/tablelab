@@ -680,6 +680,8 @@ serve(async (req: Request) => {
         analysis_json: analysis,
         model_used: "claude-sonnet-4-6",
         tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+        input_tokens: message.usage.input_tokens,
+        output_tokens: message.usage.output_tokens,
         cache_read_tokens: message.usage.cache_read_input_tokens ?? 0,
         cache_write_tokens: message.usage.cache_creation_input_tokens ?? 0,
       },
