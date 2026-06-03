@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -57,16 +59,47 @@ class AuthGate extends ConsumerWidget {
 
 // Checks onboarding state after auth resolves.
 // New users (no profile row) and users with hasSeenOnboarding=false see OnboardingScreen.
-class _OnboardingGate extends ConsumerWidget {
+class _OnboardingGate extends ConsumerStatefulWidget {
   const _OnboardingGate({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_OnboardingGate> createState() => _OnboardingGateState();
+}
+
+class _OnboardingGateState extends ConsumerState<_OnboardingGate> {
+  // fetchProfile already retries transient failures; these are a few extra
+  // bounded retries at the gate before falling back to the dashboard, so a
+  // one-off error doesn't wrongly send a brand-new user past onboarding.
+  static const _maxRetries = 2;
+  int _retries = 0;
+  bool _retryPending = false;
+
+  void _scheduleRetry() {
+    if (_retryPending || _retries >= _maxRetries) return;
+    _retryPending = true;
+    _retries++;
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      _retryPending = false;
+      ref.invalidate(profileProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileProvider);
     return profileAsync.when(
       loading: () => const SplashScreen(key: ValueKey('splash-profile')),
-      error: (_, _) => const MainNavigation(key: ValueKey('main')),
+      error: (_, _) {
+        if (_retries < _maxRetries) {
+          _scheduleRetry();
+          return const SplashScreen(key: ValueKey('splash-profile'));
+        }
+        // Retries exhausted — fall back to the dashboard rather than blocking.
+        return const MainNavigation(key: ValueKey('main'));
+      },
       data: (profile) {
+        _retries = 0; // reset after a successful fetch
         if (profile == null || !profile.hasSeenOnboarding) {
           return const OnboardingScreen(key: ValueKey('onboarding'));
         }

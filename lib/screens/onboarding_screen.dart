@@ -29,15 +29,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     } else {
       AnalyticsService.onboardingCompleted();
     }
+    var ok = false;
     try {
       await ref.read(profileServiceProvider).markOnboardingComplete();
+      ok = true;
     } catch (_) {
-      // Non-fatal — proceed regardless so user is never stuck.
+      ok = false;
     } finally {
       if (mounted) setState(() => _completing = false);
     }
+
     if (!mounted) return;
-    ref.invalidate(profileProvider);
+
+    if (ok) {
+      // Only advance once the flag is persisted — otherwise the gate re-reads
+      // has_seen_onboarding=false and bounces the user back to the first page.
+      ref.invalidate(profileProvider);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Couldn't finish setup. Check your connection and try again.",
+          ),
+        ),
+      );
+    }
   }
 
   void _next() {
