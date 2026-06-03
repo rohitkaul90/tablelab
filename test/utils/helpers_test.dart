@@ -243,6 +243,23 @@ void main() {
     test('returns zero for invalid time strings', () {
       expect(calcDurationMinutes('bad', '22:00'), equals(0));
     });
+
+    test('returns zero when time has colon but non-numeric parts', () {
+      // splits into 2 parts, but the parts fail int.tryParse
+      expect(calcDurationMinutes('1a:30', '22:00'), equals(0));
+      expect(calcDurationMinutes('18:00', '10:bb'), equals(0));
+    });
+  });
+
+  // ── supportedDisplayCurrencies ───────────────────────────────────────────────
+
+  group('supportedDisplayCurrencies', () {
+    test('is sorted and contains the major currencies', () {
+      final list = supportedDisplayCurrencies;
+      expect(list, containsAll(['USD', 'CAD', 'GBP', 'EUR', 'INR']));
+      final sorted = [...list]..sort();
+      expect(list, equals(sorted));
+    });
   });
 
   // ── isTournamentType ─────────────────────────────────────────────────────────
