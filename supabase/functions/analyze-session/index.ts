@@ -183,21 +183,23 @@ const SESSION_DAILY_LIMIT = 5;
 async function isRateLimited(supabase: any, userId: string, userEmail: string | undefined): Promise<boolean> {
   if (EXEMPT_EMAILS.has(userEmail ?? "")) return false;
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from("ai_usage_log")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("function_name", "analyze-session")
     .gte("called_at", since);
+  if (error) console.error("ai_usage_log rate-limit read failed:", error.code, error.message);
   return (count ?? 0) >= SESSION_DAILY_LIMIT;
 }
 
 // deno-lint-ignore no-explicit-any
 async function logUsage(supabase: any, userId: string): Promise<void> {
-  await supabase.from("ai_usage_log").insert({
+  const { error } = await supabase.from("ai_usage_log").insert({
     user_id: userId,
     function_name: "analyze-session",
   });
+  if (error) console.error("ai_usage_log insert failed:", error.code, error.message);
 }
 
 // ── Draw pre-computation (deterministic — injected as ground truth) ───────────
@@ -577,6 +579,17 @@ serve(async (req: Request) => {
       });
     }
 
+    // All DB work uses the service role. The anon+JWT client above verifies the
+    // user but its token was not propagating into PostgREST's RLS context, so
+    // auth.uid() resolved to NULL — silently failing every insert (usage log +
+    // analysis cache) and making the cache/rate-limit reads return nothing.
+    // The user is already verified via getUser(); every query below is scoped
+    // explicitly by user_id, so correctness no longer depends on RLS.
+    const db = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
     const body = await req.json() as {
       session: Session;
       hands?: PokerHand[];
@@ -595,11 +608,15 @@ serve(async (req: Request) => {
 
     // ── Cache check ──────────────────────────────────────────────────────────
     if (!forceRefresh) {
-      const { data: cached } = await supabase
+      const { data: cached, error: cacheErr } = await db
         .from("ai_analyses")
         .select("analysis_json")
+        .eq("user_id", user.id)
         .eq("session_id", session.id)
         .maybeSingle();
+      if (cacheErr) {
+        console.error("ai_analyses cache read failed:", cacheErr.code, cacheErr.message);
+      }
 
       if (cached) {
         return new Response(JSON.stringify(cached.analysis_json), {
@@ -609,7 +626,7 @@ serve(async (req: Request) => {
     }
 
     // ── Rate limit check ─────────────────────────────────────────────────────
-    if (await isRateLimited(supabase, user.id, user.email ?? undefined)) {
+    if (await isRateLimited(db, user.id, user.email ?? undefined)) {
       return new Response(
         JSON.stringify({ error: "Daily analysis limit reached. Please try again tomorrow." }),
         { status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
@@ -653,10 +670,10 @@ serve(async (req: Request) => {
     // deno-lint-ignore no-explicit-any
     const analysis = (toolBlock as any).input as Record<string, unknown>;
 
-    await logUsage(supabase, user.id);
+    await logUsage(db, user.id);
 
     // ── Cache the result ─────────────────────────────────────────────────────
-    await supabase.from("ai_analyses").upsert(
+    const { error: cacheWriteErr } = await db.from("ai_analyses").upsert(
       {
         user_id: user.id,
         session_id: session.id,
@@ -668,6 +685,9 @@ serve(async (req: Request) => {
       },
       { onConflict: "user_id,session_id" },
     );
+    if (cacheWriteErr) {
+      console.error("ai_analyses upsert failed:", cacheWriteErr.code, cacheWriteErr.message);
+    }
 
     return new Response(JSON.stringify(analysis), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
