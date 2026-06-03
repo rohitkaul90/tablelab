@@ -60,3 +60,6 @@ supabase/.temp/
 
 # Logo design files
 logo_concepts/
+
+# Launch ops (tester lists contain PII — keep out of the repo)
+launch/
