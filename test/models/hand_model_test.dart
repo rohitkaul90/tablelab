@@ -306,5 +306,200 @@ void main() {
       );
       expect(flop.streetReached, equals('Flop'));
     });
+
+    test('streetReached returns Turn and River for deeper hands', () {
+      final base = makeHand();
+      StreetData s(Street st) => StreetData(street: st, actions: const []);
+
+      final turn = PokerHand(
+        id: 'h', userId: 'u', playedAt: DateTime(2026, 1, 1),
+        tableSetup: base.tableSetup, players: const [],
+        streets: [s(Street.preflop), s(Street.flop), s(Street.turn)],
+      );
+      expect(turn.streetReached, equals('Turn'));
+
+      final river = PokerHand(
+        id: 'h', userId: 'u', playedAt: DateTime(2026, 1, 1),
+        tableSetup: base.tableSetup, players: const [],
+        streets: [
+          s(Street.preflop), s(Street.flop), s(Street.turn), s(Street.river)
+        ],
+      );
+      expect(river.streetReached, equals('River'));
+    });
+  });
+
+  // ── Street.label extension ───────────────────────────────────────────────────
+
+  group('StreetLabel.label', () {
+    test('returns the display label for every street', () {
+      expect(Street.preflop.label, equals('Pre-flop'));
+      expect(Street.flop.label, equals('Flop'));
+      expect(Street.turn.label, equals('Turn'));
+      expect(Street.river.label, equals('River'));
+    });
+  });
+
+  // ── HandAction.label — remaining branches ────────────────────────────────────
+
+  group('HandAction.label — allIn / post / straddle', () {
+    test('dedicated all-in action type', () {
+      expect(
+          const HandAction(seat: 0, type: ActionType.allIn, amount: 1200).label,
+          equals('ALL-IN \$1200'));
+    });
+
+    test('post (blind) label', () {
+      expect(const HandAction(seat: 1, type: ActionType.post, amount: 2).label,
+          equals('POST \$2'));
+    });
+
+    test('straddle label', () {
+      expect(
+          const HandAction(seat: 3, type: ActionType.postStraddle, amount: 4)
+              .label,
+          equals('STRADDLE \$4'));
+    });
+
+    test('null amount falls back to 0 in label', () {
+      expect(const HandAction(seat: 0, type: ActionType.call).label,
+          equals('CALL \$0'));
+    });
+  });
+
+  // ── HandPlayer.copyWith ──────────────────────────────────────────────────────
+
+  group('HandPlayer.copyWith', () {
+    const base = HandPlayer(
+        seatIndex: 2, name: 'Hero', startingStack: 400, isHero: true);
+
+    test('overrides holeCards while preserving other fields', () {
+      final updated = base.copyWith(holeCards: ['As', 'Kh']);
+      expect(updated.holeCards, equals(['As', 'Kh']));
+      expect(updated.seatIndex, equals(2));
+      expect(updated.name, equals('Hero'));
+      expect(updated.startingStack, equals(400));
+      expect(updated.isHero, isTrue);
+    });
+
+    test('preserves existing holeCards when none provided', () {
+      const withCards = HandPlayer(
+          seatIndex: 1,
+          name: 'Hero',
+          startingStack: 200,
+          holeCards: ['Qd', 'Qs']);
+      final copy = withCards.copyWith();
+      expect(copy.holeCards, equals(['Qd', 'Qs']));
+    });
+  });
+
+  // ── TableSetup — straddleSeat / positionName / action order ───────────────────
+
+  group('TableSetup.straddleSeat', () {
+    test('returns -1 when no straddle', () {
+      const setup = TableSetup(
+          numSeats: 6,
+          buttonSeat: 0,
+          heroSeat: 2,
+          smallBlind: 1,
+          bigBlind: 2);
+      expect(setup.straddleSeat, equals(-1));
+    });
+
+    test('seat after BB when straddle present (with wraparound)', () {
+      const setup = TableSetup(
+          numSeats: 6,
+          buttonSeat: 4,
+          heroSeat: 0,
+          smallBlind: 1,
+          bigBlind: 2,
+          straddle: 4);
+      // (4 + 3) % 6 = 1
+      expect(setup.straddleSeat, equals(1));
+    });
+  });
+
+  group('TableSetup.positionName', () {
+    test('6-max names relative to button', () {
+      const setup = TableSetup(
+          numSeats: 6,
+          buttonSeat: 0,
+          heroSeat: 2,
+          smallBlind: 1,
+          bigBlind: 2);
+      expect(setup.positionName(0), equals('BTN'));
+      expect(setup.positionName(1), equals('SB'));
+      expect(setup.positionName(2), equals('BB'));
+      expect(setup.positionName(3), equals('UTG'));
+      expect(setup.positionName(4), equals('HJ'));
+      expect(setup.positionName(5), equals('CO'));
+    });
+
+    test('straddle seat overrides position name with STR', () {
+      const setup = TableSetup(
+          numSeats: 6,
+          buttonSeat: 0,
+          heroSeat: 2,
+          smallBlind: 1,
+          bigBlind: 2,
+          straddle: 3);
+      expect(setup.positionName(3), equals('STR'));
+    });
+
+    test('9-max names use the wide table labels', () {
+      const setup = TableSetup(
+          numSeats: 9,
+          buttonSeat: 0,
+          heroSeat: 4,
+          smallBlind: 1,
+          bigBlind: 2);
+      expect(setup.positionName(0), equals('BTN'));
+      expect(setup.positionName(4), equals('UTG+1'));
+      expect(setup.positionName(8), equals('CO'));
+    });
+
+    test('falls back to generic Pn when seat is beyond label list', () {
+      const setup = TableSetup(
+          numSeats: 10,
+          buttonSeat: 0,
+          heroSeat: 1,
+          smallBlind: 1,
+          bigBlind: 2);
+      // off = 9, labels only cover 0..8 → generic fallback
+      expect(setup.positionName(9), equals('P10'));
+    });
+  });
+
+  group('TableSetup action order', () {
+    const setup = TableSetup(
+        numSeats: 6, buttonSeat: 0, heroSeat: 2, smallBlind: 1, bigBlind: 2);
+    final active = [0, 1, 2, 3, 4, 5];
+
+    test('preflopOrder starts UTG (button + 3) without straddle', () {
+      expect(setup.preflopOrder(active), equals([3, 4, 5, 0, 1, 2]));
+    });
+
+    test('preflopOrder starts one later when a straddle is posted', () {
+      const straddled = TableSetup(
+          numSeats: 6,
+          buttonSeat: 0,
+          heroSeat: 2,
+          smallBlind: 1,
+          bigBlind: 2,
+          straddle: 4);
+      expect(straddled.preflopOrder(active), equals([4, 5, 0, 1, 2, 3]));
+    });
+
+    test('preflopOrder respects the active filter', () {
+      expect(setup.preflopOrder([0, 2, 4]), equals([4, 0, 2]));
+    });
+
+    test('postflopOrder starts at SB (button + 1)', () {
+      expect(setup.postflopOrder(active), equals([1, 2, 3, 4, 5, 0]));
+    });
+
+    test('postflopOrder respects the active filter', () {
+      expect(setup.postflopOrder([0, 3, 5]), equals([3, 5, 0]));
+    });
   });
 }
