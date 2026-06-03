@@ -48,19 +48,22 @@ Deno.serve(async (req) => {
 
   // Delete user data in FK-safe order before removing the auth record.
   // If cascade deletes are configured on auth.users, these are redundant but harmless.
-  const tables = [
+  //
+  // Two tables are intentionally NOT in this user_id list:
+  //  - player_read_notes has no user_id column; it cascades via read_id when its
+  //    parent player_reads rows are deleted below (ON DELETE CASCADE on read_id).
+  //  - profiles is keyed by id (= auth.users.id), not user_id — handled separately.
+  const userScopedTables = [
     "ai_usage_log",
     "ai_analyses",
     "ai_hand_analyses",
-    "player_read_notes",
     "player_reads",
     "rake_presets",
     "hands",
     "sessions",
-    "profiles",
   ];
 
-  for (const table of tables) {
+  for (const table of userScopedTables) {
     const { error } = await adminClient
       .from(table)
       .delete()
@@ -69,6 +72,15 @@ Deno.serve(async (req) => {
       console.error(`Failed to delete from ${table}:`, error.message);
       // Non-fatal: continue — the auth deletion below is the critical step.
     }
+  }
+
+  // profiles uses id (= auth.users.id) as its user reference, not user_id.
+  const { error: profileErr } = await adminClient
+    .from("profiles")
+    .delete()
+    .eq("id", uid);
+  if (profileErr) {
+    console.error("Failed to delete from profiles:", profileErr.message);
   }
 
   const { error: deleteError } = await adminClient.auth.admin.deleteUser(uid);
