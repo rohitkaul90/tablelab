@@ -8,7 +8,7 @@ A Flutter poker bankroll tracker and study tool for live cash games and tourname
 - **Hand history** — record and replay individual hands with street-by-street action
 - **Reads** — build opponent profiles with tags and observations; get GTO-grounded coaching tips per player type
 - **Analytics** — profit/loss charts, win rate by stakes and location, session history with filtering
-- **AI analysis** — Claude-powered session and hand coaching via Supabase Edge Functions (10 analyses/day)
+- **AI analysis** — Claude-powered session and hand coaching via Supabase Edge Functions (5 session + 20 hand analyses/day per user)
 - **Equity calculator** — offline hand-vs-range equity via Monte Carlo simulation
 - **ICM calculator** — fair chip-chop deal calculations at final tables
 - **Tournament calendar** — scraped upcoming tournament listings
@@ -18,23 +18,23 @@ A Flutter poker bankroll tracker and study tool for live cash games and tourname
 
 - Flutter (Dart) — Material 3, dark theme
 - Riverpod — state management
-- Supabase — Postgres database, auth (email + Google OAuth), realtime, Edge Functions
+- Supabase — Postgres database, auth (email + Google OAuth), Edge Functions (no Realtime — providers invalidate after writes)
 - Claude API — AI coaching via Supabase Edge Functions (Deno)
 
 ## Getting started
 
-**Prerequisites:** Flutter SDK ≥ 3.12, a Supabase project
+**Prerequisites:** Flutter SDK ≥ 3.27 (uses `Color.withValues` / `MediaQuery.withClampedTextScaling`), a Supabase project
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-**Web (GitHub Pages):**
+**Web (GitHub Pages, custom domain `tablelab.app`):**
 ```bash
-flutter build web --base-href /poker-tracker/
+flutter build web --release --base-href /
 ```
-The `--base-href` flag is required for correct asset resolution on GitHub Pages.
+Use `--base-href /` (root) — the app is served from the custom domain `tablelab.app`, not a project subpath. Run the web build in PowerShell on Windows (bash mangles the bare `/`).
 
 ## Project structure
 

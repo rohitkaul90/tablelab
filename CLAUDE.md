@@ -45,7 +45,7 @@ dart run build_runner build --delete-conflicting-outputs   # only if @riverpod a
 
 ## Slash-command agents
 
-Twelve specialist agents live in `.claude/commands/`. Invoke with `/agent-name [args]`:
+Fifteen specialist agents live in `.claude/commands/`. Invoke with `/agent-name [args]`:
 
 | Command | Role | Scope |
 |---|---|---|
@@ -61,6 +61,9 @@ Twelve specialist agents live in `.claude/commands/`. Invoke with `/agent-name [
 | `/legal-compliance` | Privacy policy, GDPR, store labels | Docs + screens |
 | `/bizops` | Unit economics, pricing, RevenueCat | Analysis + docs |
 | `/growth` | ASO, Reddit/PH launch, viral loop spec | Copy + specs |
+| `/ux-designer` | Store visual assets, in-app UX flows, UI copy, onboarding specs | specs + Dart widgets |
+| `/audit` | Deep multi-pass review of the whole codebase — finds issues *and* fixes them | Full code changes |
+| `/triple-code-review` | Triple-agent PR review (Cursor Bugbot + Claude + Codex), cross-referenced to drop hallucinations | Read-only review |
 
 Start any new session on launch work with `/release-orchestrator` — it reads the actual codebase state and outputs a prioritized action plan.
 
