@@ -193,11 +193,23 @@ async function isRateLimited(supabase: any, userId: string, userEmail: string | 
   return (count ?? 0) >= SESSION_DAILY_LIMIT;
 }
 
+interface ClaudeUsage {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+}
+
 // deno-lint-ignore no-explicit-any
-async function logUsage(supabase: any, userId: string): Promise<void> {
+async function logUsage(supabase: any, userId: string, usage?: ClaudeUsage): Promise<void> {
+  // One row per call (never overwritten) — the append-only spend ledger.
   const { error } = await supabase.from("ai_usage_log").insert({
     user_id: userId,
     function_name: "analyze-session",
+    input_tokens: usage?.input_tokens ?? 0,
+    output_tokens: usage?.output_tokens ?? 0,
+    cache_read_tokens: usage?.cache_read_input_tokens ?? 0,
+    cache_write_tokens: usage?.cache_creation_input_tokens ?? 0,
   });
   if (error) console.error("ai_usage_log insert failed:", error.code, error.message);
 }
@@ -670,7 +682,7 @@ serve(async (req: Request) => {
     // deno-lint-ignore no-explicit-any
     const analysis = (toolBlock as any).input as Record<string, unknown>;
 
-    await logUsage(db, user.id);
+    await logUsage(db, user.id, message.usage);
 
     // ── Cache the result ─────────────────────────────────────────────────────
     const { error: cacheWriteErr } = await db.from("ai_analyses").upsert(
