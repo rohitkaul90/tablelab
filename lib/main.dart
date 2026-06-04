@@ -109,36 +109,43 @@ class _MainNavigationState extends State<MainNavigation> {
           ToolsScreen(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.list_outlined),
-            selectedIcon: Icon(Icons.list),
-            label: 'Sessions',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.style_outlined),
-            selectedIcon: Icon(Icons.style),
-            label: 'Hands',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.psychology_outlined),
-            selectedIcon: Icon(Icons.psychology),
-            label: 'Reads',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.construction_outlined),
-            selectedIcon: Icon(Icons.construction),
-            label: 'Tools',
-          ),
-        ],
+      // Cap text scaling for the bottom bar so its labels stay single-line. On a
+      // large system font setting (e.g. Samsung "Large" font / screen zoom) the
+      // longest label, "Dashboard", wrapped to two lines within its equal-width
+      // slot. Clamping to 1.0 keeps all five labels on one line.
+      bottomNavigationBar: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.0,
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: 'Dashboard',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.list_outlined),
+              selectedIcon: Icon(Icons.list),
+              label: 'Sessions',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.style_outlined),
+              selectedIcon: Icon(Icons.style),
+              label: 'Hands',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.psychology_outlined),
+              selectedIcon: Icon(Icons.psychology),
+              label: 'Reads',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.construction_outlined),
+              selectedIcon: Icon(Icons.construction),
+              label: 'Tools',
+            ),
+          ],
+        ),
       ),
     );
   }
