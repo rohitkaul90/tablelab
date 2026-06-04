@@ -191,23 +191,29 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                       ),
                       // Autocomplete dropdown
                       if (_suggestions.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(top: 2),
-                          decoration: BoxDecoration(
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          // Use Material (not a colored Container/DecoratedBox) so the
+                          // ListTiles paint their background + ink splashes on a Material
+                          // ancestor. A colored DecoratedBox between the ListTile and the
+                          // nearest Material hides those effects and trips ListTile's
+                          // _debugCheckBackgroundIsHidden assert in debug builds.
+                          child: Material(
                             color: theme.colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            children: _suggestions.map((p) => ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.history, size: 16),
-                              title: Text(p.playerLabel),
-                              subtitle: p.tags.isNotEmpty
-                                  ? Text(p.tags.map(tagDisplayName).take(3).join(' · '),
-                                      style: const TextStyle(fontSize: 11))
-                                  : null,
-                              onTap: () => _pickSuggestion(p),
-                            )).toList(),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              children: _suggestions.map((p) => ListTile(
+                                dense: true,
+                                leading: const Icon(Icons.history, size: 16),
+                                title: Text(p.playerLabel),
+                                subtitle: p.tags.isNotEmpty
+                                    ? Text(p.tags.map(tagDisplayName).take(3).join(' · '),
+                                        style: const TextStyle(fontSize: 11))
+                                    : null,
+                                onTap: () => _pickSuggestion(p),
+                              )).toList(),
+                            ),
                           ),
                         ),
                       const SizedBox(height: 16),

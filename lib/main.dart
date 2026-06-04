@@ -65,6 +65,16 @@ class PokerTrackerApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const AuthGate(),
+      // Incoming platform route pushes (the io.supabase.pokertracker OAuth /
+      // email-confirmation deep link, or an OS-supplied launch route) are
+      // delivered to the Navigator as *named* routes. This app navigates
+      // imperatively (Navigator.push only) with no named routes, so without a
+      // fallback the framework hits `widget.onUnknownRoute!` on a null value and
+      // crashes in release (the guarding assert is stripped). Supabase handles
+      // the deep link via its own listener, so we just route any unknown push
+      // back to AuthGate to swallow it safely.
+      onUnknownRoute: (settings) =>
+          MaterialPageRoute(builder: (_) => const AuthGate()),
     );
   }
 }

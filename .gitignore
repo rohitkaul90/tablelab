@@ -63,3 +63,6 @@ logo_concepts/
 
 # Launch ops (tester lists contain PII — keep out of the repo)
 launch/
+
+# Crash reports pasted from Crashlytics for debugging (may contain PII)
+crash_reports/
