@@ -200,6 +200,12 @@ All models are plain immutable classes — no code generation.
 
 **fl_chart on Windows** — always set `barTouchData: BarTouchData(enabled: false)` and `lineTouchData: const LineTouchData(enabled: false)` on every chart. Default enabled state throws `RangeError` on Windows when mouse nears edge.
 
+**Deep links need a route fallback** — the app navigates imperatively (`Navigator.push` only) with `MaterialApp(home:)` and no named routes. When the OS delivers a platform route push (the `io.supabase.pokertracker` OAuth / email-confirmation deep link arrives as a named route like `/?code=…`), the framework calls `Navigator.pushNamed`, finds no match, and hits `widget.onUnknownRoute!` on a null value. The guarding assert is stripped in **release**, so this crashes only in production. `MaterialApp.onUnknownRoute` (in `main.dart`) returns an `AuthGate` route to swallow these safely — do not remove it. Supabase handles the actual deep link via its own listener; the route push is the redundant copy.
+
+**ListTile under a colored box** — never wrap a `ListTile`/`SwitchListTile` (or a `Column`/`ListView` of them) in a `Container`/`DecoratedBox` with a background `color`/`decoration` without a `Material` in between — the tile paints its background + ink splashes on the nearest `Material` ancestor, so the colored box hides them and trips `ListTile._debugCheckBackgroundIsHidden` (debug-only assert). Use a `Material` (with `color` + `borderRadius` + `clipBehavior`) instead of the colored `Container`.
+
+**Crashlytics is release-only by intent** — `main.dart` calls `setCrashlyticsCollectionEnabled(!kDebugMode)`, so debug builds (`flutter run` on a device) don't report crashes. This keeps debug-only asserts out of the production Crashlytics dashboard; when triaging, filter issues by the released build's version to ignore stale crashes from old builds.
+
 ### Analyzer configuration
 
 `analysis_options.yaml` excludes `test_imports/` (untracked scratch directory) and disables `use_null_aware_elements` (requires Dart SDK ≥3.8 collection literal syntax not yet available). `flutter analyze --fatal-infos` must return zero issues — CI enforces this.

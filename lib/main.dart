@@ -22,6 +22,11 @@ void main() async {
   // Firebase/Crashlytics is Android/iOS only — skip entirely on web.
   if (!kIsWeb) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    // Don't report crashes from debug builds (e.g. `flutter run` on a device) —
+    // they pollute the production Crashlytics view with debug-only asserts that
+    // can't happen in release. Collection stays on for release/profile builds.
+    await FirebaseCrashlytics.instance
+        .setCrashlyticsCollectionEnabled(!kDebugMode);
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
