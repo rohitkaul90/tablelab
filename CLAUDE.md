@@ -35,7 +35,7 @@ bash scripts/bump-version.sh 1.2.0
 supabase functions deploy delete-account
 supabase functions deploy analyze-session
 supabase functions deploy analyze-hand
-supabase db push                  # apply pending migrations
+supabase db push                  # apply pending migrations — ⚠️ UNSAFE here, see "Migration history is desynced" below; apply new migrations via the SQL editor instead
 
 # Asset regeneration
 dart run flutter_native_splash:create
@@ -111,6 +111,8 @@ All data is user-scoped via Row Level Security. Credentials live in `lib/config/
 
 **Note:** `sessions`, `hands`, and `rake_presets` were created directly in the Supabase dashboard before the migration workflow was established — their DDL is not in `supabase/migrations/`. All other tables have migration files.
 
+**⚠️ Migration history is desynced — do NOT run `supabase db push`.** Most migrations were applied out-of-band (dashboard SQL editor / direct push without recording), so the remote `supabase_migrations.schema_migrations` history is missing ~10 entries even though their schema changes ARE live (verify with `supabase migration list` — many local rows show a blank Remote column). Running `db push` would attempt to **replay all "pending" migrations** onto prod; a single non-idempotent statement errors mid-run and can leave prod half-applied. **To apply a new migration: paste its SQL into the Supabase SQL editor and run it directly, and still commit the migration file for replayability.** The proper one-time fix is `supabase migration repair --status applied <version> …` to record the already-applied migrations, after which `db push` would be safe — but this hasn't been done (careful: same-date versions like `20260603` cover multiple files). **Schema-then-deploy order is mandatory:** an Edge Function that writes a new column must be deployed *after* the column exists, or its insert fails silently (e.g. a failed `logUsage` insert stops the rate-limit row → unlimited AI calls).
+
 **GRANTs gotcha — new tables need explicit table + sequence grants.** Enabling RLS and adding policies is *not* enough: Postgres checks table-level `GRANT`s **before** RLS, and `service_role`'s `BYPASSRLS` does **not** include table/sequence privileges. A table created via migration with only RLS + policies (no `GRANT`) fails every access with `42501 permission denied for table …` — *before* RLS is evaluated. This silently broke the AI tables (`ai_analyses`, `ai_hand_analyses`, `ai_usage_log`): inserts 42501'd, but because the Edge Functions didn't check `.error` (and `supabase-js` doesn't throw by default) they returned 200 while writing nothing — which also disabled the AI result cache and made the rate-limit count always read 0 (unlimited AI calls). Fixed in `20260602_ai_table_grants.sql`. When adding a table, follow the `tournament_listings`/`profiles` pattern: `grant` the needed privileges to `service_role` (+ `postgres`) and read access to `authenticated`. **Also grant on the sequence** for any `serial`/`bigserial` column — inserting calls `nextval()` and needs `grant usage, select on sequence <table>_<col>_seq` separately (uuid-default PKs don't). Edge Functions should do DB writes with a **service-role client** (verify the user via the anon+JWT client's `getUser()`, then write with service role scoped explicitly by `user_id`) — the anon+JWT client's token does not reliably propagate into PostgREST's RLS context, so `auth.uid()` resolves to NULL and RLS-scoped writes fail silently.
 
 **Edge Functions** (Deno, `supabase/functions/`):
@@ -128,7 +130,7 @@ All data is user-scoped via Row Level Security. Credentials live in `lib/config/
 - `temperature: 0` on both functions for deterministic coaching output
 - `computeDrawSummary()` injects deterministic `[FACT —` annotations into the user prompt — do not remove; these ground the model's hand-reading
 - Error responses return generic user-facing messages; raw exceptions are logged server-side only
-- Both functions store `cache_read_tokens` + `cache_write_tokens` per call (columns added to `ai_analyses` + `ai_hand_analyses`) for cost modeling
+- Both functions store `cache_read_tokens` + `cache_write_tokens` per call (columns added to `ai_analyses` + `ai_hand_analyses`) for cost modeling. **Note these cache-row token columns are OVERWRITTEN on re-analysis (`upsert onConflict`) — do not sum them for spend.** The accurate, append-only spend source is `ai_usage_log`, which has its own `input_tokens`/`output_tokens`/`cache_read_tokens`/`cache_write_tokens` (one row per call, never overwritten) written by `logUsage()` — accurate going forward only (pre-2026-06-03 calls weren't logged)
 
 ### CI/CD — GitHub Actions
 
