@@ -69,7 +69,7 @@ Start any new session on launch work with `/release-orchestrator` — it reads t
 
 ## Architecture
 
-**TableLab** is a Flutter poker bankroll tracker. Package name: `tablelab`. Dark Material 3 theme, seed color `#1B5E20`.
+**TableLab** is a Flutter poker bankroll tracker. Package name: `tablelab`. Dark Material 3 theme, seed color `#1B5E20`. The app is **operated by MagpiQ**, a registered Ontario sole proprietorship — the umbrella company; TableLab is the product. Privacy/about pages name MagpiQ as the data controller; user-facing contact is `privacy@`/`support@tablelab.app` (Cloudflare Email Routing on the tablelab.app domain). Company/vendor/billing contact is `admin@magpiq.com`.
 
 ### Navigation flow
 
@@ -77,9 +77,9 @@ Start any new session on launch work with `/release-orchestrator` — it reads t
 
 `AuthGate` uses `StreamBuilder<AuthState>` + `AnimatedSwitcher` to fade between `SplashScreen` (while auth resolves), `LoginScreen`, and `_OnboardingGate`. `_OnboardingGate` watches `profileProvider` — if `profile == null || !profile.hasSeenOnboarding` it shows `OnboardingScreen`, otherwise `MainNavigation`. The splash is shown until Supabase emits the first valid auth event — no minimum timer.
 
-`MainNavigation` is an `IndexedStack` with a `NavigationBar` (5 tabs: Dashboard, Sessions, Hands, Reads, Tournaments). The `AppDrawer` is mounted via `mainScaffoldKey` (a `GlobalKey<ScaffoldState>` exported from `app_drawer.dart`) so any screen can call `mainScaffoldKey.currentState?.openDrawer()`.
+`MainNavigation` is an `IndexedStack` with a `NavigationBar` (5 tabs: Dashboard, Sessions, Hands, Reads, Tools). The `AppDrawer` is mounted via `mainScaffoldKey` (a `GlobalKey<ScaffoldState>` exported from `app_drawer.dart`) so any screen can call `mainScaffoldKey.currentState?.openDrawer()`.
 
-Drawer sections: **Home** (Navigator.popUntil isFirst) → **Profile** → **APP** (Tournament Calendar, Settings, Help, About, Terms of Service, Data & Privacy, Feedback) → **Sign Out** (pinned). Screens pushed via Navigator.push must include `drawer: const AppDrawer()` on their Scaffold if they need drawer access; alternatively call `mainScaffoldKey.currentState?.openDrawer()` from a custom leading button.
+Drawer sections: **Home** (Navigator.popUntil isFirst) → **Profile** → **APP** (Tournament Calendar, Settings, Send Feedback, Help, About) → **LEGAL** (Terms of Service, Data & Privacy) → **Sign Out** (pinned). Send Feedback sits high in APP (not buried at the bottom) and the rarely-tapped legal docs are grouped under a LEGAL label. Screens pushed via Navigator.push must include `drawer: const AppDrawer()` on their Scaffold if they need drawer access; alternatively call `mainScaffoldKey.currentState?.openDrawer()` from a custom leading button.
 
 Bottom nav tabs: Dashboard, Sessions, Hands, Reads, **Tools**. The Tools tab hosts `ToolsScreen` — a `SegmentedButton` pill toggle switching between `EquityCalculatorScreen(showScaffold: false)` and `IcmCalculatorScreen(showScaffold: false)` via `IndexedStack` (state preserved on tab switch). Both calculator screens accept `showScaffold: bool` (default `true`) — when `false` they return body content only, no Scaffold/AppBar, suitable for embedding.
 
@@ -91,6 +91,8 @@ Bottom nav tabs: Dashboard, Sessions, Hands, Reads, **Tools**. The Tools tab hos
 
 Service classes are plain Dart, wrapped in `Provider<>` at the provider layer. All providers live in `lib/providers/`.
 
+**Service DI for tests:** `ProfileService` and `AiService` take an optional `SupabaseClient` constructor arg and resolve `Supabase.instance.client` **lazily** (via a getter), so they can be constructed/faked in widget tests without an initialized Supabase. Tests override the provider with a fake — see `test/screens/profile_screen_test.dart` (guards the regression where saving the profile reset `has_seen_onboarding` and bounced users into onboarding). `AiService.fetchUsageLast24h()` reads `ai_usage_log` for the Settings "AI USAGE" rows; its row-tally is extracted into the pure, unit-tested `AiUsage.fromRows`.
+
 | Provider | Type | Notes |
 |---|---|---|
 | `authUserIdProvider` | `StreamProvider<String?>` | emits current user ID on auth change |
@@ -101,6 +103,9 @@ Service classes are plain Dart, wrapped in `Provider<>` at the provider layer. A
 | `tournamentListingsProvider` | `FutureProvider.autoDispose` | |
 | `readsProvider` | `FutureProvider` | fetch-once via `fetchReads`; watches `authUserIdProvider`; in `reads_provider.dart` |
 | `profileProvider` | `FutureProvider` | in `profile_provider.dart`; watches `authUserIdProvider` |
+| `distinctStakesProvider` / `distinctLocationsProvider` | `Provider` | derived from sessions; feed filter/dropdown UIs |
+
+Service classes are exposed via plain `Provider<>`: `supabaseServiceProvider`, `handServiceProvider`, `aiServiceProvider` (in `providers.dart`), `readsServiceProvider` (`reads_provider.dart`), `profileServiceProvider` (`profile_provider.dart`) — override these in tests to inject fakes.
 
 **Cross-account scoping** — every user-scoped provider must `ref.watch(authUserIdProvider)` so it restarts when a different account signs in.
 
@@ -181,6 +186,10 @@ Board cards and other exact-hand players' cards are passed as `excludedCards`. S
 
 - **`lib/equity/`** — offline equity: card encoding (rank×4+suit), 7-card evaluator (brute-force 5-card combos), Monte Carlo simulator, GTO preflop ranges
 - **`lib/reads/`** — `insights_engine.dart` (rule-based coaching from player tags), `tag_definitions.dart`
+- **Session logging vs hand recording** — two distinct entry paths. `LogSessionScreen` (`log_session_screen.dart`) is the cash/tournament *session* form (date, game type, location, stakes, buy-in/cash-out); it takes an optional `session` arg for edit mode and is pushed from Dashboard, Sessions list, and `SessionDetailScreen`. `HandInputScreen` (`hand_input/`) records an individual *hand*. Don't conflate them.
+- **`lib/screens/hand_replayer/`** — `HandReplayerScreen`: street-by-street visual playback of a recorded `PokerHand` on a painted table (`_TablePainter`, `_Frame`/`_SeatState` model the animation). Launched from `HandsScreen` and `HandInputScreen`.
+- **`lib/screens/analytics_screen.dart`** — `AnalyticsScreen`: in-app charts/stat breakdowns over sessions+hands (distinct from PostHog product analytics). Uses a `SliverPersistentHeader` summary delegate.
+- **Import/Export** — three screens: `import_export_screen.dart` (hub — CSV/Excel export + entry to import) → `import_source_screen.dart` (source picker: 17 named app presets across mobile, desktop-HUD, and tournament-DB categories, plus a generic CSV/Excel option; auto-detects delimiter, handles xlsx/xls) → `import_mapping_screen.dart` (column mapping: 20 fields, only `date` + `buy_in` required, derives cash-out from a P&L column when absent). **Dedup key = `date + buy_in + cash_out`** (toggleable; an "overwrite" mode is the alternative). Reached from the Sessions AppBar, **Settings → DATA**, and the Sessions/Dashboard empty-state "Import from another app" CTAs. The importer does **not** invalidate providers — the call site does on return (e.g. the Hands/Sessions FAB).
 - **`lib/utils/helpers.dart`** — currency conversion, `parseBBFromStakes`, `calcBB100`, `formatPL`, `fieldSizeBucket`, all shared formatting
 
 ### Models
