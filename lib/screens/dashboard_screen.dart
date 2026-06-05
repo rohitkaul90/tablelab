@@ -9,6 +9,7 @@ import '../widgets/stat_card.dart';
 import '../widgets/session_tile.dart';
 import 'log_session_screen.dart';
 import 'session_detail_screen.dart';
+import 'import_source_screen.dart';
 import 'analytics_screen.dart';
 import 'ai_analysis/session_analysis_screen.dart';
 import '../providers/profile_provider.dart';
@@ -463,7 +464,7 @@ class _OverviewBody extends ConsumerWidget {
                       style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text(
-                    'Log your first session to start\ntracking your bankroll.',
+                    'Log your first session — or import your\nhistory from another app.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context)
@@ -481,6 +482,16 @@ class _OverviewBody extends ConsumerWidget {
                     ),
                     icon: const Icon(Icons.add),
                     label: const Text('Log Session'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ImportSourceScreen()),
+                    ),
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: const Text('Import from another app'),
                   ),
                 ],
               ),

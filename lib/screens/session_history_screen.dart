@@ -8,6 +8,7 @@ import '../widgets/session_tile.dart';
 import 'log_session_screen.dart';
 import 'session_detail_screen.dart';
 import 'import_export_screen.dart';
+import 'import_source_screen.dart';
 
 class SessionHistoryScreen extends ConsumerWidget {
   const SessionHistoryScreen({super.key});
@@ -83,7 +84,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                     Text(
                       hasFilter
                           ? 'Try adjusting or clearing your filters.'
-                          : 'Log your first session to start\ntracking your bankroll.',
+                          : 'Log your first session — or import your\nhistory from another app.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context)
@@ -101,7 +102,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                         icon: const Icon(Icons.clear),
                         label: const Text('Clear Filters'),
                       )
-                    else
+                    else ...[
                       FilledButton.icon(
                         onPressed: () => Navigator.push(
                           context,
@@ -111,6 +112,17 @@ class SessionHistoryScreen extends ConsumerWidget {
                         icon: const Icon(Icons.add),
                         label: const Text('Log Session'),
                       ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ImportSourceScreen()),
+                        ),
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: const Text('Import from another app'),
+                      ),
+                    ],
                   ],
                 ),
               ),

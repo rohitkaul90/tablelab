@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'import_export_screen.dart';
+import '../services/ai_service.dart';
 import '../providers/providers.dart';
 import '../providers/reads_provider.dart';
 import '../providers/profile_provider.dart';
@@ -16,17 +18,41 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _deleting = false;
   String _version = '…';
+  AiUsage? _usage;
+  bool _usageFailed = false;
 
   @override
   void initState() {
     super.initState();
     _loadVersion();
+    _loadUsage();
   }
 
   Future<void> _loadVersion() async {
     final info = await PackageInfo.fromPlatform();
     if (!mounted) return;
     setState(() => _version = '${info.version} (${info.buildNumber})');
+  }
+
+  Future<void> _loadUsage() async {
+    try {
+      final usage = await ref.read(aiServiceProvider).fetchUsageLast24h();
+      if (!mounted) return;
+      setState(() => _usage = usage);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _usageFailed = true);
+    }
+  }
+
+  String _usageLabel({required bool isSession}) {
+    if (_usageFailed) return '—';
+    final u = _usage;
+    if (u == null) return '…';
+    if (u.exempt) return 'Unlimited';
+    return isSession
+        ? '${u.session} / ${AiService.sessionDailyLimit}'
+        : '${u.hand} / ${AiService.handDailyLimit}';
   }
 
   Future<void> _deleteAccount() async {
@@ -132,6 +158,75 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    'AI USAGE',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.2,
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.auto_awesome_outlined),
+                  title: const Text('Session analyses'),
+                  trailing: Text(
+                    _usageLabel(isSession: true),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.auto_awesome_outlined),
+                  title: const Text('Hand analyses'),
+                  trailing: Text(
+                    _usageLabel(isSession: false),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    'Free daily limits, on a rolling 24-hour window.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    'DATA',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.2,
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.import_export),
+                  title: const Text('Import / Export Sessions'),
+                  subtitle: const Text(
+                    'Migrate from another app, or back up your data',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ImportExportScreen()),
                   ),
                 ),
                 const Divider(),

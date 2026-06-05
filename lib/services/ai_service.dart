@@ -4,9 +4,56 @@ import '../models/ai_analysis_model.dart';
 import '../models/player_read.dart';
 import '../models/hand_model.dart';
 import 'analytics_service.dart';
+import 'supabase_retry.dart';
+
+/// AI analysis usage within the rolling 24h rate-limit window.
+class AiUsage {
+  final int session;
+  final int hand;
+  final bool exempt;
+  const AiUsage(
+      {required this.session, required this.hand, required this.exempt});
+}
 
 class AiService {
   final _client = Supabase.instance.client;
+
+  // Must match the Edge Function constants (analyze-session / analyze-hand).
+  static const sessionDailyLimit = 5;
+  static const handDailyLimit = 20;
+  static const _exemptEmails = {'rhtk.1234@gmail.com'};
+
+  /// Counts the user's AI analyses in the same rolling 24h window the Edge
+  /// Functions use for rate-limiting. Cache hits don't log usage, so these
+  /// counts equal what actually counts against the daily limit.
+  Future<AiUsage> fetchUsageLast24h() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      return const AiUsage(session: 0, hand: 0, exempt: false);
+    }
+    final exempt = _exemptEmails.contains(user.email ?? '');
+    final since = DateTime.now()
+        .toUtc()
+        .subtract(const Duration(hours: 24))
+        .toIso8601String();
+    final rows = await withSupabaseRetry<List<Map<String, dynamic>>>(
+      () async => await _client
+          .from('ai_usage_log')
+          .select('function_name')
+          .eq('user_id', user.id)
+          .gte('called_at', since),
+    );
+    var session = 0;
+    var hand = 0;
+    for (final r in rows) {
+      if (r['function_name'] == 'analyze-session') {
+        session++;
+      } else if (r['function_name'] == 'analyze-hand') {
+        hand++;
+      }
+    }
+    return AiUsage(session: session, hand: hand, exempt: exempt);
+  }
 
   Future<SessionAnalysis> analyzeSession(
     SessionModel session, {
