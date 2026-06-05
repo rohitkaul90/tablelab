@@ -713,7 +713,8 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       if (_skipDuplicates && !_overwrite) {
         final existing = await service.fetchAllSessions();
         existingKeys = existing
-            .map((s) => '${s.date}_${s.buyIn.toStringAsFixed(2)}')
+            .map((s) =>
+                '${s.date}_${s.buyIn.toStringAsFixed(2)}_${s.cashOut.toStringAsFixed(2)}')
             .toSet();
       }
 
@@ -732,11 +733,6 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
         final buyInStr =
             cell(buyInIdx).replaceAll(RegExp(r'[\$,£€₹]'), '').trim();
         final buyIn = double.tryParse(buyInStr) ?? 0;
-
-        if (existingKeys != null) {
-          final key = '${dateStr}_${buyIn.toStringAsFixed(2)}';
-          if (existingKeys.contains(key)) continue;
-        }
 
         // Game type — infer tournament when tournament-specific columns are
         // mapped but the file has no explicit game_type column (e.g. Sharkscope,
@@ -836,6 +832,17 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
         }
 
         final double pl = cashOut - buyIn;
+
+        // Skip duplicates on (date + buy-in + cash-out). Checked here — not at
+        // the top of the loop — because it needs the derived cash-out. Adding
+        // the result makes two same-day, same-buy-in sessions with different
+        // outcomes distinct, while a true re-import still yields an identical
+        // key (cash-out round-trips as a number).
+        if (existingKeys != null &&
+            existingKeys.contains(
+                '${dateStr}_${buyIn.toStringAsFixed(2)}_${cashOut.toStringAsFixed(2)}')) {
+          continue;
+        }
 
         // Duration — handles "1h 30m", "1:30", "1:30:00", decimal hours, plain minutes
         int durationMinutes = 0;
@@ -1203,7 +1210,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Skip duplicate sessions'),
                   subtitle: const Text(
-                      'Skip rows whose date + buy-in match an existing session.'),
+                      'Skip rows whose date, buy-in, and cash-out match an existing session.'),
                   value: _skipDuplicates,
                   onChanged: _overwrite
                       ? null
