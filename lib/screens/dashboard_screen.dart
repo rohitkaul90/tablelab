@@ -360,6 +360,7 @@ class _OverviewBody extends ConsumerWidget {
             ),
             totalPL: stats.totalPL,
             currency: currency,
+            stakes: profile.preferredStakes,
           )
         else
           _SetBankrollPrompt(),
@@ -544,43 +545,65 @@ class _CurrentBankrollCard extends StatelessWidget {
   final double startingBankroll;
   final double totalPL;
   final String currency;
+  final String? stakes;
 
   const _CurrentBankrollCard({
     required this.startingBankroll,
     required this.totalPL,
     required this.currency,
+    this.stakes,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final currentBankroll = startingBankroll + totalPL;
     final isUp = currentBankroll >= startingBankroll;
+    final subtle =
+        theme.colorScheme.onSurface.withValues(alpha: 0.6);
+
+    // Growth % since the starting bankroll (guard divide-by-zero).
+    final growthPct =
+        startingBankroll > 0 ? (totalPL / startingBankroll) * 100 : null;
+    final growthStr = growthPct == null
+        ? ''
+        : '  ·  ${growthPct >= 0 ? '+' : ''}'
+            '${growthPct.toStringAsFixed(growthPct.abs() >= 10 ? 0 : 1)}%';
+
+    // Buy-ins available at the player's stakes (~100bb cash buy-in). Only shown
+    // when the stakes parse to a big blind — skips tournament / unset stakes.
+    final bb = stakes != null ? parseBBFromStakes(stakes!) : null;
+    final buyIns = (bb != null && bb > 0 && currentBankroll > 0)
+        ? (currentBankroll / (bb * 100)).floor()
+        : null;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         child: Column(
           children: [
-            Text('Current Bankroll',
-                style: Theme.of(context).textTheme.bodyMedium),
+            Text('Current Bankroll', style: theme.textTheme.bodyMedium),
             const SizedBox(height: 8),
             Text(
               formatPLWithCurrency(currentBankroll, currency),
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+              style: theme.textTheme.displayMedium?.copyWith(
                     color: isUp ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,
                   ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Started with ${formatPLWithCurrency(startingBankroll, currency)}  ·  '
-              '${totalPL >= 0 ? '+' : ''}${formatPLWithCurrency(totalPL, currency)} P&L',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
+              'Started with ${formatPLWithCurrency(startingBankroll, currency)}'
+              '$growthStr',
+              style: theme.textTheme.bodySmall?.copyWith(color: subtle),
             ),
+            if (buyIns != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                '≈ $buyIns buy-in${buyIns == 1 ? '' : 's'} at $stakes',
+                style: theme.textTheme.bodySmall?.copyWith(color: subtle),
+              ),
+            ],
           ],
         ),
       ),
