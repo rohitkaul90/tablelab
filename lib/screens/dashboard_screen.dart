@@ -153,7 +153,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           icon: const Icon(Icons.menu),
           onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
         ),
-        title: const Text('Dashboard'),
+        title: const Text('Stats'),
         actions: [
           if (_tabController.index == 0)
             sessionsAsync.maybeWhen(

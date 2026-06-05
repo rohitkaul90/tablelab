@@ -77,11 +77,11 @@ Start any new session on launch work with `/release-orchestrator` — it reads t
 
 `AuthGate` uses `StreamBuilder<AuthState>` + `AnimatedSwitcher` to fade between `SplashScreen` (while auth resolves), `LoginScreen`, and `_OnboardingGate`. `_OnboardingGate` watches `profileProvider` — if `profile == null || !profile.hasSeenOnboarding` it shows `OnboardingScreen`, otherwise `MainNavigation`. The splash is shown until Supabase emits the first valid auth event — no minimum timer.
 
-`MainNavigation` is an `IndexedStack` with a `NavigationBar` (5 tabs: Dashboard, Sessions, Hands, Reads, Tools). The `AppDrawer` is mounted via `mainScaffoldKey` (a `GlobalKey<ScaffoldState>` exported from `app_drawer.dart`) so any screen can call `mainScaffoldKey.currentState?.openDrawer()`.
+`MainNavigation` is an `IndexedStack` with a `NavigationBar` (5 tabs: Stats, Sessions, Hands, Reads, Tools — note the first tab is labelled **Stats** but its widget/screen class is `DashboardScreen`). The `AppDrawer` is mounted via `mainScaffoldKey` (a `GlobalKey<ScaffoldState>` exported from `app_drawer.dart`) so any screen can call `mainScaffoldKey.currentState?.openDrawer()`.
 
 Drawer sections: **Home** (Navigator.popUntil isFirst) → **Profile** → **APP** (Tournament Calendar, Settings, Send Feedback, Help, About) → **LEGAL** (Terms of Service, Data & Privacy) → **Sign Out** (pinned). Send Feedback sits high in APP (not buried at the bottom) and the rarely-tapped legal docs are grouped under a LEGAL label. Screens pushed via Navigator.push must include `drawer: const AppDrawer()` on their Scaffold if they need drawer access; alternatively call `mainScaffoldKey.currentState?.openDrawer()` from a custom leading button.
 
-Bottom nav tabs: Dashboard, Sessions, Hands, Reads, **Tools**. The Tools tab hosts `ToolsScreen` — a `SegmentedButton` pill toggle switching between `EquityCalculatorScreen(showScaffold: false)` and `IcmCalculatorScreen(showScaffold: false)` via `IndexedStack` (state preserved on tab switch). Both calculator screens accept `showScaffold: bool` (default `true`) — when `false` they return body content only, no Scaffold/AppBar, suitable for embedding.
+Bottom nav tabs: Stats (`DashboardScreen`), Sessions, Hands, Reads, **Tools**. The Tools tab hosts `ToolsScreen` — a `SegmentedButton` pill toggle switching between `EquityCalculatorScreen(showScaffold: false)` and `IcmCalculatorScreen(showScaffold: false)` via `IndexedStack` (state preserved on tab switch). Both calculator screens accept `showScaffold: bool` (default `true`) — when `false` they return body content only, no Scaffold/AppBar, suitable for embedding.
 
 `AuthGate` also handles `AuthChangeEvent.passwordRecovery` → shows `ResetPasswordScreen` (set new password + auto sign-out on success).
 

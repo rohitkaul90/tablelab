@@ -111,8 +111,8 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
       // Cap text scaling for the bottom bar so its labels stay single-line. On a
       // large system font setting (e.g. Samsung "Large" font / screen zoom) the
-      // longest label, "Dashboard", wrapped to two lines within its equal-width
-      // slot. Clamping to 1.0 keeps all five labels on one line.
+      // longest label wrapped to two lines within its equal-width slot. Clamping
+      // to 1.0 keeps all five labels on one line.
       bottomNavigationBar: MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.0,
         child: NavigationBar(
@@ -122,7 +122,7 @@ class _MainNavigationState extends State<MainNavigation> {
             NavigationDestination(
               icon: Icon(Icons.dashboard_outlined),
               selectedIcon: Icon(Icons.dashboard),
-              label: 'Dashboard',
+              label: 'Stats',
             ),
             NavigationDestination(
               icon: Icon(Icons.list_outlined),

@@ -73,10 +73,10 @@ const _gettingStarted = [
   ),
   _Faq(
     q: 'How do I navigate the app?',
-    a: 'The bottom navigation bar has five tabs: Dashboard, Sessions, Hands, Reads, and Calendar. '
+    a: 'The bottom navigation bar has five tabs: Stats, Sessions, Hands, Reads, and Tools '
+        '(Equity Calculator and ICM Deal Calculator). '
         'Tap the menu icon (☰) in the top-left of any screen to open the side drawer. '
-        'The drawer contains your profile, Help, About, Data & Privacy, and the Tools section '
-        '(Equity Calculator and ICM Deal Calculator).',
+        'The drawer contains your profile, Tournament Calendar, Settings, Help, About, and Data & Privacy.',
   ),
   _Faq(
     q: 'Is my data private?',
@@ -134,7 +134,7 @@ const _sessions = [
 const _analytics = [
   _Faq(
     q: 'Where do I find Analytics?',
-    a: 'Go to the Dashboard tab and tap the "Analytics" chip at the top. '
+    a: 'Go to the Stats tab and tap the "Analytics" chip at the top. '
         'The Analytics view lives alongside the Overview tab on the same screen.',
   ),
   _Faq(

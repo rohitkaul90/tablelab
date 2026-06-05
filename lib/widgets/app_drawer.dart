@@ -113,7 +113,7 @@ class AppDrawer extends ConsumerWidget {
                     ListTile(
                       leading: const Icon(Icons.home_outlined),
                       title: const Text('Home'),
-                      subtitle: const Text('Dashboard, sessions, hands & more',
+                      subtitle: const Text('Stats, sessions, hands & more',
                           style: TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.of(context)
