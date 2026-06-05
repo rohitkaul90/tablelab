@@ -173,6 +173,20 @@ class AppDrawer extends ConsumerWidget {
                       },
                     ),
                     ListTile(
+                      leading: const Icon(Icons.feedback_outlined),
+                      title: const Text('Send Feedback'),
+                      subtitle: const Text('Bugs, ideas, suggestions',
+                          style: TextStyle(fontSize: 11)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        launchUrl(Uri(
+                          scheme: 'mailto',
+                          path: 'feedback@tablelab.app',
+                          queryParameters: {'subject': 'TableLab Feedback'},
+                        ));
+                      },
+                    ),
+                    ListTile(
                       leading: const Icon(Icons.help_outline_rounded),
                       title: const Text('Help & FAQ'),
                       subtitle: const Text('Features, tips, common questions',
@@ -200,6 +214,7 @@ class AppDrawer extends ConsumerWidget {
                         );
                       },
                     ),
+                    _SectionLabel('LEGAL', theme),
                     ListTile(
                       leading: const Icon(Icons.gavel_outlined),
                       title: const Text('Terms of Service'),
@@ -226,20 +241,6 @@ class AppDrawer extends ConsumerWidget {
                           MaterialPageRoute(
                               builder: (_) => const DataPrivacyScreen()),
                         );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.feedback_outlined),
-                      title: const Text('Send Feedback'),
-                      subtitle: const Text('Bugs, ideas, suggestions',
-                          style: TextStyle(fontSize: 11)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        launchUrl(Uri(
-                          scheme: 'mailto',
-                          path: 'feedback@tablelab.app',
-                          queryParameters: {'subject': 'TableLab Feedback'},
-                        ));
                       },
                     ),
                   ],
