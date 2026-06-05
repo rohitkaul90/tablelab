@@ -360,7 +360,7 @@ class _OverviewBody extends ConsumerWidget {
             ),
             totalPL: stats.totalPL,
             currency: currency,
-            stakes: profile.preferredStakes,
+            stakes: _stakeForBuyIns(profile.preferredStakes, sessions),
           )
         else
           _SetBankrollPrompt(),
@@ -540,6 +540,22 @@ class _SetBankrollPrompt extends StatelessWidget {
 }
 
 // ── Current Bankroll card ─────────────────────────────────────────────────────
+
+/// Stake to size buy-ins against: the player's preferred stake if set and
+/// parseable, otherwise their most-played cash-game stake. Returns null when
+/// neither exists (e.g. tournament-only players) — the buy-ins line is hidden.
+String? _stakeForBuyIns(String? preferred, List<SessionModel> sessions) {
+  if (preferred != null && parseBBFromStakes(preferred) != null) {
+    return preferred;
+  }
+  final counts = <String, int>{};
+  for (final s in sessions) {
+    if (s.gameType != 'cash' || parseBBFromStakes(s.stakes) == null) continue;
+    counts[s.stakes] = (counts[s.stakes] ?? 0) + 1;
+  }
+  if (counts.isEmpty) return null;
+  return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+}
 
 class _CurrentBankrollCard extends StatelessWidget {
   final double startingBankroll;
