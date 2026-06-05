@@ -13,10 +13,32 @@ class AiUsage {
   final bool exempt;
   const AiUsage(
       {required this.session, required this.hand, required this.exempt});
+
+  /// Tallies ai_usage_log rows (each carrying a `function_name`) into a usage
+  /// summary. Pure function — unit-testable without Supabase.
+  factory AiUsage.fromRows(List<Map<String, dynamic>> rows,
+      {required bool exempt}) {
+    var session = 0;
+    var hand = 0;
+    for (final r in rows) {
+      if (r['function_name'] == 'analyze-session') {
+        session++;
+      } else if (r['function_name'] == 'analyze-hand') {
+        hand++;
+      }
+    }
+    return AiUsage(session: session, hand: hand, exempt: exempt);
+  }
 }
 
 class AiService {
-  final _client = Supabase.instance.client;
+  /// [client] is injectable for tests; production uses the global Supabase
+  /// client, resolved lazily so the service can be constructed without an
+  /// initialized Supabase instance.
+  AiService([SupabaseClient? client]) : _injected = client;
+
+  final SupabaseClient? _injected;
+  SupabaseClient get _client => _injected ?? Supabase.instance.client;
 
   // Must match the Edge Function constants (analyze-session / analyze-hand).
   static const sessionDailyLimit = 5;
@@ -43,16 +65,7 @@ class AiService {
           .eq('user_id', user.id)
           .gte('called_at', since),
     );
-    var session = 0;
-    var hand = 0;
-    for (final r in rows) {
-      if (r['function_name'] == 'analyze-session') {
-        session++;
-      } else if (r['function_name'] == 'analyze-hand') {
-        hand++;
-      }
-    }
-    return AiUsage(session: session, hand: hand, exempt: exempt);
+    return AiUsage.fromRows(rows, exempt: exempt);
   }
 
   Future<SessionAnalysis> analyzeSession(

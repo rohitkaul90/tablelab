@@ -3,7 +3,13 @@ import '../models/profile_model.dart';
 import 'supabase_retry.dart';
 
 class ProfileService {
-  final _client = Supabase.instance.client;
+  /// [client] is injectable for tests; production uses the global Supabase
+  /// client, resolved lazily so the service can be constructed (and faked)
+  /// without an initialized Supabase instance.
+  ProfileService([SupabaseClient? client]) : _injected = client;
+
+  final SupabaseClient? _injected;
+  SupabaseClient get _client => _injected ?? Supabase.instance.client;
 
   String? get uid => _client.auth.currentUser?.id;
   String? get email => _client.auth.currentUser?.email;
