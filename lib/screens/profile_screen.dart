@@ -24,6 +24,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _loading = true;
   bool _saving = false;
   String? _uid;
+  // Preserve the existing onboarding flag so saving the profile never resets it
+  // (a fresh ProfileModel defaults hasSeenOnboarding to false, which would bounce
+  // the user back into the onboarding flow via _OnboardingGate). Defaults to true
+  // since any user on this screen has already passed onboarding.
+  bool _hasSeenOnboarding = true;
 
   @override
   void initState() {
@@ -56,6 +61,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _sincCtrl.text = profile.playingSince?.toString() ?? '';
       _rateCtrl.text = profile.hourlyRateGoal?.toString() ?? '';
       _bankrollCtrl.text = profile.startingBankroll?.toString() ?? '';
+      _hasSeenOnboarding = profile.hasSeenOnboarding;
       setState(() {
         _preferredGame = profile.preferredGame;
         _bankrollCurrency = profile.startingBankrollCurrency;
@@ -84,6 +90,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         hourlyRateGoal: double.tryParse(_rateCtrl.text.trim()),
         startingBankroll: double.tryParse(_bankrollCtrl.text.trim()),
         startingBankrollCurrency: _bankrollCurrency,
+        hasSeenOnboarding: _hasSeenOnboarding,
       );
       await ref.read(profileServiceProvider).upsertProfile(profile);
       ref.invalidate(profileProvider);
