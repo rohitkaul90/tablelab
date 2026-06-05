@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.pokertracker" "\0"
+            VALUE "CompanyName", "MagpiQ" "\0"
             VALUE "FileDescription", "poker_tracker" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "poker_tracker" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.pokertracker. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 MagpiQ. All rights reserved." "\0"
             VALUE "OriginalFilename", "poker_tracker.exe" "\0"
             VALUE "ProductName", "poker_tracker" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
