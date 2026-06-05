@@ -1504,7 +1504,7 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
           const Icon(Icons.check_circle_outline,
               size: 64, color: Color(0xFF66BB6A)),
           const SizedBox(height: 16),
-          const Text('Hand Recorded!',
+          const Text('Hand recorded',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
