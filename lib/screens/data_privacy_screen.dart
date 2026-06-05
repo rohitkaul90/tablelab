@@ -51,14 +51,16 @@ class DataPrivacyScreen extends StatelessWidget {
                 'opt-in — your data is never sent unless you tap "Analyse".',
           ),
           _Section(
-            icon: Icons.block_outlined,
-            title: 'No tracking, no ads',
+            icon: Icons.insights_outlined,
+            title: 'Analytics & ads',
             body:
-                'TableLab does not use advertising SDKs or third-party data '
-                'brokers. Your poker data is yours. We do not sell, rent, or '
-                'share your personal information with any third party for '
-                'marketing purposes. We may add anonymous usage analytics in '
-                'future — this page will be updated when that occurs.',
+                'TableLab uses PostHog for anonymous product usage analytics — '
+                'which features are used and how often — to help us improve the '
+                'app. These events are not linked to your account identity, and '
+                'analytics are disabled on Windows. TableLab does not use '
+                'advertising SDKs or third-party data brokers. Your poker data '
+                'is yours. We do not sell, rent, or share your personal '
+                'information with any third party for marketing purposes.',
           ),
           _Section(
             icon: Icons.manage_accounts_outlined,
@@ -101,7 +103,7 @@ class DataPrivacyScreen extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           Text(
-            'Last updated: May 2026',
+            'Last updated: June 2026',
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.outline),
             textAlign: TextAlign.center,
