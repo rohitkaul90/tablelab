@@ -217,6 +217,7 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
 
   // ── saved hand ───────────────────────────────────────────────────────────────
   PokerHand? _savedHand;
+  bool _saving = false;
 
   Set<String> get _usedCards {
     final used = <String>{};
@@ -524,6 +525,9 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
 
   // ── save ─────────────────────────────────────────────────────────────────────
   Future<void> _saveHand() async {
+    if (_saving) return;
+    _saving = true;
+
     final updatedPlayers = _players.map((p) {
       final cards = _showdownCards[p.seatIndex];
       if (cards != null) return p.copyWith(holeCards: cards);
@@ -533,20 +537,29 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
       return p;
     }).toList();
 
-    final service = ref.read(handServiceProvider);
-    final hand = await service.saveHand(
-      tableSetup: _setup,
-      players: updatedPlayers,
-      streets: _completedStreets,
-      sessionId: _selectedSessionId,
-      tournamentStage: _isTournamentHand ? _tournamentStage : null,
-    );
-    AnalyticsService.handRecorded(isTournament: _isTournamentHand);
-    if (!mounted) return;
-    setState(() {
-      _savedHand = hand;
-      _step = _Step.done;
-    });
+    try {
+      final service = ref.read(handServiceProvider);
+      final hand = await service.saveHand(
+        tableSetup: _setup,
+        players: updatedPlayers,
+        streets: _completedStreets,
+        sessionId: _selectedSessionId,
+        tournamentStage: _isTournamentHand ? _tournamentStage : null,
+      );
+      AnalyticsService.handRecorded(isTournament: _isTournamentHand);
+      if (!mounted) return;
+      setState(() {
+        _savedHand = hand;
+        _step = _Step.done;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save hand. Please try again.')),
+      );
+    } finally {
+      _saving = false;
+    }
   }
 
   // ── card picker ───────────────────────────────────────────────────────────────
