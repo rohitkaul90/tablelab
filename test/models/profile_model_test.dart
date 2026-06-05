@@ -156,4 +156,29 @@ void main() {
       expect(updated.startingBankrollCurrency, equals('USD'));
     });
   });
+
+  // ── Regression guard: onboarding-flag footgun ────────────────────────────────
+
+  group('hasSeenOnboarding default (Save Profile regression guard)', () {
+    test('a freshly-constructed ProfileModel defaults hasSeenOnboarding to false',
+        () {
+      // ProfileScreen._save() once built a fresh ProfileModel from the form
+      // fields WITHOUT carrying the loaded hasSeenOnboarding, so it defaulted to
+      // false; toUpsert() then wrote has_seen_onboarding=false and the
+      // profileProvider invalidation bounced users into onboarding. Any code
+      // building a ProfileModel for upsert MUST pass the real loaded value.
+      const p = ProfileModel(id: 'x');
+      expect(p.hasSeenOnboarding, isFalse);
+    });
+
+    test('toUpsert always carries has_seen_onboarding (so it must be set right)',
+        () {
+      // Because toUpsert() unconditionally writes the column, a wrong value
+      // overwrites the stored flag — this is why the fresh-model default bit us.
+      const seen = ProfileModel(id: 'x', hasSeenOnboarding: true);
+      const unseen = ProfileModel(id: 'x', hasSeenOnboarding: false);
+      expect(seen.toUpsert()['has_seen_onboarding'], isTrue);
+      expect(unseen.toUpsert()['has_seen_onboarding'], isFalse);
+    });
+  });
 }
