@@ -351,20 +351,27 @@ class _OverviewBody extends ConsumerWidget {
         const SizedBox(height: 12),
 
         // ── Current Bankroll card (or prompt to set it) ───────────────────
-        if (profile?.startingBankroll != null)
-          _CurrentBankrollCard(
-            startingBankroll: convertCurrency(
-              profile!.startingBankroll!,
-              profile.startingBankrollCurrency,
-              currency,
-            ),
-            totalPL: stats.totalPL,
-            currency: currency,
-            stakes: _stakeForBuyIns(profile.preferredStakes, sessions),
-          )
-        else
-          _SetBankrollPrompt(),
-        const SizedBox(height: 12),
+        // Bankroll is a single overall figure (starting bankroll + total P&L
+        // across all game types), so it only makes sense in the unfiltered
+        // "All" view. Under the Cash/Tournament filter, startingBankroll +
+        // game-filtered P&L is neither the true bankroll nor a per-game one,
+        // so the card is hidden.
+        if (gameFilter == null) ...[
+          if (profile?.startingBankroll != null)
+            _CurrentBankrollCard(
+              startingBankroll: convertCurrency(
+                profile!.startingBankroll!,
+                profile.startingBankrollCurrency,
+                currency,
+              ),
+              totalPL: stats.totalPL,
+              currency: currency,
+              stakes: _stakeForBuyIns(profile.preferredStakes, sessions),
+            )
+          else
+            _SetBankrollPrompt(),
+          const SizedBox(height: 12),
+        ],
 
         // ── Stat cards grid ────────────────────────────────────────────────
         LayoutBuilder(
