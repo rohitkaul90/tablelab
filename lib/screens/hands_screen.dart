@@ -5,6 +5,7 @@ import '../models/hand_model.dart';
 import '../providers/providers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/playing_card_widget.dart';
+import '../widgets/ai_usage_pill.dart';
 import 'hand_input/hand_input_screen.dart';
 import 'hand_replayer/hand_replayer_screen.dart';
 import 'ai_analysis/hand_analysis_screen.dart';
@@ -49,9 +50,19 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
         title: const Text('Hands'),
         centerTitle: true,
       ),
-      body: handsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
+      body: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: AiUsagePill(kind: AiAnalysisKind.hand),
+            ),
+          ),
+          Expanded(
+            child: handsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text('Error loading hands: $e',
@@ -67,22 +78,23 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.style_outlined, size: 72, color: Colors.white12),
+                  Icon(Icons.style_outlined,
+                      size: 72,
+                      color: Theme.of(context).colorScheme.outlineVariant),
                   const SizedBox(height: 16),
                   Text(
                     'No hands recorded yet',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(color: Colors.white54),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Tap + to record and replay a hand',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.white38),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.75)),
                   ),
                 ],
               ),
@@ -97,6 +109,9 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
             ),
           );
         },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_hands',
@@ -210,17 +225,23 @@ class _HandTile extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         '${hand.streetReached} · ${hand.players.length} players',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white60,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.60),
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         fmt.format(hand.playedAt.toLocal()),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Colors.white38,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.75),
                         ),
                       ),
                     ],
@@ -246,7 +267,10 @@ class _HandTile extends StatelessWidget {
 
                 IconButton(
                   icon: const Icon(Icons.auto_awesome, size: 18),
-                  color: Colors.white38,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.75),
                   tooltip: 'AI Coaching',
                   padding: EdgeInsets.zero,
                   constraints:
@@ -258,7 +282,8 @@ class _HandTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
+                Icon(Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.outline, size: 20),
               ],
             ),
           ),
