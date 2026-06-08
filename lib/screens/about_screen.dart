@@ -67,7 +67,7 @@ class AboutScreen extends StatelessWidget {
                   icon: Icons.bar_chart_rounded,
                   color: Colors.indigo,
                   title: 'Deep Analytics',
-                  body: 'P&L over time, win rates by stakes, location, game type, day of week, '
+                  body: 'Profit over time, win rates by stakes, location, game type, day of week, '
                       'and time of day. Statistical recommendations that flag where you\'re actually '
                       'making money — not where you think you are.',
                 ),

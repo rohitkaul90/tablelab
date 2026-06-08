@@ -23,7 +23,7 @@ const _appFields = [
   _AppField('stakes',           'Stakes',                 hint: 'e.g. 1/2, 2/5'),
   _AppField('cash_out',         'Cash-out'),
   _AppField('prize_won',        'Prize Won'),
-  _AppField('profit_loss',      'P&L',                    hint: 'used to derive cash-out if absent'),
+  _AppField('profit_loss',      'Profit',                 hint: 'used to derive cash-out if absent'),
   _AppField('duration_minutes', 'Duration (minutes)'),
   _AppField('duration_hours',   'Duration (hours)',       hint: 'also accepts "1h 30m", "1:30" etc.'),
   _AppField('start_time',       'Start Time'),
@@ -629,7 +629,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
           (prizeWonIdx >= 0 && cell(prizeWonIdx).isNotEmpty) ||
           (plIdx >= 0 && cell(plIdx).isNotEmpty);
       if (!hasResult && issues.length < 5) {
-        issues.add(_RowIssue(i + 2, 'No result column — will record \$0 P&L'));
+        issues.add(_RowIssue(i + 2, 'No result column — will record \$0 profit'));
       }
 
       if (dateMin == null || dateStr.compareTo(dateMin) < 0) dateMin = dateStr;
@@ -659,8 +659,8 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
         builder: (_) => AlertDialog(
           title: const Text('No result column mapped'),
           content: const Text(
-            'You haven\'t mapped Cash-out, Prize Won, or P&L.\n\n'
-            'All imported sessions will show \$0 P&L.\n\n'
+            'You haven\'t mapped Cash-out, Prize Won, or Profit.\n\n'
+            'All imported sessions will show \$0 profit.\n\n'
             'Import anyway?',
           ),
           actions: [

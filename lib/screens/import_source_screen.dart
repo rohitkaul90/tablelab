@@ -267,7 +267,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
                     _SectionHeader('Desktop HUD Software'),
                     const SizedBox(height: 4),
                     Text(
-                      'These apps export P&L (not cash-out). Cash-out is derived automatically.',
+                      'These apps export profit (not cash-out). Cash-out is derived automatically.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.outline,
                           ),

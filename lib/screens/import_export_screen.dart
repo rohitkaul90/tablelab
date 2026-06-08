@@ -219,7 +219,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
                       Text(
                         '• Select your source app for automatic column mapping\n'
                         '• Only Date and Buy-in are required — everything else is optional\n'
-                        '• If your file has only a P&L column (no Cash-out), cash-out is derived automatically\n'
+                        '• If your file has only a Profit column (no Cash-out), cash-out is derived automatically\n'
                         '• Duration accepts minutes, decimal hours, "1h 30m", "1:30", and more\n'
                         '• Duplicate sessions (same date + buy-in + cash-out) are skipped by default',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
