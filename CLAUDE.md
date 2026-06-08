@@ -69,7 +69,7 @@ Start any new session on launch work with `/release-orchestrator` — it reads t
 
 ## Architecture
 
-**TableLab** is a Flutter poker bankroll tracker. Package name: `tablelab`. Dark Material 3 theme, seed color `#1B5E20`. The app is **operated by MagpiQ**, a registered Ontario sole proprietorship — the umbrella company; TableLab is the product. Privacy/about pages name MagpiQ as the data controller; user-facing contact is `privacy@`/`support@tablelab.app` (Cloudflare Email Routing on the tablelab.app domain). Company/vendor/billing contact is `admin@magpiq.com`.
+**TableLab** is a Flutter poker bankroll tracker. Package name: `tablelab`. Material 3, seed color `#1B5E20`, with **light + dark themes** and a System/Light/Dark toggle (see Theming below). The app is **operated by MagpiQ**, a registered Ontario sole proprietorship — the umbrella company; TableLab is the product. Privacy/about pages name MagpiQ as the data controller; user-facing contact is `privacy@`/`support@tablelab.app` (Cloudflare Email Routing on the tablelab.app domain). Company/vendor/billing contact is `admin@magpiq.com`.
 
 ### Navigation flow
 
@@ -87,6 +87,12 @@ Bottom nav tabs: Stats (`DashboardScreen`), Sessions, Hands, Reads, **Tools**. T
 
 **Email confirmation** — `signUp` in `login_screen.dart` sets `emailRedirectTo: 'https://tablelab.app/confirmed.html'` for **all** platforms. It must be an `https` URL, never the `io.supabase.pokertracker://` custom scheme — browsers/email clients can't open a custom scheme, which renders a blank page. `web/confirmed.html` is a static page (deployed to `docs/`) that shows a verified message and, on mobile, an "Open the TableLab app" deep-link button (the deep link is still used for Google OAuth and the button). The redirect URL must be allowlisted in Supabase → Authentication → URL Configuration (`https://tablelab.app/**`).
 
+### Theming
+
+`lib/theme/app_theme.dart` defines `AppTheme.light` / `AppTheme.dark` (both `ColorScheme.fromSeed` off `#1B5E20`; light overrides `scaffoldBackgroundColor` to a soft off-white `#F6F8F4`). `MaterialApp` in `main.dart` wires `theme`/`darkTheme`/`themeMode`. Theme mode is held by `themeModeProvider` (`StateNotifierProvider<ThemeModeNotifier, ThemeMode>` in `theme_provider.dart`) and **persisted to `shared_preferences`, not the Supabase profile** — it must apply at launch *before* auth resolves, so `main()` loads prefs and overrides `sharedPreferencesProvider` before `runApp`.
+
+**Immersive poker-table screens stay dark in both modes.** `HandInputScreen` and `HandReplayerScreen` wrap their build in `Theme(data: AppTheme.dark, …)` — a green-felt table reads wrong with a light AppBar, and it bounds the color refactor. `AppTheme.dark`/`.light` are cached `static final` (not getters) because the replayer rebuilds every animation frame and `fromSeed` is non-trivial. When adding chrome, use `Theme.of(context).colorScheme` tokens (`onSurfaceVariant`, `outline`, `outlineVariant`) — not hardcoded `Colors.whiteNN`, which vanish on light.
+
 ### State management — Riverpod
 
 Service classes are plain Dart, wrapped in `Provider<>` at the provider layer. All providers live in `lib/providers/`.
@@ -100,6 +106,10 @@ Service classes are plain Dart, wrapped in `Provider<>` at the provider layer. A
 | `filteredSessionsProvider` | `Provider` | derived from sessions + filter |
 | `filterProvider` | `StateProvider<SessionFilter>` | global session filter state |
 | `handsProvider` | `FutureProvider` | fetch-once; watches `authUserIdProvider` |
+| `handFilterProvider` | `StateProvider<HandFilter>` | Hands-tab funnel filter (game type, min pot in **bb**, street, stakes, table size, hero position, dates); applied client-side in `HandsScreen` |
+| `aiUsageProvider` | `FutureProvider<AiUsage>` | 24h AI usage; feeds the contextual `AiUsagePill` indicators; **invalidate after each AI analysis** |
+| `themeModeProvider` | `StateNotifierProvider<…, ThemeMode>` | System/Light/Dark, persisted to `shared_preferences` (see Theming) |
+| `sharedPreferencesProvider` | `Provider` | throws until overridden in `main()` after prefs load |
 | `tournamentListingsProvider` | `FutureProvider.autoDispose` | |
 | `readsProvider` | `FutureProvider` | fetch-once via `fetchReads`; watches `authUserIdProvider`; in `reads_provider.dart` |
 | `profileProvider` | `FutureProvider` | in `profile_provider.dart`; watches `authUserIdProvider` |
@@ -115,7 +125,7 @@ Service classes are exposed via plain `Provider<>`: `supabaseServiceProvider`, `
 
 All data is user-scoped via Row Level Security. Credentials live in `lib/config/supabase_config.dart` (anon key — public by design; file is gitignored). All Supabase calls go through `withSupabaseRetry<T>()` (`lib/services/supabase_retry.dart`), which retries once on PGRST303 (JWT clock-skew error).
 
-**Tables:** `sessions`, `hands` (JSONB `hand_data`, nullable `session_id`), `player_reads`, `player_read_notes`, `rake_presets`, `profiles` (includes `starting_bankroll numeric`, `starting_bankroll_currency text`), `ai_analyses`, `ai_hand_analyses`, `ai_usage_log`, `tournament_listings`.
+**Tables:** `sessions` (incl. `table_size int` — added `20260608` via SQL editor), `hands` (JSONB `hand_data`, nullable `session_id`), `player_reads`, `player_read_notes`, `rake_presets`, `profiles` (includes `starting_bankroll numeric`, `starting_bankroll_currency text`), `ai_analyses`, `ai_hand_analyses`, `ai_usage_log`, `tournament_listings`.
 
 **Note:** `sessions`, `hands`, and `rake_presets` were created directly in the Supabase dashboard before the migration workflow was established — their DDL is not in `supabase/migrations/`. All other tables have migration files.
 
@@ -189,18 +199,22 @@ Board cards and other exact-hand players' cards are passed as `excludedCards`. S
 - **Session logging vs hand recording** — two distinct entry paths. `LogSessionScreen` (`log_session_screen.dart`) is the cash/tournament *session* form (date, game type, location, stakes, buy-in/cash-out); it takes an optional `session` arg for edit mode and is pushed from Dashboard, Sessions list, and `SessionDetailScreen`. `HandInputScreen` (`hand_input/`) records an individual *hand*. Don't conflate them.
 - **`lib/screens/hand_replayer/`** — `HandReplayerScreen`: street-by-street visual playback of a recorded `PokerHand` on a painted table (`_TablePainter`, `_Frame`/`_SeatState` model the animation). Launched from `HandsScreen` and `HandInputScreen`.
 - **`lib/screens/analytics_screen.dart`** — `AnalyticsScreen`: in-app charts/stat breakdowns over sessions+hands (distinct from PostHog product analytics). Uses a `SliverPersistentHeader` summary delegate.
-- **Import/Export** — three screens: `import_export_screen.dart` (hub — CSV/Excel export + entry to import) → `import_source_screen.dart` (source picker: 17 named app presets across mobile, desktop-HUD, and tournament-DB categories, plus a generic CSV/Excel option; auto-detects delimiter, handles xlsx/xls) → `import_mapping_screen.dart` (column mapping: 20 fields, only `date` + `buy_in` required, derives cash-out from a P&L column when absent). **Dedup key = `date + buy_in + cash_out`** (toggleable; an "overwrite" mode is the alternative). Reached from the Sessions AppBar, **Settings → DATA**, and the Sessions/Dashboard empty-state "Import from another app" CTAs. The importer does **not** invalidate providers — the call site does on return (e.g. the Hands/Sessions FAB).
-- **`lib/utils/helpers.dart`** — currency conversion, `parseBBFromStakes`, `calcBB100`, `formatPL`, `fieldSizeBucket`, all shared formatting
+- **Hands tab** — `HandsScreen` lists recorded hands with a funnel filter (`handFilterProvider` / `HandFilter`, applied client-side; distinct chip options derived from the loaded hands). Tile layout uses a `LayoutBuilder` that **measures text width and sizes the cards to fill the leftover space** — the info text has no ellipsis (can't truncate) and hole + community cards share one computed size. Per-hand actions (AI Coaching / Delete) live in a `⋮` overflow menu; tapping the tile opens the replayer. `AiUsagePill` shows the contextual AI quota on this tab, the dashboard coaching card, and session detail.
+- **Import/Export** — three screens: `import_export_screen.dart` (hub — CSV/Excel export + entry to import) → `import_source_screen.dart` (source picker: 17 named app presets across mobile, desktop-HUD, and tournament-DB categories, plus a generic CSV/Excel option; auto-detects delimiter, handles xlsx/xls) → `import_mapping_screen.dart` (column mapping: 20 fields, only `date` + `buy_in` required, derives cash-out from a "Profit" column when absent). **Dedup key = `date + buy_in + cash_out`** (toggleable; an "overwrite" mode is the alternative). Reached from the Sessions AppBar, **Settings → DATA**, and the Sessions/Dashboard empty-state "Import from another app" CTAs. The importer does **not** invalidate providers — the call site does on return (e.g. the Hands/Sessions FAB).
+- **`lib/utils/helpers.dart`** — currency conversion, `parseBBFromStakes`, `calcBB100`, `formatPL`, `fieldSizeBucket`, `tableSizeLabel`, all shared formatting. **Terminology:** user-facing copy says **"Profit"**, never "P&L" (standardized across Analytics/Help/About/import).
 
 ### Models
 
-`SessionModel` — `fromMap()` (snake_case DB → camelCase Dart).  
-`PokerHand` — `fromJson()`/`toJson()` (entire hand serialized as JSONB); has optional `tournamentStage` and `TableSetup.ante` fields.  
+`SessionModel` — `fromMap()` (snake_case DB → camelCase Dart); includes optional `tableSize`.  
+`PokerHand` — `fromJson()`/`toJson()` (entire hand serialized as JSONB); fields include optional `tournamentStage`, `TableSetup.ante`, and an explicit **`isTournament` bool**. `isTournament` is the reliable game-type signal (set from the recording toggle / locked session value); legacy hands without it infer `tournamentStage != null || ante != null` in `fromJson`. `PokerHand.finalPot` derives the pot in chips (sum of each seat's max contribution per street — mirrors the replayer).  
+`TableSetup` supports **2–9 seats** via `positionLabels(seats)` (heads-up → 9-max); heads-up is special-cased (button posts the SB; BB acts first postflop). See `hand_filter.dart` for `HandFilter`/`handStakesKey`/`handHeroPosition`.  
 All models are plain immutable classes — no code generation.
 
 ### Hand recording
 
-`HandInputScreen` supports tournament hands: `isTournamentSession` param shows stage dropdown, ante field, relabels stakes as "Blind Level". All-in runout: `_allInSeats` persists across streets; `_isAllInRunout` getter auto-deals remaining streets when ≤1 non-all-in player remains. Undo stack (`_HandSnapshot`) captures state before each action.
+`HandInputScreen` supports tournament hands: `isTournamentSession` param shows stage dropdown, ante field, relabels stakes as "Blind Level". Table size is a **2–9 dropdown** (not a 6/9 toggle). All-in runout: `_allInSeats` persists across streets; `_isAllInRunout` getter auto-deals remaining streets when ≤1 non-all-in player remains. Undo stack (`_HandSnapshot`) captures state before each action. The save persists explicit `isTournament`.
+
+**Recording from a session** (`prefilledSessionId != null`, launched from `SessionDetailScreen`): game type is inherited and **locked** (read-only label, no toggle); session stakes pre-fill as an **editable** default (any value, incl. non-presets) since the session's stakes can't capture a straddle / 3-blind game. Two session pickers show date · game type · stakes · **location**: `_SessionPickerTile` (recording) and the replayer's `_SessionLinkSheet` (linking a pre-recorded hand, which also shows profit). `SessionDetailScreen` lists the hands linked to that session (filtered `handsProvider` by `sessionId`).
 
 ### Critical patterns
 
@@ -229,7 +243,7 @@ All models are plain immutable classes — no code generation.
 - `docs/CNAME` must contain `tablelab.app` — preserve it on every deploy
 - `docs/.nojekyll` must exist — recreate after every wipe
 - PowerShell for the flutter build command; bash for the file copy
-- Static pages in `web/` are copied into the build and served at the root: `privacy.html` (`/privacy`, required by Apple review), `about.html` (`/about`), `confirmed.html` (`/confirmed.html`, the email-verification landing page — see Email confirmation above). Match their dark theme (`#111811` bg, `#4CAF50` accents) when adding more.
+- Static pages in `web/` are copied into the build and served at the root. They form a **cohesive marketing site** sharing one stylesheet (`web/site.css`, served at `/site.css`) with a common sticky header-nav + footer: `about.html` (`/about`) is the **landing page** (hero, features, FAQ), `privacy.html` (`/privacy`, required by Apple review), `terms.html` (`/terms`), `confirmed.html` (`/confirmed.html`, the email-verification landing page — see Email confirmation above). The **Flutter app stays at `/`** — don't move it (would break OAuth/email redirects + base-href); keep `/about` and `/privacy` URLs stable (store-listing). Match the dark theme (`#111811` bg, `#4CAF50` accents) and link `/site.css` when adding pages.
 
 ### Android build
 
