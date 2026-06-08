@@ -372,6 +372,7 @@ class _SessionHandTile extends StatelessWidget {
     final theme = Theme.of(context);
     final hero = hand.hero;
     final fmt = DateFormat('MMM d · h:mm a');
+    final potStr = NumberFormat('#,###').format(hand.finalPot);
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -404,11 +405,13 @@ class _SessionHandTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${hand.streetReached} · ${hand.players.length} players',
+                      'Pot \$$potStr · ${hand.streetReached}',
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -428,7 +431,7 @@ class _SessionHandTile extends StatelessWidget {
                       .take(3)
                       .map((c) => Padding(
                             padding: const EdgeInsets.only(left: 2),
-                            child: PlayingCard(card: c, width: 18, height: 25),
+                            child: PlayingCard(card: c, width: 26, height: 36),
                           ))
                       .toList(),
                 ),

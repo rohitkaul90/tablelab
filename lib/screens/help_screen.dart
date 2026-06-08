@@ -101,7 +101,7 @@ const _sessions = [
   _Faq(
     q: 'What is Rake and why should I track it?',
     a: 'Rake is the fee the house takes for running the game. '
-        'It\'s recorded for informational purposes only — it doesn\'t change your P&L, but it '
+        'It\'s recorded for informational purposes only — it doesn\'t change your profit, but it '
         'helps you understand the true cost of play at different venues. '
         'You can save rake presets per location so you never have to re-enter the same value.',
   ),
@@ -138,7 +138,7 @@ const _analytics = [
         'The Analytics view lives alongside the Overview tab on the same screen.',
   ),
   _Faq(
-    q: 'What is the P&L Over Time chart?',
+    q: 'What is the Profit Over Time chart?',
     a: 'This chart tracks your cumulative profit and loss over time. '
         'A line trending upward means you\'re profitable — every session adds (or subtracts) from your running total. '
         'Switch between Cumulative, Weekly, Monthly, and Yearly views using the chips above the chart.',
@@ -153,7 +153,7 @@ const _analytics = [
     q: 'What are the Insight Cards?',
     a: 'Insight Cards break down your performance by different dimensions: stakes, buy-in level, '
         'game type, day of week, time of day, session length, table quality, and location. '
-        'Each card shows your P&L and win rate for that segment so you can see exactly where you perform best.',
+        'Each card shows your profit and win rate for that segment so you can see exactly where you perform best.',
   ),
   _Faq(
     q: 'What are Recommendations?',

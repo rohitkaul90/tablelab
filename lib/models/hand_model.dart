@@ -244,6 +244,12 @@ class PokerHand {
   final String? notes;
   final String? tournamentStage;
 
+  /// Whether this is a tournament hand. Set explicitly from the recording
+  /// toggle (or locked from the session when recording from one) so game type
+  /// is reliable — `tournamentStage` alone is optional and can't distinguish a
+  /// stage-less tournament hand from a cash hand.
+  final bool isTournament;
+
   const PokerHand({
     required this.id,
     required this.userId,
@@ -254,6 +260,7 @@ class PokerHand {
     required this.streets,
     this.notes,
     this.tournamentStage,
+    this.isTournament = false,
   });
 
   HandPlayer? get hero => players.where((p) => p.isHero).firstOrNull;
@@ -268,6 +275,24 @@ class PokerHand {
     return 'River';
   }
 
+  /// Final pot size in chips — the sum across streets of each seat's largest
+  /// contribution on that street. Mirrors the running-pot math the replayer
+  /// uses, so list tiles and the replay agree.
+  int get finalPot {
+    var pot = 0;
+    for (final street in streets) {
+      final seatMax = <int, int>{};
+      for (final a in street.actions) {
+        final amt = a.amount;
+        if (amt != null && amt > (seatMax[a.seat] ?? 0)) {
+          seatMax[a.seat] = amt;
+        }
+      }
+      pot += seatMax.values.fold(0, (s, v) => s + v);
+    }
+    return pot;
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'userId': userId,
@@ -278,6 +303,7 @@ class PokerHand {
         'streets': streets.map((s) => s.toJson()).toList(),
         if (notes != null) 'notes': notes,
         if (tournamentStage != null) 'tournamentStage': tournamentStage,
+        'isTournament': isTournament,
       };
 
   factory PokerHand.fromJson(Map<String, dynamic> j) => PokerHand(
@@ -295,5 +321,10 @@ class PokerHand {
             .toList(),
         notes: j['notes'] as String?,
         tournamentStage: j['tournamentStage'] as String?,
+        // Explicit flag when present; otherwise infer for legacy hands from the
+        // tournament-only signals (stage set, or an ante on the table).
+        isTournament: (j['isTournament'] as bool?) ??
+            (j['tournamentStage'] != null ||
+                (j['tableSetup'] as Map<String, dynamic>?)?['ante'] != null),
       );
 }

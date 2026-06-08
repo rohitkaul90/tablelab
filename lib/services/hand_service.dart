@@ -47,6 +47,7 @@ class HandService {
     String? sessionId,
     String? notes,
     String? tournamentStage,
+    bool isTournament = false,
   }) => withSupabaseRetry(() async {
     final id = _uuid();
     final now = DateTime.now();
@@ -60,6 +61,7 @@ class HandService {
       streets: streets,
       notes: notes,
       tournamentStage: tournamentStage,
+      isTournament: isTournament,
     );
     await _client.from('hands').insert({
       'id': id,

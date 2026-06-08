@@ -292,6 +292,80 @@ void main() {
       expect(hand.allCommunityCards, equals(['2h', '7d', 'Ks', '9c']));
     });
 
+    test('finalPot sums each seat\'s max contribution (single street)', () {
+      // makeHand preflop: seat 2 raises 8, seat 4 calls 8 -> pot 16
+      expect(makeHand().finalPot, equals(16));
+    });
+
+    test('finalPot accumulates across streets', () {
+      final hand = PokerHand(
+        id: 'h', userId: 'u', playedAt: DateTime(2026, 1, 1),
+        tableSetup: const TableSetup(
+            numSeats: 6, buttonSeat: 0, heroSeat: 1, smallBlind: 1, bigBlind: 2),
+        players: const [],
+        streets: const [
+          StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 0, type: ActionType.raise, amount: 10),
+            HandAction(seat: 1, type: ActionType.call, amount: 10),
+          ]),
+          StreetData(street: Street.flop, communityCards: ['Ah', 'Kd', '7c'], actions: [
+            HandAction(seat: 1, type: ActionType.raise, amount: 15, isOpeningBet: true),
+            HandAction(seat: 0, type: ActionType.call, amount: 15),
+          ]),
+        ],
+      );
+      // preflop 10+10=20, flop 15+15=30 -> 50
+      expect(hand.finalPot, equals(50));
+    });
+
+    test('isTournament round-trips explicitly', () {
+      final hand = PokerHand(
+        id: 'h', userId: 'u', playedAt: DateTime(2026, 1, 1),
+        tableSetup: const TableSetup(
+            numSeats: 9, buttonSeat: 0, heroSeat: 1, smallBlind: 100, bigBlind: 200),
+        players: const [], streets: const [],
+        isTournament: true,
+      );
+      expect(PokerHand.fromJson(hand.toJson()).isTournament, isTrue);
+    });
+
+    test('legacy hand (no isTournament) infers tournament from a stage', () {
+      final json = {
+        'id': 'h', 'userId': 'u', 'playedAt': '2026-01-01T00:00:00.000',
+        'tableSetup': {
+          'numSeats': 9, 'buttonSeat': 0, 'heroSeat': 1,
+          'smallBlind': 100, 'bigBlind': 200,
+        },
+        'players': [], 'streets': [],
+        'tournamentStage': 'Final Table',
+      };
+      expect(PokerHand.fromJson(json).isTournament, isTrue);
+    });
+
+    test('legacy hand (no isTournament) infers tournament from an ante', () {
+      final json = {
+        'id': 'h', 'userId': 'u', 'playedAt': '2026-01-01T00:00:00.000',
+        'tableSetup': {
+          'numSeats': 9, 'buttonSeat': 0, 'heroSeat': 1,
+          'smallBlind': 100, 'bigBlind': 200, 'ante': 25,
+        },
+        'players': [], 'streets': [],
+      };
+      expect(PokerHand.fromJson(json).isTournament, isTrue);
+    });
+
+    test('legacy cash hand (no stage, no ante) infers cash', () {
+      final json = {
+        'id': 'h', 'userId': 'u', 'playedAt': '2026-01-01T00:00:00.000',
+        'tableSetup': {
+          'numSeats': 6, 'buttonSeat': 0, 'heroSeat': 1,
+          'smallBlind': 1, 'bigBlind': 2,
+        },
+        'players': [], 'streets': [],
+      };
+      expect(PokerHand.fromJson(json).isTournament, isFalse);
+    });
+
     test('streetReached returns correct street name', () {
       final base = makeHand();
       expect(base.streetReached, equals('Pre-flop'));

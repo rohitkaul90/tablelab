@@ -584,7 +584,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               decoration: InputDecoration(
                 labelText: 'Rake / Fees (optional)',
                 prefixText: '$sym ',
-                hintText: 'Informational — does not affect P&L',
+                hintText: 'Informational — does not affect profit',
                 border: const OutlineInputBorder(),
                 suffixText: _rakePresetLoaded ? 'auto-filled' : null,
                 suffixStyle: TextStyle(

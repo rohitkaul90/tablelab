@@ -193,7 +193,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
         rateColor,
       ),
       _SummaryItem(
-        'Total P&L',
+        'Total Profit',
         formatPLWithCurrency(totalPL, displayCurrency),
         plColor,
       ),
@@ -347,8 +347,8 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                 ),
                 Text(
                   (showingTournaments && !showingCash)
-                      ? 'entries  ·  ROI  ·  P&L'
-                      : 'hrs  ·  $sym/hr  ·  P&L',
+                      ? 'entries  ·  ROI  ·  Profit'
+                      : 'hrs  ·  $sym/hr  ·  Profit',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.outline,
                       ),
@@ -702,7 +702,7 @@ class _PLChartState extends State<_PLChart> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('P&L Over Time',
+            Text('Profit Over Time',
                 style: Theme.of(context)
                     .textTheme
                     .titleSmall
@@ -840,7 +840,7 @@ class _PLChartState extends State<_PLChart> {
           Expanded(flex: 3, child: Text('Period', style: headerStyle)),
           Expanded(
               flex: 2,
-              child: Text('P&L ($sym)',
+              child: Text('Profit ($sym)',
                   style: headerStyle, textAlign: TextAlign.right)),
           Expanded(
               flex: 1,
