@@ -769,7 +769,9 @@ class _PLChartState extends State<_PLChart> {
 
   Widget _buildCumulative(BuildContext context, String sym) {
     final sessions = _lookbackSessions;
-    if (sessions.length < 2) return _emptyChart('Need at least 2 sessions');
+    if (sessions.length < 2) {
+      return _emptyChart(context, 'Need at least 2 sessions');
+    }
     double cum = 0;
     final spots = sessions.asMap().entries.map((e) {
       cum += _toD(e.value.profitLoss, e.value.currency);
@@ -794,7 +796,7 @@ class _PLChartState extends State<_PLChart> {
         // fl_chart hover crashes on Windows — disable there, keep on web/Android.
         enabled: kIsWeb || !Platform.isWindows,
         touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (_) => Colors.black87,
+          getTooltipColor: (_) => Theme.of(context).colorScheme.inverseSurface,
           getTooltipItems: (spots) => spots.map((spot) {
             final idx = spot.x.toInt().clamp(0, sessions.length - 1);
             final date = DateTime.tryParse(sessions[idx].date) ?? DateTime.now();
@@ -802,7 +804,10 @@ class _PLChartState extends State<_PLChart> {
             final sign = spot.y >= 0 ? '+' : '-';
             return LineTooltipItem(
               '$label\n$sign$sym${spot.y.abs().toStringAsFixed(0)}',
-              const TextStyle(color: Colors.white, fontSize: 11, height: 1.4),
+              TextStyle(
+                  color: Theme.of(context).colorScheme.onInverseSurface,
+                  fontSize: 11,
+                  height: 1.4),
             );
           }).toList(),
         ),
@@ -814,7 +819,7 @@ class _PLChartState extends State<_PLChart> {
         show: true,
         drawVerticalLine: false,
         getDrawingHorizontalLine: (_) =>
-            FlLine(color: Colors.white12, strokeWidth: 1),
+            FlLine(color: Theme.of(context).colorScheme.outlineVariant, strokeWidth: 1),
       ),
       borderData: FlBorderData(show: false),
     ));
@@ -880,8 +885,11 @@ class _PLChartState extends State<_PLChart> {
     final entries = periodMap.entries.toList()
       ..sort((a, b) => b.key.compareTo(a.key));
     if (entries.isEmpty) {
-      return const Center(
-          child: Text('Not enough sessions for this view', style: TextStyle(color: Colors.white38)));
+      return Center(
+          child: Text('Not enough sessions for this view',
+              style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.75))));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -890,7 +898,10 @@ class _PLChartState extends State<_PLChart> {
         const Divider(height: 1),
         for (final e in entries) ...[
           _tableDataRow(context, _periodLabel(e.key), e.value, theme),
-          const Divider(height: 1, color: Colors.white10),
+          Divider(
+              height: 1,
+              color:
+                  theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
         ],
       ],
     );
@@ -919,8 +930,11 @@ class _PLChartState extends State<_PLChart> {
     }
     final years = byYear.keys.toList()..sort((a, b) => b.compareTo(a));
     if (years.isEmpty) {
-      return const Center(
-          child: Text('Not enough sessions for this view', style: TextStyle(color: Colors.white38)));
+      return Center(
+          child: Text('Not enough sessions for this view',
+              style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.75))));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1025,7 +1039,10 @@ class _PLChartState extends State<_PLChart> {
               padding: const EdgeInsets.only(left: 12),
               child: _tableDataRow(context, _periodLabel(e.key), e.value, theme),
             ),
-            const Divider(height: 1, color: Colors.white10),
+            Divider(
+                height: 1,
+                color:
+                    theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
           ],
       ],
     );
@@ -1340,7 +1357,10 @@ class _InsightRow extends StatelessWidget {
                   height: 4,
                   width: totalWidth,
                   decoration: BoxDecoration(
-                    color: Colors.white10,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outlineVariant
+                        .withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1356,7 +1376,13 @@ class _InsightRow extends StatelessWidget {
                 // Zero center tick
                 Positioned(
                   left: halfWidth - 0.5,
-                  child: Container(height: 4, width: 1, color: Colors.white30),
+                  child: Container(
+                      height: 4,
+                      width: 1,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.30)),
                 ),
               ],
             );
@@ -1369,9 +1395,14 @@ class _InsightRow extends StatelessWidget {
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
-Widget _emptyChart(String message) => Center(
+Widget _emptyChart(BuildContext context, String message) => Center(
       child: Text(message,
-          style: const TextStyle(color: Colors.white38, fontSize: 13)),
+          style: TextStyle(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurfaceVariant
+                  .withValues(alpha: 0.75),
+              fontSize: 13)),
     );
 
 // ─── Recommendations (Welch's t-test, actionable) ─────────────────────────────

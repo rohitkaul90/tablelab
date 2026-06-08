@@ -8,6 +8,7 @@ import '../../models/session_model.dart';
 import '../../providers/providers.dart';
 import '../../widgets/playing_card_widget.dart';
 import '../../widgets/chip_stack_widget.dart';
+import '../../theme/app_theme.dart';
 import '../ai_analysis/hand_analysis_screen.dart';
 
 // ── Replay data model ─────────────────────────────────────────────────────────
@@ -315,7 +316,11 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      // Immersive felt-table playback — always dark, independent of app theme.
+      Theme(data: AppTheme.dark, child: _build(context));
+
+  Widget _build(BuildContext context) {
     final frame = _frames[_currentIndex];
     final setup = widget.hand.tableSetup;
     final total = setup.numSeats;

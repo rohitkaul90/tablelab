@@ -89,14 +89,16 @@ class AppDrawer extends ConsumerWidget {
                           Text(
                             email,
                             style: theme.textTheme.bodySmall
-                                ?.copyWith(color: Colors.white54),
+                                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.edit_outlined,
-                        size: 14, color: Colors.white38),
+                    Icon(Icons.edit_outlined,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.75)),
                   ],
                 ),
               ),

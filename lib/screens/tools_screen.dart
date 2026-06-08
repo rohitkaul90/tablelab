@@ -29,23 +29,17 @@ class _ToolsScreenState extends State<ToolsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: SegmentedButton<int>(
+              // Label-only — the icon + multi-word label risked wrapping on
+              // narrow / large-font screens.
               segments: const [
-                ButtonSegment(
-                  value: 0,
-                  label: Text('Equity Calculator'),
-                  icon: Icon(Icons.percent, size: 16),
-                ),
-                ButtonSegment(
-                  value: 1,
-                  label: Text('ICM Calculator'),
-                  icon: Icon(Icons.calculate_outlined, size: 16),
-                ),
+                ButtonSegment(value: 0, label: Text('Equity Calculator')),
+                ButtonSegment(value: 1, label: Text('ICM Calculator')),
               ],
               selected: {_selected},
               onSelectionChanged: (s) => setState(() => _selected = s.first),
               style: SegmentedButton.styleFrom(
                 selectedBackgroundColor: theme.colorScheme.primary,
-                selectedForegroundColor: Colors.white,
+                selectedForegroundColor: theme.colorScheme.onPrimary,
                 foregroundColor: theme.colorScheme.onSurface.withAlpha(153),
               ),
             ),

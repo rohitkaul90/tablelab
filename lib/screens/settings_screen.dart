@@ -7,9 +7,14 @@ import '../services/ai_service.dart';
 import '../providers/providers.dart';
 import '../providers/reads_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/theme_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  /// When set to `'ai_usage'`, the screen scrolls to and briefly highlights the
+  /// AI USAGE section on open — used by the contextual AI quota indicators.
+  final String? scrollToSection;
+
+  const SettingsScreen({super.key, this.scrollToSection});
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -20,12 +25,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _version = '…';
   AiUsage? _usage;
   bool _usageFailed = false;
+  final _aiUsageKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _loadVersion();
     _loadUsage();
+    if (widget.scrollToSection == 'ai_usage') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _aiUsageKey.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 400),
+            alignment: 0.1,
+          );
+        }
+      });
+    }
   }
 
   Future<void> _loadVersion() async {
@@ -163,6 +181,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const Divider(),
                 const SizedBox(height: 8),
                 Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    'APPEARANCE',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.2,
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.brightness_6_outlined),
+                  title: const Text('Theme'),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: SegmentedButton<ThemeMode>(
+                      // Label-only (no per-segment icons): icon+label on three
+                      // segments overflowed the row and wrapped "System" onto a
+                      // second line on narrower phones.
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          label: Text('System'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text('Light'),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text('Dark'),
+                        ),
+                      ],
+                      selected: {ref.watch(themeModeProvider)},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (s) =>
+                          ref.read(themeModeProvider.notifier).set(s.first),
+                    ),
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
+                Padding(
+                  key: _aiUsageKey,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Text(
                     'AI USAGE',

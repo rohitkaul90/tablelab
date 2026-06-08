@@ -220,7 +220,9 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                     ] else ...[
                       Row(
                         children: [
-                          const Icon(Icons.person, size: 18, color: Colors.white54),
+                          Icon(Icons.person,
+                              size: 18,
+                              color: theme.colorScheme.onSurfaceVariant),
                           const SizedBox(width: 8),
                           Text(
                             widget.existingPlayer!.playerLabel,
@@ -249,7 +251,9 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                               color: selected ? color.withAlpha(50) : theme.colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: selected ? color : Colors.white12,
+                                color: selected
+                                    ? color
+                                    : theme.colorScheme.outlineVariant,
                                 width: selected ? 1.5 : 1,
                               ),
                             ),
@@ -258,7 +262,10 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                                color: selected ? color : Colors.white70,
+                                color: selected
+                                    ? color
+                                    : theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.70),
                               ),
                             ),
                           ),
@@ -283,7 +290,9 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                             selectedColor: Colors.teal.withAlpha(60),
                             checkmarkColor: Colors.tealAccent,
                             side: BorderSide(
-                              color: selected ? Colors.tealAccent.withAlpha(180) : Colors.white24),
+                              color: selected
+                                  ? Colors.tealAccent.withAlpha(180)
+                                  : theme.colorScheme.outline),
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             visualDensity: VisualDensity.compact,
                           );
@@ -319,11 +328,16 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                           children: [
                             Icon(
                               _showHandDetails ? Icons.expand_less : Icons.expand_more,
-                              size: 18, color: Colors.white38,
+                              size: 18,
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.75),
                             ),
                             const SizedBox(width: 4),
-                            const Text('Hand Details',
-                                style: TextStyle(fontSize: 12, color: Colors.white38)),
+                            Text('Hand Details',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurfaceVariant
+                                        .withValues(alpha: 0.75))),
                           ],
                         ),
                       ),
@@ -403,9 +417,11 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                       child: FilledButton.icon(
                         onPressed: _canSave && !_saving ? _save : null,
                         icon: _saving
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 16, height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: theme.colorScheme.onPrimary))
                             : const Icon(Icons.save_outlined),
                         label: Text(_saving ? 'Saving…' : 'Save'),
                         style: FilledButton.styleFrom(
@@ -434,7 +450,8 @@ class _Handle extends StatelessWidget {
           child: Container(
             width: 40, height: 4,
             decoration: BoxDecoration(
-                color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                color: Theme.of(context).colorScheme.outline,
+                borderRadius: BorderRadius.circular(2)),
           ),
         ),
       );
@@ -485,11 +502,22 @@ class _DropField extends StatelessWidget {
           value: value,
           isDense: true,
           isExpanded: true,
-          hint: Text('—', style: TextStyle(color: Colors.white38, fontSize: 13)),
+          hint: Text('—',
+              style: TextStyle(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.75),
+                  fontSize: 13)),
           items: [
             DropdownMenuItem<String>(
               value: null,
-              child: const Text('—', style: TextStyle(color: Colors.white38)),
+              child: Text('—',
+                  style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.75))),
             ),
             ...items.map((i) => DropdownMenuItem(value: i, child: Text(i, style: const TextStyle(fontSize: 13)))),
           ],

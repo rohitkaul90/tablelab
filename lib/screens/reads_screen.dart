@@ -127,14 +127,19 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.psychology_outlined,
-                              size: 52, color: Colors.white24),
+                          Icon(Icons.psychology_outlined,
+                              size: 52,
+                              color: Theme.of(context).colorScheme.outline),
                           const SizedBox(height: 12),
                           Text(
                             _search.isEmpty
                                 ? 'No reads yet.\nTap + to log your first opponent.'
                                 : 'No players match "$_search".',
-                            style: const TextStyle(color: Colors.white38),
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withValues(alpha: 0.75)),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -257,9 +262,15 @@ class _ReadTile extends StatelessWidget {
 
               // Timestamp
               Text(ago,
-                  style: const TextStyle(fontSize: 11, color: Colors.white38)),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.75))),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, size: 18, color: Colors.white24),
+              Icon(Icons.chevron_right,
+                  size: 18, color: Theme.of(context).colorScheme.outline),
             ],
           ),
         ),

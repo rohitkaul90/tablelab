@@ -113,7 +113,7 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
             Container(
               width: 40, height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: Theme.of(context).colorScheme.outline,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -212,7 +212,13 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                         const SizedBox(height: 12),
                         Text(
                           '${cardName(_card1!)} — ${cardName(_card2!)}',
-                          style: const TextStyle(fontSize: 15, color: Colors.white70, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                              fontSize: 15,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.70),
+                              fontWeight: FontWeight.w500),
                         ),
                       ],
                       const SizedBox(height: 24),
@@ -381,7 +387,9 @@ class _ExactCardSlot extends StatelessWidget {
                 ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
       ],
     );
   }

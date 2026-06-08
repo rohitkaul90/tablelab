@@ -25,7 +25,7 @@ class CardPickerSheet extends StatelessWidget {
       builder: (context, scroll) {
         return Column(
           children: [
-            _handle(),
+            _handle(context),
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -130,7 +130,7 @@ class _FlopCardPickerSheetState extends State<FlopCardPickerSheet> {
       builder: (context, scroll) {
         return Column(
           children: [
-            _handle(),
+            _handle(context),
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -207,14 +207,14 @@ class _FlopSlot extends StatelessWidget {
           color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: isNext ? theme.colorScheme.primary : Colors.white24,
+            color: isNext ? theme.colorScheme.primary : theme.colorScheme.outline,
             width: isNext ? 1.5 : 1,
           ),
         ),
         child: Center(
           child: Text('?', style: TextStyle(
             fontSize: 22,
-            color: isNext ? theme.colorScheme.primary : Colors.white24,
+            color: isNext ? theme.colorScheme.primary : theme.colorScheme.outline,
           )),
         ),
       );
@@ -312,7 +312,7 @@ class _CardTile extends StatelessWidget {
     Color bg, fg;
     if (excluded) {
       bg = Colors.transparent;
-      fg = Colors.white12;
+      fg = Theme.of(context).colorScheme.outlineVariant;
     } else if (isSelected) {
       bg = suitColor;
       fg = Colors.black87;
@@ -369,10 +369,14 @@ class BoardCardChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.white24),
+            border: Border.all(color: theme.colorScheme.outline),
           ),
-          child: const Center(
-            child: Text('?', style: TextStyle(fontSize: 20, color: Colors.white38)),
+          child: Center(
+            child: Text('?',
+                style: TextStyle(
+                    fontSize: 20,
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.75))),
           ),
         ),
       );
@@ -401,10 +405,12 @@ class BoardCardChip extends StatelessWidget {
   }
 }
 
-Widget _handle() => Padding(
+Widget _handle(BuildContext context) => Padding(
   padding: const EdgeInsets.only(top: 8),
   child: Container(
     width: 40, height: 4,
-    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+    decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.outline,
+        borderRadius: BorderRadius.circular(2)),
   ),
 );

@@ -135,8 +135,10 @@ class _CellView extends StatelessWidget {
 
   const _CellView({required this.row, required this.col, required this.size, required this.selected});
 
-  Color _bg() {
-    if (!selected) return Colors.white.withAlpha(18);
+  Color _bg(BuildContext context) {
+    if (!selected) {
+      return Theme.of(context).colorScheme.onSurface.withAlpha(18);
+    }
     if (row == col) return Colors.amber;
     if (row < col) return Colors.green.shade600;
     return Colors.blue.shade600;
@@ -150,7 +152,7 @@ class _CellView extends StatelessWidget {
       width: size - 0.8,
       height: size - 0.8,
       margin: const EdgeInsets.all(0.4),
-      decoration: BoxDecoration(color: _bg(), borderRadius: BorderRadius.circular(1)),
+      decoration: BoxDecoration(color: _bg(context), borderRadius: BorderRadius.circular(1)),
       child: Center(
         child: FittedBox(
           fit: BoxFit.scaleDown,
@@ -159,7 +161,9 @@ class _CellView extends StatelessWidget {
             style: TextStyle(
               fontSize: 7,
               fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : Colors.white30,
+              color: selected
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.30),
             ),
           ),
         ),
@@ -178,14 +182,16 @@ class MiniRangeMatrix extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: const Size(52, 52),
-      painter: _MiniPainter(selectedCells),
+      painter: _MiniPainter(
+          selectedCells, Theme.of(context).colorScheme.onSurface.withAlpha(18)),
     );
   }
 }
 
 class _MiniPainter extends CustomPainter {
   final Set<int> cells;
-  _MiniPainter(this.cells);
+  final Color emptyColor;
+  _MiniPainter(this.cells, this.emptyColor);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -199,7 +205,7 @@ class _MiniPainter extends CustomPainter {
           else if (r < c) { color = Colors.green.shade600; }
           else { color = Colors.blue.shade600; }
         } else {
-          color = Colors.white.withAlpha(18);
+          color = emptyColor;
         }
         canvas.drawRect(
           Rect.fromLTWH(c * cs, r * cs, cs - 0.3, cs - 0.3),
@@ -210,7 +216,8 @@ class _MiniPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_MiniPainter old) => old.cells != cells;
+  bool shouldRepaint(_MiniPainter old) =>
+      old.cells != cells || old.emptyColor != emptyColor;
 }
 
 // Stats widget

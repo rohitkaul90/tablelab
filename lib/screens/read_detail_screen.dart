@@ -344,7 +344,12 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
               _SectionLabel('Observations'),
               const Spacer(),
               Text('${_notes.length} total',
-                  style: const TextStyle(fontSize: 11, color: Colors.white38)),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.75))),
             ],
           ),
           const SizedBox(height: 8),
@@ -357,7 +362,11 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
               child: Center(
                 child: Text(
                   'No observations yet.\nTap + to add one.',
-                  style: const TextStyle(color: Colors.white38),
+                  style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.75)),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -441,7 +450,8 @@ class _NoteTile extends StatelessWidget {
                         _MetaChip(note.action!,
                             color: theme.colorScheme.primary.withAlpha(200)),
                       if (note.sizing != null)
-                        _MetaChip(note.sizing!, color: Colors.white54),
+                        _MetaChip(note.sizing!,
+                            color: theme.colorScheme.onSurfaceVariant),
                       if (note.cardsShown != null)
                         _MetaChip('🂠 ${note.cardsShown!}', color: Colors.amber),
                     ],
@@ -455,12 +465,17 @@ class _NoteTile extends StatelessWidget {
                 Row(
                   children: [
                     Text(_formatDate(note.createdAt),
-                        style: const TextStyle(fontSize: 10, color: Colors.white38)),
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.75))),
                     const Spacer(),
-                    const Icon(Icons.edit_outlined, size: 12, color: Colors.white24),
+                    Icon(Icons.edit_outlined,
+                        size: 12, color: theme.colorScheme.outline),
                     const SizedBox(width: 2),
-                    const Text('tap to edit',
-                        style: TextStyle(fontSize: 10, color: Colors.white24)),
+                    Text('tap to edit',
+                        style: TextStyle(
+                            fontSize: 10, color: theme.colorScheme.outline)),
                   ],
                 ),
               ],
@@ -602,7 +617,7 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                   child: Container(
                     width: 40, height: 4,
                     decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: Theme.of(context).colorScheme.outline,
                         borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
@@ -706,9 +721,13 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                         child: FilledButton.icon(
                           onPressed: _saving ? null : _save,
                           icon: _saving
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 16, height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary))
                               : const Icon(Icons.save_outlined),
                           label: Text(_saving ? 'Saving…' : 'Save Changes'),
                           style: FilledButton.styleFrom(
@@ -755,11 +774,22 @@ class _DropField extends StatelessWidget {
           value: value,
           isDense: true,
           isExpanded: true,
-          hint: const Text('—', style: TextStyle(color: Colors.white38, fontSize: 13)),
+          hint: Text('—',
+              style: TextStyle(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.75),
+                  fontSize: 13)),
           items: [
-            const DropdownMenuItem<String>(
+            DropdownMenuItem<String>(
               value: null,
-              child: Text('—', style: TextStyle(color: Colors.white38)),
+              child: Text('—',
+                  style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.75))),
             ),
             ...items.map((i) => DropdownMenuItem(
                 value: i, child: Text(i, style: const TextStyle(fontSize: 13)))),
