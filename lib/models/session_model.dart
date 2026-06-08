@@ -20,6 +20,7 @@ class SessionModel {
   final String currency;
   final int? handsPerHour;
   final String? country;
+  final int? tableSize;
 
   const SessionModel({
     required this.id,
@@ -43,6 +44,7 @@ class SessionModel {
     required this.currency,
     this.handsPerHour,
     this.country,
+    this.tableSize,
   });
 
   factory SessionModel.fromMap(Map<String, dynamic> map) {
@@ -68,6 +70,7 @@ class SessionModel {
       currency: (map['currency'] as String?) ?? 'CAD',
       handsPerHour: map['hands_per_hour'] as int?,
       country: map['country'] as String?,
+      tableSize: map['table_size'] as int?,
     );
   }
 }

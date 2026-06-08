@@ -157,26 +157,46 @@ class TableSetup {
     this.ante,
   });
 
-  int get sbSeat => (buttonSeat + 1) % numSeats;
-  int get bbSeat => (buttonSeat + 2) % numSeats;
+  // Heads-up is special: the button posts the small blind (so SB == button)
+  // and the other player posts the big blind.
+  int get sbSeat => numSeats == 2 ? buttonSeat : (buttonSeat + 1) % numSeats;
+  int get bbSeat => numSeats == 2
+      ? (buttonSeat + 1) % numSeats
+      : (buttonSeat + 2) % numSeats;
   int get straddleSeat =>
       straddle != null ? (buttonSeat + 3) % numSeats : -1;
 
+  /// Position labels in offset-from-button order, for heads-up (2) through
+  /// 9-max. The button is index 0. Used both for naming seats and for the
+  /// hand-input default player labels, so the two stay in sync.
+  static const Map<int, List<String>> _positionLabels = {
+    2: ['BTN', 'BB'],
+    3: ['BTN', 'SB', 'BB'],
+    4: ['BTN', 'SB', 'BB', 'UTG'],
+    5: ['BTN', 'SB', 'BB', 'UTG', 'CO'],
+    6: ['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO'],
+    7: ['BTN', 'SB', 'BB', 'UTG', 'MP', 'HJ', 'CO'],
+    8: ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'MP', 'HJ', 'CO'],
+    9: ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'MP', 'HJ', 'CO'],
+  };
+
+  static List<String> positionLabels(int seats) =>
+      _positionLabels[seats] ??
+      List.generate(seats, (i) => i == 0 ? 'BTN' : 'P${i + 1}');
+
   String positionName(int seat) {
     final off = (seat - buttonSeat + numSeats) % numSeats;
-    if (straddle != null && off == 3) return 'STR';
-    if (numSeats <= 6) {
-      const n = ['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO'];
-      return off < n.length ? n[off] : 'P${seat + 1}';
-    } else {
-      const n = [
-        'BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'MP', 'HJ', 'CO'
-      ];
-      return off < n.length ? n[off] : 'P${seat + 1}';
-    }
+    // The straddle sits one seat after the BB (the UTG seat) in multiway pots.
+    if (straddle != null && numSeats > 3 && off == 3) return 'STR';
+    final labels = positionLabels(numSeats);
+    return off < labels.length ? labels[off] : 'P${seat + 1}';
   }
 
   List<int> preflopOrder(List<int> active) {
+    // Heads-up: the button (small blind) acts first preflop.
+    if (numSeats == 2) {
+      return [sbSeat, bbSeat].where(active.contains).toList();
+    }
     final firstOffset = straddle != null ? 4 : 3;
     final start = (buttonSeat + firstOffset) % numSeats;
     return List.generate(numSeats, (i) => (start + i) % numSeats)
@@ -185,7 +205,9 @@ class TableSetup {
   }
 
   List<int> postflopOrder(List<int> active) {
-    return List.generate(numSeats, (i) => (sbSeat + i) % numSeats)
+    // Heads-up: the big blind acts first postflop; otherwise the SB leads.
+    final start = numSeats == 2 ? bbSeat : sbSeat;
+    return List.generate(numSeats, (i) => (start + i) % numSeats)
         .where(active.contains)
         .toList();
   }

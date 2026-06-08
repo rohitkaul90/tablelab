@@ -567,4 +567,23 @@ void main() {
       expect(formatBB100(-3.4), equals('-3'));
     });
   });
+
+  // ── tableSizeLabel ───────────────────────────────────────────────────────────
+
+  group('tableSizeLabel', () {
+    test('labels heads-up specially', () {
+      expect(tableSizeLabel(2), equals('Heads-up (2)'));
+    });
+
+    test('labels common ring sizes', () {
+      expect(tableSizeLabel(6), equals('6-max'));
+      expect(tableSizeLabel(9), equals('9-max (full ring)'));
+    });
+
+    test('falls back to N-handed for other sizes', () {
+      expect(tableSizeLabel(3), equals('3-handed'));
+      expect(tableSizeLabel(5), equals('5-handed'));
+      expect(tableSizeLabel(8), equals('8-handed'));
+    });
+  });
 }

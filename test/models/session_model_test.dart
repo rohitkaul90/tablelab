@@ -27,6 +27,7 @@ void main() {
       'currency': 'CAD',
       'hands_per_hour': 28,
       'country': 'Canada',
+      'table_size': 8,
     };
 
     test('parses all required fields', () {
@@ -57,6 +58,7 @@ void main() {
       expect(session.rakePaid, equals(25.0));
       expect(session.tableQuality, equals(4));
       expect(session.handsPerHour, equals(28));
+      expect(session.tableSize, equals(8));
     });
 
     test('handles null optional fields gracefully', () {
@@ -116,6 +118,7 @@ void main() {
       expect(session.location, isNull);
       expect(session.notes, isNull);
       expect(session.currency, equals('CAD'));
+      expect(session.tableSize, isNull);
     });
   });
 }
