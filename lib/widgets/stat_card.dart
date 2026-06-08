@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 
+/// A single overview metric (label + value). Uses the neutral Card surface so
+/// the grid of metrics blends with the dashboard background rather than each
+/// card carrying its own coloured tint. [valueColor] is for semantic values
+/// only (e.g. green/red win rate); the label is always a muted neutral.
 class StatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color? valueColor;
-  final Color? accentColor;
 
   const StatCard({
     super.key,
     required this.label,
     required this.value,
     this.valueColor,
-    this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = accentColor ?? theme.colorScheme.primary;
 
     return Card(
-      color: accent.withAlpha(28),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final h = constraints.maxHeight;
@@ -39,7 +39,7 @@ class StatCard extends StatelessWidget {
                     label,
                     style: TextStyle(
                       fontSize: labelFontSize,
-                      color: accent,
+                      color: theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.4,
                     ),
