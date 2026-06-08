@@ -38,7 +38,11 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
             reads: reads,
             forceRefresh: forceRefresh,
           );
-      if (mounted) setState(() { _analysis = analysis; _loading = false; });
+      if (mounted) {
+        setState(() { _analysis = analysis; _loading = false; });
+        // Refresh the quota indicators (no Realtime — manual invalidation).
+        ref.invalidate(aiUsageProvider);
+      }
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }

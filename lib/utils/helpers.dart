@@ -124,6 +124,15 @@ String tableQualityLabel(int? quality) {
   }
 }
 
+/// Friendly label for a table's player count (2 = heads-up … 9 = full ring).
+/// Shared by hand recording, the session form, and session detail.
+String tableSizeLabel(int n) => switch (n) {
+      2 => 'Heads-up (2)',
+      6 => '6-max',
+      9 => '9-max (full ring)',
+      _ => '$n-handed',
+    };
+
 String timeOfDayBucket(String startTime) {
   final hour = int.tryParse(startTime.split(':')[0]) ?? 0;
   if (hour >= 6 && hour < 12) return 'Morning (6am–12pm)';

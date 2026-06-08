@@ -502,4 +502,79 @@ void main() {
       expect(setup.postflopOrder([0, 3, 5]), equals([3, 5, 0]));
     });
   });
+
+  // ── TableSetup — heads-up and variable table sizes ───────────────────────────
+
+  group('TableSetup.positionLabels (static)', () {
+    test('covers heads-up through 9-max with the right count', () {
+      for (var n = 2; n <= 9; n++) {
+        expect(TableSetup.positionLabels(n).length, equals(n),
+            reason: '$n-handed should have $n labels');
+        expect(TableSetup.positionLabels(n).first, equals('BTN'));
+      }
+    });
+
+    test('heads-up is BTN/BB — the button posts the small blind', () {
+      expect(TableSetup.positionLabels(2), equals(['BTN', 'BB']));
+    });
+
+    test('unknown sizes fall back to generic labels', () {
+      final labels = TableSetup.positionLabels(11);
+      expect(labels.length, equals(11));
+      expect(labels.first, equals('BTN'));
+      expect(labels[1], equals('P2'));
+    });
+  });
+
+  group('TableSetup heads-up (2 seats)', () {
+    const buttonZero = TableSetup(
+        numSeats: 2, buttonSeat: 0, heroSeat: 0, smallBlind: 1, bigBlind: 2);
+
+    test('button posts the small blind; the other seat is the big blind', () {
+      expect(buttonZero.sbSeat, equals(0));
+      expect(buttonZero.bbSeat, equals(1));
+    });
+
+    test('position names', () {
+      expect(buttonZero.positionName(0), equals('BTN'));
+      expect(buttonZero.positionName(1), equals('BB'));
+    });
+
+    test('SB (button) acts first preflop, BB acts first postflop', () {
+      expect(buttonZero.preflopOrder([0, 1]), equals([0, 1]));
+      expect(buttonZero.postflopOrder([0, 1]), equals([1, 0]));
+    });
+
+    test('blinds and order rotate with the button seat', () {
+      const buttonOne = TableSetup(
+          numSeats: 2, buttonSeat: 1, heroSeat: 0, smallBlind: 1, bigBlind: 2);
+      expect(buttonOne.sbSeat, equals(1));
+      expect(buttonOne.bbSeat, equals(0));
+      expect(buttonOne.positionName(1), equals('BTN'));
+      expect(buttonOne.positionName(0), equals('BB'));
+      expect(buttonOne.preflopOrder([0, 1]), equals([1, 0]));
+      expect(buttonOne.postflopOrder([0, 1]), equals([0, 1]));
+    });
+  });
+
+  group('TableSetup intermediate sizes', () {
+    test('3-handed: BTN acts first preflop, SB first postflop', () {
+      const setup = TableSetup(
+          numSeats: 3, buttonSeat: 0, heroSeat: 0, smallBlind: 1, bigBlind: 2);
+      expect(setup.positionName(0), equals('BTN'));
+      expect(setup.positionName(1), equals('SB'));
+      expect(setup.positionName(2), equals('BB'));
+      expect(setup.preflopOrder([0, 1, 2]), equals([0, 1, 2]));
+      expect(setup.postflopOrder([0, 1, 2]), equals([1, 2, 0]));
+    });
+
+    test('8-max position labels', () {
+      const setup = TableSetup(
+          numSeats: 8, buttonSeat: 0, heroSeat: 0, smallBlind: 1, bigBlind: 2);
+      expect(setup.positionName(3), equals('UTG'));
+      expect(setup.positionName(5), equals('MP'));
+      expect(setup.positionName(6), equals('HJ'));
+      expect(setup.positionName(7), equals('CO'));
+    });
+  });
 }

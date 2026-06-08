@@ -270,9 +270,10 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
           // ── Players ───────────────────────────────────────────────────────
           _sectionHeader(context, 'Players', '${_players.length}/9'),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Enter each remaining player\'s chip count.',
-            style: TextStyle(fontSize: 12, color: Colors.white54),
+            style: TextStyle(
+                fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 10),
           ...List.generate(_players.length, (i) => _playerRow(i, theme)),
@@ -288,9 +289,10 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
           // ── Payouts ───────────────────────────────────────────────────────
           _sectionHeader(context, 'Prize Pool', '${_payouts.length} places'),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Enter the prize for each remaining place.',
-            style: TextStyle(fontSize: 12, color: Colors.white54),
+            style: TextStyle(
+                fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 10),
           ...List.generate(_payouts.length, (i) => _payoutRow(i, theme)),
@@ -328,7 +330,8 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
             const SizedBox(height: 4),
             Text(
               'Total prize pool: ${_fmtMoney(_results!.fold(0.0, (s, r) => s + r.icm))}',
-              style: const TextStyle(fontSize: 12, color: Colors.white54),
+              style: TextStyle(
+                  fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
 
@@ -339,9 +342,9 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
               child: Row(
                 children: [
                   const Expanded(flex: 3, child: SizedBox()),
-                  _colHeader('ICM Deal'),
-                  _colHeader('Chip-Chop'),
-                  _colHeader('Diff'),
+                  _colHeader(context, 'ICM Deal'),
+                  _colHeader(context, 'Chip-Chop'),
+                  _colHeader(context, 'Diff'),
                 ],
               ),
             ),
@@ -423,7 +426,8 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
         IconButton(
           icon: const Icon(Icons.remove_circle_outline, size: 18),
           onPressed: _players.length > 2 ? () => _removePlayer(i) : null,
-          color: Colors.white38,
+          color:
+              theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
@@ -439,10 +443,10 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
           width: 36,
           child: Text(
             _placeLabel(i + 1),
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Colors.white54),
+                color: theme.colorScheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
         ),
@@ -470,7 +474,8 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
         IconButton(
           icon: const Icon(Icons.remove_circle_outline, size: 18),
           onPressed: _payouts.length > 2 ? () => _removePayout(i) : null,
-          color: Colors.white38,
+          color:
+              theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
@@ -501,8 +506,12 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
                   overflow: TextOverflow.ellipsis),
               Text(
                 '${_fmtChips(r.chips)} chips · ${r.chipPct.toStringAsFixed(1)}%',
-                style:
-                    const TextStyle(fontSize: 10, color: Colors.white38),
+                style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.75)),
               ),
             ],
           ),
@@ -533,11 +542,16 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
         ),
       );
 
-  Widget _colHeader(String label) => Expanded(
+  Widget _colHeader(BuildContext context, String label) => Expanded(
         flex: 2,
         child: Text(
           label,
-          style: const TextStyle(fontSize: 10, color: Colors.white38),
+          style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurfaceVariant
+                  .withValues(alpha: 0.75)),
           textAlign: TextAlign.right,
         ),
       );
@@ -563,8 +577,12 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(badge,
-                  style: const TextStyle(
-                      fontSize: 10, color: Colors.white38)),
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.75))),
             ),
           ],
         ],
@@ -592,8 +610,8 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
               'splits the prize pool in direct proportion to chip counts. '
               'The "Diff" column shows how much each player gains or loses '
               'under ICM vs a pure chip-chop.',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: Colors.white54, height: 1.55),
+              style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant, height: 1.55),
             ),
           ],
         ),

@@ -1052,9 +1052,14 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
   @override
   Widget build(BuildContext context) {
     final dropdownItems = <DropdownMenuItem<String>>[
-      const DropdownMenuItem<String>(
+      DropdownMenuItem<String>(
         value: null,
-        child: Text(_notMapped, style: TextStyle(color: Colors.white38)),
+        child: Text(_notMapped,
+            style: TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withValues(alpha: 0.75))),
       ),
       ...widget.fileHeaders.map(
         (h) => DropdownMenuItem(
@@ -1194,8 +1199,12 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                             _mapping[field.key] = v;
                             _preview = _computePreview();
                           }),
-                          hint: const Text(_notMapped,
-                              style: TextStyle(color: Colors.white38)),
+                          hint: Text(_notMapped,
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withValues(alpha: 0.75))),
                         ),
                       ),
                     ],
@@ -1256,11 +1265,12 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                   onPressed:
                       (_importing || _preview.valid == 0) ? null : _import,
                   child: _importing
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.onPrimary),
                         )
                       : Text(_overwrite
                           ? 'Import & overwrite  (${_preview.valid} rows)'

@@ -48,6 +48,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   String? _country;
   final _notesCtrl = TextEditingController();
   int? _tableQuality;
+  int? _tableSize;
   bool _rakePresetLoaded = false;
   bool _submitted = false;
   bool _saving = false;
@@ -99,6 +100,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _country = s.country;
       _notesCtrl.text = s.notes ?? '';
       _tableQuality = s.tableQuality;
+      _tableSize = s.tableSize;
       _livePL = s.profitLoss;
       _liveDuration = s.durationMinutes;
     } else {
@@ -284,6 +286,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       'total_entrants': teText.isEmpty ? null : int.tryParse(teText),
       'prize_won': _isTournament ? prizeWon : null,
       'table_quality': _showTableQuality ? _tableQuality : null,
+      'table_size': _isTournament ? null : _tableSize,
       'currency': _currency,
       'hands_per_hour': hphText.isEmpty ? null : int.tryParse(hphText),
       'country': _country,
@@ -394,10 +397,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 border: OutlineInputBorder(),
               ),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
                   child: Text('Not specified',
-                      style: TextStyle(color: Colors.white38)),
+                      style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.75))),
                 ),
                 ..._countries.map((c) =>
                     DropdownMenuItem<String?>(value: c, child: Text(c))),
@@ -459,6 +466,30 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                           : null,
                 ),
               ],
+              const SizedBox(height: 16),
+
+              // Table size (optional — common cash games run 6, 8, or 9 handed)
+              DropdownButtonFormField<int?>(
+                key: ValueKey(_tableSize),
+                initialValue: _tableSize,
+                decoration: const InputDecoration(
+                  labelText: 'Table Size (optional)',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('Not specified',
+                        style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.75))),
+                  ),
+                  for (var n = 2; n <= 9; n++)
+                    DropdownMenuItem<int?>(
+                        value: n, child: Text(tableSizeLabel(n))),
+                ],
+                onChanged: (v) => setState(() => _tableSize = v),
+              ),
               const SizedBox(height: 16),
             ],
 

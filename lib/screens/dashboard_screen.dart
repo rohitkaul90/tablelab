@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
 import '../models/session_model.dart';
+import '../models/profile_model.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/session_tile.dart';
+import '../widgets/ai_usage_pill.dart';
 import 'log_session_screen.dart';
 import 'session_detail_screen.dart';
 import 'import_source_screen.dart';
@@ -324,7 +326,7 @@ class _OverviewBody extends ConsumerWidget {
           const SizedBox(height: 12),
         ],
 
-        // ── Total P&L hero card ────────────────────────────────────────────
+        // ── Profit hero card (bankroll folded in) ──────────────────────────
         Card(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -332,8 +334,8 @@ class _OverviewBody extends ConsumerWidget {
               children: [
                 Text(
                   gameFilter == null
-                      ? 'Total P&L'
-                      : '${gameFilter == 'cash' ? 'Cash' : 'Tournament'} P&L',
+                      ? 'Profit'
+                      : '${gameFilter == 'cash' ? 'Cash' : 'Tournament'} Profit',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
@@ -344,34 +346,22 @@ class _OverviewBody extends ConsumerWidget {
                         fontWeight: FontWeight.bold,
                       ),
                 ),
+                // Bankroll is one overall figure (starting bankroll + total P&L
+                // across all game types) so it only makes sense unfiltered. It's
+                // folded in as a quiet secondary line rather than its own card —
+                // most established / recreational players don't track a separate
+                // poker bankroll.
+                if (gameFilter == null)
+                  _InlineBankroll(
+                    profile: profile,
+                    totalPL: stats.totalPL,
+                    currency: currency,
+                  ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
-
-        // ── Current Bankroll card (or prompt to set it) ───────────────────
-        // Bankroll is a single overall figure (starting bankroll + total P&L
-        // across all game types), so it only makes sense in the unfiltered
-        // "All" view. Under the Cash/Tournament filter, startingBankroll +
-        // game-filtered P&L is neither the true bankroll nor a per-game one,
-        // so the card is hidden.
-        if (gameFilter == null) ...[
-          if (profile?.startingBankroll != null)
-            _CurrentBankrollCard(
-              startingBankroll: convertCurrency(
-                profile!.startingBankroll!,
-                profile.startingBankrollCurrency,
-                currency,
-              ),
-              totalPL: stats.totalPL,
-              currency: currency,
-              stakes: _stakeForBuyIns(profile.preferredStakes, sessions),
-            )
-          else
-            _SetBankrollPrompt(),
-          const SizedBox(height: 12),
-        ],
 
         // ── Stat cards grid ────────────────────────────────────────────────
         LayoutBuilder(
@@ -387,30 +377,25 @@ class _OverviewBody extends ConsumerWidget {
                     StatCard(
                       label: 'Sessions',
                       value: '${stats.sessionCount}',
-                      accentColor: Colors.deepPurple,
                     ),
                     StatCard(
                       label: 'ITM',
                       value: '${stats.itm}',
-                      accentColor: Colors.teal,
                     ),
                     StatCard(
                       label: 'ITM %',
                       value: '${stats.itmPct.toStringAsFixed(0)}%',
-                      accentColor: Colors.cyan,
                     ),
                     StatCard(
                       label: 'ROI',
                       value: formatROI(stats.roi),
                       valueColor: stats.roi >= 0 ? Colors.green : Colors.red,
-                      accentColor: Colors.amber,
                     ),
                   ]
                 : [
                     StatCard(
                       label: 'Hours Played',
                       value: '${stats.totalHours.round()}h',
-                      accentColor: Colors.blue,
                     ),
                     StatCard(
                       label: 'Win Rate',
@@ -418,12 +403,10 @@ class _OverviewBody extends ConsumerWidget {
                           '${formatPLWithCurrency(stats.hourlyRate, currency)}/hr',
                       valueColor:
                           stats.hourlyRate >= 0 ? Colors.green : Colors.red,
-                      accentColor: Colors.teal,
                     ),
                     StatCard(
                       label: 'Sessions',
                       value: '${stats.sessionCount}',
-                      accentColor: Colors.deepPurple,
                     ),
                     StatCard(
                       label: 'W / L',
@@ -433,7 +416,6 @@ class _OverviewBody extends ConsumerWidget {
                           : stats.losses > stats.wins
                               ? Colors.red
                               : null,
-                      accentColor: Colors.orange,
                     ),
                   ],
           ),
@@ -510,125 +492,63 @@ class _OverviewBody extends ConsumerWidget {
   }
 }
 
-// ── Set Bankroll prompt ───────────────────────────────────────────────────────
+// ── Inline bankroll (secondary line under the Profit hero) ────────────────────
 
-class _SetBankrollPrompt extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ProfileScreen()),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(Icons.account_balance_wallet_outlined,
-                  color: scheme.onSurface.withValues(alpha: 0.4), size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Set your starting bankroll to track your current balance →',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Current Bankroll card ─────────────────────────────────────────────────────
-
-/// Stake to size buy-ins against: the player's preferred stake if set and
-/// parseable, otherwise their most-played cash-game stake. Returns null when
-/// neither exists (e.g. tournament-only players) — the buy-ins line is hidden.
-String? _stakeForBuyIns(String? preferred, List<SessionModel> sessions) {
-  if (preferred != null && parseBBFromStakes(preferred) != null) {
-    return preferred;
-  }
-  final counts = <String, int>{};
-  for (final s in sessions) {
-    if (s.gameType != 'cash' || parseBBFromStakes(s.stakes) == null) continue;
-    counts[s.stakes] = (counts[s.stakes] ?? 0) + 1;
-  }
-  if (counts.isEmpty) return null;
-  return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
-}
-
-class _CurrentBankrollCard extends StatelessWidget {
-  final double startingBankroll;
+/// Bankroll shown as a quiet line inside the Profit card rather than its own
+/// card. When a starting bankroll is set it shows the current balance + growth
+/// %; otherwise it offers an unobtrusive link to set one (deliberately
+/// low-key — most players don't track a poker-specific bankroll).
+class _InlineBankroll extends StatelessWidget {
+  final ProfileModel? profile;
   final double totalPL;
   final String currency;
-  final String? stakes;
 
-  const _CurrentBankrollCard({
-    required this.startingBankroll,
+  const _InlineBankroll({
+    required this.profile,
     required this.totalPL,
     required this.currency,
-    this.stakes,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final currentBankroll = startingBankroll + totalPL;
-    final isUp = currentBankroll >= startingBankroll;
-    final subtle =
-        theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final subtle = theme.colorScheme.onSurfaceVariant;
+    final starting = profile?.startingBankroll;
 
-    // Growth % since the starting bankroll (guard divide-by-zero).
+    if (starting == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: TextButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfileScreen()),
+          ),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            foregroundColor: subtle,
+            textStyle: const TextStyle(fontSize: 12),
+          ),
+          child: const Text('Set starting bankroll'),
+        ),
+      );
+    }
+
+    final startConverted =
+        convertCurrency(starting, profile!.startingBankrollCurrency, currency);
+    final current = startConverted + totalPL;
     final growthPct =
-        startingBankroll > 0 ? (totalPL / startingBankroll) * 100 : null;
+        startConverted > 0 ? (totalPL / startConverted) * 100 : null;
     final growthStr = growthPct == null
         ? ''
         : '  ·  ${growthPct >= 0 ? '+' : ''}'
             '${growthPct.toStringAsFixed(growthPct.abs() >= 10 ? 0 : 1)}%';
 
-    // Buy-ins available at the player's stakes (~100bb cash buy-in). Only shown
-    // when the stakes parse to a big blind — skips tournament / unset stakes.
-    final bb = stakes != null ? parseBBFromStakes(stakes!) : null;
-    final buyIns = (bb != null && bb > 0 && currentBankroll > 0)
-        ? (currentBankroll / (bb * 100)).floor()
-        : null;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        child: Column(
-          children: [
-            Text('Current Bankroll', style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 8),
-            Text(
-              formatPLWithCurrency(currentBankroll, currency),
-              style: theme.textTheme.displayMedium?.copyWith(
-                    color: isUp ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Started with ${formatPLWithCurrency(startingBankroll, currency)}'
-              '$growthStr',
-              style: theme.textTheme.bodySmall?.copyWith(color: subtle),
-            ),
-            if (buyIns != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                '≈ $buyIns buy-in${buyIns == 1 ? '' : 's'} at $stakes',
-                style: theme.textTheme.bodySmall?.copyWith(color: subtle),
-              ),
-            ],
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        'Bankroll ${formatAmount(current, currency)}$growthStr',
+        style: theme.textTheme.bodySmall?.copyWith(color: subtle),
       ),
     );
   }
@@ -682,6 +602,8 @@ class _AiCoachingCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.7),
                             )),
+                    const SizedBox(height: 4),
+                    const AiUsagePill(kind: AiAnalysisKind.session),
                   ],
                 ),
               ),

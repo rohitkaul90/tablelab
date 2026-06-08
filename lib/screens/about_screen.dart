@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -164,8 +165,26 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 36),
+                // Version is read from the build (package_info_plus) so this
+                // line always reflects the installed app — no hardcoded number
+                // to fall out of date.
+                FutureBuilder<PackageInfo>(
+                  future: PackageInfo.fromPlatform(),
+                  builder: (context, snap) {
+                    final version = snap.hasData
+                        ? 'v${snap.data!.version} (${snap.data!.buildNumber})'
+                        : '';
+                    return Text(
+                      'TableLab $version'.trim(),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 4),
                 Text(
-                  'TableLab v1.1',
+                  'Operated by MagpiQ',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

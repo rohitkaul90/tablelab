@@ -69,6 +69,16 @@ final handsProvider = FutureProvider<List<PokerHand>>((ref) {
 
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
 
+/// Current 24h AI usage (session + hand analysis counts, exempt flag), feeding
+/// the contextual quota indicators at the AI entry points. Watches
+/// [authUserIdProvider] so it restarts on account switch. Invalidate after any
+/// AI analysis call so the remaining count stays accurate (there is no
+/// Realtime push).
+final aiUsageProvider = FutureProvider<AiUsage>((ref) {
+  ref.watch(authUserIdProvider);
+  return ref.read(aiServiceProvider).fetchUsageLast24h();
+});
+
 final tournamentListingsProvider = FutureProvider.autoDispose<List<TournamentListing>>((ref) {
   return ref.read(supabaseServiceProvider).fetchTournamentListings();
 });

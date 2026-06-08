@@ -7,8 +7,10 @@ import '../../models/hand_model.dart';
 import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
 import '../../services/analytics_service.dart';
+import '../../utils/helpers.dart';
 import '../../widgets/playing_card_widget.dart';
 import '../../widgets/chip_stack_widget.dart';
+import '../../theme/app_theme.dart';
 import '../hand_replayer/hand_replayer_screen.dart';
 
 class _BlindFormatter extends TextInputFormatter {
@@ -77,9 +79,7 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
     '1/2', '1/3', '2/3', '2/5', '5/10', '10/20', '10/25', '25/50',
   ];
 
-  List<String> get _positions => _numSeats == 6
-      ? const ['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO']
-      : const ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'MP', 'HJ', 'CO'];
+  List<String> get _positions => TableSetup.positionLabels(_numSeats);
 
   int? get _parsedSB {
     if (_isTournamentHand) {
@@ -586,7 +586,12 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
 
   // ── build ─────────────────────────────────────────────────────────────────────
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      // The hand-input table is an immersive green-felt experience — keep it
+      // dark regardless of the app's light/dark theme.
+      Theme(data: AppTheme.dark, child: _build(context));
+
+  Widget _build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_stepTitle),
@@ -666,16 +671,25 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
         const Text('Table Size',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
-        SegmentedButton<int>(
-          segments: const [
-            ButtonSegment(value: 6, label: Text('6-max')),
-            ButtonSegment(value: 9, label: Text('9-max')),
+        DropdownButtonFormField<int>(
+          initialValue: _numSeats,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            isDense: true,
+            contentPadding:
+                EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          ),
+          items: [
+            for (var n = 2; n <= 9; n++)
+              DropdownMenuItem(value: n, child: Text(tableSizeLabel(n))),
           ],
-          selected: {_numSeats},
-          onSelectionChanged: (s) => setState(() {
-            _numSeats = s.first;
-            if (_heroSeat >= _numSeats) _heroSeat = 0;
-          }),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() {
+              _numSeats = v;
+              if (_heroSeat >= _numSeats) _heroSeat = 0;
+            });
+          },
         ),
         const SizedBox(height: 20),
 

@@ -5,14 +5,27 @@ import 'package:tablelab/screens/auth/login_screen.dart';
 // Wrap LoginScreen in a minimal MaterialApp so Theme / Navigator work.
 Widget _buildLoginScreen() => const MaterialApp(home: LoginScreen());
 
+// Pumps LoginScreen on a tall surface so the full scrolling form (including the
+// bottom sign-in/register toggle and legal links) is laid out within the test
+// viewport — otherwise off-screen widgets can't be tapped.
+Future<void> _pumpLogin(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(1080, 2600);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+  await tester.pumpWidget(_buildLoginScreen());
+  await tester.pump();
+}
+
 void main() {
   // Flutter test runner can't load real font glyphs; suppress asset warnings.
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('LoginScreen — rendering', () {
     testWidgets('shows email field, password field, Sign In button', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump(); // let async frame settle
+      await _pumpLogin(tester); // let async frame settle
 
       expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'Password'), findsOneWidget);
@@ -20,29 +33,25 @@ void main() {
     });
 
     testWidgets('shows "Sign in to continue" subtitle in sign-in mode', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       expect(find.text('Sign in to continue'), findsOneWidget);
     });
 
     testWidgets('shows Forgot password link in sign-in mode', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       expect(find.text('Forgot password?'), findsOneWidget);
     });
 
     testWidgets('shows Privacy Policy button', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       expect(find.text('Privacy Policy'), findsOneWidget);
     });
 
     testWidgets('shows Continue with Google button', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       expect(find.text('Continue with Google'), findsOneWidget);
     });
@@ -50,8 +59,7 @@ void main() {
 
   group('LoginScreen — register mode toggle', () {
     testWidgets('tapping toggle switches to register mode', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       await tester.tap(find.text("Don't have an account? Create one"));
       await tester.pump();
@@ -62,8 +70,7 @@ void main() {
     });
 
     testWidgets('Forgot password link hidden in register mode', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       await tester.tap(find.text("Don't have an account? Create one"));
       await tester.pump();
@@ -72,8 +79,7 @@ void main() {
     });
 
     testWidgets('toggling back to sign-in mode restores sign-in UI', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       // → register
       await tester.tap(find.text("Don't have an account? Create one"));
@@ -89,8 +95,7 @@ void main() {
 
   group('LoginScreen — form validation', () {
     testWidgets('empty email shows Required error', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
       await tester.pump();
@@ -99,8 +104,7 @@ void main() {
     });
 
     testWidgets('invalid email (no @) shows validation error', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'notanemail');
@@ -111,8 +115,7 @@ void main() {
     });
 
     testWidgets('empty password shows Required error', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Email'), 'user@test.com');
@@ -123,8 +126,7 @@ void main() {
     });
 
     testWidgets('short password in register mode shows length error', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       // Switch to register mode
       await tester.tap(find.text("Don't have an account? Create one"));
@@ -142,8 +144,7 @@ void main() {
     });
 
     testWidgets('6-char password in register mode passes length check', (tester) async {
-      await tester.pumpWidget(_buildLoginScreen());
-      await tester.pump();
+      await _pumpLogin(tester);
 
       await tester.tap(find.text("Don't have an account? Create one"));
       await tester.pump();

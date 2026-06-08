@@ -1,0 +1,227 @@
+/* TableLab marketing site — shared styles for the landing, privacy, and terms
+   pages. The Flutter app itself lives at "/"; these static pages are the
+   browsable website around it. Dark brand theme, matched to the app
+   (#111811 background, #4CAF50 green accents). */
+
+:root {
+  --bg: #111811;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --primary: #4CAF50;
+  --primary-dark: #2E7D32;
+  --primary-hover: #388E3C;
+  --secondary: #81C784;
+  --text: rgba(255, 255, 255, 0.87);
+  --text-soft: rgba(255, 255, 255, 0.78);
+  --text-muted: rgba(255, 255, 255, 0.55);
+  --text-faint: rgba(255, 255, 255, 0.38);
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Header / nav ──────────────────────────────────────────────────────────── */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: rgba(17, 24, 17, 0.85);
+  backdrop-filter: saturate(160%) blur(10px);
+  -webkit-backdrop-filter: saturate(160%) blur(10px);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.site-header .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+.site-header .brand:hover { text-decoration: none; }
+.site-header .brand .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+}
+
+.site-nav { display: flex; align-items: center; gap: 22px; }
+.site-nav a.link { color: var(--text-muted); font-size: 0.92rem; }
+.site-nav a.link:hover { color: var(--text); text-decoration: none; }
+
+.btn {
+  display: inline-block;
+  padding: 11px 22px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  border: none;
+  text-align: center;
+}
+.btn-primary { background: var(--primary-dark); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); text-decoration: none; }
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--surface-border);
+}
+.btn-ghost:hover { border-color: rgba(255,255,255,0.2); text-decoration: none; }
+.site-header .btn { padding: 9px 18px; font-size: 0.9rem; }
+
+/* ── Layout ────────────────────────────────────────────────────────────────── */
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+/* ── Hero ──────────────────────────────────────────────────────────────────── */
+
+.hero { text-align: center; padding: 72px 24px 40px; }
+.hero h1 {
+  font-size: 2.6rem;
+  line-height: 1.1;
+  margin: 0 0 16px;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.hero h1 .accent { color: var(--primary); }
+.hero .tagline {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  max-width: 560px;
+  margin: 0 auto 32px;
+}
+.hero .actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+/* ── Sections / feature grid ───────────────────────────────────────────────── */
+
+section { padding: 40px 0; }
+h2.section-title {
+  color: var(--secondary);
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 20px;
+}
+
+.features { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.feature {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  padding: 18px;
+}
+.feature .ic { font-size: 1.4rem; margin-bottom: 8px; display: block; }
+.feature strong { color: rgba(255,255,255,0.92); display: block; margin-bottom: 4px; }
+.feature span { color: var(--text-muted); font-size: 0.92rem; }
+
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.step {
+  text-align: center;
+  padding: 12px;
+}
+.step .num {
+  width: 34px; height: 34px; line-height: 34px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: var(--primary-dark);
+  color: #fff;
+  font-weight: 700;
+}
+.step strong { display: block; margin-bottom: 4px; }
+.step span { color: var(--text-muted); font-size: 0.9rem; }
+
+ul.plain { padding-left: 1.4em; }
+ul.plain li { margin-bottom: 6px; color: var(--text-soft); }
+
+/* ── FAQ ───────────────────────────────────────────────────────────────────── */
+
+.faq details {
+  border-bottom: 1px solid var(--surface-border);
+  padding: 14px 0;
+}
+.faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: '+'; float: right; color: var(--text-muted); }
+.faq details[open] summary::after { content: '–'; }
+.faq p { color: var(--text-muted); margin: 10px 0 2px; }
+
+/* ── Legal pages ───────────────────────────────────────────────────────────── */
+
+.legal { padding: 40px 0 24px; }
+.legal h1 { color: var(--primary); font-size: 1.9rem; margin-bottom: 4px; }
+.legal h2 {
+  color: var(--secondary);
+  font-size: 1.05rem;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+.legal p, .legal li { color: var(--text-soft); }
+.legal ul { padding-left: 1.4em; }
+.legal li { margin-bottom: 4px; }
+.legal .meta { color: var(--text-faint); font-size: 0.85rem; margin-bottom: 2rem; }
+.legal .disclaimer {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid var(--primary);
+  padding: 12px 16px;
+  margin: 1.5rem 0;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+
+.site-footer {
+  margin-top: 24px;
+  border-top: 1px solid var(--surface-border);
+  padding: 28px 24px 40px;
+}
+.site-footer .inner {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.site-footer .links { display: flex; gap: 20px; flex-wrap: wrap; }
+.site-footer a { color: var(--text-muted); font-size: 0.88rem; }
+.site-footer .copy { color: var(--text-faint); font-size: 0.85rem; }
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 560px) {
+  .hero h1 { font-size: 2rem; }
+  .features, .steps { grid-template-columns: 1fr; }
+  .site-nav .link { display: none; }
+}

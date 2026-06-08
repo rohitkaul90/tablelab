@@ -359,11 +359,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     FilledButton.icon(
                       onPressed: _saving ? null : _save,
                       icon: _saving
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
+                                  strokeWidth: 2,
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary))
                           : const Icon(Icons.save_outlined),
                       label: Text(_saving ? 'Saving…' : 'Save Profile'),
                       style: FilledButton.styleFrom(

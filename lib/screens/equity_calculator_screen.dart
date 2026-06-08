@@ -242,10 +242,15 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Column(
                     children: [
-                      const Icon(Icons.people_outline, size: 48, color: Colors.white24),
+                      Icon(Icons.people_outline,
+                          size: 48, color: Theme.of(context).colorScheme.outline),
                       const SizedBox(height: 8),
-                      const Text('Add at least 2 players to begin',
-                          style: TextStyle(color: Colors.white38)),
+                      Text('Add at least 2 players to begin',
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.75))),
                     ],
                   ),
                 ),
@@ -281,7 +286,10 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                     icon: const Icon(Icons.clear, size: 14),
                     label: const Text('Clear Board'),
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.white38,
+                      foregroundColor: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.75),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       visualDensity: VisualDensity.compact,
                     ),
@@ -307,8 +315,13 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Text('Flop',
-                        style: TextStyle(fontSize: 10, color: Colors.white38)),
+                    Text('Flop',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.75))),
                   ],
                 ),
                 const SizedBox(width: 12),
@@ -317,8 +330,13 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                   children: [
                     BoardCardChip(cardIdx: _board[3], onTap: () => _openCardPicker(3)),
                     const SizedBox(height: 4),
-                    const Text('Turn',
-                        style: TextStyle(fontSize: 10, color: Colors.white38)),
+                    Text('Turn',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.75))),
                   ],
                 ),
                 const SizedBox(width: 12),
@@ -327,8 +345,13 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                   children: [
                     BoardCardChip(cardIdx: _board[4], onTap: () => _openCardPicker(4)),
                     const SizedBox(height: 4),
-                    const Text('River',
-                        style: TextStyle(fontSize: 10, color: Colors.white38)),
+                    Text('River',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.75))),
                   ],
                 ),
               ],
@@ -342,9 +365,11 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
               child: FilledButton.icon(
                 onPressed: _canCalculate && !_running ? _calculate : null,
                 icon: _running
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary),
                       )
                     : const Icon(Icons.calculate),
                 label: Text(_running ? 'Calculating…' : 'Calculate Equity'),
@@ -365,7 +390,12 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                   Text('EQUITY — ${_streetLabel(_resultBoard)}', style: sectionLabel),
                   const Spacer(),
                   Text('${_result!.iterations ~/ 1000}k iterations',
-                      style: const TextStyle(fontSize: 11, color: Colors.white38)),
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.75))),
                 ],
               ),
               const SizedBox(height: 12),
@@ -483,7 +513,7 @@ class _PlayerCard extends StatelessWidget {
           color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: hasRange ? color.withAlpha(120) : Colors.white12,
+            color: hasRange ? color.withAlpha(120) : theme.colorScheme.outlineVariant,
             width: hasRange ? 1.5 : 1,
           ),
         ),
@@ -510,7 +540,9 @@ class _PlayerCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Icon(Icons.edit, size: 11, color: Colors.white30),
+                Icon(Icons.edit,
+                    size: 11,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.30)),
               ],
             ),
             const SizedBox(height: 6),
@@ -522,7 +554,7 @@ class _PlayerCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${player.comboCount} combos  ${player.rangePercent.toStringAsFixed(1)}%',
-                  style: const TextStyle(fontSize: 9, color: Colors.white54),
+                  style: TextStyle(fontSize: 9, color: theme.colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -541,7 +573,9 @@ class _PlayerCard extends StatelessWidget {
               const Spacer(),
               Text(
                 player.isExactHand ? 'Tap to\nset hand' : 'Tap to\nset range',
-                style: const TextStyle(fontSize: 10, color: Colors.white30),
+                style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.30)),
                 textAlign: TextAlign.center,
               ),
               const Spacer(),
@@ -587,10 +621,16 @@ class _EquityRow extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text('${(equity * 100).toStringAsFixed(1)}%',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface)),
               const Spacer(),
               Text('$comboCount ${comboCount == 1 ? 'combo' : 'combos'}',
-                  style: const TextStyle(fontSize: 11, color: Colors.white38)),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.75))),
             ],
           ),
           const SizedBox(height: 6),

@@ -4,11 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth/auth_gate.dart';
 import 'config/analytics_config.dart';
 import 'config/supabase_config.dart';
 import 'firebase_options.dart';
+import 'providers/theme_provider.dart';
+import 'theme/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/hands_screen.dart';
 import 'screens/reads_screen.dart';
@@ -51,24 +54,30 @@ void main() async {
     }
   }
 
-  runApp(const ProviderScope(child: PokerTrackerApp()));
+  // Load persisted preferences (theme mode) before the first frame so the
+  // chosen theme applies immediately — no dark→light flash on cold start.
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const PokerTrackerApp(),
+    ),
+  );
 }
 
-class PokerTrackerApp extends StatelessWidget {
+class PokerTrackerApp extends ConsumerWidget {
   const PokerTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
       title: 'TableLab',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1B5E20),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       home: const AuthGate(),
       // Incoming platform route pushes (the io.supabase.pokertracker OAuth /
       // email-confirmation deep link, or an OS-supplied launch route) are
