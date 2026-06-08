@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/session_model.dart';
 import '../models/session_filter.dart';
 import '../models/hand_model.dart';
+import '../models/hand_filter.dart';
 import '../models/tournament_listing.dart';
 import '../services/supabase_service.dart';
 import '../services/hand_service.dart';
@@ -66,6 +67,10 @@ final handsProvider = FutureProvider<List<PokerHand>>((ref) {
   ref.watch(authUserIdProvider); // re-fetch when user changes
   return ref.read(handServiceProvider).fetchHands();
 });
+
+/// Active filter for the Hands tab (funnel). AND-ed criteria; see [HandFilter].
+final handFilterProvider =
+    StateProvider<HandFilter>((ref) => const HandFilter());
 
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
 
