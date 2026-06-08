@@ -3,122 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TableLab — Poker Bankroll Tracker</title>
-  <meta name="description" content="TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record hands, get AI coaching, and track your results over time.">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 40px 24px 72px;
-      background: #111811;
-      color: rgba(255,255,255,0.87);
-      line-height: 1.65;
-    }
-    h1 { color: #4CAF50; font-size: 2rem; margin-bottom: 4px; }
-    h2 { color: #81C784; font-size: 1.05rem; margin-top: 2.5rem; margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; }
-    p, li { color: rgba(255,255,255,0.80); }
-    ul { padding-left: 1.4em; }
-    li { margin-bottom: 6px; }
-    a { color: #4CAF50; }
-    .tagline { color: rgba(255,255,255,0.55); font-size: 1.1rem; margin-bottom: 2.5rem; }
-    .cta {
-      display: inline-block;
-      margin-top: 0.5rem;
-      padding: 12px 28px;
-      background: #2E7D32;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 1rem;
-      letter-spacing: 0.01em;
-    }
-    .cta:hover { background: #388E3C; }
-    .features {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 1rem;
-    }
-    .feature {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
-      padding: 16px;
-    }
-    .feature strong { color: rgba(255,255,255,0.92); display: block; margin-bottom: 4px; }
-    .feature span { color: rgba(255,255,255,0.55); font-size: 0.9rem; }
-    .footer {
-      margin-top: 3.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      font-size: 0.85rem;
-      color: rgba(255,255,255,0.35);
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .footer a { color: rgba(255,255,255,0.40); }
-    @media (max-width: 500px) {
-      .features { grid-template-columns: 1fr; }
-    }
-  </style>
+  <title>TableLab — Poker Bankroll Tracker & AI Coaching</title>
+  <meta name="description" content="TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record hands, run equity, and get AI coaching — on Android and the web.">
+  <link rel="canonical" href="https://tablelab.app/about">
+  <meta property="og:title" content="TableLab — Poker Bankroll Tracker & AI Coaching">
+  <meta property="og:description" content="Track sessions, record hands, and get AI-powered coaching. Free on Android and the web.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tablelab.app/about">
+  <link rel="stylesheet" href="/site.css">
 </head>
 <body>
 
-  <h1>TableLab</h1>
-  <p class="tagline">Poker bankroll tracker for cash games and tournaments.</p>
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="#features">Features</a>
+      <a class="link" href="#how">How it works</a>
+      <a class="link" href="/privacy">Privacy</a>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
 
-  <p>TableLab is a free app that helps poker players track their results, study their hands, and
-  improve their game over time. Log sessions, record hand histories, calculate equity, and get
-  AI-powered coaching — all in one place.</p>
+  <main>
+    <div class="hero">
+      <h1>Track your poker.<br><span class="accent">Fix your leaks.</span></h1>
+      <p class="tagline">A free bankroll tracker for cash games and tournaments — with hand
+        recording, an equity calculator, and AI coaching that tells you what to work on.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/">Open the App</a>
+        <a class="btn btn-ghost" href="#features">See features</a>
+      </div>
+    </div>
 
-  <a class="cta" href="https://tablelab.app">Open App</a>
+    <div class="wrap">
 
-  <h2>Features</h2>
-  <div class="features">
-    <div class="feature">
-      <strong>Session Tracking</strong>
-      <span>Log cash game and tournament sessions with stakes, buy-in, cash-out, duration, and notes.</span>
-    </div>
-    <div class="feature">
-      <strong>Hand Recorder</strong>
-      <span>Record full hand histories street by street, with pot odds, bet sizing, and player actions.</span>
-    </div>
-    <div class="feature">
-      <strong>AI Coaching</strong>
-      <span>Get Claude-powered analysis of your sessions and individual hands with actionable feedback.</span>
-    </div>
-    <div class="feature">
-      <strong>Equity Calculator</strong>
-      <span>Run range vs. range equity calculations with GTO presets and Monte Carlo simulation.</span>
-    </div>
-    <div class="feature">
-      <strong>Player Reads</strong>
-      <span>Track reads and tendencies on opponents you play with regularly.</span>
-    </div>
-    <div class="feature">
-      <strong>Bankroll Dashboard</strong>
-      <span>Charts and statistics across your full history — win rate, BB/100, profit by game type, and more.</span>
-    </div>
-  </div>
+      <section id="features">
+        <h2 class="section-title">Everything in one place</h2>
+        <div class="features">
+          <div class="feature">
+            <span class="ic">📒</span>
+            <strong>Session Tracking</strong>
+            <span>Log cash and tournament sessions with stakes, buy-in, cash-out, table size, duration, and notes.</span>
+          </div>
+          <div class="feature">
+            <span class="ic">🃏</span>
+            <strong>Hand Recorder</strong>
+            <span>Record full hand histories street by street — from heads-up to 9-handed — then replay them on a table.</span>
+          </div>
+          <div class="feature">
+            <span class="ic">✨</span>
+            <strong>AI Coaching</strong>
+            <span>Get Claude-powered analysis of your sessions and individual hands, with concrete, actionable feedback.</span>
+          </div>
+          <div class="feature">
+            <span class="ic">🧮</span>
+            <strong>Equity Calculator</strong>
+            <span>Run range-vs-range equity with GTO presets and Monte Carlo simulation — fully offline.</span>
+          </div>
+          <div class="feature">
+            <span class="ic">👁️</span>
+            <strong>Player Reads</strong>
+            <span>Track tendencies on the regulars you face, and turn tags into rule-based insights.</span>
+          </div>
+          <div class="feature">
+            <span class="ic">📈</span>
+            <strong>Bankroll Dashboard</strong>
+            <span>Win rate, BB/100, profit by game type, and trends across your full history.</span>
+          </div>
+        </div>
+      </section>
 
-  <h2>Platforms</h2>
-  <ul>
-    <li><strong>Android</strong> — available on Google Play</li>
-    <li><strong>Web</strong> — runs in any modern browser at <a href="https://tablelab.app">tablelab.app</a></li>
-  </ul>
+      <section id="how">
+        <h2 class="section-title">How it works</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="num">1</div>
+            <strong>Log your sessions</strong>
+            <span>Add each cash game or tournament in seconds.</span>
+          </div>
+          <div class="step">
+            <div class="num">2</div>
+            <strong>Record key hands</strong>
+            <span>Capture the spots you want to study, linked to the session.</span>
+          </div>
+          <div class="step">
+            <div class="num">3</div>
+            <strong>Get coached</strong>
+            <span>Let the AI debrief your play and surface your leaks.</span>
+          </div>
+        </div>
+      </section>
 
-  <h2>About</h2>
-  <p>TableLab is built and maintained by MagpiQ, an independent software developer based in
-  Ontario, Canada. All your session data is private to your account and protected by row-level
-  security. The app does not show ads and does not sell your data.</p>
+      <section id="platforms">
+        <h2 class="section-title">Where to play</h2>
+        <ul class="plain">
+          <li><strong>Android</strong> — available on Google Play.</li>
+          <li><strong>Web</strong> — runs in any modern browser at <a href="/">tablelab.app</a>.</li>
+        </ul>
+      </section>
 
-  <div class="footer">
-    <a href="https://tablelab.app/privacy">Privacy Policy</a>
-    <span>© 2026 MagpiQ</span>
-  </div>
+      <section id="faq" class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>Is TableLab free?</summary>
+          <p>Yes. The core tracker, hand recorder, equity calculator, and dashboard are free.
+          AI coaching has a generous free daily allowance.</p>
+        </details>
+        <details>
+          <summary>Does it show ads or sell my data?</summary>
+          <p>No ads, and we never sell your data. Your records are private to your account and
+          protected by row-level security. See our <a href="/privacy">Privacy Policy</a>.</p>
+        </details>
+        <details>
+          <summary>Is my data sent anywhere for AI coaching?</summary>
+          <p>Only when you explicitly tap “Analyse”. At that point the relevant session or hand is
+          sent to Anthropic (Claude) to generate the coaching, then cached to your account.</p>
+        </details>
+        <details>
+          <summary>Can I export my sessions?</summary>
+          <p>Yes — export to CSV/Excel any time from the in-app Import/Export screen, and import
+          from other trackers too.</p>
+        </details>
+      </section>
+
+      <section id="about-magpiq">
+        <h2 class="section-title">About</h2>
+        <p style="color: var(--text-soft);">TableLab is built and operated by <strong>MagpiQ</strong>,
+        an independent software studio based in Ontario, Canada. Questions or feedback? Reach us at
+        <a href="mailto:support@tablelab.app">support@tablelab.app</a>.</p>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/about">About</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
 
 </body>
 </html>
