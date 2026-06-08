@@ -266,8 +266,14 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
     if (widget.prefilledSessionId != null) {
       _selectedSessionId = widget.prefilledSessionId;
     }
-    if (widget.prefilledStakes != null &&
-        _presetStakes.contains(widget.prefilledStakes)) {
+    // Pre-fill stakes from the session as an editable default (cash only —
+    // tournaments use the blind-level fields). Any value is accepted, not just
+    // presets, so a "3/6" session doesn't silently fall back to 1/2. The user
+    // can still change it or add a straddle, which the session can't capture.
+    if (!widget.isTournamentSession &&
+        widget.prefilledStakes != null &&
+        widget.prefilledStakes!.isNotEmpty &&
+        widget.prefilledStakes != 'N/A') {
       _selectedStakes = widget.prefilledStakes!;
     }
     _isTournamentHand = widget.isTournamentSession;
@@ -545,6 +551,7 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
         streets: _completedStreets,
         sessionId: _selectedSessionId,
         tournamentStage: _isTournamentHand ? _tournamentStage : null,
+        isTournament: _isTournamentHand,
       );
       AnalyticsService.handRecorded(isTournament: _isTournamentHand);
       if (!mounted) return;
@@ -694,24 +701,52 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
         const SizedBox(height: 20),
 
         // ── Tournament toggle ────────────────────────────────────────────────
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Tournament hand'),
-          subtitle: const Text(
-            'Enables blind level labelling, ante, stage & BB-depth tracking',
-            style: TextStyle(fontSize: 11),
+        if (widget.prefilledSessionId != null)
+          // Recording from a session: game type is inherited and locked — no
+          // need to ask again. (Stakes are pre-filled but stay editable, since
+          // the session's stakes can't capture a straddle / 3-blind game.)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Icon(Icons.lock_outline,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Text(
+                  _isTournamentHand ? 'Tournament hand' : 'Cash hand',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '· from session',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          )
+        else
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Tournament hand'),
+            subtitle: const Text(
+              'Enables blind level labelling, ante, stage & BB-depth tracking',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: _isTournamentHand,
+            onChanged: (v) => setState(() {
+              _isTournamentHand = v;
+              if (!v) {
+                _anteCtrl.clear();
+                _tournSbCtrl.clear();
+                _tournBbCtrl.clear();
+                _tournamentStage = null;
+              }
+            }),
           ),
-          value: _isTournamentHand,
-          onChanged: (v) => setState(() {
-            _isTournamentHand = v;
-            if (!v) {
-              _anteCtrl.clear();
-              _tournSbCtrl.clear();
-              _tournBbCtrl.clear();
-              _tournamentStage = null;
-            }
-          }),
-        ),
         const SizedBox(height: 16),
 
         // ── Blind level (Stakes) ────────────────────────────────────────────
@@ -774,14 +809,21 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
               contentPadding:
                   EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
-            items: _presetStakes
-                .map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text('\$$s',
-                          style:
-                              const TextStyle(fontWeight: FontWeight.bold)),
-                    ))
-                .toList(),
+            items: [
+              // Include a non-preset prefilled value (e.g. a "3/6" session) so
+              // it's selectable and the dropdown's value is always valid.
+              if (!_presetStakes.contains(_selectedStakes))
+                DropdownMenuItem(
+                  value: _selectedStakes,
+                  child: Text('\$$_selectedStakes',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ..._presetStakes.map((s) => DropdownMenuItem(
+                    value: s,
+                    child: Text('\$$s',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                  )),
+            ],
             onChanged: (v) => setState(() => _selectedStakes = v!),
           ),
         if (sb != null && bb != null)
@@ -1764,7 +1806,12 @@ class _SessionPickerTile extends ConsumerWidget {
                 ),
                 ...recent.map((s) {
                   final date = s.date.length >= 10 ? s.date.substring(0, 10) : s.date;
-                  final label = '$date  ·  ${s.gameType}  ·  ${s.stakes}';
+                  final loc = (s.location != null && s.location!.isNotEmpty)
+                      ? '  ·  ${s.location}'
+                      : '';
+                  // Location distinguishes multiple same-day sessions at
+                  // different venues.
+                  final label = '$date  ·  ${s.gameType}  ·  ${s.stakes}$loc';
                   return DropdownMenuItem<String?>(
                     value: s.id,
                     child: Text(label,
@@ -1779,7 +1826,8 @@ class _SessionPickerTile extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 5),
                 child: Text(
-                  'Session: ${selected.date.substring(0, 10)}  ·  ${selected.stakes}',
+                  'Session: ${selected.date.substring(0, 10)}  ·  ${selected.stakes}'
+                  '${selected.location != null && selected.location!.isNotEmpty ? '  ·  ${selected.location}' : ''}',
                   style: const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
               ),

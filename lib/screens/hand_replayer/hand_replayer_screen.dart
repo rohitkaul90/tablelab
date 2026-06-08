@@ -1073,6 +1073,10 @@ class _SessionLinkSheet extends StatelessWidget {
                 final pl = s.profitLoss;
                 final plStr =
                     '${pl >= 0 ? '+' : ''}${pl.abs().toStringAsFixed(0)} ${s.currency}';
+                // Location helps distinguish same-day sessions at different venues.
+                final locPart = (s.location != null && s.location!.isNotEmpty)
+                    ? '${s.location}  ·  '
+                    : '';
                 return ListTile(
                   leading: Icon(
                     isLinked ? Icons.link : Icons.calendar_today_outlined,
@@ -1085,11 +1089,12 @@ class _SessionLinkSheet extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text(
-                    plStr,
+                    '$locPart$plStr',
                     style: TextStyle(
                       fontSize: 12,
                       color: pl >= 0 ? Colors.green.shade300 : Colors.red.shade300,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   trailing: isLinked
                       ? Icon(Icons.check, color: Colors.green.shade400, size: 16)
