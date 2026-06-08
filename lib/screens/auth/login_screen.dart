@@ -184,7 +184,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: theme.colorScheme.outline,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Bankroll tracking, hand replays, and AI coaching '
+                      'for cash & tournament poker.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.85),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
 
                     // ── Google sign-in ─────────────────────────────────────
                     OutlinedButton.icon(
@@ -319,29 +330,70 @@ class _LoginScreenState extends State<LoginScreen> {
                             : "Don't have an account? Create one",
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextButton(
+                    const SizedBox(height: 4),
+                    TextButton.icon(
                       onPressed: () => launchUrl(
-                        Uri.parse('https://tablelab.app/privacy'),
+                        Uri.parse('https://tablelab.app/about'),
                         mode: LaunchMode.externalApplication,
                       ),
+                      icon: const Icon(Icons.open_in_new, size: 14),
+                      label: const Text('Learn more about TableLab'),
                       style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: theme.colorScheme.primary,
+                        textStyle: const TextStyle(fontSize: 13),
                       ),
-                      child: Text(
-                        'Privacy Policy',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.outline,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _LegalLink(
+                          label: 'Privacy Policy',
+                          url: 'https://tablelab.app/privacy',
                         ),
-                      ),
+                        Text(
+                          '  ·  ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                        _LegalLink(
+                          label: 'Terms',
+                          url: 'https://tablelab.app/terms',
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// Muted, tappable legal link that opens the marketing site in the browser.
+class _LegalLink extends StatelessWidget {
+  final String label;
+  final String url;
+
+  const _LegalLink({required this.label, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.outline,
         ),
       ),
     );
