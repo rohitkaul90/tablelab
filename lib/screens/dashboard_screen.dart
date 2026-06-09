@@ -34,8 +34,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   // Analytics filter state
   String? _analyticsVenueFilter;
-  String? _analyticsCountryFilter;
-  String? _analyticsLocationFilter;
+  Set<String> _analyticsCountryFilter = {};
+  Set<String> _analyticsLocationFilter = {};
   String? _analyticsDisplayCurrency;
   String? _analyticsDateFilter;
 
@@ -56,9 +56,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   bool get _hasActiveAnalyticsFilter =>
       _analyticsDisplayCurrency != null ||
-      _analyticsCountryFilter != null ||
+      _analyticsCountryFilter.isNotEmpty ||
       _analyticsVenueFilter != null ||
-      _analyticsLocationFilter != null ||
+      _analyticsLocationFilter.isNotEmpty ||
       _analyticsDateFilter != null;
 
   void _showFilterSheet(List<SessionModel> sessions) {
@@ -135,9 +135,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }),
         onReset: () => setState(() {
           _analyticsDisplayCurrency = null;
-          _analyticsCountryFilter = null;
+          _analyticsCountryFilter = {};
           _analyticsVenueFilter = null;
-          _analyticsLocationFilter = null;
+          _analyticsLocationFilter = {};
           _analyticsDateFilter = null;
         }),
       ),
@@ -395,7 +395,7 @@ class _OverviewBody extends ConsumerWidget {
                 : [
                     StatCard(
                       label: 'Hours Played',
-                      value: '${stats.totalHours.round()}h',
+                      value: formatHours(stats.totalHours),
                     ),
                     StatCard(
                       label: 'Win Rate',

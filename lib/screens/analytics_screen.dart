@@ -11,16 +11,16 @@ import '../utils/helpers.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   final String? venueFilter;
-  final String? countryFilter;
-  final String? locationFilter;
+  final Set<String> countryFilter;
+  final Set<String> locationFilter;
   final String? displayCurrency;
   final String? dateFilter;
 
   const AnalyticsScreen({
     super.key,
     this.venueFilter,
-    this.countryFilter,
-    this.locationFilter,
+    this.countryFilter = const {},
+    this.locationFilter = const {},
     this.displayCurrency,
     this.dateFilter,
   });
@@ -59,16 +59,16 @@ class AnalyticsScreen extends ConsumerWidget {
 class _AnalyticsBody extends StatefulWidget {
   final List<SessionModel> sessions;
   final String? venueFilter;
-  final String? countryFilter;
-  final String? locationFilter;
+  final Set<String> countryFilter;
+  final Set<String> locationFilter;
   final String? displayCurrency;
   final String? dateFilter;
 
   const _AnalyticsBody({
     required this.sessions,
     this.venueFilter,
-    this.countryFilter,
-    this.locationFilter,
+    this.countryFilter = const {},
+    this.locationFilter = const {},
     this.displayCurrency,
     this.dateFilter,
   });
@@ -79,7 +79,6 @@ class _AnalyticsBody extends StatefulWidget {
 
 class _AnalyticsBodyState extends State<_AnalyticsBody> {
   String? _gameFilter;
-  bool _recsExpanded = false;
 
   String get _effectiveCurrency {
     if (widget.displayCurrency != null) return widget.displayCurrency!;
@@ -107,8 +106,9 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
         }).toList();
       }
     }
-    if (widget.countryFilter != null) {
-      result = result.where((s) => s.country == widget.countryFilter).toList();
+    if (widget.countryFilter.isNotEmpty) {
+      result =
+          result.where((s) => widget.countryFilter.contains(s.country)).toList();
     }
     if (_gameFilter != null) {
       if (_gameFilter == 'tournament') {
@@ -122,9 +122,11 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     } else if (widget.venueFilter == 'live') {
       result = result.where((s) => !isOnlineSession(s.location)).toList();
     }
-    if (widget.locationFilter != null) {
-      result =
-          result.where((s) => s.location == widget.locationFilter).toList();
+    if (widget.locationFilter.isNotEmpty) {
+      result = result
+          .where((s) =>
+              s.location != null && widget.locationFilter.contains(s.location))
+          .toList();
     }
     return result;
   }
@@ -186,7 +188,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
 
     final summaryItems = <_SummaryItem>[
       _SummaryItem('Sessions', '${filtered.length}'),
-      _SummaryItem('Hours', '${totalHours.toStringAsFixed(1)}h'),
+      _SummaryItem('Hours', formatHours(totalHours)),
       _SummaryItem(
         'Win Rate',
         '$rateSign$sym${hourlyRate.abs().toStringAsFixed(0)}/hr',
@@ -258,9 +260,9 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
             delegate: _SummaryDelegate(
               items: summaryItems,
               columns: summaryCols,
-              labelSize: isWide ? 11.5 : 10.0,
-              valueSize: isWide ? 14.0 : 12.0,
-              rowHeight: isWide ? 46.0 : 38.0,
+              labelSize: isWide ? 12.0 : 11.0,
+              valueSize: isWide ? 16.0 : 15.0,
+              rowHeight: isWide ? 52.0 : 48.0,
               hPad: hPad,
             ),
           ),
@@ -270,70 +272,6 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
             padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 88),
             sliver: SliverList.list(
               children: [
-                // Recommendations (collapsible)
-                InkWell(
-                  onTap: () =>
-                      setState(() => _recsExpanded = !_recsExpanded),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                            child: _sectionHeader(
-                                context, 'Recommendations')),
-                        Icon(
-                          _recsExpanded
-                              ? Icons.expand_less
-                              : Icons.expand_more,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_recsExpanded) ...[
-                  const SizedBox(height: 8),
-                  if (_gameFilter == null &&
-                      showingCash &&
-                      showingTournaments) ...[
-                    _RecommendationsCard(
-                      sessions: filtered
-                          .where((s) => s.gameType == 'cash')
-                          .toList(),
-                      gameLabel: 'cash',
-                      displayCurrency: displayCurrency,
-                    ),
-                    const SizedBox(height: 8),
-                    _RecommendationsCard(
-                      sessions: filtered
-                          .where((s) => isTournamentType(s.gameType))
-                          .toList(),
-                      gameLabel: 'tournament',
-                      displayCurrency: displayCurrency,
-                    ),
-                  ] else if (showingCash)
-                    _RecommendationsCard(
-                      sessions: filtered
-                          .where((s) => s.gameType == 'cash')
-                          .toList(),
-                      gameLabel: 'cash',
-                      displayCurrency: displayCurrency,
-                    )
-                  else if (showingTournaments)
-                    _RecommendationsCard(
-                      sessions: filtered
-                          .where((s) => isTournamentType(s.gameType))
-                          .toList(),
-                      gameLabel: 'tournament',
-                      displayCurrency: displayCurrency,
-                    ),
-                ],
-                const SizedBox(height: 20),
-
-                _sectionHeader(context, 'Charts'),
-                const SizedBox(height: 8),
                 _PLChart(
                     sessions: sorted, displayCurrency: displayCurrency),
                 const SizedBox(height: 20),
@@ -514,6 +452,44 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                     isTournament: showingTournaments && !showingCash,
                   ),
                 ],
+
+                // ── Recommendations (the takeaway drawn from the breakdowns
+                //    above — lives at the bottom as a conclusion). ──────────
+                const SizedBox(height: 20),
+                _sectionHeader(context, 'Recommendations'),
+                const SizedBox(height: 8),
+                if (_gameFilter == null &&
+                    showingCash &&
+                    showingTournaments) ...[
+                  _RecommendationsCard(
+                    sessions:
+                        filtered.where((s) => s.gameType == 'cash').toList(),
+                    gameLabel: 'cash',
+                    displayCurrency: displayCurrency,
+                  ),
+                  const SizedBox(height: 8),
+                  _RecommendationsCard(
+                    sessions: filtered
+                        .where((s) => isTournamentType(s.gameType))
+                        .toList(),
+                    gameLabel: 'tournament',
+                    displayCurrency: displayCurrency,
+                  ),
+                ] else if (showingCash)
+                  _RecommendationsCard(
+                    sessions:
+                        filtered.where((s) => s.gameType == 'cash').toList(),
+                    gameLabel: 'cash',
+                    displayCurrency: displayCurrency,
+                  )
+                else if (showingTournaments)
+                  _RecommendationsCard(
+                    sessions: filtered
+                        .where((s) => isTournamentType(s.gameType))
+                        .toList(),
+                    gameLabel: 'tournament',
+                    displayCurrency: displayCurrency,
+                  ),
               ],
             ),
           ),
@@ -649,15 +625,51 @@ enum _Lookback { all, oneYear, sixMonths, threeMonths, oneMonth }
 class _PLChart extends StatefulWidget {
   final List<SessionModel> sessions;
   final String displayCurrency;
-  const _PLChart({required this.sessions, required this.displayCurrency});
+  // When true, render the cumulative graph filling the available height (used
+  // by the full-screen view) — no card, no title, no mode toggle.
+  final bool fullScreen;
+  final _Lookback initialLookback;
+  const _PLChart({
+    required this.sessions,
+    required this.displayCurrency,
+    this.fullScreen = false,
+    this.initialLookback = _Lookback.all,
+  });
 
   @override
   State<_PLChart> createState() => _PLChartState();
 }
 
+class _PLChartFullScreen extends StatelessWidget {
+  final List<SessionModel> sessions;
+  final String displayCurrency;
+  final _Lookback initialLookback;
+  const _PLChartFullScreen({
+    required this.sessions,
+    required this.displayCurrency,
+    this.initialLookback = _Lookback.all,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Profit Over Time')),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: _PLChart(
+          sessions: sessions,
+          displayCurrency: displayCurrency,
+          fullScreen: true,
+          initialLookback: initialLookback,
+        ),
+      ),
+    );
+  }
+}
+
 class _PLChartState extends State<_PLChart> {
   _PLMode _mode = _PLMode.cumulative;
-  _Lookback _lookback = _Lookback.all;
+  late _Lookback _lookback = widget.initialLookback;
   final Set<String> _expandedYears = {DateTime.now().year.toString()};
 
   static const _modeLabels = {
@@ -692,9 +704,47 @@ class _PLChartState extends State<_PLChart> {
     }).toList();
   }
 
+  // Lookback (All / 1Y / 6M / 3M / 1M) chip row — shared by the card and the
+  // full-screen view.
+  Widget _lookbackSelector() => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final entry in [
+              (_Lookback.all, 'All'),
+              (_Lookback.oneYear, '1Y'),
+              (_Lookback.sixMonths, '6M'),
+              (_Lookback.threeMonths, '3M'),
+              (_Lookback.oneMonth, '1M'),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ChoiceChip(
+                  label: Text(entry.$2, style: const TextStyle(fontSize: 11)),
+                  selected: _lookback == entry.$1,
+                  onSelected: (_) => setState(() => _lookback = entry.$1),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final sym = currencySymbol(widget.displayCurrency);
+
+    // Full-screen: cumulative graph filling the height, with the lookback row.
+    if (widget.fullScreen) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: _buildCumulative(context, sym)),
+          const SizedBox(height: 12),
+          _lookbackSelector(),
+        ],
+      );
+    }
 
     return Card(
       child: Padding(
@@ -702,13 +752,47 @@ class _PLChartState extends State<_PLChart> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Profit Over Time',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Profit Over Time',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                ),
+                if (_mode == _PLMode.cumulative)
+                  IconButton(
+                    icon: const Icon(Icons.open_in_full, size: 18),
+                    tooltip: 'Full screen',
+                    visualDensity: VisualDensity.compact,
+                    color: Theme.of(context).colorScheme.outline,
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => _PLChartFullScreen(
+                          sessions: widget.sessions,
+                          displayCurrency: widget.displayCurrency,
+                          initialLookback: _lookback,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 10),
-            // Mode toggle
+            // Graph first — sits directly under the title so it (and its x-axis)
+            // clears the fold. The view/timeframe controls live below it.
+            if (_mode == _PLMode.cumulative)
+              SizedBox(
+                height: (MediaQuery.of(context).size.height * 0.27)
+                    .clamp(170.0, 260.0),
+                child: _buildCumulative(context, sym),
+              )
+            else
+              _buildTable(context),
+            const SizedBox(height: 10),
+            // Mode toggle (below the graph)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -726,41 +810,11 @@ class _PLChartState extends State<_PLChart> {
                     .toList(),
               ),
             ),
-            const SizedBox(height: 12),
+            // Lookback period selector (cumulative only, below)
             if (_mode == _PLMode.cumulative) ...[
-              // Lookback period selector
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final entry in [
-                      (_Lookback.all, 'All'),
-                      (_Lookback.oneYear, '1Y'),
-                      (_Lookback.sixMonths, '6M'),
-                      (_Lookback.threeMonths, '3M'),
-                      (_Lookback.oneMonth, '1M'),
-                    ])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ChoiceChip(
-                          label: Text(entry.$2,
-                              style: const TextStyle(fontSize: 11)),
-                          selected: _lookback == entry.$1,
-                          onSelected: (_) =>
-                              setState(() => _lookback = entry.$1),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: MediaQuery.of(context).size.width > 800 ? 240 : 180,
-                child: _buildCumulative(context, sym),
-              ),
-            ] else
-              _buildTable(context),
+              const SizedBox(height: 8),
+              _lookbackSelector(),
+            ],
           ],
         ),
       ),
@@ -1728,17 +1782,17 @@ class _RecommendationsCard extends StatelessWidget {
 
 class AnalyticsFilterSheet extends StatefulWidget {
   final String displayCurrency;
-  final String? countryFilter;
+  final Set<String> countryFilter;
   final String? venueFilter;
-  final String? locationFilter;
+  final Set<String> locationFilter;
   final String? dateFilter;
   final List<String> allCountries;
   final bool hasMultipleCountries;
   final bool hasOnline;
   final bool hasLive;
   final List<String> allLocations;
-  final void Function(String? currency, String? country, String? venue,
-      String? location, String? date) onApply;
+  final void Function(String? currency, Set<String> country, String? venue,
+      Set<String> location, String? date) onApply;
   final VoidCallback onReset;
 
   const AnalyticsFilterSheet({
@@ -1763,18 +1817,18 @@ class AnalyticsFilterSheet extends StatefulWidget {
 
 class _AnalyticsFilterSheetState extends State<AnalyticsFilterSheet> {
   late String _currency;
-  late String? _country;
+  late Set<String> _country;
   late String? _venue;
-  late String? _location;
+  late Set<String> _location;
   late String? _date;
 
   @override
   void initState() {
     super.initState();
     _currency = widget.displayCurrency;
-    _country = widget.countryFilter;
+    _country = {...widget.countryFilter};
     _venue = widget.venueFilter;
-    _location = widget.locationFilter;
+    _location = {...widget.locationFilter};
     _date = widget.dateFilter;
   }
 
@@ -1854,14 +1908,21 @@ class _AnalyticsFilterSheetState extends State<AnalyticsFilterSheet> {
                 children: [
                   FilterChip(
                     label: const Text('All Countries'),
-                    selected: _country == null,
-                    onSelected: (_) => setState(() => _country = null),
+                    selected: _country.isEmpty,
+                    onSelected: (_) => setState(() => _country = {}),
                   ),
                   ...widget.allCountries.map((c) => FilterChip(
                         label: Text(c),
-                        selected: _country == c,
-                        onSelected: (on) =>
-                            setState(() => _country = on ? c : null),
+                        selected: _country.contains(c),
+                        onSelected: (on) => setState(() {
+                          final next = {..._country};
+                          if (on) {
+                            next.add(c);
+                          } else {
+                            next.remove(c);
+                          }
+                          _country = next;
+                        }),
                       )),
                 ],
               ),
@@ -1900,14 +1961,21 @@ class _AnalyticsFilterSheetState extends State<AnalyticsFilterSheet> {
                 children: [
                   FilterChip(
                     label: const Text('All Locations'),
-                    selected: _location == null,
-                    onSelected: (_) => setState(() => _location = null),
+                    selected: _location.isEmpty,
+                    onSelected: (_) => setState(() => _location = {}),
                   ),
                   ...widget.allLocations.map((l) => FilterChip(
                         label: Text(l),
-                        selected: _location == l,
-                        onSelected: (on) =>
-                            setState(() => _location = on ? l : null),
+                        selected: _location.contains(l),
+                        onSelected: (on) => setState(() {
+                          final next = {..._location};
+                          if (on) {
+                            next.add(l);
+                          } else {
+                            next.remove(l);
+                          }
+                          _location = next;
+                        }),
                       )),
                 ],
               ),

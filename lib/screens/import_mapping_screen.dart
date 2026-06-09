@@ -351,6 +351,8 @@ class _ImportPreview {
   final String? dateMin;
   final String? dateMax;
   final List<_RowIssue> issues;
+  // Non-fatal: cash rows whose stakes can't be parsed for BB/100.
+  final String? stakesWarning;
 
   const _ImportPreview({
     required this.valid,
@@ -358,6 +360,7 @@ class _ImportPreview {
     this.dateMin,
     this.dateMax,
     this.issues = const [],
+    this.stakesWarning,
   });
 }
 
@@ -597,6 +600,11 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
     final cashOutIdx   = colIdx(_mapping['cash_out']);
     final prizeWonIdx  = colIdx(_mapping['prize_won']);
     final plIdx        = colIdx(_mapping['profit_loss']);
+    final stakesIdx    = colIdx(_mapping['stakes']);
+    final gameTypeIdx  = colIdx(_mapping['game_type']);
+
+    var unparseableStakes = 0;
+    String? unparseableExample;
 
     for (int i = 0; i < widget.rows.length; i++) {
       final row = widget.rows[i];
@@ -634,8 +642,31 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
 
       if (dateMin == null || dateStr.compareTo(dateMin) < 0) dateMin = dateStr;
       if (dateMax == null || dateStr.compareTo(dateMax) > 0) dateMax = dateStr;
+
+      // Stakes that can't be read for BB/100 (cash games only). Non-fatal —
+      // the row still imports, it just won't contribute to BB/100.
+      if (stakesIdx >= 0) {
+        final stakesRaw = cell(stakesIdx);
+        final gt = gameTypeIdx >= 0 ? cell(gameTypeIdx).toLowerCase() : '';
+        final isCash = !gt.contains('tourn') &&
+            !gt.contains('sng') &&
+            !gt.contains('sit');
+        if (isCash &&
+            stakesRaw.isNotEmpty &&
+            parseBBFromStakes(stakesRaw) == null) {
+          unparseableStakes++;
+          unparseableExample ??= stakesRaw;
+        }
+      }
+
       valid++;
     }
+
+    final stakesWarning = unparseableStakes == 0
+        ? null
+        : '$unparseableStakes cash session${unparseableStakes == 1 ? '' : 's'} '
+            'have stakes that can\'t be read for BB/100 (e.g. "$unparseableExample") '
+            '— they\'ll still import, but won\'t count toward BB/100.';
 
     return _ImportPreview(
       valid: valid,
@@ -643,6 +674,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       dateMin: dateMin,
       dateMax: dateMax,
       issues: issues,
+      stakesWarning: stakesWarning,
     );
   }
 
@@ -1393,6 +1425,26 @@ class _PreviewCard extends StatelessWidget {
                         ),
                   ),
                 ),
+            ],
+            if (preview.stakesWarning != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 15, color: Theme.of(context).colorScheme.outline),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      preview.stakesWarning!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            height: 1.35,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ],
         ),
