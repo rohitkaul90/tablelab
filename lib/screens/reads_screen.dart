@@ -218,7 +218,7 @@ class _ReadTile extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: archetypes.isNotEmpty
-                        ? tagColor(archetypes.first)
+                        ? readableTagColor(context, tagColor(archetypes.first))
                         : theme.colorScheme.primary,
                   ),
                 ),
@@ -251,7 +251,7 @@ class _ReadTile extends StatelessWidget {
                                 style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: c)),
+                                    color: readableTagColor(context, c))),
                           );
                         }).toList(),
                       ),

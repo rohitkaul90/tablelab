@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/player_read.dart';
 import '../../reads/tag_definitions.dart';
+import 'archetype_glossary.dart';
 
 const List<String> _kPositions = ['UTG', 'UTG+1', 'UTG+2', 'MP', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
 const List<String> _kActions = ['Limp', 'Open', 'Call', 'Cold-Call', '3-Bet', '4-Bet', 'Jam', 'Check', 'Bet', 'Check-Raise', 'Fold'];
@@ -234,38 +235,55 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                     ],
 
                     // ── Archetype tags ─────────────────────────────────────
-                    _SectionLabel('Player Type'),
+                    Row(
+                      children: [
+                        _SectionLabel('Player Type'),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => showArchetypeGlossary(context),
+                          child: Icon(Icons.info_outline,
+                              size: 15,
+                              color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: kArchetypeTags.entries.map((e) {
                         final selected = _tags.contains(e.key);
+                        // Single-select: once one player type is picked, the
+                        // others grey out (tap the selected one to switch).
+                        final disabled = tagDisabled(e.key, _tags);
                         final color = tagColor(e.key);
-                        return GestureDetector(
-                          onTap: () => _toggleTag(e.key),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: selected ? color.withAlpha(50) : theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: selected
-                                    ? color
-                                    : theme.colorScheme.outlineVariant,
-                                width: selected ? 1.5 : 1,
+                        return Opacity(
+                          opacity: disabled ? 0.4 : 1.0,
+                          child: GestureDetector(
+                            onTap: disabled ? null : () => _toggleTag(e.key),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: selected ? color.withAlpha(50) : theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: selected
+                                      ? color
+                                      : theme.colorScheme.outlineVariant,
+                                  width: selected ? 1.5 : 1,
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              e.value,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                                color: selected
-                                    ? color
-                                    : theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.70),
+                              child: Text(
+                                e.value,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                                  color: selected
+                                      ? color
+                                      : theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.70),
+                                ),
                               ),
                             ),
                           ),
@@ -283,10 +301,14 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                         runSpacing: 6,
                         children: group.value.entries.map((e) {
                           final selected = _tags.contains(e.key);
+                          // null onSelected greys + disables the chip when a
+                          // contradictory tendency is already selected.
+                          final disabled = tagDisabled(e.key, _tags);
                           return FilterChip(
                             label: Text(e.value, style: const TextStyle(fontSize: 11)),
                             selected: selected,
-                            onSelected: (_) => _toggleTag(e.key),
+                            onSelected:
+                                disabled ? null : (_) => _toggleTag(e.key),
                             selectedColor: Colors.teal.withAlpha(60),
                             checkmarkColor: Colors.tealAccent,
                             side: BorderSide(

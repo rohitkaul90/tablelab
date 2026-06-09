@@ -6,6 +6,7 @@ import '../providers/reads_provider.dart';
 import '../reads/insights_engine.dart';
 import '../reads/tag_definitions.dart';
 import '../widgets/reads/quick_add_sheet.dart';
+import '../widgets/reads/archetype_glossary.dart';
 
 class ReadDetailScreen extends ConsumerStatefulWidget {
   final PlayerRead read;
@@ -248,7 +249,19 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
         children: [
           // ── Tags ─────────────────────────────────────────────────────────
           if (_read.tags.isNotEmpty) ...[
-            _SectionLabel('Tags'),
+            Row(
+              children: [
+                _SectionLabel('Tags'),
+                if (archetypes.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () => showArchetypeGlossary(context),
+                    child: Icon(Icons.info_outline,
+                        size: 15, color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ],
+            ),
             const SizedBox(height: 8),
             if (archetypes.isNotEmpty) ...[
               Wrap(
@@ -266,7 +279,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: c)),
+                            color: readableTagColor(context, c))),
                   );
                 }).toList(),
               ),
@@ -276,15 +289,19 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
               Wrap(
                 spacing: 6, runSpacing: 6,
                 children: tendencies.map((t) {
+                  final c = tagColor(t);
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.teal.withAlpha(40),
+                      color: c.withAlpha(45),
                       borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: c.withAlpha(110)),
                     ),
                     child: Text(tagDisplayName(t),
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.tealAccent)),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: readableTagColor(context, c))),
                   );
                 }).toList(),
               ),
@@ -503,14 +520,14 @@ class _MetaChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
-          color: color.withAlpha(30),
+          color: color.withAlpha(40),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(label,
             style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: color)),
+                color: readableTagColor(context, color))),
       );
 }
 
