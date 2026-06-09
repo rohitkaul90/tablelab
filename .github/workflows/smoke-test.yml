@@ -1,0 +1,42 @@
+name: Smoke Test
+
+# Synthetic end-to-end check against PRODUCTION. Catches the "200 but writes
+# nothing" failure class that UptimeRobot can't see. See scripts/smoke-test.mjs.
+
+on:
+  schedule:
+    # Cheap check ($0) every 30 min — auth + sessions CRUD + analyze-hand cache hit.
+    - cron: "*/30 * * * *"
+    # Deep check (~$0.034) once daily at 08:15 UTC — forces the full AI write path.
+    - cron: "15 8 * * *"
+  workflow_dispatch:
+    inputs:
+      deep:
+        description: "Run the costed deep AI-write check"
+        type: boolean
+        default: false
+
+# Don't pile up runs if one hangs.
+concurrency:
+  group: smoke-test
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run smoke test
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+          SMOKE_ALERT_WEBHOOK: ${{ secrets.SMOKE_ALERT_WEBHOOK }}
+          # Deep on the daily cron OR when manually dispatched with deep=true.
+          SMOKE_DEEP: ${{ (github.event.schedule == '15 8 * * *' || github.event.inputs.deep == 'true') && '1' || '0' }}
+        run: node scripts/smoke-test.mjs
