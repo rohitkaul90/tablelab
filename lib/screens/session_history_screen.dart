@@ -249,10 +249,16 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       children: stakes
                           .map((s) => FilterChip(
                                 label: Text(s),
-                                selected: _draft.stakes == s,
-                                onSelected: (on) => setState(() =>
-                                    _draft = _draft.copyWith(
-                                        stakes: on ? s : null)),
+                                selected: _draft.stakes.contains(s),
+                                onSelected: (on) => setState(() {
+                                  final next = {..._draft.stakes};
+                                  if (on) {
+                                    next.add(s);
+                                  } else {
+                                    next.remove(s);
+                                  }
+                                  _draft = _draft.copyWith(stakes: next);
+                                }),
                               ))
                           .toList(),
                     ),
@@ -279,10 +285,16 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       children: locs
                           .map((l) => FilterChip(
                                 label: Text(l),
-                                selected: _draft.location == l,
-                                onSelected: (on) => setState(() =>
-                                    _draft = _draft.copyWith(
-                                        location: on ? l : null)),
+                                selected: _draft.locations.contains(l),
+                                onSelected: (on) => setState(() {
+                                  final next = {..._draft.locations};
+                                  if (on) {
+                                    next.add(l);
+                                  } else {
+                                    next.remove(l);
+                                  }
+                                  _draft = _draft.copyWith(locations: next);
+                                }),
                               ))
                           .toList(),
                     ),
