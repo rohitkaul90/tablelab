@@ -109,6 +109,10 @@ async function sessionsRoundtrip() {
   const today = new Date().toISOString().slice(0, 10);
   const nowIso = new Date().toISOString();
   const row = {
+    // The app always sets user_id explicitly on insert (supabase_service.dart);
+    // the sessions RLS policy is WITH CHECK (user_id = auth.uid()), so omitting
+    // it is a correct 42501 rejection — mirror the app and set it.
+    user_id: userId,
     date: today,
     stakes: "1/2",
     game_type: "cash",
