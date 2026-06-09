@@ -58,9 +58,30 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
   String? _errorMsg;
   List<int?> _resultBoard = List.filled(5, null);
 
+  @override
+  void initState() {
+    super.initState();
+    _players.addAll(_defaultPlayers());
+  }
+
+  // The calculator opens ready to use: the canonical heads-up pair (positions
+  // are cosmetic labels here — they don't affect the equity math) with empty
+  // ranges prompting a tap. Avoids the old "add at least 2 players" friction.
+  List<_PlayerState> _defaultPlayers() => [
+        _PlayerState(position: 'BTN', selectedCells: {}),
+        _PlayerState(position: 'BB', selectedCells: {}),
+      ];
+
   Set<String> get _takenPositions => _players.map((p) => p.position).toSet();
   bool get _canCalculate =>
       _players.length >= 2 && _players.every((p) => p.comboCount > 0);
+
+  // True once the user has changed anything away from the fresh default state.
+  bool get _isModified =>
+      _result != null ||
+      _board.any((c) => c != null) ||
+      _players.length != 2 ||
+      _players.any((p) => p.comboCount > 0 || p.isExactHand);
 
   void _addPlayer() {
     final available = kPositions.where((p) => !_takenPositions.contains(p)).toList();
@@ -195,7 +216,9 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
   });
 
   void _reset() => setState(() {
-    _players.clear();
+    _players
+      ..clear()
+      ..addAll(_defaultPlayers());
     _board.fillRange(0, 5, null);
     _result = null;
     _errorMsg = null;
@@ -227,6 +250,18 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
               children: [
                 Text('PLAYERS', style: sectionLabel),
                 const Spacer(),
+                if (_isModified)
+                  TextButton.icon(
+                    onPressed: _reset,
+                    icon: const Icon(Icons.refresh, size: 14),
+                    label: const Text('Reset'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.75),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
                 if (_players.length < 9)
                   TextButton.icon(
                     onPressed: _addPlayer,
