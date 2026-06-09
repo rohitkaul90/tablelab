@@ -150,6 +150,8 @@ All data is user-scoped via Row Level Security. Credentials live in `lib/config/
 - Error responses return generic user-facing messages; raw exceptions are logged server-side only
 - Both functions store `cache_read_tokens` + `cache_write_tokens` per call (columns added to `ai_analyses` + `ai_hand_analyses`) for cost modeling. **Note these cache-row token columns are OVERWRITTEN on re-analysis (`upsert onConflict`) — do not sum them for spend.** The accurate, append-only spend source is `ai_usage_log`, which has its own `input_tokens`/`output_tokens`/`cache_read_tokens`/`cache_write_tokens` (one row per call, never overwritten) written by `logUsage()` — accurate going forward only (pre-2026-06-03 calls weren't logged)
 
+**AI cost / cache monitor** — `scripts/ai-cost-report.sql` (paste into the Supabase SQL editor, zero secrets) and `scripts/ai-cost-report.mjs` (formatted/`--json`, needs the **service-role** key since `ai_usage_log` is RLS-scoped per user — run locally, not in CI) report what the Anthropic console can't: cache hit-rate (`cache_read_share` ≈ 0 with calls > 5 = the ephemeral system-prompt cache broke, input cost ~2×), per-user spend, and days-to-$100-cap projection. Priced at **Sonnet 4.6** rates (both Edge Functions' model); one marked spot in each file to re-price if `analyze-hand` moves to Haiku. Docs in `scripts/AI_COST_MONITOR.md`.
+
 ### CI/CD — GitHub Actions
 
 Five active workflows in `.github/workflows/`:
