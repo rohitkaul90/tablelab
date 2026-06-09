@@ -152,7 +152,7 @@ All data is user-scoped via Row Level Security. Credentials live in `lib/config/
 
 ### CI/CD — GitHub Actions
 
-Four active workflows in `.github/workflows/`:
+Five active workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -160,8 +160,11 @@ Four active workflows in `.github/workflows/`:
 | `deploy-web.yml` | Push to `main` touching `lib/`, `web/`, `assets/`, `pubspec.*` | Builds web + deploys to `docs/` (preserves CNAME + .nojekyll) |
 | `build-android.yml` | Push of `v*.*.*` tag | Decodes keystore from secret, builds signed AAB, creates GitHub Release |
 | `scrape-tournaments.yml` | Weekly cron (Mon 9am UTC) | Calls `scrape-tournaments` Edge Function |
+| `smoke-test.yml` | Cron (every 30 min + daily 08:15 UTC) + manual | Synthetic prod E2E (`scripts/smoke-test.mjs`): auth → sessions CRUD → `analyze-hand`; catches "200 but writes nothing" failures |
 
-Required GitHub Secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`.
+Required GitHub Secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `SMOKE_TEST_EMAIL`, `SMOKE_TEST_PASSWORD` (+ optional `SMOKE_ALERT_WEBHOOK`).
+
+**Smoke test** (`scripts/smoke-test.mjs`, docs in `scripts/SMOKE_TEST.md`) runs the real prod paths on a schedule to catch the silent-write failure class UptimeRobot can't see (42501 GRANT / broken `logUsage` / RLS regression). Cheap runs (every 30 min) hit the `analyze-hand` cache = $0; the daily deep run forces one uncached Claude call (~$0.034) and asserts a **fresh `ai_usage_log` row appeared** — the smoking-gun check. Uses a dedicated synthetic test account (not the exempt personal one); the sessions insert must set `user_id` explicitly (RLS `WITH CHECK (user_id = auth.uid())`), mirroring the app.
 
 CI generates `lib/config/supabase_config.dart` at build time from secrets — it is never committed. The `deploy-web.yml` commit uses `[skip ci]` in its message to prevent loops (note: pushing a tag also fires `deploy-web.yml` + `ci.yml` if `lib/`/`pubspec` changed, so a tag push commonly produces a `[skip ci]` deploy commit on `main` — rebase before subsequent pushes).
 
