@@ -33,6 +33,47 @@ void main() {
       expect(parseBBFromStakes('0.5/1'), equals(1.0));
       expect(parseBBFromStakes('0.25/0.5'), equals(0.5));
     });
+
+    test('takes the big blind (2nd value) from a 3-blind / straddle game', () {
+      expect(parseBBFromStakes(r'$2/$5/$10'), equals(5.0));
+      expect(parseBBFromStakes('1/2/4'), equals(2.0));
+    });
+
+    test('handles non-dollar currency symbols', () {
+      expect(parseBBFromStakes('£2/£5'), equals(5.0));
+      expect(parseBBFromStakes('€1/€2'), equals(2.0));
+      expect(parseBBFromStakes('₹100/₹200'), equals(200.0));
+    });
+
+    test('handles other separators', () {
+      expect(parseBBFromStakes('1-2'), equals(2.0));
+      expect(parseBBFromStakes('2-5'), equals(5.0));
+    });
+
+    test('ignores trailing game-type labels', () {
+      expect(parseBBFromStakes('1/2 NLHE'), equals(2.0));
+      expect(parseBBFromStakes(r'$2/$5 NL'), equals(5.0));
+      expect(parseBBFromStakes('5/10 PLO'), equals(10.0));
+    });
+
+    test('handles k-suffix and comma decimals', () {
+      expect(parseBBFromStakes('1k/2k'), equals(2000.0));
+      expect(parseBBFromStakes('2,5/5'), equals(5.0));
+      expect(parseBBFromStakes('1/2,5'), equals(2.5));
+    });
+
+    test('parses online cap notation (NLxxx → BB = number/100)', () {
+      expect(parseBBFromStakes('NL100'), equals(1.0));
+      expect(parseBBFromStakes('200NL'), equals(2.0));
+      expect(parseBBFromStakes('PLO50'), equals(0.5));
+      expect(parseBBFromStakes('nl1000'), equals(10.0));
+      expect(parseBBFromStakes('NL2'), closeTo(0.02, 1e-9));
+    });
+
+    test('bare single number and pure text are unparseable', () {
+      expect(parseBBFromStakes('200'), isNull);
+      expect(parseBBFromStakes('Microstakes'), isNull);
+    });
   });
 
   // ── calcBB100 ────────────────────────────────────────────────────────────────
@@ -584,6 +625,17 @@ void main() {
       expect(tableSizeLabel(3), equals('3-handed'));
       expect(tableSizeLabel(5), equals('5-handed'));
       expect(tableSizeLabel(8), equals('8-handed'));
+    });
+  });
+
+  // ── formatHours ──────────────────────────────────────────────────────────────
+
+  group('formatHours', () {
+    test('rounds to a whole number with a thousands separator', () {
+      expect(formatHours(3389.1), equals('3,389h'));
+      expect(formatHours(999.6), equals('1,000h'));
+      expect(formatHours(0), equals('0h'));
+      expect(formatHours(45.4), equals('45h'));
     });
   });
 }

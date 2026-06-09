@@ -67,6 +67,10 @@ String formatAmount(double amount, String currency) {
   return '${currencySymbol(currency)}${_numFmt.format(amount.round())}';
 }
 
+/// Hours played — rounded to a whole number with a thousands separator
+/// (e.g. 3389.1 → "3,389h").
+String formatHours(double hours) => '${_numFmt.format(hours.round())}h';
+
 String formatPLWithCurrency(double amount, String currency) =>
     formatPL(amount, currencySymbol(currency));
 
@@ -167,11 +171,43 @@ String monthLabel(String date) {
 
 /// Parses the big-blind size from a stakes string like "1/2", "2/5", "$1/$2".
 /// Returns null if the format is unrecognisable.
+/// Big-blind regex token: a number with optional decimal (`.` or `,`) and an
+/// optional `k` (thousands) suffix.
+final _bbNumber = RegExp(r'(\d+(?:[.,]\d+)?)(k)?');
+
+/// Parses the big blind (in the stakes' own currency units) from a stakes
+/// string, tolerant of the formats manual entry and imports produce:
+/// `$1/$2`, `1/2`, `£2/£5`, `2-5`, `$2/$5/$10` (straddle → BB is the 2nd),
+/// `1/2 NLHE`, `1k/2k`, `2,5/5` (comma decimal), and single-value online cap
+/// notation `NL100` / `200NL` / `PLO50` (a 100bb cap → BB = number/100).
+/// Currency symbols/codes and game labels are ignored. Returns null when no
+/// big blind can be determined (e.g. a bare ambiguous number or pure text).
 double? parseBBFromStakes(String stakes) {
-  final clean = stakes.replaceAll(r'$', '').trim();
-  final parts = clean.split('/');
-  if (parts.length < 2) return null;
-  return double.tryParse(parts[1].trim());
+  final lower = stakes.toLowerCase();
+
+  final nums = <double>[];
+  for (final m in _bbNumber.allMatches(lower)) {
+    var v = double.tryParse(m.group(1)!.replaceAll(',', '.'));
+    if (v == null) continue;
+    if (m.group(2) == 'k') v *= 1000;
+    nums.add(v);
+  }
+  if (nums.isEmpty) return null;
+
+  // Two or more numbers ("1/2", "$2/$5/$10") → the big blind is the second.
+  if (nums.length >= 2) {
+    return nums[1] > 0 ? nums[1] : null;
+  }
+
+  // A single number is only meaningful with online cap notation, where the
+  // value is a 100bb buy-in cap (NL100 → $1 BB, NL200 → $2 BB, NL25 → $0.25).
+  if (RegExp(r'nl|plo|cap').hasMatch(lower)) {
+    final bb = nums.first / 100;
+    return bb > 0 ? bb : null;
+  }
+
+  // Bare single number is ambiguous (BB? buy-in? stake level?) → give up.
+  return null;
 }
 
 /// BB/100 across the given sessions.
