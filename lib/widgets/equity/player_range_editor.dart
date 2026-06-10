@@ -145,7 +145,8 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
             Expanded(
               child: SingleChildScrollView(
                 controller: scroll,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: EdgeInsets.fromLTRB(
+                    12, 0, 12, 12 + MediaQuery.paddingOf(context).bottom),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

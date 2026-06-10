@@ -156,7 +156,8 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
       body: _busy
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                  16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
               children: [
                 _SectionHeader(title: 'Export'),
                 const SizedBox(height: 8),

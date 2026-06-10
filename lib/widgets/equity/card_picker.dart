@@ -49,7 +49,8 @@ class CardPickerSheet extends StatelessWidget {
               child: SingleChildScrollView(
                 controller: scroll,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.fromLTRB(
+                      12, 0, 12, 12 + MediaQuery.paddingOf(context).bottom),
                   child: _CardGrid(
                     excludedCards: excludedCards,
                     selectedCards: currentCard != null ? {currentCard!} : {},
@@ -165,7 +166,8 @@ class _FlopCardPickerSheetState extends State<FlopCardPickerSheet> {
               child: SingleChildScrollView(
                 controller: scroll,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.fromLTRB(
+                      12, 0, 12, 12 + MediaQuery.paddingOf(context).bottom),
                   child: _CardGrid(
                     excludedCards: widget.excludedCards,
                     selectedCards: _pickedSet,

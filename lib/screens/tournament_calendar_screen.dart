@@ -233,7 +233,8 @@ class _TournamentFilterSheetState extends State<_TournamentFilterSheet> {
           Expanded(
             child: ListView(
               controller: scroll,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: EdgeInsets.fromLTRB(
+                  16, 12, 16, 24 + MediaQuery.paddingOf(context).bottom),
               children: [
                 // Country filter
                 Text('Country',

@@ -150,7 +150,8 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
             Expanded(
               child: SingleChildScrollView(
                 controller: scroll,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                padding: EdgeInsets.fromLTRB(
+                    16, 8, 16, 24 + MediaQuery.paddingOf(context).bottom),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

@@ -16,7 +16,8 @@ void showArchetypeGlossary(BuildContext context) {
         maxChildSize: 0.92,
         builder: (_, scroll) => ListView(
           controller: scroll,
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          padding: EdgeInsets.fromLTRB(
+              20, 0, 20, 24 + MediaQuery.paddingOf(ctx).bottom),
           children: [
             Text('Player Types', style: theme.textTheme.titleLarge),
             const SizedBox(height: 4),

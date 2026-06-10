@@ -173,7 +173,8 @@ class _AnalysisView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
       children: [
         _NarrativeCard(narrative: analysis.narrative),
         if (analysis.keyThemes.isNotEmpty) ...[

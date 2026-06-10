@@ -17,7 +17,8 @@ class AboutScreen extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 48),
+            padding: EdgeInsets.fromLTRB(
+                24, 32, 24, 48 + MediaQuery.paddingOf(context).bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

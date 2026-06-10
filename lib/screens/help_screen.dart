@@ -15,7 +15,8 @@ class HelpScreen extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.fromLTRB(
+                0, 8, 0, 8 + MediaQuery.paddingOf(context).bottom),
             children: [
               _SectionHeader('Getting Started', Icons.flag_outlined, primary),
               ..._gettingStarted.map((faq) => _FaqTile(faq)),

@@ -245,7 +245,8 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+            16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
         children: [
           // ── Tags ─────────────────────────────────────────────────────────
           if (_read.tags.isNotEmpty) ...[
@@ -642,7 +643,8 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
               Expanded(
                 child: SingleChildScrollView(
                   controller: scroll,
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  padding: EdgeInsets.fromLTRB(
+                      16, 4, 16, 24 + MediaQuery.paddingOf(context).bottom),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

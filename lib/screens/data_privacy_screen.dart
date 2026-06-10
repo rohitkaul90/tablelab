@@ -10,7 +10,8 @@ class DataPrivacyScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Data & Privacy')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 48),
+        padding: EdgeInsets.fromLTRB(
+            20, 24, 20, 48 + MediaQuery.paddingOf(context).bottom),
         children: [
           _Section(
             icon: Icons.storage_outlined,

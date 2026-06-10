@@ -145,7 +145,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+                  padding: EdgeInsets.fromLTRB(
+                      16, 24, 16, 32 + MediaQuery.paddingOf(context).bottom),
                   children: [
                     // ── Avatar + email ───────────────────────────────────────
                     Center(

@@ -331,7 +331,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          // Bottom inset: Android 15 (targetSdk 35) forces edge-to-edge, and an
+          // explicit `padding` disables ListView's automatic safe-area handling
+          // — without this the Save button lands under the system nav bar.
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
           children: [
             // Date
             ListTile(
