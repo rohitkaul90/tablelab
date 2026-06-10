@@ -5,8 +5,11 @@ name: Smoke Test
 
 on:
   schedule:
-    # Cheap check ($0) every 30 min — auth + sessions CRUD + analyze-hand cache hit.
-    - cron: "*/30 * * * *"
+    # Cheap check ($0) twice hourly — auth + sessions CRUD + analyze-hand cache hit.
+    # :07/:37, NOT :00/:30 — GitHub heavily throttles/drops schedules on the
+    # busiest minutes (we observed 6 runs in 14h on */30). Off-peak minutes
+    # get dropped far less. Timing is still best-effort.
+    - cron: "7,37 * * * *"
     # Deep check (~$0.034) once daily at 08:15 UTC — forces the full AI write path.
     - cron: "15 8 * * *"
   workflow_dispatch:

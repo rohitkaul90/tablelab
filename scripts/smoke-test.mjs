@@ -10,8 +10,15 @@
 // Layers, cheapest first:
 //   1. Auth           — password sign-in against Supabase Auth
 //   2. Sessions CRUD  — insert → read-back → delete via PostgREST (user JWT, RLS)
-//   3. analyze-hand   — cache-hit call: function reachable + auth + cache read ($0)
-//   4. analyze-hand   — forceRefresh call, then assert a FRESH ai_usage_log row
+//   3. Smoke hand row — idempotent insert into `hands`. REQUIRED: the
+//                       ai_hand_analyses cache row has an FK to hands(id), so
+//                       without this row the analysis cache can never persist
+//                       and every "cheap" run silently costs a Claude call.
+//   4. analyze-hand   — cache-hit call ($0), then assert NO new ai_usage_log row
+//                       appeared (proof it really was a cache hit). If the cache
+//                       was cold, the first call warms it and a second call must
+//                       hit — a broken cache write path fails here.
+//   5. analyze-hand   — forceRefresh call, then assert a FRESH ai_usage_log row
 //                       appeared (the full AI write path). DEEP only — costs ~$0.034.
 //
 // Exit code 0 = all green. Non-zero = a step failed (fail the CI job → GitHub
@@ -162,6 +169,33 @@ async function sessionsRoundtrip() {
   }
 }
 
+// ── Step 3: ensure the smoke hand exists in `hands` ──────────────────────────
+//
+// ai_hand_analyses.hand_id REFERENCES hands(id) ON DELETE CASCADE — if this row
+// is missing, the Edge Function's cache upsert fails (FK 23503, only logged
+// server-side) and every cheap run becomes a real Claude call. Idempotent:
+// on_conflict=id + ignore-duplicates means re-runs are no-ops. Never delete
+// this row (deleting it cascades away the cached analysis too).
+
+async function ensureSmokeHandRow() {
+  const res = await fetch(`${REST}/hands?on_conflict=id`, {
+    method: "POST",
+    headers: pgHeaders({
+      Prefer: "resolution=ignore-duplicates,return=minimal",
+    }),
+    body: JSON.stringify({
+      id: SMOKE_HAND_ID,
+      user_id: userId,
+      played_at: "2026-01-01T00:00:00Z", // fixed — keeps the row byte-stable
+      hand_data: smokeHand(),
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`hands upsert HTTP ${res.status}: ${body.slice(0, 300)}`);
+  }
+}
+
 // ── Minimal but schema-valid hand for analyze-hand ───────────────────────────
 
 function smokeHand() {
@@ -214,22 +248,50 @@ async function callAnalyzeHand(forceRefresh) {
   return { res, body };
 }
 
-// ── Step 3: analyze-hand reachable (cache hit — free) ────────────────────────
+// ── Step 4: analyze-hand cache hit (free) — and PROVE it was a hit ───────────
+//
+// The mirror image of the deep check: a forceRefresh:false call must NOT
+// append an ai_usage_log row. If one appears, the cache was cold — legitimate
+// only right after first deploy or a cache wipe — so we warm-and-retry once:
+// the second call MUST be a hit. A broken cache write path (e.g. the FK bug
+// where the upsert silently failed every time) fails the retry too, going red
+// instead of quietly burning ~$0.02 per run.
 
-async function analyzeHandReachable() {
-  const { res, body } = await callAnalyzeHand(false);
-  assert(
-    res.ok,
-    `analyze-hand HTTP ${res.status}: ${JSON.stringify(body)}`,
-  );
+function assertValidAnalysis(res, body, label) {
+  assert(res.ok, `${label} HTTP ${res.status}: ${JSON.stringify(body)}`);
   // A real analysis (cached or fresh) always carries these fields.
   assert(
     typeof body.summary === "string" && typeof body.verdict === "string",
-    `analyze-hand returned 200 but not a valid analysis: ${JSON.stringify(body).slice(0, 200)}`,
+    `${label} returned 200 but not a valid analysis: ${JSON.stringify(body).slice(0, 200)}`,
   );
 }
 
-// ── Step 4: full AI write path (DEEP only — costs one Claude call) ───────────
+async function analyzeHandCacheHit() {
+  const before = await latestUsageLogAt();
+
+  const first = await callAnalyzeHand(false);
+  assertValidAnalysis(first.res, first.body, "analyze-hand");
+
+  const afterFirst = await latestUsageLogAt();
+  const firstWasMiss = afterFirst !== null && (before === null || afterFirst > before);
+  if (!firstWasMiss) return; // true $0 cache hit — the normal path
+
+  // Cold cache: the call above just warmed it (one paid call). Verify the
+  // round-trip — this second call must be served from ai_hand_analyses.
+  console.log("  cache was cold — warmed it (one paid call); verifying the hit path…");
+  const second = await callAnalyzeHand(false);
+  assertValidAnalysis(second.res, second.body, "analyze-hand (retry)");
+
+  const afterSecond = await latestUsageLogAt();
+  assert(
+    afterSecond !== null && !(afterSecond > afterFirst),
+    "analyze-hand result cache is BROKEN: a forceRefresh:false call made a real " +
+      "Claude call even though the cache was just written — every cheap run is " +
+      "costing money (check ai_hand_analyses upsert errors in the function logs)",
+  );
+}
+
+// ── Step 5: full AI write path (DEEP only — costs one Claude call) ───────────
 
 async function aiWritePath() {
   // Baseline: newest usage-log timestamp before we force a call.
@@ -287,7 +349,8 @@ async function main() {
   // Everything below needs a token; bail early if auth failed.
   if (accessToken) {
     await step("sessions: insert → read-back → delete", sessionsRoundtrip);
-    await step("analyze-hand: reachable (cache hit)", analyzeHandReachable);
+    await step("hands: smoke hand row exists (FK target for the analysis cache)", ensureSmokeHandRow);
+    await step("analyze-hand: cache hit, $0 (no new ai_usage_log row)", analyzeHandCacheHit);
     if (DEEP) {
       await step("analyze-hand: full AI write path (forced)", aiWritePath);
     }
