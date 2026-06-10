@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { reportError } from '../_shared/alert.ts'
 
 // ── Country code → display name ───────────────────────────────────────────────
 
@@ -223,6 +224,7 @@ Deno.serve(async (req) => {
       ? `Scraper failed: ${errors.join('; ')}`
       : 'Scraper returned 0 tournaments — PokerNews HTML may have changed'
     console.error(msg)
+    await reportError('scrape-tournaments', msg)
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -240,6 +242,7 @@ Deno.serve(async (req) => {
 
   if (upsertError) {
     console.error('Upsert failed:', upsertError.message)
+    await reportError('scrape-tournaments', `tournament_listings upsert failed: ${upsertError.message}`)
     return new Response(JSON.stringify({ error: upsertError.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.36.3";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { reportError } from "../_shared/alert.ts";
 
 const allowedOrigins = new Set([
   "https://tablelab.app",
@@ -128,7 +129,11 @@ async function isRateLimited(supabase: any, userId: string, userEmail: string | 
     .eq("user_id", userId)
     .eq("function_name", "analyze-hand")
     .gte("called_at", since);
-  if (error) console.error("ai_usage_log rate-limit read failed:", error.code, error.message);
+  if (error) {
+    console.error("ai_usage_log rate-limit read failed:", error.code, error.message);
+    // A silently failing count reads as 0 → unlimited AI calls. Alert.
+    await reportError("analyze-hand", `rate-limit read failed: ${error.code} ${error.message}`);
+  }
   return (count ?? 0) >= HAND_DAILY_LIMIT;
 }
 
@@ -150,7 +155,11 @@ async function logUsage(supabase: any, userId: string, usage?: ClaudeUsage): Pro
     cache_read_tokens: usage?.cache_read_input_tokens ?? 0,
     cache_write_tokens: usage?.cache_creation_input_tokens ?? 0,
   });
-  if (error) console.error("ai_usage_log insert failed:", error.code, error.message);
+  if (error) {
+    console.error("ai_usage_log insert failed:", error.code, error.message);
+    // Broken spend ledger = no rate limiting + blind cost tracking. Alert.
+    await reportError("analyze-hand", `ai_usage_log insert failed: ${error.code} ${error.message}`);
+  }
 }
 
 // ── Draw pre-computation (deterministic — injected as ground truth) ───────────
@@ -594,6 +603,7 @@ serve(async (req: Request) => {
         .maybeSingle();
       if (cacheErr) {
         console.error("ai_hand_analyses cache read failed:", cacheErr.code, cacheErr.message);
+        await reportError("analyze-hand", `cache read failed: ${cacheErr.code} ${cacheErr.message}`);
       }
 
       if (cached) {
@@ -665,6 +675,9 @@ serve(async (req: Request) => {
     );
     if (cacheWriteErr) {
       console.error("ai_hand_analyses upsert failed:", cacheWriteErr.code, cacheWriteErr.message);
+      // A failed cache write means the next identical request pays for a fresh
+      // Claude call (the exact FK bug that bit the smoke test). Alert.
+      await reportError("analyze-hand", `ai_hand_analyses upsert failed: ${cacheWriteErr.code} ${cacheWriteErr.message}`);
     }
 
     return new Response(JSON.stringify(analysis), {
@@ -673,6 +686,7 @@ serve(async (req: Request) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("analyze-hand error:", msg);
+    await reportError("analyze-hand", msg);
     if (msg === "CLAUDE_TIMEOUT") {
       return new Response(
         JSON.stringify({ error: "Analysis timed out. Please try again." }),

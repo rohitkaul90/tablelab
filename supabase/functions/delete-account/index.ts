@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { reportError } from "../_shared/alert.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -71,6 +72,8 @@ Deno.serve(async (req) => {
     if (error) {
       console.error(`Failed to delete from ${table}:`, error.message);
       // Non-fatal: continue — the auth deletion below is the critical step.
+      // But a partial delete is a GDPR problem (orphaned user data) — alert.
+      await reportError("delete-account", `failed to delete from ${table}: ${error.message}`);
     }
   }
 
@@ -81,11 +84,13 @@ Deno.serve(async (req) => {
     .eq("id", uid);
   if (profileErr) {
     console.error("Failed to delete from profiles:", profileErr.message);
+    await reportError("delete-account", `failed to delete from profiles: ${profileErr.message}`);
   }
 
   const { error: deleteError } = await adminClient.auth.admin.deleteUser(uid);
   if (deleteError) {
     console.error("Failed to delete auth user:", deleteError.message);
+    await reportError("delete-account", `failed to delete auth user: ${deleteError.message}`);
     return new Response(JSON.stringify({ error: "Failed to delete account" }), {
       status: 500,
       headers: { ...cors, "Content-Type": "application/json" },
