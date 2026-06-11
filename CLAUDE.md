@@ -155,7 +155,7 @@ All data is user-scoped via Row Level Security. Credentials live in `lib/config/
 
 ### CI/CD — GitHub Actions
 
-Five active workflows in `.github/workflows/`:
+Six active workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -164,8 +164,9 @@ Five active workflows in `.github/workflows/`:
 | `build-android.yml` | Push of `v*.*.*` tag | Decodes keystore from secret, builds signed AAB, creates GitHub Release |
 | `scrape-tournaments.yml` | Weekly cron (Mon 9am UTC) | Calls `scrape-tournaments` Edge Function |
 | `smoke-test.yml` | Cron (twice hourly :07/:37 + daily 08:15 UTC) + manual | Synthetic prod E2E (`scripts/smoke-test.mjs`): auth → sessions CRUD → `analyze-hand`; catches "200 but writes nothing" failures |
+| `daily-digest.yml` | Cron (daily 13:21 UTC) + manual | Morning Discord heartbeat (`scripts/daily-digest.mjs`): smoke-run summary + AI spend/cache/cap + activity counts; the message's *absence* signals dead monitoring. Needs `SUPABASE_SERVICE_ROLE_KEY` |
 
-Required GitHub Secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `SMOKE_TEST_EMAIL`, `SMOKE_TEST_PASSWORD` (+ optional `SMOKE_ALERT_WEBHOOK`).
+Required GitHub Secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `SMOKE_TEST_EMAIL`, `SMOKE_TEST_PASSWORD`, `SUPABASE_SERVICE_ROLE_KEY` (daily digest only — deliberate exposure decision 2026-06-11; if compromised, rotate in Supabase → Settings → API and update the secret) (+ optional `SMOKE_ALERT_WEBHOOK`).
 
 **Smoke test** (`scripts/smoke-test.mjs`, docs in `scripts/SMOKE_TEST.md`) runs the real prod paths on a schedule to catch the silent-write failure class UptimeRobot can't see (42501 GRANT / broken `logUsage` / RLS regression). Cheap runs (twice hourly, at :07/:37 — GitHub throttles :00/:30 schedules hard) hit the `analyze-hand` cache = $0 **and assert no new `ai_usage_log` row appeared** (cache-hit proof; a cold cache warms-and-retries once); the daily deep run forces one uncached Claude call (~$0.034) and asserts a **fresh `ai_usage_log` row appeared** — the smoking-gun check. Uses a dedicated synthetic test account (not the exempt personal one); the sessions insert must set `user_id` explicitly (RLS `WITH CHECK (user_id = auth.uid())`), mirroring the app. **The smoke hand must exist as a row in `hands`** (the script self-provisions it, idempotently): `ai_hand_analyses.hand_id` FKs to `hands(id)`, so without that row the function's cache upsert silently fails and every cheap run costs a real Claude call.
 

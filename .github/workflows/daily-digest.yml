@@ -1,0 +1,49 @@
+name: Daily Digest
+
+# One green/red Discord heartbeat each morning tying together the smoke test
+# and AI spend/cache health. The message's ABSENCE is itself an alert — this
+# catches silently-dead monitoring (disabled cron, deleted webhook, expired
+# secret). See scripts/daily-digest.mjs.
+
+on:
+  schedule:
+    # 13:21 UTC ≈ 9:21am ET. Off-peak minute — GitHub throttles :00/:30 crons.
+    # After the 08:15 UTC deep smoke run, so its result is included.
+    - cron: "21 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read # reads smoke-test workflow runs
+
+concurrency:
+  group: daily-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build and post digest
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ALERT_WEBHOOK: ${{ secrets.SMOKE_ALERT_WEBHOOK }}
+          SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/daily-digest.mjs
+      # If the digest itself dies, say so on the same channel — otherwise a
+      # broken heartbeat is indistinguishable from a quiet morning.
+      - name: Report digest failure
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.SMOKE_ALERT_WEBHOOK }}
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d '{"text":"🔴 daily-digest workflow FAILED — the heartbeat itself is broken. Check GitHub Actions."}' \
+            "$WEBHOOK" || true
