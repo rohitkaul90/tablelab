@@ -11,6 +11,7 @@ import 'config/analytics_config.dart';
 import 'config/supabase_config.dart';
 import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
+import 'services/analytics_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/hands_screen.dart';
@@ -53,6 +54,21 @@ void main() async {
       // Non-fatal — analytics failure must never crash the app.
     }
   }
+
+  // Tie PostHog persons to Supabase accounts so the People page shows real
+  // users (by email) instead of anonymous device IDs. Reset on sign-out so a
+  // shared device doesn't attribute the next user's events to the previous one.
+  Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+    final event = state.event;
+    final user = state.session?.user;
+    if ((event == AuthChangeEvent.initialSession ||
+            event == AuthChangeEvent.signedIn) &&
+        user != null) {
+      AnalyticsService.identify(user.id, email: user.email);
+    } else if (event == AuthChangeEvent.signedOut) {
+      AnalyticsService.reset();
+    }
+  });
 
   // Load persisted preferences (theme mode) before the first frame so the
   // chosen theme applies immediately — no dark→light flash on cold start.

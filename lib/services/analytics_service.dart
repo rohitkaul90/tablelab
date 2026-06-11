@@ -7,9 +7,14 @@ bool get _analyticsSupported =>
     kIsWeb || defaultTargetPlatform != TargetPlatform.windows;
 
 class AnalyticsService {
-  static Future<void> identify(String userId) async {
+  static Future<void> identify(String userId, {String? email}) async {
     if (!_analyticsSupported) return;
-    await Posthog().identify(userId: userId);
+    await Posthog().identify(
+      userId: userId,
+      // PostHog's People page uses the `email` person property as the display
+      // name — without it testers are unmatchable anonymous device IDs.
+      userProperties: {if (email != null) 'email': email},
+    );
   }
 
   static Future<void> reset() async {
