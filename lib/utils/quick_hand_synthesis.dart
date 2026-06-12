@@ -24,6 +24,10 @@ enum QuickHeroAction { fold, check, call, bet, raise, allIn }
 
 enum QuickResult { won, lost, chopped }
 
+/// What hero did on the decision street BEFORE the facing action arrived —
+/// captures check-then-faced-a-bet and bet-then-got-raised/jammed lines.
+enum QuickEarlierAction { none, checked, bet }
+
 /// How the preflop pot was built when the decision came later. `auto` infers
 /// it from hero's hand (GTO preset charts) and the stated pot size.
 enum QuickPotType { auto, limped, singleRaised, threeBet, fourBet }
@@ -42,6 +46,8 @@ class QuickHandInput {
   final QuickFacing facing;
   final QuickHeroAction heroAction;
   final QuickPotType potType;
+  final QuickEarlierAction earlierAction;
+  final double? earlierBetBb; // hero's earlier bet on the decision street
   final double? facingSizeBb;
   final double? heroSizeBb;
   final double? potBeforeBb; // pot entering the decision street
@@ -64,6 +70,8 @@ class QuickHandInput {
     required this.facing,
     required this.heroAction,
     this.potType = QuickPotType.auto,
+    this.earlierAction = QuickEarlierAction.none,
+    this.earlierBetBb,
     this.facingSizeBb,
     this.heroSizeBb,
     this.potBeforeBb,
@@ -419,6 +427,56 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
 
   int chips(double bb) => _bbToChips(bb, input.bigBlind);
 
+  // Hero in the blinds acts first postflop against our villain placements
+  // (the villain is never the SB).
+  final heroActsFirst =
+      input.positionLabel == 'SB' || input.positionLabel == 'BB';
+
+  // What happened on the decision street BEFORE the facing action — hero's
+  // own check or bet (postflop), or the implied raise war (preflop).
+  var heroEarlierBetBb = 0.0;
+  if (!isPreflopDecision) {
+    switch (input.earlierAction) {
+      case QuickEarlierAction.none:
+        break;
+      case QuickEarlierAction.checked:
+        decisionActions
+            .add(HandAction(seat: heroSeat, type: ActionType.check));
+      case QuickEarlierAction.bet:
+        // An in-position hero only gets to bet after the villain checks.
+        if (!heroActsFirst) {
+          decisionActions
+              .add(HandAction(seat: villainSeat, type: ActionType.check));
+        }
+        heroEarlierBetBb =
+            input.earlierBetBb ?? max(1.0, potAtDecisionBb / 2);
+        decisionActions.add(HandAction(
+            seat: heroSeat,
+            type: ActionType.raise,
+            amount: chips(heroEarlierBetBb),
+            isOpeningBet: true));
+    }
+  } else {
+    // A preflop "facing a 3-bet" implies hero opened first; "facing a 4-bet+"
+    // implies the villain opened, hero 3-bet, and the villain 4-bet.
+    switch (input.facing) {
+      case QuickFacing.threeBet:
+        if (posClass != 'bb') {
+          heroEarlierBetBb = 2.5;
+          decisionActions.add(HandAction(
+              seat: heroSeat, type: ActionType.raise, amount: chips(2.5)));
+        }
+      case QuickFacing.fourBetPlus:
+        decisionActions.add(HandAction(
+            seat: villainSeat, type: ActionType.raise, amount: chips(2.5)));
+        heroEarlierBetBb = 9;
+        decisionActions.add(HandAction(
+            seat: heroSeat, type: ActionType.raise, amount: chips(9)));
+      default:
+        break;
+    }
+  }
+
   switch (input.facing) {
     case QuickFacing.unopened:
       break;
@@ -455,7 +513,8 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
           amount: chips(villainAmountBb),
           isOpeningBet: true));
     case QuickFacing.raise:
-      villainAmountBb = input.facingSizeBb ?? defaultBetBb() * 3;
+      villainAmountBb = input.facingSizeBb ??
+          (heroEarlierBetBb > 0 ? heroEarlierBetBb * 3 : defaultBetBb() * 3);
       decisionActions.add(HandAction(
           seat: villainSeat,
           type: ActionType.raise,
@@ -528,13 +587,21 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
       intermediateIdx++;
       final bettor = story.heroIsAggressor ? heroSeat : villainSeat;
       final caller = story.heroIsAggressor ? villainSeat : heroSeat;
+      // Postflop the first-to-act player checks before an in-position bet.
+      final bettorActsFirst = (bettor == heroSeat) == heroActsFirst;
       if (betBb < 0.5) {
         actions = [
-          HandAction(seat: caller, type: ActionType.check),
-          HandAction(seat: bettor, type: ActionType.check),
+          HandAction(
+              seat: bettorActsFirst ? bettor : caller,
+              type: ActionType.check),
+          HandAction(
+              seat: bettorActsFirst ? caller : bettor,
+              type: ActionType.check),
         ];
       } else {
         actions = [
+          if (!bettorActsFirst)
+            HandAction(seat: caller, type: ActionType.check),
           HandAction(
               seat: bettor,
               type: ActionType.raise,
@@ -759,7 +826,8 @@ String _buildNotes(QuickHandInput input,
     ..write('[Quick entry] Only ONE decision point was recorded; all other '
         'action in this hand is auto-generated scaffolding. Evaluate ONLY the '
         'recorded decision below — do NOT critique the play on any other '
-        'street.\n')
+        'street. The hand is a heads-up abstraction (one villain); multiway '
+        'action and earlier-street details are simplified.\n')
     ..write('${input.numSeats}-max ${input.smallBlind}/${input.bigBlind} '
         '$game, Hero ${input.positionLabel} with '
         '${input.heroCards.join(' ')}, '
@@ -771,8 +839,18 @@ String _buildNotes(QuickHandInput input,
         '${potAtDecisionBb != null && potAtDecisionBb > 0 ? ', reaching ~${_fmtBb(potAtDecisionBb)} on the ${input.decisionStreet.label.toLowerCase()}' : ''}.');
   }
 
+  final earlierDesc = input.decisionStreet == Street.preflop
+      ? ''
+      : switch (input.earlierAction) {
+          QuickEarlierAction.none => '',
+          QuickEarlierAction.checked => 'Hero checked first, then faced ',
+          QuickEarlierAction.bet => input.earlierBetBb != null
+              ? 'Hero bet ${_fmtBb(input.earlierBetBb!)} first, then faced '
+              : 'Hero bet first, then faced ',
+        };
   sb.write(' RECORDED ${input.decisionStreet.label} decision: '
-      'facing $facingDesc$pot; Hero $heroDesc.');
+      '${earlierDesc.isEmpty ? 'facing' : earlierDesc.trimRight()} '
+      '$facingDesc$pot; Hero $heroDesc.');
 
   if (input.result != null) {
     final amount = input.resultAmountBb != null

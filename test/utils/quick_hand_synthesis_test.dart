@@ -14,6 +14,8 @@ QuickHandInput makeInput({
   QuickFacing facing = QuickFacing.openRaise,
   QuickHeroAction heroAction = QuickHeroAction.call,
   QuickPotType potType = QuickPotType.auto,
+  QuickEarlierAction earlierAction = QuickEarlierAction.none,
+  double? earlierBetBb,
   double? facingSizeBb,
   double? heroSizeBb,
   double? potBeforeBb,
@@ -36,6 +38,8 @@ QuickHandInput makeInput({
       facing: facing,
       heroAction: heroAction,
       potType: potType,
+      earlierAction: earlierAction,
+      earlierBetBb: earlierBetBb,
       facingSizeBb: facingSizeBb,
       heroSizeBb: heroSizeBb,
       potBeforeBb: potBeforeBb,
@@ -294,8 +298,9 @@ void main() {
         heroAction: QuickHeroAction.call,
       ));
       final preflop = s.streets.single.actions;
+      // The first raise is hero's implied open; the villain's 3-bet is last.
       final villainRaise =
-          preflop.firstWhere((a) => a.type == ActionType.raise);
+          preflop.lastWhere((a) => a.type == ActionType.raise);
       final heroCall = preflop.firstWhere((a) => a.type == ActionType.call);
       expect(villainRaise.amount, equals(22)); // 11bb at 1/2
       expect(heroCall.amount, equals(villainRaise.amount));
@@ -316,6 +321,104 @@ void main() {
     });
   });
 
+  group('earlier action / order of action', () {
+    test('OOP hero checks before facing the villain action', () {
+      // The user-reported bug: SB hero looked second-to-act vs the villain.
+      final s = synthesizeQuickHand(makeInput(
+        positionLabel: 'SB',
+        decisionStreet: Street.turn,
+        facing: QuickFacing.allIn,
+        heroAction: QuickHeroAction.call,
+        earlierAction: QuickEarlierAction.checked,
+        potBeforeBb: 30,
+      ));
+      final turn = s.streets[2].actions;
+      final heroSeat = s.tableSetup.heroSeat;
+      expect(turn[0].seat, equals(heroSeat));
+      expect(turn[0].type, equals(ActionType.check));
+      expect(turn[1].isAllIn, isTrue);
+      expect(turn[2].seat, equals(heroSeat));
+      expect(turn[2].type, equals(ActionType.call));
+    });
+
+    test('hero bet then villain jam: bet is in the line and the pot', () {
+      final s = synthesizeQuickHand(makeInput(
+        positionLabel: 'SB',
+        decisionStreet: Street.turn,
+        facing: QuickFacing.allIn,
+        heroAction: QuickHeroAction.fold,
+        earlierAction: QuickEarlierAction.bet,
+        earlierBetBb: 15,
+        potBeforeBb: 30,
+      ));
+      final turn = s.streets[2].actions;
+      final heroSeat = s.tableSetup.heroSeat;
+      // SB hero acts first: bet leads the street (no villain check).
+      expect(turn[0].seat, equals(heroSeat));
+      expect(turn[0].type, equals(ActionType.raise));
+      expect(turn[0].amount, equals(30)); // 15bb at 1/2
+      expect(turn[1].isAllIn, isTrue);
+      // Hero folded — his street contribution is the dead 15bb bet.
+      final hand = toHand(s);
+      final villainJam = turn[1].amount!;
+      expect(hand.finalPot, equals(60 + 30 + villainJam));
+    });
+
+    test('IP hero bet first: the villain check precedes it (check-raise)', () {
+      final s = synthesizeQuickHand(makeInput(
+        positionLabel: 'BTN',
+        decisionStreet: Street.flop,
+        boardCards: ['2h', '7d', 'Ks'],
+        facing: QuickFacing.raise,
+        heroAction: QuickHeroAction.call,
+        earlierAction: QuickEarlierAction.bet,
+        earlierBetBb: 5,
+        potBeforeBb: 10,
+      ));
+      final flop = s.streets[1].actions;
+      final heroSeat = s.tableSetup.heroSeat;
+      expect(flop[0].type, equals(ActionType.check));
+      expect(flop[0].seat, isNot(equals(heroSeat)));
+      expect(flop[1].seat, equals(heroSeat)); // hero's bet
+      expect(flop[1].amount, equals(10)); // 5bb
+      expect(flop[2].type, equals(ActionType.raise)); // the check-raise
+      expect(flop[2].amount, equals(30)); // default 3× hero's bet
+      expect(flop[3].type, equals(ActionType.call));
+      expect(flop[3].amount, equals(flop[2].amount));
+    });
+
+    test('preflop facing a 3-bet implies hero opened first', () {
+      final s = synthesizeQuickHand(makeInput(
+        facing: QuickFacing.threeBet,
+        facingSizeBb: 11,
+        heroAction: QuickHeroAction.call,
+      ));
+      final preflop = s.streets.single.actions;
+      final heroSeat = s.tableSetup.heroSeat;
+      final raises =
+          preflop.where((a) => a.type == ActionType.raise).toList();
+      expect(raises.length, equals(2));
+      expect(raises[0].seat, equals(heroSeat)); // hero's open
+      expect(raises[0].amount, equals(5)); // 2.5bb
+      expect(raises[1].seat, isNot(equals(heroSeat))); // the 3-bet
+      expect(raises[1].amount, equals(22));
+    });
+
+    test('preflop facing a 4-bet implies open + hero 3-bet first', () {
+      final s = synthesizeQuickHand(makeInput(
+        facing: QuickFacing.fourBetPlus,
+        heroAction: QuickHeroAction.fold,
+      ));
+      final preflop = s.streets.single.actions;
+      final heroSeat = s.tableSetup.heroSeat;
+      final raises =
+          preflop.where((a) => a.type == ActionType.raise).toList();
+      expect(raises.length, equals(3)); // open, hero 3-bet, 4-bet
+      expect(raises[1].seat, equals(heroSeat));
+      expect(raises[0].seat, equals(raises[2].seat));
+    });
+  });
+
   group('replayer seat invariant', () {
     test('every action seat belongs to a player, across the full matrix', () {
       for (final cards in [
@@ -327,6 +430,7 @@ void main() {
             for (final street in Street.values) {
               for (final facing in QuickFacing.values) {
                 for (final action in QuickHeroAction.values) {
+                  for (final earlier in QuickEarlierAction.values) {
                   final s = synthesizeQuickHand(makeInput(
                     heroCards: cards,
                     numSeats: seats,
@@ -334,6 +438,9 @@ void main() {
                     decisionStreet: street,
                     facing: facing,
                     heroAction: action,
+                    earlierAction: earlier,
+                    earlierBetBb:
+                        earlier == QuickEarlierAction.bet ? 5 : null,
                     potBeforeBb: street == Street.preflop ? null : 12,
                   ));
                   final playerSeats =
@@ -348,6 +455,7 @@ void main() {
                               'player ($seats-max $label, $street, $facing, '
                               '$action, $cards)');
                     }
+                  }
                   }
                 }
               }
@@ -386,6 +494,21 @@ void main() {
               'into a pot of ~30bb; Hero raised to 55bb.'));
       expect(s.notes, contains('Result: won ~140bb.'));
       expect(s.notes, endsWith('Villain snap-called preflop.'));
+    });
+
+    test('earlier action appears in the recorded-decision sentence', () {
+      final s = synthesizeQuickHand(makeInput(
+        positionLabel: 'SB',
+        decisionStreet: Street.turn,
+        facing: QuickFacing.allIn,
+        heroAction: QuickHeroAction.call,
+        earlierAction: QuickEarlierAction.bet,
+        earlierBetBb: 15,
+        potBeforeBb: 30,
+      ));
+      expect(s.notes,
+          contains('Hero bet 15bb first, then faced an all-in'));
+      expect(s.notes, contains('heads-up abstraction'));
     });
 
     test('preflop decision carries no assumption line', () {

@@ -50,6 +50,8 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
   QuickFacing _facing = QuickFacing.unopened;
   QuickHeroAction? _heroAction;
   QuickPotType _potType = QuickPotType.auto;
+  QuickEarlierAction _earlier = QuickEarlierAction.none;
+  final _earlierBetCtrl = TextEditingController();
   final _facingSizeCtrl = TextEditingController();
   final _heroSizeCtrl = TextEditingController();
   final _potBeforeCtrl = TextEditingController();
@@ -88,7 +90,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
     for (final c in [
       _customStakesCtrl, _tournSbCtrl, _tournBbCtrl, _anteCtrl,
       _facingSizeCtrl, _heroSizeCtrl, _potBeforeCtrl, _effStackCtrl,
-      _resultAmountCtrl, _noteCtrl,
+      _resultAmountCtrl, _noteCtrl, _earlierBetCtrl,
     ]) {
       c.dispose();
     }
@@ -209,6 +211,34 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           ],
       };
 
+  /// "Earlier this street" applies to postflop aggression hero responded to.
+  bool get _showEarlier =>
+      _street != Street.preflop &&
+      const {QuickFacing.bet, QuickFacing.raise, QuickFacing.allIn}
+          .contains(_facing);
+
+  /// Facing a raise requires hero to have bet; facing a bet means hero
+  /// can't have bet (it would be a raise).
+  List<QuickEarlierAction> get _earlierOptions => switch (_facing) {
+        QuickFacing.raise => const [QuickEarlierAction.bet],
+        QuickFacing.bet => const [
+            QuickEarlierAction.none,
+            QuickEarlierAction.checked,
+          ],
+        _ => QuickEarlierAction.values,
+      };
+
+  QuickEarlierAction get _defaultEarlier {
+    if (_facing == QuickFacing.raise) return QuickEarlierAction.bet;
+    return (_position == 'SB' || _position == 'BB')
+        ? QuickEarlierAction.checked
+        : QuickEarlierAction.none;
+  }
+
+  void _resetEarlierIfIllegal() {
+    if (!_earlierOptions.contains(_earlier)) _earlier = _defaultEarlier;
+  }
+
   bool get _facingHasSize => const {
         QuickFacing.openRaise,
         QuickFacing.threeBet,
@@ -228,6 +258,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
       };
 
   void _setStreet(Street s) => setState(() {
+        final wasShown = _showEarlier;
         _street = s;
         final allowed = switch (s) {
           Street.preflop => 0,
@@ -242,6 +273,11 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           _facing = s == Street.preflop
               ? QuickFacing.unopened
               : QuickFacing.checkedTo;
+        }
+        if (!wasShown && _showEarlier) {
+          _earlier = _defaultEarlier;
+        } else {
+          _resetEarlierIfIllegal();
         }
         if (_heroAction != null && !_actionOptions.contains(_heroAction)) {
           _heroAction = null;
@@ -286,6 +322,11 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
         facing: _facing,
         heroAction: _heroAction!,
         potType: _street == Street.preflop ? QuickPotType.auto : _potType,
+        earlierAction:
+            _showEarlier ? _earlier : QuickEarlierAction.none,
+        earlierBetBb: _showEarlier && _earlier == QuickEarlierAction.bet
+            ? _parseBb(_earlierBetCtrl)
+            : null,
         facingSizeBb: _facingHasSize ? _parseBb(_facingSizeCtrl) : null,
         heroSizeBb: _heroActionHasSize ? _parseBb(_heroSizeCtrl) : null,
         potBeforeBb:
@@ -479,7 +520,13 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
                   label: Text(_facingLabels[f]!),
                   selected: _facing == f,
                   onSelected: (_) => setState(() {
+                    final wasShown = _showEarlier;
                     _facing = f;
+                    if (!wasShown && _showEarlier) {
+                      _earlier = _defaultEarlier;
+                    } else {
+                      _resetEarlierIfIllegal();
+                    }
                     if (_heroAction != null &&
                         !_actionOptions.contains(_heroAction)) {
                       _heroAction = null;
@@ -490,6 +537,29 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           ),
           if (_facingHasSize)
             _bbField(_facingSizeCtrl, 'Size (BB) — optional'),
+          if (_showEarlier) ...[
+            const SizedBox(height: 10),
+            Text('Earlier this street',
+                style: Theme.of(context).textTheme.bodySmall),
+            Wrap(
+              spacing: 6,
+              runSpacing: 0,
+              children: [
+                for (final e in _earlierOptions)
+                  ChoiceChip(
+                    label: Text(switch (e) {
+                      QuickEarlierAction.none => 'Villain acted first',
+                      QuickEarlierAction.checked => 'I checked first',
+                      QuickEarlierAction.bet => 'I bet first',
+                    }),
+                    selected: _earlier == e,
+                    onSelected: (_) => setState(() => _earlier = e),
+                  ),
+              ],
+            ),
+            if (_earlier == QuickEarlierAction.bet)
+              _bbField(_earlierBetCtrl, 'Your earlier bet (BB) — optional'),
+          ],
           const SizedBox(height: 10),
           Text('You', style: Theme.of(context).textTheme.bodySmall),
           Wrap(
