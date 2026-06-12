@@ -10,6 +10,7 @@ import '../../services/analytics_service.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/playing_card_widget.dart';
 import '../../widgets/chip_stack_widget.dart';
+import '../../widgets/hand_card_picker.dart';
 import '../../theme/app_theme.dart';
 import '../hand_replayer/hand_replayer_screen.dart';
 
@@ -29,6 +30,24 @@ class _BlindFormatter extends TextInputFormatter {
     );
   }
 }
+
+/// Cash-game stakes presets shared by the full wizard and Quick Hand mode.
+const kPresetStakes = [
+  '1/2', '1/3', '2/3', '2/5', '5/10', '10/20', '10/25', '25/50',
+];
+
+/// Tournament stage options (value, label) shared by the full wizard and
+/// Quick Hand mode.
+const kTournamentStages = [
+  (null, 'Not specified'),
+  ('early', 'Early stages (Day 1/2)'),
+  ('middle', 'Middle stages'),
+  ('late', 'Late stages'),
+  ('bubble', 'On the bubble'),
+  ('itm', 'In the money (ITM)'),
+  ('ft_bubble', 'Final table bubble'),
+  ('final_table', 'Final table'),
+];
 
 enum _Step {
   setup,
@@ -74,10 +93,6 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
       List.generate(9, (_) => FocusNode());
   final List<TextEditingController> _stackCtrl =
       List.generate(9, (i) => TextEditingController());
-
-  static const _presetStakes = [
-    '1/2', '1/3', '2/3', '2/5', '5/10', '10/20', '10/25', '25/50',
-  ];
 
   List<String> get _positions => TableSetup.positionLabels(_numSeats);
 
@@ -200,17 +215,6 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
   final _tournSbCtrl = TextEditingController();
   final _tournBbCtrl = TextEditingController();
   String? _tournamentStage;
-
-  static const _tournamentStages = [
-    (null, 'Not specified'),
-    ('early', 'Early stages (Day 1/2)'),
-    ('middle', 'Middle stages'),
-    ('late', 'Late stages'),
-    ('bubble', 'On the bubble'),
-    ('itm', 'In the money (ITM)'),
-    ('ft_bubble', 'Final table bubble'),
-    ('final_table', 'Final table'),
-  ];
 
   // ── session linking ──────────────────────────────────────────────────────────
   String? _selectedSessionId;
@@ -570,18 +574,9 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
   }
 
   // ── card picker ───────────────────────────────────────────────────────────────
-  Future<List<String>?> _pickCards(int count, {Set<String>? extra}) async {
-    final used = {..._usedCards, ...?extra};
-    return showModalBottomSheet<List<String>>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: const Color(0xFF1A1A2E),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => _CardPicker(count: count, used: used),
-    );
-  }
+  Future<List<String>?> _pickCards(int count, {Set<String>? extra}) =>
+      showHandCardPicker(context,
+          count: count, used: {..._usedCards, ...?extra});
 
   Future<void> _pickHeroCards() async {
     final cards = await _pickCards(2);
@@ -812,13 +807,13 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
             items: [
               // Include a non-preset prefilled value (e.g. a "3/6" session) so
               // it's selectable and the dropdown's value is always valid.
-              if (!_presetStakes.contains(_selectedStakes))
+              if (!kPresetStakes.contains(_selectedStakes))
                 DropdownMenuItem(
                   value: _selectedStakes,
                   child: Text('\$$_selectedStakes',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
-              ..._presetStakes.map((s) => DropdownMenuItem(
+              ...kPresetStakes.map((s) => DropdownMenuItem(
                     value: s,
                     child: Text('\$$s',
                         style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -868,7 +863,7 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
               contentPadding:
                   EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
-            items: _tournamentStages
+            items: kTournamentStages
                 .map((entry) => DropdownMenuItem<String?>(
                       value: entry.$1,
                       child: Text(entry.$2),
@@ -2007,175 +2002,3 @@ class _RecorderPlayerPanel extends StatelessWidget {
   }
 }
 
-// ── card picker bottom sheet ────────────────────────────────────────────────────
-class _CardPicker extends StatefulWidget {
-  final int count;
-  final Set<String> used;
-  const _CardPicker({required this.count, required this.used});
-
-  @override
-  State<_CardPicker> createState() => _CardPickerState();
-}
-
-class _CardPickerState extends State<_CardPicker> {
-  static const _ranks = [
-    'A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'
-  ];
-  static const _suits = ['s', 'h', 'd', 'c'];
-  static const _suitSymbols = {'s': '♠', 'h': '♥', 'd': '♦', 'c': '♣'};
-  static const _suitColors = {
-    's': Colors.white,
-    'h': Color(0xFFEF5350),
-    'd': Color(0xFFEF5350),
-    'c': Colors.white,
-  };
-
-  final Set<String> _selected = {};
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (_, sc) => Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Row(children: [
-            Text(
-              'Select ${widget.count} card${widget.count > 1 ? 's' : ''}',
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            Text('${_selected.length}/${widget.count}',
-                style: const TextStyle(color: Colors.white54)),
-          ]),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(children: [
-            const SizedBox(width: 24),
-            ..._suits.map((s) => Expanded(
-                  child: Center(
-                    child: Text(_suitSymbols[s]!,
-                        style: TextStyle(
-                            fontSize: 16,
-                            color: _suitColors[s],
-                            fontWeight: FontWeight.bold)),
-                  ),
-                )),
-          ]),
-        ),
-        const Divider(height: 8),
-        Expanded(
-          child: ListView.builder(
-            controller: sc,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            itemCount: _ranks.length,
-            itemBuilder: (_, ri) {
-              final rank = _ranks[ri];
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(children: [
-                  SizedBox(
-                    width: 24,
-                    child: Text(rank == 'T' ? '10' : rank,
-                        style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.white54,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                  ..._suits.map((suit) {
-                    final card = '$rank$suit';
-                    final isUsed = widget.used.contains(card);
-                    final isSel = _selected.contains(card);
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: isUsed
-                            ? null
-                            : () {
-                                setState(() {
-                                  if (isSel) {
-                                    _selected.remove(card);
-                                  } else if (_selected.length <
-                                      widget.count) {
-                                    _selected.add(card);
-                                  }
-                                });
-                              },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          margin: const EdgeInsets.all(2),
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isUsed
-                                ? Colors.grey[900]
-                                : isSel
-                                    ? Theme.of(context).colorScheme.primary
-                                    : const Color(0xFF2A2A3E),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isSel
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer
-                                  : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                rank == 'T' ? '10' : rank,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: isUsed
-                                      ? Colors.white12
-                                      : _suitColors[suit],
-                                ),
-                              ),
-                              Text(
-                                _suitSymbols[suit]!,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isUsed
-                                      ? Colors.white12
-                                      : _suitColors[suit],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ]),
-              );
-            },
-          ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: FilledButton(
-              onPressed: _selected.length == widget.count
-                  ? () => Navigator.pop(context, _selected.toList())
-                  : null,
-              style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48)),
-              child: Text(
-                _selected.length == widget.count
-                    ? 'Confirm — ${_selected.join(' ')}'
-                    : 'Select ${widget.count - _selected.length} more',
-              ),
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-}

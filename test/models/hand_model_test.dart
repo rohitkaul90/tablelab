@@ -366,6 +366,35 @@ void main() {
       expect(PokerHand.fromJson(json).isTournament, isFalse);
     });
 
+    test('isQuickEntry round-trips when true', () {
+      final hand = PokerHand(
+        id: 'h', userId: 'u', playedAt: DateTime(2026, 1, 1),
+        tableSetup: const TableSetup(
+            numSeats: 6, buttonSeat: 0, heroSeat: 2, smallBlind: 1, bigBlind: 2),
+        players: const [], streets: const [],
+        isQuickEntry: true,
+      );
+      final json = hand.toJson();
+      expect(json['isQuickEntry'], isTrue);
+      expect(PokerHand.fromJson(json).isQuickEntry, isTrue);
+    });
+
+    test('isQuickEntry is omitted from JSON when false', () {
+      expect(makeHand().toJson().containsKey('isQuickEntry'), isFalse);
+    });
+
+    test('legacy hand without isQuickEntry parses as false', () {
+      final json = {
+        'id': 'h', 'userId': 'u', 'playedAt': '2026-01-01T00:00:00.000',
+        'tableSetup': {
+          'numSeats': 6, 'buttonSeat': 0, 'heroSeat': 1,
+          'smallBlind': 1, 'bigBlind': 2,
+        },
+        'players': [], 'streets': [],
+      };
+      expect(PokerHand.fromJson(json).isQuickEntry, isFalse);
+    });
+
     test('streetReached returns correct street name', () {
       final base = makeHand();
       expect(base.streetReached, equals('Pre-flop'));

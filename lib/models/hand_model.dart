@@ -250,6 +250,11 @@ class PokerHand {
   /// stage-less tournament hand from a cash hand.
   final bool isTournament;
 
+  /// Whether this hand was captured via Quick Hand mode — a single decision
+  /// point with the surrounding action synthesized, not a street-by-street
+  /// record. Absent on legacy hands (parses as false).
+  final bool isQuickEntry;
+
   const PokerHand({
     required this.id,
     required this.userId,
@@ -261,6 +266,7 @@ class PokerHand {
     this.notes,
     this.tournamentStage,
     this.isTournament = false,
+    this.isQuickEntry = false,
   });
 
   HandPlayer? get hero => players.where((p) => p.isHero).firstOrNull;
@@ -304,6 +310,7 @@ class PokerHand {
         if (notes != null) 'notes': notes,
         if (tournamentStage != null) 'tournamentStage': tournamentStage,
         'isTournament': isTournament,
+        if (isQuickEntry) 'isQuickEntry': true,
       };
 
   factory PokerHand.fromJson(Map<String, dynamic> j) => PokerHand(
@@ -326,5 +333,6 @@ class PokerHand {
         isTournament: (j['isTournament'] as bool?) ??
             (j['tournamentStage'] != null ||
                 (j['tableSetup'] as Map<String, dynamic>?)?['ante'] != null),
+        isQuickEntry: j['isQuickEntry'] as bool? ?? false,
       );
 }
