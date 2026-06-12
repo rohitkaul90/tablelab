@@ -183,6 +183,121 @@ class _FlopCardPickerSheetState extends State<FlopCardPickerSheet> {
   }
 }
 
+/// Hole-cards picker — stays open until both cards are selected, then
+/// auto-confirms (same interaction as the flop picker: no double round-trip).
+class HoleCardsPickerSheet extends StatefulWidget {
+  final Set<int> excludedCards; // board + other players' exact cards
+  final List<int?> currentCards; // length 2
+  final ValueChanged<List<int?>> onConfirm;
+
+  const HoleCardsPickerSheet({
+    super.key,
+    required this.excludedCards,
+    required this.currentCards,
+    required this.onConfirm,
+  });
+
+  @override
+  State<HoleCardsPickerSheet> createState() => _HoleCardsPickerSheetState();
+}
+
+class _HoleCardsPickerSheetState extends State<HoleCardsPickerSheet> {
+  late List<int?> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List<int?>.from(widget.currentCards);
+  }
+
+  Set<int> get _pickedSet => _selected.whereType<int>().toSet();
+
+  void _onCardTap(int idx) {
+    setState(() {
+      final pos = _selected.indexOf(idx);
+      if (pos >= 0) {
+        // Deselect
+        _selected[pos] = null;
+      } else {
+        // Fill first empty slot
+        final empty = _selected.indexOf(null);
+        if (empty >= 0) _selected[empty] = idx;
+      }
+    });
+    // Auto-confirm when both filled
+    if (_selected.every((c) => c != null)) {
+      widget.onConfirm(List<int?>.from(_selected));
+      Navigator.pop(context);
+    }
+  }
+
+  void _clearAll() => setState(() => _selected = [null, null]);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final filledCount = _selected.whereType<int>().length;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.6,
+      minChildSize: 0.5,
+      maxChildSize: 0.75,
+      builder: (context, scroll) {
+        return Column(
+          children: [
+            _handle(context),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const Text('Select Hand', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 8),
+                  Text(
+                    '($filledCount / 2)',
+                    style: TextStyle(fontSize: 13, color: theme.colorScheme.primary),
+                  ),
+                  const Spacer(),
+                  TextButton(onPressed: _clearAll, child: const Text('Clear')),
+                ],
+              ),
+            ),
+            // 2 slot preview
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Row(
+                children: [
+                  for (int i = 0; i < 2; i++) ...[
+                    _FlopSlot(cardIdx: _selected[i], isNext: _selected[i] == null && _selected.indexOf(null) == i),
+                    if (i < 1) const SizedBox(width: 8),
+                  ],
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            const SizedBox(height: 4),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scroll,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      12, 0, 12, 12 + MediaQuery.paddingOf(context).bottom),
+                  child: _CardGrid(
+                    excludedCards: widget.excludedCards,
+                    selectedCards: _pickedSet,
+                    onTap: _onCardTap,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _FlopSlot extends StatelessWidget {
   final int? cardIdx;
   final bool isNext;

@@ -8,7 +8,7 @@ import 'package:tablelab/services/hand_service.dart';
 
 /// Avoids Supabase entirely — HandService resolves its client lazily, so a
 /// subclass that overrides saveHand never touches Supabase.instance.
-class _FakeHandService extends HandService {
+class FakeHandService extends HandService {
   int saveCalls = 0;
   TableSetup? capturedSetup;
   List<StreetData>? capturedStreets;
@@ -18,7 +18,7 @@ class _FakeHandService extends HandService {
   bool? capturedIsQuickEntry;
   Duration delay;
 
-  _FakeHandService({this.delay = Duration.zero});
+  FakeHandService({this.delay = Duration.zero});
 
   @override
   Future<PokerHand> saveHand({
@@ -61,7 +61,7 @@ void useTallViewport(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
-Future<void> pumpQuickHand(WidgetTester tester, _FakeHandService fake,
+Future<void> pumpQuickHand(WidgetTester tester, FakeHandService fake,
     {String? prefilledSessionId,
     String? prefilledStakes,
     bool isTournamentSession = false}) async {
@@ -86,7 +86,7 @@ QuickHandScreenState stateOf(WidgetTester tester) =>
 void main() {
   testWidgets('save is disabled until the required fields are set',
       (tester) async {
-    final fake = _FakeHandService();
+    final fake = FakeHandService();
     await pumpQuickHand(tester, fake);
 
     final save = find.widgetWithText(FilledButton, 'Save Hand');
@@ -108,7 +108,7 @@ void main() {
 
   testWidgets('minimal fill saves once with isQuickEntry and pops',
       (tester) async {
-    final fake = _FakeHandService();
+    final fake = FakeHandService();
     useTallViewport(tester);
     await tester.pumpWidget(
       ProviderScope(
@@ -151,7 +151,7 @@ void main() {
   });
 
   testWidgets('double-tapping save calls the service once', (tester) async {
-    final fake = _FakeHandService(delay: const Duration(milliseconds: 100));
+    final fake = FakeHandService(delay: const Duration(milliseconds: 100));
     await pumpQuickHand(tester, fake);
 
     stateOf(tester).debugSetHeroCards(['As', 'Kd']);
@@ -172,7 +172,7 @@ void main() {
 
   testWidgets('session prefill locks game type and threads the session id',
       (tester) async {
-    final fake = _FakeHandService();
+    final fake = FakeHandService();
     await pumpQuickHand(tester, fake,
         prefilledSessionId: 'sess-1',
         prefilledStakes: '2/5',

@@ -49,6 +49,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
   final List<String> _board = [];
   QuickFacing _facing = QuickFacing.unopened;
   QuickHeroAction? _heroAction;
+  QuickPotType _potType = QuickPotType.auto;
   final _facingSizeCtrl = TextEditingController();
   final _heroSizeCtrl = TextEditingController();
   final _potBeforeCtrl = TextEditingController();
@@ -284,6 +285,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
         boardCards: List.of(_board),
         facing: _facing,
         heroAction: _heroAction!,
+        potType: _street == Street.preflop ? QuickPotType.auto : _potType,
         facingSizeBb: _facingHasSize ? _parseBb(_facingSizeCtrl) : null,
         heroSizeBb: _heroActionHasSize ? _parseBb(_heroSizeCtrl) : null,
         potBeforeBb:
@@ -371,6 +373,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
             )
           else
             SegmentedButton<bool>(
+              showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: false, label: Text('Cash')),
                 ButtonSegment(value: true, label: Text('Tournament')),
@@ -437,6 +440,9 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           const SizedBox(height: 16),
           _sectionLabel('THE DECISION'),
           SegmentedButton<Street>(
+            // The default selected checkmark widens the segment and wraps the
+            // 4-pill row on phones.
+            showSelectedIcon: false,
             segments: [
               for (final s in Street.values)
                 ButtonSegment(
@@ -500,9 +506,31 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           ),
           if (_heroActionHasSize)
             _bbField(_heroSizeCtrl, 'Your size (BB) — optional'),
-          if (_street != Street.preflop)
+          if (_street != Street.preflop) ...[
             _bbField(_potBeforeCtrl,
                 'Pot entering this street (BB) — optional'),
+            const SizedBox(height: 10),
+            Text('How preflop went — optional',
+                style: Theme.of(context).textTheme.bodySmall),
+            Wrap(
+              spacing: 6,
+              runSpacing: 0,
+              children: [
+                for (final t in QuickPotType.values)
+                  ChoiceChip(
+                    label: Text(switch (t) {
+                      QuickPotType.auto => 'Auto',
+                      QuickPotType.limped => 'Limped',
+                      QuickPotType.singleRaised => 'Single-raised',
+                      QuickPotType.threeBet => '3-bet pot',
+                      QuickPotType.fourBet => '4-bet pot',
+                    }),
+                    selected: _potType == t,
+                    onSelected: (_) => setState(() => _potType = t),
+                  ),
+              ],
+            ),
+          ],
           _bbField(_effStackCtrl, 'Effective stacks (BB)'),
           const SizedBox(height: 16),
           _sectionLabel('RESULT — OPTIONAL'),
