@@ -64,23 +64,21 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
     });
   }
 
-  void _pickCard({required bool isCard1, required BuildContext context}) {
-    final excluded = {
-      ...widget.excludedCards,
-      if (isCard1 && _card2 != null) _card2!,
-      if (!isCard1 && _card1 != null) _card1!,
-    };
+  // Both hole cards in one sheet visit — the picker stays open until two
+  // cards are chosen (mirrors the flop picker / hand-recording UX).
+  void _pickHoleCards(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => CardPickerSheet(
-        excludedCards: excluded,
-        currentCard: isCard1 ? _card1 : _card2,
-        onSelected: (idx) => setState(() {
-          if (isCard1) { _card1 = idx; } else { _card2 = idx; }
+      builder: (_) => HoleCardsPickerSheet(
+        excludedCards: widget.excludedCards,
+        currentCards: [_card1, _card2],
+        onConfirm: (cards) => setState(() {
+          _card1 = cards[0];
+          _card2 = cards[1];
         }),
       ),
     );
@@ -192,13 +190,13 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                           _ExactCardSlot(
                             cardIdx: _card1,
                             label: 'Card 1',
-                            onTap: () => _pickCard(isCard1: true, context: context),
+                            onTap: () => _pickHoleCards(context),
                           ),
                           const SizedBox(width: 16),
                           _ExactCardSlot(
                             cardIdx: _card2,
                             label: 'Card 2',
-                            onTap: () => _pickCard(isCard1: false, context: context),
+                            onTap: () => _pickHoleCards(context),
                           ),
                           if (_card1 != null || _card2 != null) ...[
                             const Spacer(),

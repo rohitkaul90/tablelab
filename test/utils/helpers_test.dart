@@ -76,6 +76,44 @@ void main() {
     });
   });
 
+  // ── parseBlindsFromStakes ────────────────────────────────────────────────────
+
+  group('parseBlindsFromStakes', () {
+    test('returns both blinds for standard stakes', () {
+      expect(parseBlindsFromStakes('1/2'), equals((1.0, 2.0)));
+      expect(parseBlindsFromStakes('2/5'), equals((2.0, 5.0)));
+      expect(parseBlindsFromStakes('25/50'), equals((25.0, 50.0)));
+    });
+
+    test('strips currency symbols and handles separators', () {
+      expect(parseBlindsFromStakes(r'$2/$5'), equals((2.0, 5.0)));
+      expect(parseBlindsFromStakes('£2/£5'), equals((2.0, 5.0)));
+      expect(parseBlindsFromStakes('1-2'), equals((1.0, 2.0)));
+    });
+
+    test('SB is first, BB is second in a 3-blind / straddle game', () {
+      expect(parseBlindsFromStakes(r'$2/$5/$10'), equals((2.0, 5.0)));
+    });
+
+    test('cap notation derives SB as half the BB', () {
+      expect(parseBlindsFromStakes('NL100'), equals((0.5, 1.0)));
+      expect(parseBlindsFromStakes('200NL'), equals((1.0, 2.0)));
+    });
+
+    test('the BB always matches parseBBFromStakes', () {
+      for (final s in ['1/2', r'$2/$5', '1-2', 'NL100', '1k/2k', '2,5/5']) {
+        expect(parseBlindsFromStakes(s)?.$2, equals(parseBBFromStakes(s)),
+            reason: s);
+      }
+    });
+
+    test('returns null for unparseable input', () {
+      expect(parseBlindsFromStakes(''), isNull);
+      expect(parseBlindsFromStakes('200'), isNull);
+      expect(parseBlindsFromStakes('N/A'), isNull);
+    });
+  });
+
   // ── calcBB100 ────────────────────────────────────────────────────────────────
 
   group('calcBB100', () {

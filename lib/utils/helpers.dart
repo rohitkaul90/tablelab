@@ -182,9 +182,9 @@ final _bbNumber = RegExp(r'(\d+(?:[.,]\d+)?)(k)?');
 /// notation `NL100` / `200NL` / `PLO50` (a 100bb cap → BB = number/100).
 /// Currency symbols/codes and game labels are ignored. Returns null when no
 /// big blind can be determined (e.g. a bare ambiguous number or pure text).
-double? parseBBFromStakes(String stakes) {
-  final lower = stakes.toLowerCase();
+double? parseBBFromStakes(String stakes) => parseBlindsFromStakes(stakes)?.$2;
 
+List<double> _stakesNumbers(String lower) {
   final nums = <double>[];
   for (final m in _bbNumber.allMatches(lower)) {
     var v = double.tryParse(m.group(1)!.replaceAll(',', '.'));
@@ -192,18 +192,32 @@ double? parseBBFromStakes(String stakes) {
     if (m.group(2) == 'k') v *= 1000;
     nums.add(v);
   }
+  return nums;
+}
+
+/// Parses both blinds from a stakes string, tolerant of the same formats as
+/// [parseBBFromStakes] (currency symbols, `-` separators, `k` suffix, comma
+/// decimals, `NLxxx` cap notation). Returns `(smallBlind, bigBlind)` in the
+/// stakes' own units, or null when no big blind can be determined. When the
+/// small blind can't be read (single-value cap notation) it defaults to half
+/// the big blind.
+(double, double)? parseBlindsFromStakes(String stakes) {
+  final lower = stakes.toLowerCase();
+  final nums = _stakesNumbers(lower);
   if (nums.isEmpty) return null;
 
-  // Two or more numbers ("1/2", "$2/$5/$10") → the big blind is the second.
+  // Two or more numbers ("1/2", "$2/$5/$10") → SB is the first, BB the second.
   if (nums.length >= 2) {
-    return nums[1] > 0 ? nums[1] : null;
+    if (nums[1] <= 0) return null;
+    final sb = nums[0] > 0 ? nums[0] : nums[1] / 2;
+    return (sb, nums[1]);
   }
 
   // A single number is only meaningful with online cap notation, where the
   // value is a 100bb buy-in cap (NL100 → $1 BB, NL200 → $2 BB, NL25 → $0.25).
   if (RegExp(r'nl|plo|cap').hasMatch(lower)) {
     final bb = nums.first / 100;
-    return bb > 0 ? bb : null;
+    return bb > 0 ? (bb / 2, bb) : null;
   }
 
   // Bare single number is ambiguous (BB? buy-in? stake level?) → give up.

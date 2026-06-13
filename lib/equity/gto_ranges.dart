@@ -261,6 +261,155 @@ final List<GtoPreset> gtoPresets = [
     },
   ),
 
+  // ─── Cash Game Calling Ranges — bucketed (opener: Early=UTG–MP,
+  //     Middle=HJ–CO, Late=BTN–SB). Pair-specific charts above stay for the
+  //     classic spots; these fill the grid for every other seat combination.
+  GtoPreset(
+    key: 'cash_call_bb_vs_sb',
+    label: 'BB Call vs SB',
+    category: 'Cash Call',
+    hands: {
+      '22', '33', '44', '55', '66', '77', '88', '99',
+      'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+      'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s',
+      'QJs', 'QTs', 'Q9s', 'Q8s', 'JTs', 'J9s', 'J8s',
+      'T9s', 'T8s', 'T7s', '98s', '97s', '87s', '86s', '76s', '75s', '65s', '54s',
+      'AJo', 'ATo', 'A9o', 'A8o', 'A7o',
+      'KQo', 'KJo', 'KTo', 'K9o',
+      'QJo', 'QTo', 'JTo', 'T9o', '98o',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_call_sb_vs_early',
+    label: 'SB Call vs Early Open',
+    category: 'Cash Call',
+    hands: {
+      '66', '77', '88', '99', 'TT',
+      'AQs', 'AJs', 'ATs', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_call_sb_vs_middle',
+    label: 'SB Call vs Middle Open',
+    category: 'Cash Call',
+    hands: {
+      '44', '55', '66', '77', '88', '99', 'TT',
+      'AQs', 'AJs', 'ATs', 'A9s', 'A5s',
+      'KQs', 'KJs', 'KTs', 'QJs', 'QTs', 'JTs', 'T9s', '98s', '87s',
+      'AQo',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_call_sb_vs_late',
+    label: 'SB Call vs Late Open',
+    category: 'Cash Call',
+    hands: {
+      '22', '33', '44', '55', '66', '77', '88', '99', 'TT',
+      'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A5s', 'A4s',
+      'KQs', 'KJs', 'KTs', 'K9s',
+      'QJs', 'QTs', 'JTs', 'J9s', 'T9s', '98s', '87s', '76s', '65s',
+      'AQo', 'AJo', 'KQo',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_call_ip_vs_early',
+    label: 'IP Call vs Early Open',
+    category: 'Cash Call',
+    hands: {
+      '22', '33', '44', '55', '66', '77', '88', '99', 'TT',
+      'AQs', 'AJs', 'ATs', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s', '87s',
+      'AQo',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_call_ip_vs_middle',
+    label: 'IP Call vs Middle Open',
+    category: 'Cash Call',
+    hands: {
+      '22', '33', '44', '55', '66', '77', '88', '99', 'TT',
+      'AQs', 'AJs', 'ATs', 'A9s', 'A5s',
+      'KQs', 'KJs', 'KTs', 'QJs', 'QTs', 'JTs', 'J9s',
+      'T9s', '98s', '87s', '76s', '65s',
+      'AQo', 'AJo', 'KQo',
+    },
+  ),
+
+  // ─── Cash Game 3-Bet Ranges — bucketed additions ─────────────────────────
+  GtoPreset(
+    key: 'cash_3b_ip_vs_early',
+    label: 'IP 3-bet vs Early Open',
+    category: 'Cash 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ', 'JJ',
+      'AKs', 'AQs', 'A5s', 'A4s', 'KQs',
+      'AKo',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_3b_sb_vs_early',
+    label: 'SB 3-bet vs Early Open',
+    category: 'Cash 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ', 'JJ',
+      'AKs', 'AQs', 'A5s',
+      'AKo',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_3b_sb_vs_middle',
+    label: 'SB 3-bet vs Middle Open',
+    category: 'Cash 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ', 'JJ', 'TT',
+      'AKs', 'AQs', 'AJs', 'A5s', 'A4s',
+      'KQs',
+      'AKo', 'AQo',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_3b_bb_vs_sb',
+    label: 'BB 3-bet vs SB',
+    category: 'Cash 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ', 'JJ', 'TT', '99',
+      'AKs', 'AQs', 'AJs', 'ATs', 'A5s', 'A4s', 'A3s', 'A2s',
+      'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s', '87s', '76s',
+      'AKo', 'AQo', 'AJo', 'KQo',
+    },
+  ),
+
+  // ─── Cash Game vs 3-Bet (continuing as the opener) ───────────────────────
+  GtoPreset(
+    key: 'cash_4b_value',
+    label: '4-bet (value + bluffs)',
+    category: 'Cash vs 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ',
+      'AKs', 'A5s', 'A4s',
+      'AKo',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_call_3b_ip',
+    label: 'Call 3-bet (IP)',
+    category: 'Cash vs 3-bet',
+    hands: {
+      '77', '88', '99', 'TT', 'JJ',
+      'AQs', 'AJs', 'ATs', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s',
+      'AQo',
+    },
+  ),
+  GtoPreset(
+    key: 'cash_call_3b_oop',
+    label: 'Call 3-bet (OOP)',
+    category: 'Cash vs 3-bet',
+    hands: {
+      '88', '99', 'TT', 'JJ',
+      'AQs', 'AJs', 'KQs', 'QJs', 'JTs',
+      'AQo',
+    },
+  ),
+
   // ─── Tournament RFI (100BB, 9-max, slightly tighter) ────────────────────
   GtoPreset(
     key: 'trn_rfi_utg',
@@ -383,6 +532,114 @@ final List<GtoPreset> gtoPresets = [
       'A5s', 'A4s',
       'KQs',
       'AKo', 'AQo',
+    },
+  ),
+  GtoPreset(
+    key: 'trn_3b_bb_vs_early',
+    label: 'BB 3-bet vs Early Open',
+    category: 'Tournament 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ',
+      'AKs', 'AQs', 'A5s',
+      'AKo',
+    },
+  ),
+  GtoPreset(
+    key: 'trn_3b_sb_vs_late',
+    label: 'SB 3-bet vs Late Open',
+    category: 'Tournament 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ', 'JJ',
+      'AKs', 'AQs', 'AJs', 'ATs', 'A5s', 'A4s', 'A3s',
+      'KQs', 'QJs', 'JTs',
+      'AKo', 'AQo',
+    },
+  ),
+  GtoPreset(
+    key: 'trn_3b_ip_vs_early',
+    label: 'IP 3-bet vs Early Open',
+    category: 'Tournament 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ',
+      'AKs', 'AQs', 'A5s',
+      'AKo',
+    },
+  ),
+
+  // ─── Tournament Calling Ranges (antes — wider defends) ──────────────────
+  GtoPreset(
+    key: 'trn_call_bb_vs_early',
+    label: 'BB Call vs Early Open',
+    category: 'Tournament Call',
+    hands: {
+      '22', '33', '44', '55', '66', '77',
+      'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+      'KQs', 'KJs', 'KTs', 'K9s', 'K8s',
+      'QJs', 'QTs', 'Q9s', 'JTs', 'J9s',
+      'T9s', 'T8s', '98s', '97s', '87s', '76s', '65s', '54s',
+      'AJo', 'ATo', 'KQo', 'KJo', 'QJo', 'JTo',
+    },
+  ),
+  GtoPreset(
+    key: 'trn_call_bb_vs_middle',
+    label: 'BB Call vs Middle Open',
+    category: 'Tournament Call',
+    hands: {
+      '22', '33', '44', '55', '66', '77', '88',
+      'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+      'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s',
+      'QJs', 'QTs', 'Q9s', 'Q8s', 'JTs', 'J9s', 'J8s',
+      'T9s', 'T8s', 'T7s', '98s', '97s', '87s', '86s', '76s', '75s', '65s', '54s', '43s',
+      'AJo', 'ATo', 'A9o', 'KQo', 'KJo', 'KTo', 'QJo', 'QTo', 'JTo', 'T9o',
+    },
+  ),
+  GtoPreset(
+    key: 'trn_call_bb_vs_late',
+    label: 'BB Call vs Late Open',
+    category: 'Tournament Call',
+    hands: {
+      '22', '33', '44', '55', '66', '77', '88', '99',
+      'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
+      'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s', 'K4s', 'K3s', 'K2s',
+      'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', 'Q6s', 'Q5s',
+      'JTs', 'J9s', 'J8s', 'J7s', 'T9s', 'T8s', 'T7s', 'T6s',
+      '98s', '97s', '96s', '87s', '86s', '85s', '76s', '75s', '74s',
+      '65s', '64s', '54s', '53s', '43s',
+      'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o',
+      'KQo', 'KJo', 'KTo', 'K9o', 'K8o',
+      'QJo', 'QTo', 'Q9o', 'JTo', 'J9o', 'T9o', 'T8o', '98o', '87o',
+    },
+  ),
+  GtoPreset(
+    key: 'trn_call_ip_vs_early',
+    label: 'IP Call vs Early Open',
+    category: 'Tournament Call',
+    hands: {
+      '22', '33', '44', '55', '66', '77', '88', '99', 'TT',
+      'AQs', 'AJs', 'ATs', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s',
+      'AQo',
+    },
+  ),
+
+  // ─── Tournament vs 3-Bet ─────────────────────────────────────────────────
+  GtoPreset(
+    key: 'trn_4b_value',
+    label: '4-bet (value + bluffs)',
+    category: 'Tournament vs 3-bet',
+    hands: {
+      'AA', 'KK', 'QQ',
+      'AKs', 'A5s',
+      'AKo',
+    },
+  ),
+  GtoPreset(
+    key: 'trn_call_3b',
+    label: 'Call 3-bet',
+    category: 'Tournament vs 3-bet',
+    hands: {
+      '88', '99', 'TT', 'JJ',
+      'AQs', 'AJs', 'KQs', 'QJs', 'JTs',
+      'AQo',
     },
   ),
 ];

@@ -75,10 +75,12 @@ class AnalyticsService {
 
   // ── Hands ───────────────────────────────────────────────────────────────────
 
-  static void handRecorded({required bool isTournament}) {
+  static void handRecorded(
+      {required bool isTournament, String entryMode = 'full'}) {
     if (!_analyticsSupported) return;
     Posthog().capture(eventName: 'hand_recorded', properties: {
       'is_tournament': isTournament,
+      'entry_mode': entryMode, // 'full' or 'quick'
     });
   }
 

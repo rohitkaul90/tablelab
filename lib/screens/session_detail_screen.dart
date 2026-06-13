@@ -9,7 +9,7 @@ import '../widgets/playing_card_widget.dart';
 import '../widgets/ai_usage_pill.dart';
 import 'log_session_screen.dart';
 import 'ai_analysis/session_analysis_screen.dart';
-import 'hand_input/hand_input_screen.dart';
+import 'hand_input/record_hand_sheet.dart';
 import 'hand_replayer/hand_replayer_screen.dart';
 
 class SessionDetailScreen extends ConsumerWidget {
@@ -208,17 +208,13 @@ class SessionDetailScreen extends ConsumerWidget {
               minimumSize: const Size.fromHeight(48),
             ),
             onPressed: () async {
-              await Navigator.push(
+              await showRecordHandSheet(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => HandInputScreen(
-                    prefilledSessionId: session.id,
-                    prefilledStakes: session.stakes,
-                    prefilledSessionLabel:
-                        '${DateFormat('MMM d').format(DateTime.parse(session.date))}  ·  ${session.stakes}',
-                    isTournamentSession: isTournament,
-                  ),
-                ),
+                prefilledSessionId: session.id,
+                prefilledStakes: session.stakes,
+                prefilledSessionLabel:
+                    '${DateFormat('MMM d').format(DateTime.parse(session.date))}  ·  ${session.stakes}',
+                isTournamentSession: isTournament,
               );
               // No Realtime — refresh so a newly recorded hand shows in the
               // "Hands this session" list above.

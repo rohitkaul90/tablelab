@@ -7,7 +7,7 @@ import '../providers/providers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/playing_card_widget.dart';
 import '../widgets/ai_usage_pill.dart';
-import 'hand_input/hand_input_screen.dart';
+import 'hand_input/record_hand_sheet.dart';
 import 'hand_replayer/hand_replayer_screen.dart';
 import 'ai_analysis/hand_analysis_screen.dart';
 
@@ -164,10 +164,7 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_hands',
         onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const HandInputScreen()),
-          );
+          await showRecordHandSheet(context);
           if (!mounted) return;
           ref.invalidate(handsProvider);
         },
@@ -243,7 +240,8 @@ class _HandTile extends StatelessWidget {
                 // leftover width — never clipping the hand info, and clamped so
                 // they can't exceed the 3-line text height (tile stays the same).
                 final l1 = 'Pot \$$potStr';
-                final l2 = '$stakes · ${hand.streetReached}';
+                final l2 = '$stakes · ${hand.streetReached}'
+                    '${hand.isQuickEntry ? ' · Quick' : ''}';
                 final l3 = fmt.format(hand.playedAt.toLocal());
                 double measure(String t, double size, FontWeight weight) {
                   final tp = TextPainter(
