@@ -348,6 +348,7 @@ function positionName(seat: number, setup: TableSetup): string {
 function buildPrompt(
   hand: PokerHand,
   reads: PlayerRead[],
+  equityFacts: string[] = [],
 ): { prompt: string; facts: string[] } {
   const { tableSetup: ts, players, streets } = hand;
   const seatMap = new Map(players.map((p) => [p.seat, p]));
@@ -491,6 +492,14 @@ function buildPrompt(
 
   if (hand.notes) lines.push(`Hand note: "${hand.notes}"`);
 
+  // Deterministic equity cross-check (computed on-device, passed in the
+  // request) — ground truth the coaching must agree with. Appended after the
+  // hand context so the model reads it before the analysis instruction.
+  for (const f of equityFacts) {
+    lines.push(f);
+    facts.push(f);
+  }
+
   lines.push(
     "",
     "Analyze each street hero reached. When a read or tag exists for an opponent, base optimal play on that player profile (exploit accordingly). When no read exists, use GTO population defaults and state this. Use null for streets not reached.",
@@ -601,6 +610,7 @@ serve(async (req: Request) => {
       hand: PokerHand;
       reads?: PlayerRead[];
       forceRefresh?: boolean;
+      equityFacts?: unknown;
     };
 
     const { hand, reads = [], forceRefresh = false } = body;
@@ -611,6 +621,16 @@ serve(async (req: Request) => {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
+
+    // On-device equity facts are client-computed; sanitise before trusting them
+    // in the prompt (cap count + length — this is the user's own analysis, but
+    // keep the payload bounded regardless).
+    const equityFacts: string[] = Array.isArray(body.equityFacts)
+      ? body.equityFacts
+        .filter((f): f is string => typeof f === "string")
+        .slice(0, 8)
+        .map((f) => f.slice(0, 600))
+      : [];
 
     // Only pass reads for opponents actually in this hand
     const opponentNames = new Set(
@@ -653,7 +673,7 @@ serve(async (req: Request) => {
       apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
     });
 
-    const built = buildPrompt(hand, relevantReads);
+    const built = buildPrompt(hand, relevantReads, equityFacts);
 
     const claudeCall = anthropic.messages.create({
       model: "claude-sonnet-4-6",

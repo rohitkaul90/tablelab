@@ -104,6 +104,7 @@ class AiService {
     PokerHand hand, {
     List<PlayerRead> reads = const [],
     bool forceRefresh = false,
+    List<String> equityFacts = const [],
   }) async {
     final res = await _client.functions.invoke(
       'analyze-hand',
@@ -113,6 +114,9 @@ class AiService {
             .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
             .toList(),
         'forceRefresh': forceRefresh,
+        // Deterministic on-device equity, injected into the prompt as ground
+        // truth so the coaching can't contradict the math (see analyze-hand).
+        if (equityFacts.isNotEmpty) 'equityFacts': equityFacts,
       },
     );
 

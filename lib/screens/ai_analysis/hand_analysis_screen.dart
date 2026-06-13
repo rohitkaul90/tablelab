@@ -27,22 +27,7 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _runAnalysis();
-      _runEquityCheck();
-    });
-  }
-
-  /// Deterministic on-device cross-check, run in parallel with the AI call.
-  /// Best-effort: the coaching view renders without it.
-  Future<void> _runEquityCheck() async {
-    try {
-      final reads = ref.read(readsProvider).value ?? [];
-      final check = await computeHandEquityCheck(widget.hand, reads: reads);
-      if (mounted) setState(() => _equityCheck = check);
-    } catch (_) {
-      // Unmodelable hand (corrupt cards etc.) — just omit the equity chips.
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runAnalysis());
   }
 
   Future<void> _runAnalysis({bool forceRefresh = false}) async {
@@ -52,10 +37,26 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
     });
     try {
       final reads = ref.read(readsProvider).value ?? [];
+
+      // Compute the deterministic cross-check first so it can both feed the
+      // equity chips AND ground the AI prompt (its numbers ride in as [FACT]
+      // lines the coaching can't contradict). Best-effort: a hand the engine
+      // can't model just yields no chips and no equity facts.
+      HandEquityCheck? equity;
+      try {
+        equity = await computeHandEquityCheck(widget.hand, reads: reads);
+      } catch (_) {
+        equity = null;
+      }
+      if (!mounted) return;
+      setState(() => _equityCheck = equity);
+
       final analysis = await ref.read(aiServiceProvider).analyzeHand(
             widget.hand,
             reads: reads,
             forceRefresh: forceRefresh,
+            equityFacts:
+                equity != null ? equityCheckFacts(equity) : const [],
           );
       if (mounted) {
         setState(() { _analysis = analysis; _loading = false; });

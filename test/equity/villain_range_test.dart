@@ -503,6 +503,99 @@ void main() {
     });
   });
 
+  group('equityCheckFacts', () {
+    test('renders a per-street equity FACT plus a villain-range FACT', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], streets: [
+          _btnOpenBbCall(),
+        ]),
+        iterations: 3000,
+      );
+      final facts = equityCheckFacts(check!);
+      expect(facts, isNotEmpty);
+      expect(facts.first, contains('Hero equity'));
+      expect(facts.first, contains('Monte Carlo'));
+      expect(facts.first, contains('pre-flop ~'));
+      expect(facts.first, contains('MUST be consistent'));
+      expect(facts.any((f) => f.contains('range behind the equity')), isTrue);
+    });
+
+    test('flags synthesized (Quick Hand) action in the caveat', () async {
+      final check = await computeHandEquityCheck(
+        _hand(
+            heroSeat: 2,
+            heroCards: ['As', 'Ah'],
+            isQuickEntry: true,
+            streets: [_btnOpenBbCall()]),
+        iterations: 2000,
+      );
+      expect(equityCheckFacts(check!).first, contains('Quick Hand'));
+    });
+
+    test('AA folding to a nit shove yields a low river equity', () async {
+      // The device-review hand: AA on Tc7d4c3hKc vs a nit who shoves the
+      // river. The injected FACT must report a low river equity so the model
+      // can't claim showdown value.
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 0,
+          heroCards: ['Ah', 'Ad'],
+          villainSeat: 2,
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 0, type: ActionType.raise, amount: 5),
+              HandAction(seat: 2, type: ActionType.call, amount: 5),
+            ]),
+            const StreetData(
+              street: Street.flop,
+              communityCards: ['Tc', '7d', '4c'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(
+                    seat: 0,
+                    type: ActionType.raise,
+                    amount: 7,
+                    isOpeningBet: true),
+                HandAction(seat: 2, type: ActionType.call, amount: 7),
+              ],
+            ),
+            const StreetData(
+              street: Street.turn,
+              communityCards: ['3h'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(
+                    seat: 0,
+                    type: ActionType.raise,
+                    amount: 28,
+                    isOpeningBet: true),
+                HandAction(seat: 2, type: ActionType.call, amount: 28),
+              ],
+            ),
+            const StreetData(
+              street: Street.river,
+              communityCards: ['Kc'],
+              actions: [
+                HandAction(
+                    seat: 2,
+                    type: ActionType.allIn,
+                    amount: 92,
+                    isAllIn: true),
+                HandAction(seat: 0, type: ActionType.fold),
+              ],
+            ),
+          ],
+        ),
+        reads: [_read('Villain', ['nit'])],
+        iterations: 8000,
+      );
+      final river = check!.streets.firstWhere((s) => s.street == Street.river);
+      expect(river.heroEquity, lessThan(0.35),
+          reason: "AA should beat little of a nit's river shove range");
+    });
+  });
+
   group('edge cases', () {
     test('returns null without hero hole cards', () async {
       final hand = PokerHand(

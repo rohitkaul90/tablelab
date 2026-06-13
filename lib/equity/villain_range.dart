@@ -83,6 +83,35 @@ class HandEquityCheck {
   });
 }
 
+/// Renders a [HandEquityCheck] into deterministic `[FACT —]` lines for the
+/// `analyze-hand` prompt — the equity the model must not contradict, plus the
+/// range assumption behind it. Returns an empty list when there is nothing to
+/// assert. These are computed on-device, never by the model.
+List<String> equityCheckFacts(HandEquityCheck check) {
+  if (check.streets.isEmpty) return const [];
+  final perStreet = check.streets
+      .map((s) => '${s.street.label.toLowerCase()} ~${(s.heroEquity * 100).round()}%')
+      .join(', ');
+  final caveat = check.basedOnSynthesizedAction
+      ? ' The earlier action is synthesized (Quick Hand entry), so treat these '
+          'as approximate, but the decision-street number is grounded in the '
+          'recorded action and reads.'
+      : '';
+  final facts = <String>[
+    '[FACT — Hero equity vs the modeled villain range(s), computed on-device '
+        'by Monte Carlo (${check.streets.first.iterations} trials), NOT by you: '
+        '$perStreet. These are deterministic ground truth — your assessment of '
+        'each street MUST be consistent with them. A low number means hero '
+        'loses to most of villain\'s range on that street and is at best a weak '
+        'bluff-catcher.$caveat]',
+  ];
+  for (final v in check.villains.where((v) => !v.usedExactCards)) {
+    facts.add('[FACT — Villain ${v.name} (${v.position}) range behind the '
+        'equity above: ${v.rangeTrail.join('; ')}.]');
+  }
+  return facts;
+}
+
 // ── Chen-formula hand ranking ─────────────────────────────────────────────────
 // Used to widen/tighten a chart range for reads tags: widening adds the next
 // strongest hands not already in the range; tightening keeps the top of it.
