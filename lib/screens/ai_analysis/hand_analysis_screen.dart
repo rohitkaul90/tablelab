@@ -419,6 +419,9 @@ class _StreetCoachingCard extends StatelessWidget {
     return Card(
       child: ExpansionTile(
         initiallyExpanded: true,
+        // Badges live on their own row below the title (a Wrap) rather than in
+        // `trailing` — in trailing they overlapped the community cards in the
+        // title on flop/turn/river. The Wrap re-flows instead of colliding.
         title: Row(
           children: [
             Text(
@@ -429,47 +432,29 @@ class _StreetCoachingCard extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
             if (entry.newCards.isNotEmpty) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               for (final c in entry.newCards)
                 Padding(
-                  padding: const EdgeInsets.only(right: 3),
-                  child: PlayingCard(card: c, width: 20, height: 28),
+                  padding: const EdgeInsets.only(right: 5),
+                  child: PlayingCard(card: c, width: 36, height: 50),
                 ),
             ],
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (equity != null) ...[
-              _EquityChip(equity: equity!, onTap: onEquityTap),
-              const SizedBox(width: 4),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (equity != null)
+                _EquityChip(equity: equity!, onTap: onEquityTap),
+              if (f.confidence != null)
+                _ConfidenceBadge(confidence: f.confidence!),
+              _GtoChip(wasGto: f.wasGto),
             ],
-            if (f.confidence != null) ...[
-              _ConfidenceBadge(confidence: f.confidence!),
-              const SizedBox(width: 4),
-            ],
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: f.wasGto
-                    ? Colors.blueGrey.withValues(alpha: 0.15)
-                    : Colors.orange.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                f.wasGto ? 'GTO' : 'Exploit',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: f.wasGto ? Colors.blueGrey : Colors.orange,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.expand_more),
-          ],
+          ),
         ),
         children: [
           Padding(
@@ -509,6 +494,37 @@ class _StreetCoachingCard extends StatelessWidget {
   }
 }
 
+class _GtoChip extends StatelessWidget {
+  final bool wasGto;
+
+  const _GtoChip({required this.wasGto});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = wasGto ? Colors.blueGrey : Colors.orange;
+    return Tooltip(
+      message: wasGto
+          ? 'GTO: hero\'s play matches the game-theory-optimal baseline'
+          : 'Exploit: the better play here deviates from GTO to exploit this opponent',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          wasGto ? 'GTO' : 'Exploit',
+          style: TextStyle(
+            fontSize: 10,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ConfidenceBadge extends StatelessWidget {
   final String confidence; // 'high' | 'medium' | 'low'
 
@@ -521,23 +537,116 @@ class _ConfidenceBadge extends StatelessWidget {
       'low' => Colors.orange,
       _ => Theme.of(context).colorScheme.outline,
     };
-    return Tooltip(
-      message: 'How confident the AI is in this street\'s assessment',
+    final label = confidence.isEmpty
+        ? confidence
+        : confidence[0].toUpperCase() + confidence.substring(1);
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => _showConfidenceInfo(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(
-          confidence.toUpperCase(),
-          style: TextStyle(
-            fontSize: 10,
-            color: color,
-            fontWeight: FontWeight.w600,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline, size: 11, color: color),
+            const SizedBox(width: 3),
+            Text(
+              'Confidence: $label',
+              style: TextStyle(
+                fontSize: 10,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+void _showConfidenceInfo(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('AI confidence'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text("How sure the AI is about this street's recommendation:"),
+          SizedBox(height: 14),
+          _ConfidenceLegendRow(
+            level: 'High',
+            color: Colors.green,
+            meaning: 'Standard spot with a well-established answer.',
+          ),
+          SizedBox(height: 10),
+          _ConfidenceLegendRow(
+            level: 'Medium',
+            color: Colors.grey,
+            meaning: 'Depends on reads or assumptions about the opponent.',
+          ),
+          SizedBox(height: 10),
+          _ConfidenceLegendRow(
+            level: 'Low',
+            color: Colors.orange,
+            meaning: 'A genuinely close spot, or key information is missing.',
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Got it'),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ConfidenceLegendRow extends StatelessWidget {
+  final String level;
+  final Color color;
+  final String meaning;
+
+  const _ConfidenceLegendRow({
+    required this.level,
+    required this.color,
+    required this.meaning,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            level,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(meaning,
+              style: Theme.of(context).textTheme.bodySmall),
+        ),
+      ],
     );
   }
 }
