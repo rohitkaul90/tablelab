@@ -79,8 +79,19 @@ const streetFeedbackSchema = {
         optimal: { type: "string", description: "The optimal or better play against this opponent" },
         rationale: { type: "string", description: "Why that play is better, referencing opponent reads if available" },
         wasGto: { type: "boolean", description: "True if hero's play was GTO-aligned" },
+        confidence: {
+          type: "string",
+          enum: ["high", "medium", "low"],
+          description:
+            "How clear-cut this street's assessment is: high = standard spot with a well-established answer, medium = read- or assumption-dependent, low = genuinely close or missing key information",
+        },
+        alternative: {
+          anyOf: [{ type: "null" }, { type: "string" }],
+          description:
+            "A second genuinely defensible line for this street, in one sentence (e.g. 'A small raise for protection is also fine here'). Set to null when the optimal play is clearly unique.",
+        },
       },
-      required: ["decision", "optimal", "rationale", "wasGto"],
+      required: ["decision", "optimal", "rationale", "wasGto", "confidence", "alternative"],
     },
   ],
 };
@@ -321,6 +332,79 @@ function computeDrawSummary(holeCards: string[], boardCards: string[]): string {
   return `[FACT — hero's hole cards: ${holeCards.join(" ")} | board cards: ${boardCards.join(" ")} | made hand: ${madeHand} | straight status: ${straightLine} | flush status: ${flushLine}. These are pre-computed ground truth. Do not contradict or alter.]`;
 }
 
+// Board-level texture facts — hand-independent constraints on what ANY player
+// can hold against this board. Grounds villain-range reasoning the hero-hand
+// draw summary never touches (e.g. "a set boats up" on an unpaired board).
+function computeBoardSummary(boardCards: string[]): string {
+  if (boardCards.length < 3) return "";
+  const cRank = (c: string) => c.slice(0, -1);
+  const cSuit = (c: string) => c.slice(-1);
+
+  // ── Board pairing → full house / quads possibility ───────────────────────
+  const rankCnt: Record<string, number> = {};
+  for (const c of boardCards) {
+    const r = cRank(c);
+    rankCnt[r] = (rankCnt[r] ?? 0) + 1;
+  }
+  const maxRankCnt = Math.max(...Object.values(rankCnt));
+  const pairedRanks = Object.values(rankCnt).filter((n) => n >= 2).length;
+
+  // ── Suits → flush possibility ─────────────────────────────────────────────
+  const suitCnt: Record<string, number> = {};
+  for (const c of boardCards) {
+    const s = cSuit(c);
+    suitCnt[s] = (suitCnt[s] ?? 0) + 1;
+  }
+  const maxSuit = Math.max(...Object.values(suitCnt));
+  const suitName: Record<string, string> = {
+    h: "hearts", d: "diamonds", c: "clubs", s: "spades",
+  };
+  const flushSuit = Object.entries(suitCnt).find(([, n]) => n === maxSuit)?.[0] ?? "";
+
+  // ── Straight possibility: any 5-rank window with >=3 distinct board ranks ──
+  const present = new Set<number>();
+  for (const c of boardCards) {
+    const v = RANK_VAL[cRank(c)];
+    if (v) {
+      present.add(v);
+      if (v === 14) present.add(1); // wheel ace
+    }
+  }
+  let straightPossible = false;
+  for (let low = 1; low <= 10; low++) {
+    let inWindow = 0;
+    for (let v = low; v < low + 5; v++) if (present.has(v)) inWindow++;
+    if (inWindow >= 3) { straightPossible = true; break; }
+  }
+
+  const parts: string[] = [];
+  if (maxRankCnt >= 4) {
+    parts.push("the board itself shows QUADS");
+  } else if (maxRankCnt === 3) {
+    parts.push("the board is TRIPLED — a full house or quads is possible");
+  } else if (maxRankCnt === 2) {
+    parts.push(pairedRanks >= 2
+      ? "the board is DOUBLE-PAIRED — a full house is possible (and quads with the case card)"
+      : "the board is PAIRED — a full house (a set plus the board pair) or quads is possible");
+  } else {
+    parts.push("the board is UNPAIRED — NO full house and NO quads is possible for ANY hand; a set does NOT improve to a full house here");
+  }
+
+  if (maxSuit >= 5) {
+    parts.push(`all five board cards share ${suitName[flushSuit]} — a flush is on the board`);
+  } else if (maxSuit === 4) {
+    parts.push(`four ${suitName[flushSuit]} are on the board — a single ${suitName[flushSuit].slice(0, -1)} card makes a flush`);
+  } else if (maxSuit === 3) {
+    parts.push(`three ${suitName[flushSuit]} are present — a flush is possible (needs two ${suitName[flushSuit]} hole cards)`);
+  } else {
+    parts.push("no flush is possible (no suit has three or more cards on the board)");
+  }
+
+  parts.push(straightPossible ? "a straight is possible" : "no straight is possible");
+
+  return `[FACT — Board texture (${boardCards.join(" ")}): ${parts.join("; ")}. Do NOT credit any hand — hero's or villain's — with a category the board does not allow.]`;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function positionName(seat: number, setup: TableSetup): string {
@@ -334,7 +418,11 @@ function positionName(seat: number, setup: TableSetup): string {
   return off < n.length ? n[off] : `P${seat + 1}`;
 }
 
-function buildPrompt(hand: PokerHand, reads: PlayerRead[]): string {
+function buildPrompt(
+  hand: PokerHand,
+  reads: PlayerRead[],
+  equityFacts: string[] = [],
+): { prompt: string; facts: string[] } {
   const { tableSetup: ts, players, streets } = hand;
   const seatMap = new Map(players.map((p) => [p.seat, p]));
   const readMap = new Map(reads.map((r) => [r.playerLabel.toLowerCase(), r]));
@@ -403,6 +491,8 @@ function buildPrompt(hand: PokerHand, reads: PlayerRead[]): string {
   // size at each street header.
   const boardSoFar: string[] = [];
   let runningPot = 0;
+  // Collected so the client can show "what the AI was told" verbatim.
+  const facts: string[] = [];
 
   for (const street of streets) {
     boardSoFar.push(...street.communityCards);
@@ -466,19 +556,38 @@ function buildPrompt(hand: PokerHand, reads: PlayerRead[]): string {
     const potLabel = potBeforeStreet > 0 ? ` (pot: ${potBeforeStreet})` : "";
     lines.push(`${label}${cc}${potLabel}: ${actionParts.join("; ")}`);
 
+    // Board-texture FACT first (what's possible for anyone), then hero's
+    // specific made hand / draws.
+    if (boardSoFar.length >= 3) {
+      const boardFact = computeBoardSummary(boardSoFar);
+      if (boardFact) {
+        lines.push(boardFact);
+        facts.push(boardFact);
+      }
+    }
     if (hero?.holeCards?.length === 2 && boardSoFar.length > 0) {
-      lines.push(computeDrawSummary(hero.holeCards, boardSoFar));
+      const fact = computeDrawSummary(hero.holeCards, boardSoFar);
+      lines.push(fact);
+      facts.push(fact);
     }
   }
 
   if (hand.notes) lines.push(`Hand note: "${hand.notes}"`);
+
+  // Deterministic equity cross-check (computed on-device, passed in the
+  // request) — ground truth the coaching must agree with. Appended after the
+  // hand context so the model reads it before the analysis instruction.
+  for (const f of equityFacts) {
+    lines.push(f);
+    facts.push(f);
+  }
 
   lines.push(
     "",
     "Analyze each street hero reached. When a read or tag exists for an opponent, base optimal play on that player profile (exploit accordingly). When no read exists, use GTO population defaults and state this. Use null for streets not reached.",
   );
 
-  return lines.join("\n");
+  return { prompt: lines.join("\n"), facts };
 }
 
 // ── System prompt (cached) ────────────────────────────────────────────────────
@@ -497,6 +606,14 @@ COACHING PRINCIPLES:
 - When a read exists: always name the player and tag ("Justin is tagged Calling Station — bluffing river is -EV, valuebet thin instead").
 - When no read exists: state you are using GTO population defaults.
 - keyMistake must be the single highest-impact error in the hand, written in 1-2 sentences. If the hand was played well, set keyMistake to null.
+- confidence per street: "high" only for standard spots with a well-established answer; "medium" when the verdict depends on reads or assumptions; "low" when the spot is genuinely close or key information is missing. Do not default everything to high.
+- alternative per street: when a second line is genuinely defensible, state it in one sentence. Set it to null when the optimal play is clearly unique — do not invent alternatives for trivial spots.
+
+RANGE-VS-EQUITY CONSISTENCY (critical — your recommendation MUST agree with the range you describe):
+- Before calling any FOLD a mistake, confirm hero's hand actually beats a meaningful share of the villain range you just enumerated. If hero's hand loses to (almost) the entire range you listed, then FOLDING IS CORRECT — never label it an over-fold, and never claim hero "retains showdown value." A hand that beats nothing in the range has ~0% equity no matter how few bluffs villain has.
+- Pot odds justify a call ONLY when hero's real equity against that range meets them. State hero's rough equity vs the range before invoking pot odds; do not assert an overpair/bluff-catcher "has enough showdown value" without checking it against the specific made hands you enumerated.
+- "Villain rarely bluffs" makes calling WORSE, not better, when hero loses to villain's value hands: a non-bluffing range means a bluff-catcher beats nothing. Against nits and value-heavy players, exploitatively fold MORE to their aggression — their raises/shoves are near-pure value. The "don't over-fold vs nits" idea applies only to folding hands that still beat part of their value range, never to folding to a range that dominates hero.
+- Self-check before writing: if your rationale enumerates hands and then recommends the opposite of what beating-or-losing-to those hands implies, you have contradicted yourself — fix the verdict.
 
 TOURNAMENT COACHING (applies when tournament stage is provided):
 5. ICM AWARENESS: When tournament stage is "bubble", "ft_bubble", or "final_table", ICM pressure fundamentally changes correct play. Calling off a big stack near the bubble is often a mistake even with strong equity. Pushing ranges tighten; calling ranges tighten more. State ICM implications explicitly.
@@ -505,7 +622,8 @@ TOURNAMENT COACHING (applies when tournament stage is provided):
 
 ACCURACY RULES:
 1. CARD ACCURACY: Reproduce hole cards and board cards exactly as given. Never alter rank or suit.
-2. BET-COUNTING: BB post is not a raise. Open-raise = 2-bet, re-raise = 3-bet, re-raise over 3-bet = 4-bet, jam or raise over 4-bet = 5-bet. Never miscategorise.
+2. BET-COUNTING: BB post is not a raise. A straddle post is also a blind, not a raise — the first raise after a straddle is still the open (2-bet). Open-raise = 2-bet, re-raise = 3-bet, re-raise over 3-bet = 4-bet, jam or raise over 4-bet = 5-bet. Never miscategorise.
+2a. STRADDLES: The player marked STR posted a blind straddle. They act last preflop and defend like a big blind — wide, with a price discount — never assign them an early-position opening range just because they sit in the UTG seat. Postflop they are usually out of position. Straddle pots play at half the effective depth: frame stack-depth reasoning in straddle units when a straddle is present.
 3. TEXT FORMATTING: Plain prose only. No escape characters (\\n, \\t), no markdown, no bullet symbols inside string fields.
 4. HAND READING — silently work through these steps before writing any output field. Never include this reasoning in your output — only state the conclusions:
 
@@ -527,7 +645,25 @@ ACCURACY RULES:
 
    STEP 4 — MADE HAND: Identify the best made hand using hole cards + board: high card, one pair (top/middle/bottom pair by board rank), two pair, set (pocket pair matching board card), trips (one hole card + two board cards of same rank), straight, flush, full house, quads, straight flush.
 
-   STEP 5 — NEVER invent draws or made hands not supported by the cards listed in steps 1–4.`;
+   STEP 5 — NEVER invent draws or made hands not supported by the cards listed in steps 1–4.
+
+5. BOARD-TEXTURE CONSTRAINTS — apply to EVERY player's hand, hero AND villains alike, and honor the "Board texture" FACT line:
+   • A full house or quads is possible ONLY when the board is paired or tripled. On an UNPAIRED board no one can have a full house or quads — a set does NOT become a full house unless the board itself pairs. Never list "full houses" or "boats" in a villain range on an unpaired board.
+   • A flush is possible only when three or more cards of one suit are on the board; with two or fewer of every suit, no flush exists for anyone.
+   • A straight is possible only when the board supplies enough connected ranks (three within a five-rank window).
+   • When you enumerate a villain's value range, every hand you name must be makeable from two hole cards plus this exact board. If the board does not allow a category, do not put it in the range.`;
+
+// A stable signature of the reads that drive the analysis (and the modeled
+// equity). The cache is keyed on (user_id, hand_id), but reads also shape the
+// coaching and the injected equity FACTs — so a cached analysis is only valid
+// if it was produced under the same reads. Stored in analysis_json so no
+// schema change is needed; the client ignores the underscore-prefixed field.
+function readsSignature(reads: PlayerRead[]): string {
+  return reads
+    .map((r) => `${r.playerLabel.toLowerCase()}:${[...r.tags].sort().join(",")}`)
+    .sort()
+    .join("|");
+}
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -574,6 +710,7 @@ serve(async (req: Request) => {
       hand: PokerHand;
       reads?: PlayerRead[];
       forceRefresh?: boolean;
+      equityFacts?: unknown;
     };
 
     const { hand, reads = [], forceRefresh = false } = body;
@@ -585,6 +722,16 @@ serve(async (req: Request) => {
       });
     }
 
+    // On-device equity facts are client-computed; sanitise before trusting them
+    // in the prompt (cap count + length — this is the user's own analysis, but
+    // keep the payload bounded regardless).
+    const equityFacts: string[] = Array.isArray(body.equityFacts)
+      ? body.equityFacts
+        .filter((f): f is string => typeof f === "string")
+        .slice(0, 8)
+        .map((f) => f.slice(0, 600))
+      : [];
+
     // Only pass reads for opponents actually in this hand
     const opponentNames = new Set(
       hand.players.filter((p) => !p.isHero).map((p) => p.name.toLowerCase()),
@@ -592,6 +739,7 @@ serve(async (req: Request) => {
     const relevantReads = reads.filter((r) =>
       opponentNames.has(r.playerLabel.toLowerCase())
     );
+    const sig = readsSignature(relevantReads);
 
     // ── Cache check ──────────────────────────────────────────────────────────
     if (!forceRefresh) {
@@ -606,7 +754,11 @@ serve(async (req: Request) => {
         await reportError("analyze-hand", `cache read failed: ${cacheErr.code} ${cacheErr.message}`);
       }
 
-      if (cached) {
+      // Only a cache entry produced under the SAME reads is valid — otherwise
+      // the cached coaching/equity would contradict the freshly-computed
+      // on-device equity chips. A reads edit (or a pre-signature legacy row)
+      // falls through to a fresh analysis.
+      if (cached && cached.analysis_json?._readsSignature === sig) {
         return new Response(JSON.stringify(cached.analysis_json), {
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
@@ -626,6 +778,8 @@ serve(async (req: Request) => {
       apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
     });
 
+    const built = buildPrompt(hand, relevantReads, equityFacts);
+
     const claudeCall = anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2000,
@@ -639,7 +793,7 @@ serve(async (req: Request) => {
       ],
       tools: [COACHING_TOOL],
       tool_choice: { type: "tool", name: "provide_hand_coaching" },
-      messages: [{ role: "user", content: buildPrompt(hand, relevantReads) }],
+      messages: [{ role: "user", content: built.prompt }],
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
@@ -654,6 +808,12 @@ serve(async (req: Request) => {
     }
     // deno-lint-ignore no-explicit-any
     const analysis = (toolBlock as any).input as Record<string, unknown>;
+    // Attach the deterministic [FACT] lines so the client can show "what the
+    // AI was told" verbatim — not model output, never trusted to the model.
+    analysis.facts = built.facts;
+    // Stamp the reads signature so the cache entry is only reused under the
+    // same reads (see readsSignature). Client ignores underscore-prefixed keys.
+    analysis._readsSignature = sig;
 
     // ── Log usage ────────────────────────────────────────────────────────────
     await logUsage(db, user.id, message.usage);

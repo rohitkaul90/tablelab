@@ -12,6 +12,26 @@ const int _kFullHouse = 6;
 const int _kFourOfAKind = 7;
 const int _kStraightFlush = 8;
 
+/// Best 5-card value from 5, 6, or 7 cards. Same encoding as [evaluate7]
+/// (higher = better, compare with >). Used to score a 2-card combo against a
+/// partial board (flop = 5 cards, turn = 6, river = 7).
+int evaluateBest(List<int> cards) {
+  assert(cards.length >= 5 && cards.length <= 7);
+  if (cards.length == 5) return _evaluate5(cards);
+  if (cards.length == 7) return evaluate7(cards);
+  // 6 cards: C(6,5) = 6 ways to drop one
+  int best = 0;
+  for (int drop = 0; drop < 6; drop++) {
+    final five = <int>[];
+    for (int k = 0; k < 6; k++) {
+      if (k != drop) five.add(cards[k]);
+    }
+    final v = _evaluate5(five);
+    if (v > best) best = v;
+  }
+  return best;
+}
+
 int evaluate7(List<int> cards) {
   assert(cards.length == 7);
   int best = 0;

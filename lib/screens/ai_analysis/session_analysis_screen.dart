@@ -4,6 +4,7 @@ import '../../models/session_model.dart';
 import '../../models/ai_analysis_model.dart';
 import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
+import '../../widgets/ai/analysis_feedback_bar.dart';
 
 class SessionAnalysisScreen extends ConsumerStatefulWidget {
   final SessionModel session;
@@ -96,7 +97,12 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
           ? _LoadingView()
           : _error != null
               ? _ErrorView(error: _error!, onRetry: _runAnalysis)
-              : _AnalysisView(analysis: _analysis!),
+              : _AnalysisView(
+                  analysis: _analysis!,
+                  onRate: (rating) => ref
+                      .read(aiServiceProvider)
+                      .rateSessionAnalysis(widget.session.id, rating),
+                ),
     );
   }
 }
@@ -167,8 +173,9 @@ class _ErrorView extends StatelessWidget {
 
 class _AnalysisView extends StatelessWidget {
   final SessionAnalysis analysis;
+  final Future<void> Function(int rating)? onRate;
 
-  const _AnalysisView({required this.analysis});
+  const _AnalysisView({required this.analysis, this.onRate});
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +200,22 @@ class _AnalysisView extends StatelessWidget {
           const SizedBox(height: 24),
           _HandsSection(hands: analysis.handAnalyses),
         ],
-        const SizedBox(height: 32),
+        if (onRate != null) ...[
+          const SizedBox(height: 8),
+          AnalysisFeedbackBar(onRate: onRate!),
+        ],
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            'AI coaching can be wrong — verify big decisions.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+        ),
+        const SizedBox(height: 24),
       ],
     );
   }
