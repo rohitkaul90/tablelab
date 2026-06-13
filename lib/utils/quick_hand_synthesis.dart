@@ -852,7 +852,13 @@ String _buildNotes(QuickHandInput input,
       '${earlierDesc.isEmpty ? 'facing' : earlierDesc.trimRight()} '
       '$facingDesc$pot; Hero $heroDesc.');
 
-  if (input.result != null) {
+  if (input.heroAction == QuickHeroAction.fold) {
+    // A fold has no showdown: villain's cards were never seen. Say so
+    // explicitly so the model doesn't read the recorded "lost" outcome as
+    // proof the fold was wrong, or infer what villain held.
+    sb.write(' No showdown — Hero folded, so villain\'s actual hand is '
+        'unknown; judge the fold on villain\'s range, not on the outcome.');
+  } else if (input.result != null) {
     // resultAmountBb is the FINAL POT size, not hero's net win — keep the
     // wording explicit so the model doesn't read it as profit.
     final pot = input.resultAmountBb != null

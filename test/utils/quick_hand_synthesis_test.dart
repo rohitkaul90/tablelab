@@ -496,6 +496,26 @@ void main() {
       expect(s.notes, endsWith('Villain snap-called preflop.'));
     });
 
+    test('a fold emits a no-showdown note, never a win/lose result', () {
+      // Regression: the AA-folds-to-a-nit-shove hand. "Result: Hero lost"
+      // after a fold biased the model toward calling the fold a mistake.
+      final s = synthesizeQuickHand(makeInput(
+        heroCards: ['Ah', 'Ad'],
+        positionLabel: 'BTN',
+        decisionStreet: Street.river,
+        boardCards: ['Tc', '7d', '4c', '3h', 'Kc'],
+        facing: QuickFacing.allIn,
+        heroAction: QuickHeroAction.fold,
+        potBeforeBb: 75,
+        result: QuickResult.lost,
+        resultAmountBb: 167,
+      ));
+      expect(s.notes, contains('No showdown'));
+      expect(s.notes, contains("villain's actual hand is unknown"));
+      expect(s.notes, isNot(contains('Result: Hero lost')));
+      expect(s.notes, isNot(contains('final pot')));
+    });
+
     test('earlier action appears in the recorded-decision sentence', () {
       final s = synthesizeQuickHand(makeInput(
         positionLabel: 'SB',

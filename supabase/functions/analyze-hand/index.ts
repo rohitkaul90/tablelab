@@ -518,6 +518,12 @@ COACHING PRINCIPLES:
 - confidence per street: "high" only for standard spots with a well-established answer; "medium" when the verdict depends on reads or assumptions; "low" when the spot is genuinely close or key information is missing. Do not default everything to high.
 - alternative per street: when a second line is genuinely defensible, state it in one sentence. Set it to null when the optimal play is clearly unique — do not invent alternatives for trivial spots.
 
+RANGE-VS-EQUITY CONSISTENCY (critical — your recommendation MUST agree with the range you describe):
+- Before calling any FOLD a mistake, confirm hero's hand actually beats a meaningful share of the villain range you just enumerated. If hero's hand loses to (almost) the entire range you listed, then FOLDING IS CORRECT — never label it an over-fold, and never claim hero "retains showdown value." A hand that beats nothing in the range has ~0% equity no matter how few bluffs villain has.
+- Pot odds justify a call ONLY when hero's real equity against that range meets them. State hero's rough equity vs the range before invoking pot odds; do not assert an overpair/bluff-catcher "has enough showdown value" without checking it against the specific made hands you enumerated.
+- "Villain rarely bluffs" makes calling WORSE, not better, when hero loses to villain's value hands: a non-bluffing range means a bluff-catcher beats nothing. Against nits and value-heavy players, exploitatively fold MORE to their aggression — their raises/shoves are near-pure value. The "don't over-fold vs nits" idea applies only to folding hands that still beat part of their value range, never to folding to a range that dominates hero.
+- Self-check before writing: if your rationale enumerates hands and then recommends the opposite of what beating-or-losing-to those hands implies, you have contradicted yourself — fix the verdict.
+
 TOURNAMENT COACHING (applies when tournament stage is provided):
 5. ICM AWARENESS: When tournament stage is "bubble", "ft_bubble", or "final_table", ICM pressure fundamentally changes correct play. Calling off a big stack near the bubble is often a mistake even with strong equity. Pushing ranges tighten; calling ranges tighten more. State ICM implications explicitly.
 6. STACK DEPTH IN BBs: Always frame decisions in terms of effective BBs, not chip counts. Push/fold charts apply sub-15bb. Shove/call ranges apply sub-25bb. Deep-stack play applies 50bb+.
