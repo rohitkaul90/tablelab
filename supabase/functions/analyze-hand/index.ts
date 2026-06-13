@@ -332,6 +332,79 @@ function computeDrawSummary(holeCards: string[], boardCards: string[]): string {
   return `[FACT — hero's hole cards: ${holeCards.join(" ")} | board cards: ${boardCards.join(" ")} | made hand: ${madeHand} | straight status: ${straightLine} | flush status: ${flushLine}. These are pre-computed ground truth. Do not contradict or alter.]`;
 }
 
+// Board-level texture facts — hand-independent constraints on what ANY player
+// can hold against this board. Grounds villain-range reasoning the hero-hand
+// draw summary never touches (e.g. "a set boats up" on an unpaired board).
+function computeBoardSummary(boardCards: string[]): string {
+  if (boardCards.length < 3) return "";
+  const cRank = (c: string) => c.slice(0, -1);
+  const cSuit = (c: string) => c.slice(-1);
+
+  // ── Board pairing → full house / quads possibility ───────────────────────
+  const rankCnt: Record<string, number> = {};
+  for (const c of boardCards) {
+    const r = cRank(c);
+    rankCnt[r] = (rankCnt[r] ?? 0) + 1;
+  }
+  const maxRankCnt = Math.max(...Object.values(rankCnt));
+  const pairedRanks = Object.values(rankCnt).filter((n) => n >= 2).length;
+
+  // ── Suits → flush possibility ─────────────────────────────────────────────
+  const suitCnt: Record<string, number> = {};
+  for (const c of boardCards) {
+    const s = cSuit(c);
+    suitCnt[s] = (suitCnt[s] ?? 0) + 1;
+  }
+  const maxSuit = Math.max(...Object.values(suitCnt));
+  const suitName: Record<string, string> = {
+    h: "hearts", d: "diamonds", c: "clubs", s: "spades",
+  };
+  const flushSuit = Object.entries(suitCnt).find(([, n]) => n === maxSuit)?.[0] ?? "";
+
+  // ── Straight possibility: any 5-rank window with >=3 distinct board ranks ──
+  const present = new Set<number>();
+  for (const c of boardCards) {
+    const v = RANK_VAL[cRank(c)];
+    if (v) {
+      present.add(v);
+      if (v === 14) present.add(1); // wheel ace
+    }
+  }
+  let straightPossible = false;
+  for (let low = 1; low <= 10; low++) {
+    let inWindow = 0;
+    for (let v = low; v < low + 5; v++) if (present.has(v)) inWindow++;
+    if (inWindow >= 3) { straightPossible = true; break; }
+  }
+
+  const parts: string[] = [];
+  if (maxRankCnt >= 4) {
+    parts.push("the board itself shows QUADS");
+  } else if (maxRankCnt === 3) {
+    parts.push("the board is TRIPLED — a full house or quads is possible");
+  } else if (maxRankCnt === 2) {
+    parts.push(pairedRanks >= 2
+      ? "the board is DOUBLE-PAIRED — a full house is possible (and quads with the case card)"
+      : "the board is PAIRED — a full house (a set plus the board pair) or quads is possible");
+  } else {
+    parts.push("the board is UNPAIRED — NO full house and NO quads is possible for ANY hand; a set does NOT improve to a full house here");
+  }
+
+  if (maxSuit >= 5) {
+    parts.push(`all five board cards share ${suitName[flushSuit]} — a flush is on the board`);
+  } else if (maxSuit === 4) {
+    parts.push(`four ${suitName[flushSuit]} are on the board — a single ${suitName[flushSuit].slice(0, -1)} card makes a flush`);
+  } else if (maxSuit === 3) {
+    parts.push(`three ${suitName[flushSuit]} are present — a flush is possible (needs two ${suitName[flushSuit]} hole cards)`);
+  } else {
+    parts.push("no flush is possible (no suit has three or more cards on the board)");
+  }
+
+  parts.push(straightPossible ? "a straight is possible" : "no straight is possible");
+
+  return `[FACT — Board texture (${boardCards.join(" ")}): ${parts.join("; ")}. Do NOT credit any hand — hero's or villain's — with a category the board does not allow.]`;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function positionName(seat: number, setup: TableSetup): string {
@@ -483,6 +556,15 @@ function buildPrompt(
     const potLabel = potBeforeStreet > 0 ? ` (pot: ${potBeforeStreet})` : "";
     lines.push(`${label}${cc}${potLabel}: ${actionParts.join("; ")}`);
 
+    // Board-texture FACT first (what's possible for anyone), then hero's
+    // specific made hand / draws.
+    if (boardSoFar.length >= 3) {
+      const boardFact = computeBoardSummary(boardSoFar);
+      if (boardFact) {
+        lines.push(boardFact);
+        facts.push(boardFact);
+      }
+    }
     if (hero?.holeCards?.length === 2 && boardSoFar.length > 0) {
       const fact = computeDrawSummary(hero.holeCards, boardSoFar);
       lines.push(fact);
@@ -563,7 +645,13 @@ ACCURACY RULES:
 
    STEP 4 — MADE HAND: Identify the best made hand using hole cards + board: high card, one pair (top/middle/bottom pair by board rank), two pair, set (pocket pair matching board card), trips (one hole card + two board cards of same rank), straight, flush, full house, quads, straight flush.
 
-   STEP 5 — NEVER invent draws or made hands not supported by the cards listed in steps 1–4.`;
+   STEP 5 — NEVER invent draws or made hands not supported by the cards listed in steps 1–4.
+
+5. BOARD-TEXTURE CONSTRAINTS — apply to EVERY player's hand, hero AND villains alike, and honor the "Board texture" FACT line:
+   • A full house or quads is possible ONLY when the board is paired or tripled. On an UNPAIRED board no one can have a full house or quads — a set does NOT become a full house unless the board itself pairs. Never list "full houses" or "boats" in a villain range on an unpaired board.
+   • A flush is possible only when three or more cards of one suit are on the board; with two or fewer of every suit, no flush exists for anyone.
+   • A straight is possible only when the board supplies enough connected ranks (three within a five-rank window).
+   • When you enumerate a villain's value range, every hand you name must be makeable from two hole cards plus this exact board. If the board does not allow a category, do not put it in the range.`;
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
