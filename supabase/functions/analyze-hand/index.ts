@@ -525,7 +525,8 @@ TOURNAMENT COACHING (applies when tournament stage is provided):
 
 ACCURACY RULES:
 1. CARD ACCURACY: Reproduce hole cards and board cards exactly as given. Never alter rank or suit.
-2. BET-COUNTING: BB post is not a raise. Open-raise = 2-bet, re-raise = 3-bet, re-raise over 3-bet = 4-bet, jam or raise over 4-bet = 5-bet. Never miscategorise.
+2. BET-COUNTING: BB post is not a raise. A straddle post is also a blind, not a raise — the first raise after a straddle is still the open (2-bet). Open-raise = 2-bet, re-raise = 3-bet, re-raise over 3-bet = 4-bet, jam or raise over 4-bet = 5-bet. Never miscategorise.
+2a. STRADDLES: The player marked STR posted a blind straddle. They act last preflop and defend like a big blind — wide, with a price discount — never assign them an early-position opening range just because they sit in the UTG seat. Postflop they are usually out of position. Straddle pots play at half the effective depth: frame stack-depth reasoning in straddle units when a straddle is present.
 3. TEXT FORMATTING: Plain prose only. No escape characters (\\n, \\t), no markdown, no bullet symbols inside string fields.
 4. HAND READING — silently work through these steps before writing any output field. Never include this reasoning in your output — only state the conclusions:
 

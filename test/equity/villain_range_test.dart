@@ -15,6 +15,7 @@ PokerHand _hand({
   String villainName = 'Villain',
   bool isTournament = false,
   bool isQuickEntry = false,
+  int? straddle,
 }) {
   return PokerHand(
     id: 'h1',
@@ -26,6 +27,7 @@ PokerHand _hand({
       heroSeat: heroSeat,
       smallBlind: 1,
       bigBlind: 2,
+      straddle: straddle,
     ),
     players: [
       HandPlayer(
@@ -417,6 +419,87 @@ void main() {
       expect(byStreet[Street.preflop], 2);
       expect(byStreet[Street.flop], 2); // folds during the flop
       expect(byStreet[Street.turn], 1);
+    });
+  });
+
+  group('straddle handling', () {
+    // 6-max, button seat 0 → seat 3 is the UTG seat, which is the straddle
+    // seat when a straddle is on (positionName returns 'STR').
+
+    test('a straddler defending vs a late open gets a wide BB-style range, '
+        'not an IP cold-call range', () async {
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 0, // hero BTN opens
+          heroCards: ['As', 'Kh'],
+          villainSeat: 3, // villain is the straddler
+          straddle: 4,
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 3, type: ActionType.postStraddle, amount: 4),
+              HandAction(seat: 0, type: ActionType.raise, amount: 12),
+              HandAction(seat: 3, type: ActionType.call, amount: 12),
+            ]),
+          ],
+        ),
+        iterations: 2000,
+      );
+      expect(check, isNotNull);
+      final note = check!.villains.first.rangeTrail.first;
+      expect(note, contains('STR defending range'));
+      expect(note, contains('straddle treated as a blind'));
+      // The old bug assigned the ~10% IP cold-call chart here.
+      expect(_trailPct(check), greaterThan(20));
+    });
+
+    test('the first raise after a straddle is still an open', () async {
+      // Hero straddles, villain BTN raises — the straddle post must not
+      // count as a raise level, so the villain reads as the opener.
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 3,
+          heroCards: ['As', 'Kh'],
+          villainSeat: 0,
+          straddle: 4,
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 3, type: ActionType.postStraddle, amount: 4),
+              HandAction(seat: 0, type: ActionType.raise, amount: 12),
+              HandAction(seat: 3, type: ActionType.call, amount: 12),
+            ]),
+          ],
+        ),
+        iterations: 2000,
+      );
+      expect(check!.villains.first.rangeTrail.first,
+          contains('BTN opening range'));
+    });
+
+    test('a straddler 3-betting uses a blind 3-bet range', () async {
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 0,
+          heroCards: ['As', 'Kh'],
+          villainSeat: 3,
+          straddle: 4,
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 3, type: ActionType.postStraddle, amount: 4),
+              HandAction(seat: 0, type: ActionType.raise, amount: 12),
+              HandAction(seat: 3, type: ActionType.raise, amount: 40),
+              HandAction(seat: 0, type: ActionType.call, amount: 40),
+            ]),
+          ],
+        ),
+        iterations: 2000,
+      );
+      final note = check!.villains.first.rangeTrail.first;
+      expect(note, contains('3-bet range'));
+      // 3-bets are not straddle-widened — only passive defends are.
+      expect(note, isNot(contains('straddle treated as a blind')));
     });
   });
 

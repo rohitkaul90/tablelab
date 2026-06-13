@@ -236,8 +236,14 @@ final Map<String, Set<String>> _presetByKey = {
   for (final p in gtoPresets) p.key: p.hands,
 };
 
-String _posClass(String label) =>
-    label == 'BB' ? 'bb' : (label == 'SB' ? 'sb' : 'ip');
+String _posClass(String label) => switch (label) {
+      'BB' => 'bb',
+      'SB' => 'sb',
+      // The straddle is a blind post, not a position — the straddler defends
+      // like a (wide) big blind with a discount, never like an IP cold-caller.
+      'STR' => 'bb',
+      _ => 'ip',
+    };
 
 /// Early = UTG–MP, Middle = HJ/CO, Late = BTN/SB (mirrors the bucketed charts).
 String _openerBucket(String openerLabel) {
@@ -638,14 +644,24 @@ Future<HandEquityCheck?> computeHandEquityCheck(
         }
       case _PreAct.checkedBb:
         range = _anyTwo;
-        desc = 'checked the big blind — any two cards';
+        desc = pos == 'STR'
+            ? 'checked the straddle option — any two cards'
+            : 'checked the big blind — any two cards';
       case _PreAct.none:
         range = _anyTwo;
         desc = 'no preflop action recorded — any two cards';
     }
 
-    var factor = _preflopTagFactor(v.tags, line.act) *
+    final tagFactor = _preflopTagFactor(v.tags, line.act) *
         _preflopCallTagFactor(v.tags, line.calledAtLevel);
+    var factor = tagFactor;
+    // A straddler defending their straddle gets a price discount and closes
+    // the action — wider than the BB chart baseline they're mapped onto.
+    final straddleDefend = pos == 'STR' &&
+        (line.act == _PreAct.called || line.act == _PreAct.limped);
+    if (straddleDefend) {
+      factor = (factor * 1.25).clamp(0.35, 3.0);
+    }
     if (line.act == _PreAct.checkedBb || line.act == _PreAct.none) {
       factor = min(factor, 1.0); // can't widen any-two
     }
@@ -662,10 +678,13 @@ Future<HandEquityCheck?> computeHandEquityCheck(
     v.combos = combos;
 
     var note = 'Pre-flop: $desc (~${_pct(combos.length)} of hands)';
-    if ((factor - 1.0).abs() >= 0.01) {
-      note += factor > 1
-          ? ' · widened ×${factor.toStringAsFixed(1)} for reads'
-          : ' · tightened ×${factor.toStringAsFixed(1)} for reads';
+    if (straddleDefend) {
+      note += ' · straddle treated as a blind (BB defend charts, widened)';
+    }
+    if ((tagFactor - 1.0).abs() >= 0.01) {
+      note += tagFactor > 1
+          ? ' · widened ×${tagFactor.toStringAsFixed(1)} for reads'
+          : ' · tightened ×${tagFactor.toStringAsFixed(1)} for reads';
     }
     v.trail.add(note);
     villains.add(v);
