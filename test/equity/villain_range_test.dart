@@ -224,6 +224,29 @@ void main() {
           ],
         );
 
+    test('a wizard-style all-in (raise + isAllIn) classifies as all-in, '
+        'not bet', () async {
+      // The full Hand wizard records all-ins as ActionType.raise/call with
+      // isAllIn:true — never ActionType.allIn. The engine must still narrow
+      // to the tightest all-in keep, not the wider bet/raise keep.
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], streets: [
+          _btnOpenBbCall(),
+          flopWithVillainAction(const HandAction(
+              seat: 0,
+              type: ActionType.raise,
+              amount: 200,
+              isOpeningBet: true,
+              isAllIn: true)),
+        ]),
+        iterations: 2000,
+      );
+      final trail = check!.villains.first.rangeTrail;
+      expect(trail.any((n) => n.startsWith('Flop: all-in → kept top 25%')),
+          isTrue,
+          reason: 'trail was: $trail');
+    });
+
     test('a bet narrows the range; the trail records the kept fraction',
         () async {
       final check = await computeHandEquityCheck(

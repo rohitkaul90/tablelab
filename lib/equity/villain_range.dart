@@ -16,11 +16,13 @@
 
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show compute;
+
 import '../models/hand_model.dart';
 import '../models/player_read.dart';
 import 'card.dart';
+import 'chart_keys.dart';
 import 'evaluator.dart';
-import 'gto_ranges.dart';
 import 'simulator.dart';
 
 // ── Result types ──────────────────────────────────────────────────────────────
@@ -259,100 +261,14 @@ _PreflopLine _classifyPreflop(StreetData preflop, int villainSeat) {
   return line;
 }
 
-// ── Chart selection (villain-side) ────────────────────────────────────────────
-
-final Map<String, Set<String>> _presetByKey = {
-  for (final p in gtoPresets) p.key: p.hands,
-};
-
-String _posClass(String label) => switch (label) {
-      'BB' => 'bb',
-      'SB' => 'sb',
-      // The straddle is a blind post, not a position — the straddler defends
-      // like a (wide) big blind with a discount, never like an IP cold-caller.
-      'STR' => 'bb',
-      _ => 'ip',
-    };
-
-/// Early = UTG–MP, Middle = HJ/CO, Late = BTN/SB (mirrors the bucketed charts).
-String _openerBucket(String openerLabel) {
-  switch (openerLabel) {
-    case 'HJ':
-    case 'CO':
-      return 'middle';
-    case 'BTN':
-    case 'SB':
-      return 'late';
-    default:
-      return 'early'; // UTG, UTG+1, UTG+2, MP, STR, exotic labels
-  }
-}
+// ── Chart selection ───────────────────────────────────────────────────────────
+// Position→chart-key mapping lives in chart_keys.dart (shared with quick-hand
+// synthesis). Here we only resolve a key to its hand set, falling back to
+// any-two when a key is missing.
 
 Set<String> get _anyTwo => kRankedHands.toSet();
 
-String? _rfiKey(String label, bool trn) {
-  const map = {
-    'UTG': 'utg', 'UTG+1': 'utg1', 'UTG+2': 'utg2', 'MP': 'mp',
-    'HJ': 'hj', 'CO': 'co', 'BTN': 'btn', 'SB': 'sb',
-  };
-  final pos = map[label];
-  if (pos == null) return null;
-  return '${trn ? 'trn' : 'cash'}_rfi_$pos';
-}
-
-String _callKey(String posClass, String bucket, String openerLabel, bool trn) {
-  if (trn) {
-    if (posClass == 'bb') return 'trn_call_bb_vs_$bucket';
-    return 'trn_call_ip_vs_early'; // only non-BB tournament call chart
-  }
-  switch (posClass) {
-    case 'bb':
-      if (openerLabel == 'SB') return 'cash_call_bb_vs_sb';
-      return switch (bucket) {
-        'early' => 'cash_call_bb_vs_utg',
-        'middle' => 'cash_call_bb_vs_co',
-        _ => 'cash_call_bb_vs_btn',
-      };
-    case 'sb':
-      return 'cash_call_sb_vs_$bucket'; // early/middle/late charts all exist
-    default:
-      return switch (bucket) {
-        'early' => 'cash_call_ip_vs_early',
-        'middle' => 'cash_call_ip_vs_middle',
-        _ => 'cash_call_btn_vs_co', // closest chart for IP vs a late open
-      };
-  }
-}
-
-String _threeBetKey(String posClass, String bucket, bool trn) {
-  if (trn) {
-    return switch ((posClass, bucket)) {
-      ('bb', 'late') => 'trn_3b_bb_vs_btn',
-      ('bb', _) => 'trn_3b_bb_vs_early',
-      ('sb', _) => 'trn_3b_sb_vs_late',
-      ('ip', 'early') => 'trn_3b_ip_vs_early',
-      _ => 'trn_3b_btn_vs_co',
-    };
-  }
-  return switch ((posClass, bucket)) {
-    ('bb', 'early') => 'cash_3b_bb_vs_utg',
-    ('bb', 'middle') => 'cash_3b_bb_vs_co',
-    ('bb', _) => 'cash_3b_bb_vs_btn',
-    ('sb', 'early') => 'cash_3b_sb_vs_early',
-    ('sb', 'middle') => 'cash_3b_sb_vs_middle',
-    ('sb', _) => 'cash_3b_sb_vs_btn',
-    ('ip', 'early') => 'cash_3b_ip_vs_early',
-    _ => 'cash_3b_btn_vs_co',
-  };
-}
-
-String _call3BetKey(String posClass, bool trn) => trn
-    ? 'trn_call_3b'
-    : (posClass == 'ip' ? 'cash_call_3b_ip' : 'cash_call_3b_oop');
-
-String _fourBetKey(bool trn) => trn ? 'trn_4b_value' : 'cash_4b_value';
-
-Set<String> _chart(String key) => _presetByKey[key] ?? _anyTwo;
+Set<String> _chart(String key) => presetByKey[key] ?? _anyTwo;
 
 // ── Tag adjustments ───────────────────────────────────────────────────────────
 
@@ -476,56 +392,42 @@ int _comboScore(List<int> combo, List<int> board, {required bool isRiver}) {
 
 enum _StreetAct { none, check, call, bet, raise, allIn, fold }
 
+/// Classifies one action. Any all-in counts as [_StreetAct.allIn] regardless
+/// of base type — the full Hand wizard records all-ins as a raise/call with
+/// `isAllIn: true` (only Quick Hand synthesis emits [ActionType.allIn]), so
+/// keying off `type` alone would narrow an all-in range far too wide.
+_StreetAct _actOf(HandAction a) {
+  if (a.isAllIn) return _StreetAct.allIn;
+  return switch (a.type) {
+    ActionType.check => _StreetAct.check,
+    ActionType.call => _StreetAct.call,
+    ActionType.raise => a.isOpeningBet ? _StreetAct.bet : _StreetAct.raise,
+    ActionType.allIn => _StreetAct.allIn,
+    ActionType.fold => _StreetAct.fold,
+    ActionType.post || ActionType.postStraddle => _StreetAct.none,
+  };
+}
+
 _StreetAct _strongestAction(StreetData street, int seat) {
   var strongest = _StreetAct.none;
-  void consider(_StreetAct a) {
-    if (a.index > strongest.index) strongest = a;
-  }
-
   for (final a in street.actions) {
     if (a.seat != seat) continue;
-    switch (a.type) {
-      case ActionType.check:
-        consider(_StreetAct.check);
-      case ActionType.call:
-        consider(_StreetAct.call);
-      case ActionType.raise:
-        consider(a.isOpeningBet ? _StreetAct.bet : _StreetAct.raise);
-      case ActionType.allIn:
-        consider(_StreetAct.allIn);
-      case ActionType.fold:
-        consider(_StreetAct.fold);
-      case ActionType.post:
-      case ActionType.postStraddle:
-        break;
-    }
+    final act = _actOf(a);
+    if (act.index > strongest.index) strongest = act;
   }
-  // A fold is the weakest signal for range purposes (the range *entering* the
-  // street is what we model), but it must win classification only when it is
-  // the villain's sole action. Fold has the highest index, so special-case it:
-  if (strongest == _StreetAct.fold) {
-    for (final a in street.actions) {
-      if (a.seat == seat && a.type != ActionType.fold) {
-        // They acted before folding (e.g. bet, then folded to a raise).
-        return _strongestNonFold(street, seat);
-      }
-    }
-  }
+  // A fold defines the range only when it's the villain's sole action; if they
+  // acted before folding (bet, then folded to a raise), that prior action is
+  // what defines the range entering the street. Fold has the highest index, so
+  // unwind it.
+  if (strongest == _StreetAct.fold) return _strongestNonFold(street, seat);
   return strongest;
 }
 
 _StreetAct _strongestNonFold(StreetData street, int seat) {
   var strongest = _StreetAct.none;
   for (final a in street.actions) {
-    if (a.seat != seat) continue;
-    final act = switch (a.type) {
-      ActionType.check => _StreetAct.check,
-      ActionType.call => _StreetAct.call,
-      ActionType.raise =>
-        a.isOpeningBet ? _StreetAct.bet : _StreetAct.raise,
-      ActionType.allIn => _StreetAct.allIn,
-      _ => _StreetAct.none,
-    };
+    if (a.seat != seat || a.type == ActionType.fold) continue;
+    final act = _actOf(a);
     if (act.index > strongest.index) strongest = act;
   }
   return strongest;
@@ -570,11 +472,30 @@ String _pct(int combos) => '${(combos / 1326 * 100).round()}%';
 /// Computes hero's per-street equity against chart-derived, reads-adjusted,
 /// action-narrowed villain ranges. Returns null when the hand can't be
 /// modeled (no hero cards, no opponents, unparseable cards).
+///
+/// The whole computation — range building, per-street combo scoring/narrowing,
+/// and the Monte Carlo sims — runs in ONE background isolate, so the heavy
+/// brute-force scoring never blocks the UI thread and there is a single isolate
+/// spawn per analysis rather than one per street.
 Future<HandEquityCheck?> computeHandEquityCheck(
   PokerHand hand, {
   List<PlayerRead> reads = const [],
   int iterations = 10000,
-}) async {
+}) =>
+    compute(_computeEquityCheckSync, _EquityArgs(hand, reads, iterations));
+
+class _EquityArgs {
+  final PokerHand hand;
+  final List<PlayerRead> reads;
+  final int iterations;
+  const _EquityArgs(this.hand, this.reads, this.iterations);
+}
+
+HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
+  final hand = args.hand;
+  final reads = args.reads;
+  final iterations = args.iterations;
+
   final hero = hand.hero;
   final heroCards = hero?.holeCards;
   if (hero == null || heroCards == null || heroCards.length != 2) return null;
@@ -637,37 +558,37 @@ Future<HandEquityCheck?> computeHandEquityCheck(
       continue;
     }
 
-    final posClass = _posClass(pos);
+    final pc = posClass(pos);
     final openerLabel = line.openerSeat != null
         ? hand.tableSetup.positionName(line.openerSeat!)
         : 'BTN';
-    final bucket = _openerBucket(openerLabel);
+    final bucket = openerBucketForLabel(openerLabel);
 
     Set<String> range;
     String desc;
     switch (line.act) {
       case _PreAct.open:
-        final key = _rfiKey(pos, trn) ?? '${trn ? 'trn' : 'cash'}_rfi_co';
+        final key = rfiKey(pos, trn) ?? '${trn ? 'trn' : 'cash'}_rfi_co';
         range = _chart(key);
         desc = 'open-raised → $pos opening range';
       case _PreAct.threeBet:
-        range = _chart(_threeBetKey(posClass, bucket, trn));
+        range = _chart(threeBetKey(pc, bucket, trn));
         desc = '3-bet vs a $bucket-position open → 3-bet range';
       case _PreAct.fourBetPlus:
-        range = _chart(_fourBetKey(trn));
+        range = _chart(fourBetKey(trn));
         desc = '4-bet+ → premium value range';
       case _PreAct.limped:
         range = _chart(trn ? 'trn_call_bb_vs_late' : 'cash_call_bb_vs_btn');
         desc = 'limped → wide passive range';
       case _PreAct.called:
         if (line.calledAtLevel >= 3) {
-          range = _chart(_fourBetKey(trn));
+          range = _chart(fourBetKey(trn));
           desc = 'called a 4-bet → premium continue range';
         } else if (line.calledAtLevel == 2) {
-          range = _chart(_call3BetKey(posClass, trn));
+          range = _chart(call3BetKey(pc, trn));
           desc = 'called a 3-bet → 3-bet-defense range';
         } else {
-          range = _chart(_callKey(posClass, bucket, openerLabel, trn));
+          range = _chart(callKey(pc, bucket, openerLabel, trn));
           desc = 'called a $bucket-position open → '
               '$pos defending range';
         }
@@ -781,7 +702,8 @@ Future<HandEquityCheck?> computeHandEquityCheck(
       final simVillains =
           active.where((v) => v.combos.isNotEmpty).toList();
       if (simVillains.isNotEmpty) {
-        final result = await runSimulation(
+        // Synchronous: we are already inside the compute() isolate.
+        final result = runSimulationSync(
           ranges: [
             [
               [h1, h2]

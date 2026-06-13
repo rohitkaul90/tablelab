@@ -653,6 +653,18 @@ ACCURACY RULES:
    • A straight is possible only when the board supplies enough connected ranks (three within a five-rank window).
    • When you enumerate a villain's value range, every hand you name must be makeable from two hole cards plus this exact board. If the board does not allow a category, do not put it in the range.`;
 
+// A stable signature of the reads that drive the analysis (and the modeled
+// equity). The cache is keyed on (user_id, hand_id), but reads also shape the
+// coaching and the injected equity FACTs — so a cached analysis is only valid
+// if it was produced under the same reads. Stored in analysis_json so no
+// schema change is needed; the client ignores the underscore-prefixed field.
+function readsSignature(reads: PlayerRead[]): string {
+  return reads
+    .map((r) => `${r.playerLabel.toLowerCase()}:${[...r.tags].sort().join(",")}`)
+    .sort()
+    .join("|");
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
@@ -727,6 +739,7 @@ serve(async (req: Request) => {
     const relevantReads = reads.filter((r) =>
       opponentNames.has(r.playerLabel.toLowerCase())
     );
+    const sig = readsSignature(relevantReads);
 
     // ── Cache check ──────────────────────────────────────────────────────────
     if (!forceRefresh) {
@@ -741,7 +754,11 @@ serve(async (req: Request) => {
         await reportError("analyze-hand", `cache read failed: ${cacheErr.code} ${cacheErr.message}`);
       }
 
-      if (cached) {
+      // Only a cache entry produced under the SAME reads is valid — otherwise
+      // the cached coaching/equity would contradict the freshly-computed
+      // on-device equity chips. A reads edit (or a pre-signature legacy row)
+      // falls through to a fresh analysis.
+      if (cached && cached.analysis_json?._readsSignature === sig) {
         return new Response(JSON.stringify(cached.analysis_json), {
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
@@ -794,6 +811,9 @@ serve(async (req: Request) => {
     // Attach the deterministic [FACT] lines so the client can show "what the
     // AI was told" verbatim — not model output, never trusted to the model.
     analysis.facts = built.facts;
+    // Stamp the reads signature so the cache entry is only reused under the
+    // same reads (see readsSignature). Client ignores underscore-prefixed keys.
+    analysis._readsSignature = sig;
 
     // ── Log usage ────────────────────────────────────────────────────────────
     await logUsage(db, user.id, message.usage);

@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import '../equity/gto_ranges.dart';
+import '../equity/chart_keys.dart';
 import '../models/hand_model.dart';
 
 /// What hero was facing at the decision point.
@@ -116,62 +116,16 @@ String quickHandNotation(List<String> cards) {
 }
 
 // ── chart classification ──────────────────────────────────────────────────────
+// The position→chart-key mapping (posClass, rfiKey, threeBetKey, call3BetKey,
+// fourBetKey) plus presetByKey/inChart are shared with the equity engine —
+// see chart_keys.dart. Only the synthesis-specific opener assumption lives here.
 
-final Map<String, Set<String>> _presetByKey = {
-  for (final p in gtoPresets) p.key: p.hands,
-};
-
-bool _inChart(String? key, String hand) =>
-    key != null && (_presetByKey[key]?.contains(hand) ?? false);
-
-/// Hero's seat class for response-chart lookup.
-String _posClass(String label) =>
-    label == 'BB' ? 'bb' : (label == 'SB' ? 'sb' : 'ip');
-
-/// When the villain is the opener, hero-in-the-blinds faces a late open (we
-/// seat the villain on the button); hero in position faces an early open (we
-/// seat the villain UTG).
-String _openerBucket(String posClass) => posClass == 'ip' ? 'early' : 'late';
-
-String? _rfiKey(String label, bool trn) {
-  const map = {
-    'UTG': 'utg', 'UTG+1': 'utg1', 'UTG+2': 'utg2', 'MP': 'mp',
-    'HJ': 'hj', 'CO': 'co', 'BTN': 'btn', 'SB': 'sb',
-  };
-  final pos = map[label];
-  if (pos == null) return null; // BB (and exotic labels) never open-raise
-  return '${trn ? 'trn' : 'cash'}_rfi_$pos';
-}
-
-String _call3BetKey(String posClass, bool trn) => trn
-    ? 'trn_call_3b'
-    : (posClass == 'ip' ? 'cash_call_3b_ip' : 'cash_call_3b_oop');
-
-String? _threeBetKey(String posClass, String bucket, bool trn) {
-  if (trn) {
-    return switch ((posClass, bucket)) {
-      ('bb', 'late') => 'trn_3b_bb_vs_btn',
-      ('bb', _) => 'trn_3b_bb_vs_early',
-      ('sb', _) => 'trn_3b_sb_vs_late',
-      ('ip', 'early') => 'trn_3b_ip_vs_early',
-      ('ip', _) => 'trn_3b_btn_vs_co',
-      _ => null,
-    };
-  }
-  return switch ((posClass, bucket)) {
-    ('bb', 'early') => 'cash_3b_bb_vs_utg',
-    ('bb', 'middle') => 'cash_3b_bb_vs_co',
-    ('bb', 'late') => 'cash_3b_bb_vs_btn',
-    ('sb', 'early') => 'cash_3b_sb_vs_early',
-    ('sb', 'middle') => 'cash_3b_sb_vs_middle',
-    ('sb', 'late') => 'cash_3b_sb_vs_btn',
-    ('ip', 'early') => 'cash_3b_ip_vs_early',
-    ('ip', _) => 'cash_3b_btn_vs_co',
-    _ => null,
-  };
-}
-
-String _fourBetKey(bool trn) => trn ? 'trn_4b_value' : 'cash_4b_value';
+/// When the villain is the opener of an unknown position, hero-in-the-blinds
+/// faces a late open (we seat the villain on the button); hero in position
+/// faces an early open (we seat the villain UTG). This is a synthesis
+/// ASSUMPTION about an unknown opener — distinct from
+/// [openerBucketForLabel], which buckets a known opener's actual position.
+String _assumedOpenerBucket(String pc) => pc == 'ip' ? 'early' : 'late';
 
 // ── preflop story ─────────────────────────────────────────────────────────────
 
@@ -291,13 +245,13 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
 
   final isPreflopDecision = input.decisionStreet == Street.preflop;
   final hand = quickHandNotation(input.heroCards);
-  final posClass = _posClass(input.positionLabel);
-  final bucket = _openerBucket(posClass);
+  final pc = posClass(input.positionLabel);
+  final bucket = _assumedOpenerBucket(pc);
   final trn = input.isTournament;
 
-  final heroCanOpen = _inChart(_rfiKey(input.positionLabel, trn), hand);
-  final heroWould3Bet = _inChart(_threeBetKey(posClass, bucket, trn), hand) ||
-      _inChart(_fourBetKey(trn), hand);
+  final heroCanOpen = inChart(rfiKey(input.positionLabel, trn), hand);
+  final heroWould3Bet = inChart(threeBetKey(pc, bucket, trn), hand) ||
+      inChart(fourBetKey(trn), hand);
 
   // ── story + villain seat ────────────────────────────────────────────────
   final nIntermediate =
@@ -309,8 +263,8 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
           : input.potType);
 
   var story = _buildStory(resolvedType, heroCanOpen, heroWould3Bet,
-      _inChart(_fourBetKey(trn), hand),
-      _inChart(_call3BetKey(posClass, trn), hand), posClass);
+      inChart(fourBetKey(trn), hand),
+      inChart(call3BetKey(pc, trn), hand), pc);
 
   // The villain's seat must make the story's order of action possible.
   final (villainSeat, limpCall) = _villainSeat(
@@ -461,7 +415,7 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
     // implies the villain opened, hero 3-bet, and the villain 4-bet.
     switch (input.facing) {
       case QuickFacing.threeBet:
-        if (posClass != 'bb') {
+        if (pc != 'bb') {
           heroEarlierBetBb = 2.5;
           decisionActions.add(HandAction(
               seat: heroSeat, type: ActionType.raise, amount: chips(2.5)));

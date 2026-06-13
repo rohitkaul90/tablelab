@@ -42,6 +42,20 @@ Future<SimulationResult> runSimulation({
   return compute(_isolatedSim, params);
 }
 
+/// Synchronous core, for callers that are ALREADY inside an isolate (e.g. the
+/// equity cross-check, which runs its whole street walk off the main thread)
+/// and must not nest a `compute()`. On the main thread use [runSimulation].
+SimulationResult runSimulationSync({
+  required List<List<List<int>>> ranges,
+  required List<int> boardCards,
+  int iterations = 50000,
+}) =>
+    _isolatedSim(_SimParams(
+      ranges: ranges,
+      boardCards: boardCards,
+      iterations: iterations,
+    ));
+
 // Top-level function for compute()
 SimulationResult _isolatedSim(_SimParams p) {
   final n = p.ranges.length;
