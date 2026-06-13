@@ -79,8 +79,19 @@ const streetFeedbackSchema = {
         optimal: { type: "string", description: "The optimal or better play against this opponent" },
         rationale: { type: "string", description: "Why that play is better, referencing opponent reads if available" },
         wasGto: { type: "boolean", description: "True if hero's play was GTO-aligned" },
+        confidence: {
+          type: "string",
+          enum: ["high", "medium", "low"],
+          description:
+            "How clear-cut this street's assessment is: high = standard spot with a well-established answer, medium = read- or assumption-dependent, low = genuinely close or missing key information",
+        },
+        alternative: {
+          anyOf: [{ type: "null" }, { type: "string" }],
+          description:
+            "A second genuinely defensible line for this street, in one sentence (e.g. 'A small raise for protection is also fine here'). Set to null when the optimal play is clearly unique.",
+        },
       },
-      required: ["decision", "optimal", "rationale", "wasGto"],
+      required: ["decision", "optimal", "rationale", "wasGto", "confidence", "alternative"],
     },
   ],
 };
@@ -334,7 +345,10 @@ function positionName(seat: number, setup: TableSetup): string {
   return off < n.length ? n[off] : `P${seat + 1}`;
 }
 
-function buildPrompt(hand: PokerHand, reads: PlayerRead[]): string {
+function buildPrompt(
+  hand: PokerHand,
+  reads: PlayerRead[],
+): { prompt: string; facts: string[] } {
   const { tableSetup: ts, players, streets } = hand;
   const seatMap = new Map(players.map((p) => [p.seat, p]));
   const readMap = new Map(reads.map((r) => [r.playerLabel.toLowerCase(), r]));
@@ -403,6 +417,8 @@ function buildPrompt(hand: PokerHand, reads: PlayerRead[]): string {
   // size at each street header.
   const boardSoFar: string[] = [];
   let runningPot = 0;
+  // Collected so the client can show "what the AI was told" verbatim.
+  const facts: string[] = [];
 
   for (const street of streets) {
     boardSoFar.push(...street.communityCards);
@@ -467,7 +483,9 @@ function buildPrompt(hand: PokerHand, reads: PlayerRead[]): string {
     lines.push(`${label}${cc}${potLabel}: ${actionParts.join("; ")}`);
 
     if (hero?.holeCards?.length === 2 && boardSoFar.length > 0) {
-      lines.push(computeDrawSummary(hero.holeCards, boardSoFar));
+      const fact = computeDrawSummary(hero.holeCards, boardSoFar);
+      lines.push(fact);
+      facts.push(fact);
     }
   }
 
@@ -478,7 +496,7 @@ function buildPrompt(hand: PokerHand, reads: PlayerRead[]): string {
     "Analyze each street hero reached. When a read or tag exists for an opponent, base optimal play on that player profile (exploit accordingly). When no read exists, use GTO population defaults and state this. Use null for streets not reached.",
   );
 
-  return lines.join("\n");
+  return { prompt: lines.join("\n"), facts };
 }
 
 // ── System prompt (cached) ────────────────────────────────────────────────────
@@ -497,6 +515,8 @@ COACHING PRINCIPLES:
 - When a read exists: always name the player and tag ("Justin is tagged Calling Station — bluffing river is -EV, valuebet thin instead").
 - When no read exists: state you are using GTO population defaults.
 - keyMistake must be the single highest-impact error in the hand, written in 1-2 sentences. If the hand was played well, set keyMistake to null.
+- confidence per street: "high" only for standard spots with a well-established answer; "medium" when the verdict depends on reads or assumptions; "low" when the spot is genuinely close or key information is missing. Do not default everything to high.
+- alternative per street: when a second line is genuinely defensible, state it in one sentence. Set it to null when the optimal play is clearly unique — do not invent alternatives for trivial spots.
 
 TOURNAMENT COACHING (applies when tournament stage is provided):
 5. ICM AWARENESS: When tournament stage is "bubble", "ft_bubble", or "final_table", ICM pressure fundamentally changes correct play. Calling off a big stack near the bubble is often a mistake even with strong equity. Pushing ranges tighten; calling ranges tighten more. State ICM implications explicitly.
@@ -626,6 +646,8 @@ serve(async (req: Request) => {
       apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
     });
 
+    const built = buildPrompt(hand, relevantReads);
+
     const claudeCall = anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2000,
@@ -639,7 +661,7 @@ serve(async (req: Request) => {
       ],
       tools: [COACHING_TOOL],
       tool_choice: { type: "tool", name: "provide_hand_coaching" },
-      messages: [{ role: "user", content: buildPrompt(hand, relevantReads) }],
+      messages: [{ role: "user", content: built.prompt }],
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
@@ -654,6 +676,9 @@ serve(async (req: Request) => {
     }
     // deno-lint-ignore no-explicit-any
     const analysis = (toolBlock as any).input as Record<string, unknown>;
+    // Attach the deterministic [FACT] lines so the client can show "what the
+    // AI was told" verbatim — not model output, never trusted to the model.
+    analysis.facts = built.facts;
 
     // ── Log usage ────────────────────────────────────────────────────────────
     await logUsage(db, user.id, message.usage);
