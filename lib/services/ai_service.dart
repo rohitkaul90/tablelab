@@ -130,6 +130,40 @@ class AiService {
     return HandCoachingAnalysis.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Thumbs up/down on a cached hand analysis. [rating] is 1 (up) or -1
+  /// (down); rows are scoped by user_id + hand_id (the cache key). No-op when
+  /// the cache row is missing — feedback is best-effort.
+  Future<void> rateHandAnalysis(String handId, int rating) async {
+    final user = _client.auth.currentUser;
+    if (user == null) return;
+    await withSupabaseRetry(
+      () => _client
+          .from('ai_hand_analyses')
+          .update({
+            'rating': rating,
+            'rated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('user_id', user.id)
+          .eq('hand_id', handId),
+    );
+  }
+
+  /// Thumbs up/down on a cached session analysis ([rating]: 1 or -1).
+  Future<void> rateSessionAnalysis(String sessionId, int rating) async {
+    final user = _client.auth.currentUser;
+    if (user == null) return;
+    await withSupabaseRetry(
+      () => _client
+          .from('ai_analyses')
+          .update({
+            'rating': rating,
+            'rated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('user_id', user.id)
+          .eq('session_id', sessionId),
+    );
+  }
+
   Map<String, dynamic> _sessionJson(SessionModel s) => {
         'id': s.id,
         'date': s.date,

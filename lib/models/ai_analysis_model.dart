@@ -4,11 +4,22 @@ class StreetFeedback {
   final String rationale;
   final bool wasGto;
 
+  /// 'high' | 'medium' | 'low' — model self-reported. Null on analyses cached
+  /// before the field was added to the tool schema (render nothing then).
+  final String? confidence;
+
+  /// "Also defensible: …" — a second reasonable line for the spot. Null when
+  /// the model considers the optimal play clearly unique, or on legacy
+  /// cached analyses.
+  final String? alternative;
+
   const StreetFeedback({
     required this.decision,
     required this.optimal,
     required this.rationale,
     required this.wasGto,
+    this.confidence,
+    this.alternative,
   });
 
   factory StreetFeedback.fromJson(Map<String, dynamic> j) => StreetFeedback(
@@ -16,6 +27,8 @@ class StreetFeedback {
         optimal: j['optimal'] as String? ?? '',
         rationale: j['rationale'] as String? ?? '',
         wasGto: j['wasGto'] as bool? ?? true,
+        confidence: j['confidence'] as String?,
+        alternative: j['alternative'] as String?,
       );
 }
 
@@ -66,6 +79,11 @@ class HandCoachingAnalysis {
   final StreetFeedback? turn;
   final StreetFeedback? river;
 
+  /// The deterministic `[FACT —]` ground-truth lines the Edge Function
+  /// injected into the prompt — "what the AI was told". Empty for analyses
+  /// cached before the function started returning them.
+  final List<String> facts;
+
   const HandCoachingAnalysis({
     required this.summary,
     required this.verdict,
@@ -74,6 +92,7 @@ class HandCoachingAnalysis {
     this.flop,
     this.turn,
     this.river,
+    this.facts = const [],
   });
 
   factory HandCoachingAnalysis.fromJson(Map<String, dynamic> j) =>
@@ -81,6 +100,7 @@ class HandCoachingAnalysis {
         summary: j['summary'] as String? ?? '',
         verdict: j['verdict'] as String? ?? 'neutral',
         keyMistake: j['keyMistake'] as String?,
+        facts: List<String>.from(j['facts'] as List? ?? const []),
         preflop: j['preflop'] != null
             ? StreetFeedback.fromJson(j['preflop'] as Map<String, dynamic>)
             : null,

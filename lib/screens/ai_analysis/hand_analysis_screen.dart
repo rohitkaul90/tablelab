@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../equity/villain_range.dart';
 import '../../models/hand_model.dart';
 import '../../models/ai_analysis_model.dart';
 import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
+import '../../reads/tag_definitions.dart';
+import '../../widgets/ai/analysis_feedback_bar.dart';
 import '../../widgets/playing_card_widget.dart';
 
 class HandAnalysisScreen extends ConsumerStatefulWidget {
@@ -17,13 +20,29 @@ class HandAnalysisScreen extends ConsumerStatefulWidget {
 
 class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   HandCoachingAnalysis? _analysis;
+  HandEquityCheck? _equityCheck;
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _runAnalysis());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _runAnalysis();
+      _runEquityCheck();
+    });
+  }
+
+  /// Deterministic on-device cross-check, run in parallel with the AI call.
+  /// Best-effort: the coaching view renders without it.
+  Future<void> _runEquityCheck() async {
+    try {
+      final reads = ref.read(readsProvider).value ?? [];
+      final check = await computeHandEquityCheck(widget.hand, reads: reads);
+      if (mounted) setState(() => _equityCheck = check);
+    } catch (_) {
+      // Unmodelable hand (corrupt cards etc.) — just omit the equity chips.
+    }
   }
 
   Future<void> _runAnalysis({bool forceRefresh = false}) async {
@@ -89,7 +108,14 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
           ? _LoadingView()
           : _error != null
               ? _ErrorView(error: _error!, onRetry: _runAnalysis)
-              : _CoachingView(hand: widget.hand, analysis: _analysis!),
+              : _CoachingView(
+                  hand: widget.hand,
+                  analysis: _analysis!,
+                  equityCheck: _equityCheck,
+                  onRate: (rating) => ref
+                      .read(aiServiceProvider)
+                      .rateHandAnalysis(widget.hand.id, rating),
+                ),
     );
   }
 }
@@ -159,18 +185,26 @@ class _ErrorView extends StatelessWidget {
 // ── Coaching view ─────────────────────────────────────────────────────────────
 
 class _StreetEntry {
+  final Street street;
   final String name;
   final StreetFeedback feedback;
   final List<String> newCards;
 
-  const _StreetEntry(this.name, this.feedback, this.newCards);
+  const _StreetEntry(this.street, this.name, this.feedback, this.newCards);
 }
 
 class _CoachingView extends StatelessWidget {
   final PokerHand hand;
   final HandCoachingAnalysis analysis;
+  final HandEquityCheck? equityCheck;
+  final Future<void> Function(int rating)? onRate;
 
-  const _CoachingView({required this.hand, required this.analysis});
+  const _CoachingView({
+    required this.hand,
+    required this.analysis,
+    this.equityCheck,
+    this.onRate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -183,14 +217,22 @@ class _CoachingView extends StatelessWidget {
 
     final streets = <_StreetEntry>[
       if (analysis.preflop != null)
-        _StreetEntry('Pre-flop', analysis.preflop!, []),
+        _StreetEntry(Street.preflop, 'Pre-flop', analysis.preflop!, []),
       if (analysis.flop != null)
-        _StreetEntry('Flop', analysis.flop!, streetCardMap[Street.flop] ?? []),
+        _StreetEntry(Street.flop, 'Flop', analysis.flop!,
+            streetCardMap[Street.flop] ?? []),
       if (analysis.turn != null)
-        _StreetEntry('Turn', analysis.turn!, streetCardMap[Street.turn] ?? []),
+        _StreetEntry(Street.turn, 'Turn', analysis.turn!,
+            streetCardMap[Street.turn] ?? []),
       if (analysis.river != null)
-        _StreetEntry('River', analysis.river!, streetCardMap[Street.river] ?? []),
+        _StreetEntry(Street.river, 'River', analysis.river!,
+            streetCardMap[Street.river] ?? []),
     ];
+
+    final equityByStreet = <Street, double>{
+      for (final s in equityCheck?.streets ?? const <StreetEquityCheck>[])
+        s.street: s.heroEquity,
+    };
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -207,7 +249,13 @@ class _CoachingView extends StatelessWidget {
             ),
           ),
           for (final entry in streets) ...[
-            _StreetCoachingCard(entry: entry),
+            _StreetCoachingCard(
+              entry: entry,
+              equity: equityByStreet[entry.street],
+              onEquityTap: equityCheck != null
+                  ? () => _showEquityAssumptions(context, equityCheck!)
+                  : null,
+            ),
             const SizedBox(height: 8),
           ],
         ],
@@ -215,7 +263,26 @@ class _CoachingView extends StatelessWidget {
           const SizedBox(height: 8),
           _KeyMistakeCard(mistake: analysis.keyMistake!),
         ],
-        const SizedBox(height: 32),
+        if (analysis.facts.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _FactsCard(facts: analysis.facts),
+        ],
+        if (onRate != null) ...[
+          const SizedBox(height: 8),
+          AnalysisFeedbackBar(onRate: onRate!),
+        ],
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            'AI coaching can be wrong — verify big decisions.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+        ),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -332,7 +399,16 @@ class _HandHeaderCard extends StatelessWidget {
 class _StreetCoachingCard extends StatelessWidget {
   final _StreetEntry entry;
 
-  const _StreetCoachingCard({required this.entry});
+  /// Hero's deterministic equity on this street (0–1), when the on-device
+  /// cross-check could model the hand.
+  final double? equity;
+  final VoidCallback? onEquityTap;
+
+  const _StreetCoachingCard({
+    required this.entry,
+    this.equity,
+    this.onEquityTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -364,6 +440,14 @@ class _StreetCoachingCard extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (equity != null) ...[
+              _EquityChip(equity: equity!, onTap: onEquityTap),
+              const SizedBox(width: 4),
+            ],
+            if (f.confidence != null) ...[
+              _ConfidenceBadge(confidence: f.confidence!),
+              const SizedBox(width: 4),
+            ],
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -408,10 +492,50 @@ class _StreetCoachingCard extends StatelessWidget {
                     label: 'Why',
                     value: f.rationale,
                     color: outline),
+                if (f.alternative != null && f.alternative!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _InfoRow(
+                      label: 'Also',
+                      value: f.alternative!,
+                      color: outline),
+                ],
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ConfidenceBadge extends StatelessWidget {
+  final String confidence; // 'high' | 'medium' | 'low'
+
+  const _ConfidenceBadge({required this.confidence});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (confidence) {
+      'high' => Colors.green,
+      'low' => Colors.orange,
+      _ => Theme.of(context).colorScheme.outline,
+    };
+    return Tooltip(
+      message: 'How confident the AI is in this street\'s assessment',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          confidence.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -462,6 +586,203 @@ class _KeyMistakeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Facts card ────────────────────────────────────────────────────────────────
+// The deterministic [FACT —] lines the Edge Function injected into the prompt
+// — collapsed by default; "what the AI was told", verbatim.
+
+class _FactsCard extends StatelessWidget {
+  final List<String> facts;
+
+  const _FactsCard({required this.facts});
+
+  @override
+  Widget build(BuildContext context) {
+    final outline = Theme.of(context).colorScheme.outline;
+    return Card(
+      child: ExpansionTile(
+        leading: Icon(Icons.fact_check_outlined,
+            size: 20, color: Theme.of(context).colorScheme.primary),
+        title: Text('What the AI was told',
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          'Pre-computed card facts injected as ground truth',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: outline,
+              ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final fact in facts)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      fact,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(height: 1.4),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Equity cross-check ────────────────────────────────────────────────────────
+
+class _EquityChip extends StatelessWidget {
+  final double equity;
+  final VoidCallback? onTap;
+
+  const _EquityChip({required this.equity, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Tooltip(
+      message:
+          'Hero equity vs the modeled villain range — computed on-device, '
+          'not by the AI. Tap for assumptions.',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.verified_outlined, size: 11, color: primary),
+              const SizedBox(width: 2),
+              Text(
+                'EQ ${(equity * 100).round()}%',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showEquityAssumptions(BuildContext context, HandEquityCheck check) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      final outline = theme.colorScheme.outline;
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (ctx, controller) => ListView(
+          controller: controller,
+          padding: EdgeInsets.fromLTRB(
+              20, 0, 20, 20 + MediaQuery.paddingOf(ctx).bottom),
+          children: [
+            Text('Equity cross-check', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Text(
+              'Computed on-device by TableLab\'s Monte Carlo engine '
+              '(${check.streets.firstOrNull?.iterations ?? 10000} trials per '
+              'street) — independent of the AI. Each opponent gets a GTO '
+              'preset range from their preflop action, adjusted for your '
+              'reads, then narrowed street by street by what they did.',
+              style: theme.textTheme.bodySmall?.copyWith(color: outline),
+            ),
+            if (check.basedOnSynthesizedAction) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Quick Hand entry: action around the recorded decision is '
+                'synthesized scaffolding, so these ranges are approximate.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Text('HERO EQUITY BY STREET',
+                style: theme.textTheme.labelSmall?.copyWith(color: outline)),
+            const SizedBox(height: 6),
+            for (final s in check.streets)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 72,
+                      child: Text(s.street.label,
+                          style: theme.textTheme.bodySmall),
+                    ),
+                    Text(
+                      '${(s.heroEquity * 100).toStringAsFixed(1)}%',
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        s.boardSoFar.isEmpty
+                            ? 'vs ${s.villainCount} '
+                                'opponent${s.villainCount == 1 ? '' : 's'}'
+                            : s.boardSoFar.join(' '),
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: outline),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            for (final v in check.villains) ...[
+              const SizedBox(height: 16),
+              Text(
+                'ASSUMED RANGE — ${v.name.toUpperCase()} (${v.position})',
+                style: theme.textTheme.labelSmall?.copyWith(color: outline),
+              ),
+              if (v.appliedTags.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Reads: ${v.appliedTags.map(tagDisplayName).join(', ')}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+              const SizedBox(height: 4),
+              for (final line in v.rangeTrail)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text('•  $line', style: theme.textTheme.bodySmall),
+                ),
+            ],
+          ],
+        ),
+      );
+    },
+  );
 }
 
 // ── Info row ──────────────────────────────────────────────────────────────────
