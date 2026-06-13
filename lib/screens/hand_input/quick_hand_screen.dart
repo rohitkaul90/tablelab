@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/hand_model.dart';
 import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
+import '../../utils/helpers.dart';
 import '../../utils/quick_hand_synthesis.dart';
 import '../../widgets/hand_card_picker.dart';
 import '../../widgets/playing_card_widget.dart';
@@ -70,14 +71,17 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
     _isTournament = widget.isTournamentSession;
     final prefill = widget.prefilledStakes?.trim();
     if (prefill != null && prefill.isNotEmpty) {
-      if (kPresetStakes.contains(prefill)) {
-        _selectedStakes = prefill;
-      } else if (_isTournament) {
-        final parts = prefill.split('/');
-        if (parts.length >= 2) {
-          _tournSbCtrl.text = parts[0].trim();
-          _tournBbCtrl.text = parts[1].trim();
+      // Tournament must be checked first: its stakes are blind levels that can
+      // coincide with a cash preset (e.g. "1/2"), and a tournament always uses
+      // the SB/BB fields, never the cash preset selector.
+      if (_isTournament) {
+        final blinds = parseBlindsFromStakes(prefill);
+        if (blinds != null) {
+          _tournSbCtrl.text = blinds.$1.round().toString();
+          _tournBbCtrl.text = blinds.$2.round().toString();
         }
+      } else if (kPresetStakes.contains(prefill)) {
+        _selectedStakes = prefill;
       } else {
         _customStakes = true;
         _customStakesCtrl.text = prefill;
@@ -118,11 +122,14 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
       return (sb != null && bb != null && sb <= bb) ? (sb, bb) : null;
     }
     final raw = _customStakes ? _customStakesCtrl.text : _selectedStakes;
-    final parts = raw.split('/');
-    if (parts.length < 2) return null;
-    final sb = _parseBlind(parts[0]);
-    final bb = _parseBlind(parts[1]);
-    return (sb != null && bb != null && sb <= bb) ? (sb, bb) : null;
+    // Reuse the app's canonical parser so custom/prefilled stakes carrying
+    // currency symbols, dash separators, k-suffixes or cap notation parse the
+    // same here as everywhere else (a naive split('/') silently rejected them).
+    final blinds = parseBlindsFromStakes(raw);
+    if (blinds == null) return null;
+    final sb = blinds.$1.round();
+    final bb = blinds.$2.round();
+    return (sb > 0 && bb > 0 && sb <= bb) ? (sb, bb) : null;
   }
 
   double? _parseBb(TextEditingController c) {

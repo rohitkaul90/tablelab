@@ -853,10 +853,12 @@ String _buildNotes(QuickHandInput input,
       '$facingDesc$pot; Hero $heroDesc.');
 
   if (input.result != null) {
-    final amount = input.resultAmountBb != null
-        ? ' ~${_fmtBb(input.resultAmountBb!)}'
+    // resultAmountBb is the FINAL POT size, not hero's net win — keep the
+    // wording explicit so the model doesn't read it as profit.
+    final pot = input.resultAmountBb != null
+        ? ' (final pot ~${_fmtBb(input.resultAmountBb!)})'
         : '';
-    sb.write(' Result: ${input.result!.name}$amount.');
+    sb.write(' Result: Hero ${input.result!.name}$pot.');
   }
 
   final note = input.userNote?.trim();

@@ -492,7 +492,7 @@ void main() {
           s.notes,
           contains('RECORDED Turn decision: facing a bet of 20bb '
               'into a pot of ~30bb; Hero raised to 55bb.'));
-      expect(s.notes, contains('Result: won ~140bb.'));
+      expect(s.notes, contains('Result: Hero won (final pot ~140bb).'));
       expect(s.notes, endsWith('Villain snap-called preflop.'));
     });
 

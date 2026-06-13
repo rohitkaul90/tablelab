@@ -194,4 +194,58 @@ void main() {
     expect(fake.capturedSetup!.smallBlind, equals(2));
     expect(fake.capturedSetup!.bigBlind, equals(5));
   });
+
+  testWidgets('tournament prefill whose stakes match a cash preset is saveable',
+      (tester) async {
+    // Regression: "1/2" is a cash preset, but for a tournament session it is a
+    // blind level and must populate the SB/BB fields, not the preset selector.
+    final fake = FakeHandService();
+    await pumpQuickHand(tester, fake,
+        prefilledSessionId: 'sess-1',
+        prefilledStakes: '1/2',
+        isTournamentSession: true);
+
+    stateOf(tester).debugSetHeroCards(['As', 'Kd']);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'BTN'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Raise'));
+    await tester.pump();
+
+    // The blinds resolved from the prefill, so Save is enabled.
+    final save = find.widgetWithText(FilledButton, 'Save Hand');
+    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    expect(fake.capturedIsTournament, isTrue);
+    expect(fake.capturedSetup!.smallBlind, equals(1));
+    expect(fake.capturedSetup!.bigBlind, equals(2));
+  });
+
+  testWidgets('cash prefill with currency symbols parses and is saveable',
+      (tester) async {
+    // Regression: a naive split('/') rejected "$2/$5"; the canonical parser
+    // strips the currency symbols.
+    final fake = FakeHandService();
+    await pumpQuickHand(tester, fake,
+        prefilledSessionId: 'sess-1',
+        prefilledStakes: r'$2/$5',
+        isTournamentSession: false);
+
+    stateOf(tester).debugSetHeroCards(['As', 'Kd']);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'BTN'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Raise'));
+    await tester.pump();
+
+    final save = find.widgetWithText(FilledButton, 'Save Hand');
+    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    expect(fake.capturedSetup!.smallBlind, equals(2));
+    expect(fake.capturedSetup!.bigBlind, equals(5));
+  });
 }
