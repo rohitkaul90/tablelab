@@ -742,9 +742,16 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
             if (bluffCount > 0)
               ...scored.sublist(n - bluffCount).map((e) => e.$1),
           ];
-          v.trail.add('${street.street.label}: ${_actLabel(act)} → polarized: '
-              'top ${(valueFrac * 100).round()}% value + bottom '
-              '${(bluffFrac * 100).round()}% bluffs');
+          // Report the bluffs actually kept, not the requested fraction — when
+          // value already takes the whole range (valueFrac clamped to 1.0) or
+          // the range is tiny, bluffCount can clamp to 0 or below the requested
+          // %, and the trail must not claim a bluff tail that isn't there.
+          v.trail.add(bluffCount > 0
+              ? '${street.street.label}: ${_actLabel(act)} → polarized: '
+                  'top ${(valueFrac * 100).round()}% value + bottom '
+                  '${(bluffCount / n * 100).round()}% bluffs'
+              : '${street.street.label}: ${_actLabel(act)} → kept top '
+                  '${(valueFrac * 100).round()}% value (no bluffs added)');
         }
       }
 
