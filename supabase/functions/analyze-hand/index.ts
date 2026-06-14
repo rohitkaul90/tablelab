@@ -559,20 +559,28 @@ function buildPrompt(
           const potBefore = runningPot - increment - uncalledExcess;
           const reqPct = Math.round((increment / (potBefore + increment)) * 100);
 
-          // Direct pot odds are only DECISIVE when the call closes the hand —
-          // a river call with no further betting (every action after it is a
-          // fold) and no street to come. Pre-river or non-closing calls have
-          // implied / reverse-implied odds, so the price is a floor, not a
-          // verdict; the FACT says which so the model applies the right rule.
+          // Direct pot odds are DECISIVE only when NO further betting can
+          // follow this call — either it closes a river bet (hand ends at
+          // showdown) or chips are all-in (the board just runs out). In both
+          // cases the street's equity FACT already is hero's equity to
+          // showdown, so the price is a verdict. Otherwise (more betting/streets
+          // to come) implied / reverse-implied odds apply and the price is only
+          // a floor; the FACT says which so the model applies the right rule.
           const idx = street.actions.indexOf(a);
           const closesAction = street.actions
             .slice(idx + 1)
             .every((x) => x.type === "fold");
-          const decisive = street.street === "river" && closesAction;
+          const allInPresent = a.allIn === true ||
+            street.actions.some((x) => x.allIn === true);
+          const decisive =
+            closesAction && (street.street === "river" || allInPresent);
+          const decisiveReason = street.street === "river"
+            ? "the hand ends at showdown"
+            : "all chips are in and the board simply runs out with no more betting";
 
           streetPotOdds.push(
             decisive
-              ? `[FACT — Price for hero to call on the river: call ${increment} into a ${potBefore} pot, so hero needs ~${reqPct}% equity to break even. This call CLOSES the hand — no further betting and no later streets — so direct pot odds are DECISIVE: if hero's equity FACT for this street is at or above ${reqPct}%, calling is correct and is never a leak; if it is below ${reqPct}%, folding is correct. Use this number verbatim; do NOT compute your own pot-odds percentage.]`
+              ? `[FACT — Price for hero to call on the ${street.street}: call ${increment} into a ${potBefore} pot, so hero needs ~${reqPct}% equity to break even. After this call there is no further betting — ${decisiveReason} — so direct pot odds are DECISIVE: hero's equity FACT for this street is hero's equity all the way to showdown, so if it is at or above ${reqPct}%, calling is correct and is never a leak; if it is below ${reqPct}%, folding is correct. Use this number verbatim; do NOT compute your own pot-odds percentage.]`
               : `[FACT — Price for hero to call on the ${street.street}: call ${increment} into a ${potBefore} pot, so hero needs ~${reqPct}% direct equity to break even right now. This is a FLOOR, not the whole decision: betting and/or later streets remain, so implied odds (hero wins more when ahead) and reverse-implied odds (hero loses more when behind, or gets blown off the hand) also apply — meeting ${reqPct}% is necessary but not automatically sufficient, and falling slightly short can still be a call when implied odds are strong. Use this number verbatim; do NOT compute your own pot-odds percentage.]`,
           );
         }
@@ -721,7 +729,7 @@ ACCURACY RULES:
 6. RESULT-INDEPENDENCE & GROUNDED NUMBERS:
    • You are NOT told who won the hand. Unless a villain's hole cards are explicitly listed in the input, you do not know them — reason only from ranges and the provided equity FACTs. Never assume hero won or lost, and never let an imagined outcome shade the verdict. Evaluate the decision on the information available when it was made.
    • The "Hero equity vs the modeled villain range" FACT already accounts for a GTO-balanced share of villain bluffs. Treat it as the true bluff-catch equity. Do not silently override it with a gut feeling that "villain always has it."
-   • When a "Price for hero to call" FACT is present, use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Follow the FACT's own framing: if it says the price is DECISIVE (a river call that closes the hand), then equity at or above the threshold means calling is correct and below means folding is correct — full stop. If it says the price is a FLOOR (a pre-river or non-closing call), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so a call can be right slightly under the price or a fold right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.`;
+   • When a "Price for hero to call" FACT is present, use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Follow the FACT's own framing: if it says the price is DECISIVE (no further betting can follow — a river call that closes the hand, or any all-in where the board just runs out), then equity at or above the threshold means calling is correct and below means folding is correct — full stop. This applies on ANY street: a flop or turn all-in call is decided purely by whether hero's equity meets the price, never by implied odds. If it says the price is a FLOOR (a non-closing call with betting still to come), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so a call can be right slightly under the price or a fold right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.`;
 
 // A stable signature of the reads that drive the analysis (and the modeled
 // equity). The cache is keyed on (user_id, hand_id), but reads also shape the
