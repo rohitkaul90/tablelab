@@ -559,24 +559,27 @@ function buildPrompt(
           const potBefore = runningPot - increment - uncalledExcess;
           const reqPct = Math.round((increment / (potBefore + increment)) * 100);
 
-          // Direct pot odds are DECISIVE only when NO further betting can
-          // follow this call — either it closes a river bet (hand ends at
-          // showdown) or chips are all-in (the board just runs out). In both
-          // cases the street's equity FACT already is hero's equity to
-          // showdown, so the price is a verdict. Otherwise (more betting/streets
-          // to come) implied / reverse-implied odds apply and the price is only
-          // a floor; the FACT says which so the model applies the right rule.
+          // Direct pot odds are DECISIVE only when hero faces NO further
+          // betting decision after this call — either it closes a river bet
+          // (hand ends at showdown) or hero's own call is all-in (hero is
+          // committed and the board just runs out). In both cases the street's
+          // equity FACT already is hero's equity to showdown, so the price is a
+          // verdict. Otherwise (hero has chips behind, more betting/streets to
+          // come) implied / reverse-implied odds apply and the price is only a
+          // floor; the FACT says which so the model applies the right rule.
+          // NOTE: only HERO being all-in counts — another player's all-in does
+          // not stop hero and a remaining deep player from betting a side pot
+          // on later streets, so it must not be treated as decisive.
           const idx = street.actions.indexOf(a);
           const closesAction = street.actions
             .slice(idx + 1)
             .every((x) => x.type === "fold");
-          const allInPresent = a.allIn === true ||
-            street.actions.some((x) => x.allIn === true);
+          const heroAllIn = a.allIn === true;
           const decisive =
-            closesAction && (street.street === "river" || allInPresent);
+            closesAction && (street.street === "river" || heroAllIn);
           const decisiveReason = street.street === "river"
             ? "the hand ends at showdown"
-            : "all chips are in and the board simply runs out with no more betting";
+            : "hero is all-in, so the board simply runs out with no more betting decisions for hero";
 
           streetPotOdds.push(
             decisive
@@ -729,7 +732,7 @@ ACCURACY RULES:
 6. RESULT-INDEPENDENCE & GROUNDED NUMBERS:
    • You are NOT told who won the hand. Unless a villain's hole cards are explicitly listed in the input, you do not know them — reason only from ranges and the provided equity FACTs. Never assume hero won or lost, and never let an imagined outcome shade the verdict. Evaluate the decision on the information available when it was made.
    • The "Hero equity vs the modeled villain range" FACT already accounts for a GTO-balanced share of villain bluffs. Treat it as the true bluff-catch equity. Do not silently override it with a gut feeling that "villain always has it."
-   • When a "Price for hero to call" FACT is present, use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Follow the FACT's own framing: if it says the price is DECISIVE (no further betting can follow — a river call that closes the hand, or any all-in where the board just runs out), then equity at or above the threshold means calling is correct and below means folding is correct — full stop. This applies on ANY street: a flop or turn all-in call is decided purely by whether hero's equity meets the price, never by implied odds. If it says the price is a FLOOR (a non-closing call with betting still to come), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so a call can be right slightly under the price or a fold right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.`;
+   • When a "Price for hero to call" FACT is present, use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Follow the FACT's own framing: if it says the price is DECISIVE (no further betting can follow — a river call that closes the hand, or a call where hero is all-in and the board just runs out), then equity at or above the threshold means calling is correct and below means folding is correct — full stop. This applies on ANY street: a flop or turn call where hero is all-in is decided purely by whether hero's equity meets the price, never by implied odds. If it says the price is a FLOOR (a non-closing call with betting still to come), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so a call can be right slightly under the price or a fold right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.`;
 
 // A stable signature of the reads that drive the analysis (and the modeled
 // equity). The cache is keyed on (user_id, hand_id), but reads also shape the
