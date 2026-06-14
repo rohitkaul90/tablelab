@@ -541,11 +541,22 @@ function buildPrompt(
         streetContrib.set(a.seat, a.amount);
         runningPot += increment;
 
-        // Hero calling a wager: emit the exact break-even price. potBefore
-        // already includes the bet hero is calling (added earlier this loop),
-        // so required equity = call / (potBefore + call).
+        // Hero calling a wager: emit the exact break-even price. runningPot now
+        // includes hero's call AND the bet(s) hero is facing. When hero calls
+        // all-in for LESS than a villain's bet, the uncalled excess is returned
+        // (or side-potted) and is NOT part of the pot hero is getting odds on —
+        // so subtract, from every other player, whatever they put in beyond
+        // hero's matched amount this street. potBefore is then the live pot hero
+        // can actually win; required equity = call / (potBefore + call).
         if (p.isHero && a.type === "call" && increment > 0) {
-          const potBefore = runningPot - increment;
+          const heroStreetTotal = a.amount;
+          let uncalledExcess = 0;
+          for (const [seat, contrib] of streetContrib) {
+            if (seat !== a.seat && contrib > heroStreetTotal) {
+              uncalledExcess += contrib - heroStreetTotal;
+            }
+          }
+          const potBefore = runningPot - increment - uncalledExcess;
           const reqPct = Math.round((increment / (potBefore + increment)) * 100);
           streetPotOdds.push(
             `[FACT — Price for hero to call on the ${street.street}: call ${increment} into a ${potBefore} pot, so hero needs ~${reqPct}% equity to break even. Use this number verbatim and compare it to hero's equity FACT for this street; do NOT compute your own pot-odds percentage.]`,
