@@ -90,88 +90,30 @@ interface PlayerRead {
 
 // ── Tool definition — forces Claude to always return valid structured JSON ───
 
-const streetFeedbackSchema = {
-  anyOf: [
-    { type: "null" },
-    {
-      type: "object",
-      properties: {
-        decision: { type: "string", description: "What hero actually did on this street" },
-        optimal: { type: "string", description: "The better or optimal play" },
-        rationale: { type: "string", description: "Why that play is better" },
-        wasGto: { type: "boolean", description: "True if hero's play was GTO-aligned" },
-      },
-      required: ["decision", "optimal", "rationale", "wasGto"],
-    },
-  ],
-};
-
 // deno-lint-ignore no-explicit-any
 const ANALYSIS_TOOL: any = {
   name: "provide_analysis",
-  description: "Return structured poker coaching feedback for the session",
+  description: "Return structured, session-level poker coaching feedback",
   input_schema: {
     type: "object",
     properties: {
       narrative: {
         type: "string",
         description:
-          "3-4 paragraph coaching narrative. Address the player directly as 'you'. Be specific — reference actual results, patterns, and reads. Separate variance from skill. Keep tone constructive.",
-      },
-      keyThemes: {
-        type: "array",
-        items: { type: "string" },
-        description: "2-4 short theme labels capturing the session's main patterns, e.g. 'Thin value betting', 'Preflop 3-bet frequency'",
+          "3-4 paragraph coaching narrative addressed to the player as 'you'. The BACKBONE is session-level: separate variance from skill on the result, flag tilt/mental-game signals (long session after an early loss, late hours, pace), stake-vs-bankroll and rake burden, table/game selection, and (tournaments) ICM/finish context. Reference the recorded hands only for qualitative cross-hand tendencies — never grade an individual decision as +EV/-EV here.",
       },
       leaksIdentified: {
         type: "array",
         items: { type: "string" },
-        description: "Specific actionable leaks. Each entry is 1-2 sentences.",
+        description:
+          "Session-level and cross-hand TENDENCIES to work on, each 1-2 sentences. Describe recurring patterns or upstream causes (preflop/position selection, aggression vs passivity, sizing habits, failing to exploit a read across hands) and session-level issues (game selection, tilt, bankroll). NEVER pronounce a specific hand decision correct/incorrect or call one street a 'mistake' — that is the per-hand coach's job, which has equity grounding you do not. When a tendency traces to a specific hand, point the player to open that hand in the hand coach for the grounded read. Frame cross-hand claims as 'across your recorded hands' (a small, self-selected sample), not as precise frequencies.",
       },
       actionableTip: {
         type: "string",
-        description: "One concrete focus point for the next session",
-      },
-      handAnalyses: {
-        type: "array",
-        description:
-          "Street-by-street coaching for each recorded hand. Empty array if no hands were recorded. Use null for streets not reached.",
-        items: {
-          type: "object",
-          properties: {
-            handIndex: { type: "integer" },
-            summary: {
-              type: "string",
-              description: "Brief hand label, e.g. 'AKo 3-bet pot, BTN vs CO open'",
-            },
-            verdict: {
-              type: "string",
-              enum: ["highEV", "neutral", "leakDetected"],
-            },
-            preflop: streetFeedbackSchema,
-            flop: streetFeedbackSchema,
-            turn: streetFeedbackSchema,
-            river: streetFeedbackSchema,
-          },
-          required: [
-            "handIndex",
-            "summary",
-            "verdict",
-            "preflop",
-            "flop",
-            "turn",
-            "river",
-          ],
-        },
+        description: "One concrete, session-level focus point for the next session",
       },
     },
-    required: [
-      "narrative",
-      "keyThemes",
-      "leaksIdentified",
-      "actionableTip",
-      "handAnalyses",
-    ],
+    required: ["narrative", "leaksIdentified", "actionableTip"],
   },
 };
 
@@ -504,7 +446,7 @@ function buildUserPrompt(
     }
     lines.push(
       "",
-      "Provide street-by-street coaching for each recorded hand, then an overall session narrative.",
+      "Use these recorded hands ONLY to surface session-level and cross-hand tendencies (see your SESSION SCOPE rules) — do NOT grade any hand street-by-street or judge any single decision; the dedicated hand coach does that with equity grounding you lack here.",
     );
   } else {
     lines.push(
@@ -536,7 +478,12 @@ COACHING PRINCIPLES:
 - When no read exists on a villain, explicitly state you're defaulting to GTO population assumptions.
 - Be honest about variance. A losing session can be well-played; a winning session can contain leaks. Separate process from outcome.
 - Keep tone encouraging and growth-oriented.
-- Use null for streets a hand did not reach in your hand analyses.
+
+SESSION SCOPE (critical — this is a SESSION review, not a hand review):
+- Your backbone is session-level analysis: result vs variance, tilt/mental-game signals (long session after an early loss, late hours, pace), stake-vs-bankroll and shot-taking, rake burden, table/game selection, and (tournaments) ICM/finish context.
+- Use the recorded hands ONLY to surface qualitative CROSS-HAND TENDENCIES and to connect play to the session result. Look for recurring style: position/preflop selection, aggression vs passivity, OOP river behavior, sizing habits, whether reads were exploited across hands.
+- You do NOT grade individual hands street-by-street, and you must NEVER pronounce a specific hand decision +EV/-EV, correct, incorrect, or a "leak/mistake". A separate per-hand coach does that and has a deterministic equity cross-check you do NOT have here — if you verdict a single decision you will contradict it. Attack the recurring SITUATION or its upstream cause instead (e.g. "you keep arriving at tough OOP river spots — tighten your preflop flatting"), and when a point traces to one hand, tell the player to open that hand in the hand coach for the grounded read.
+- The recorded hands are a small, self-selected sample. Frame cross-hand observations as "across your recorded hands", never as reliable frequencies.
 
 ACCURACY RULES — follow these precisely:
 

@@ -242,7 +242,9 @@ void main() {
         iterations: 2000,
       );
       final trail = check!.villains.first.rangeTrail;
-      expect(trail.any((n) => n.startsWith('Flop: all-in → kept top 25%')),
+      expect(
+          trail.any((n) =>
+              n.startsWith('Flop: all-in → polarized: top 18% value')),
           isTrue,
           reason: 'trail was: $trail');
     });
@@ -262,7 +264,9 @@ void main() {
       );
       expect(check, isNotNull);
       final trail = check!.villains.first.rangeTrail;
-      expect(trail.any((n) => n.startsWith('Flop: bet → kept top 55%')),
+      expect(
+          trail.any(
+              (n) => n.startsWith('Flop: bet → polarized: top 30% value')),
           isTrue,
           reason: 'trail was: $trail');
     });
@@ -288,7 +292,9 @@ void main() {
         iterations: 2000,
       );
       final trail = check!.villains.first.rangeTrail;
-      expect(trail.any((n) => n.startsWith('Flop: raise → kept top 30%')),
+      expect(
+          trail.any(
+              (n) => n.startsWith('Flop: raise → polarized: top 22% value')),
           isTrue,
           reason: 'trail was: $trail');
     });
@@ -355,7 +361,62 @@ void main() {
       expect(check.streets.last.boardSoFar, ['Kh', '7d', '2c', '3s']);
     });
 
-    test('exact villain hole cards beat any range assumption', () async {
+    test('a bluff-catcher keeps realistic equity vs a polarized betting line '
+        '(not ~0)', () async {
+      // Regression (JdTd hand): the old value-only narrowing collapsed any
+      // bluff-catcher to ~0% because it kept only the strongest made hands.
+      // Hero flops/rivers top pair while villain bets every street; a polarized
+      // betting range still contains busted draws hero beats, so river equity
+      // must be well above zero. A nit (who barely bluffs) must score lower.
+      StreetData betStreet(Street s, List<String> cards) => StreetData(
+            street: s,
+            communityCards: cards,
+            actions: [
+              const HandAction(seat: 2, type: ActionType.check),
+              const HandAction(
+                  seat: 0,
+                  type: ActionType.raise,
+                  amount: 20,
+                  isOpeningBet: true),
+              const HandAction(seat: 2, type: ActionType.call, amount: 20),
+            ],
+          );
+      Future<double> riverEq(List<String> tags) async {
+        final check = await computeHandEquityCheck(
+          _hand(
+            heroSeat: 2,
+            heroCards: ['Jd', 'Td'],
+            villainSeat: 0,
+            streets: [
+              _btnOpenBbCall(),
+              betStreet(Street.flop, ['Js', '4d', '5c']),
+              betStreet(Street.turn, ['9c']),
+              betStreet(Street.river, ['2h']),
+            ],
+          ),
+          reads: tags.isEmpty ? const [] : [_read('Villain', tags)],
+          iterations: 8000,
+        );
+        return check!.streets
+            .firstWhere((s) => s.street == Street.river)
+            .heroEquity;
+      }
+
+      final noRead = await riverEq([]);
+      expect(noRead, greaterThan(0.12),
+          reason: 'top pair must beat villain bluffs, not collapse to ~0 '
+              '(was $noRead)');
+      final nit = await riverEq(['nit']);
+      expect(nit, lessThan(noRead),
+          reason: 'a nit bluffs less, so the bluff-catcher is worth less vs '
+              'them (nit=$nit, noRead=$noRead)');
+    });
+
+    test('recorded showdown cards do NOT collapse equity to the result '
+        '(villain modeled by range for result-independence)', () async {
+      // Villain turned over 7c2d at showdown, but coaching equity must be hero
+      // vs villain's RANGE at decision time — never hero vs the one hand they
+      // later showed (that injects the outcome into the decision analysis).
       final check = await computeHandEquityCheck(
         _hand(
           heroSeat: 2,
@@ -365,8 +426,11 @@ void main() {
         ),
         iterations: 5000,
       );
-      expect(check!.villains.first.usedExactCards, isTrue);
-      expect(check.streets.first.heroEquity, greaterThan(0.85));
+      expect(check!.villains.first.usedExactCards, isFalse);
+      // The range was modeled (trail names a chart + % of hands), not the exact
+      // hand.
+      expect(check.villains.first.rangeTrail.first, contains('% of hands'));
+      expect(check.streets.first.heroEquity, greaterThan(0.75));
     });
   });
 

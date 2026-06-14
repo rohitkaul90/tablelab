@@ -103,9 +103,12 @@ List<String> equityCheckFacts(HandEquityCheck check) {
     '[FACT — Hero equity vs the modeled villain range(s), computed on-device '
         'by Monte Carlo (${check.streets.first.iterations} trials), NOT by you: '
         '$perStreet. These are deterministic ground truth — your assessment of '
-        'each street MUST be consistent with them. A low number means hero '
-        'loses to most of villain\'s range on that street and is at best a weak '
-        'bluff-catcher.$caveat]',
+        'each street MUST be consistent with them. The modeled villain ranges '
+        'already include a GTO-balanced share of bluffs, so this is hero\'s true '
+        'bluff-catch equity — compare it directly to any "Price for hero to '
+        'call" pot-odds FACT to decide call vs fold. A low number means hero '
+        'loses to most of villain\'s range and is at best a weak bluff-catcher.'
+        '$caveat]',
   ];
   for (final v in check.villains.where((v) => !v.usedExactCards)) {
     facts.add('[FACT — Villain ${v.name} (${v.position}) range behind the '
@@ -433,13 +436,37 @@ _StreetAct _strongestNonFold(StreetData street, int seat) {
   return strongest;
 }
 
-double _keepFraction(_StreetAct act) => switch (act) {
-      _StreetAct.allIn => 0.25,
-      _StreetAct.raise => 0.30,
-      _StreetAct.bet => 0.55,
-      _StreetAct.call => 0.65,
-      _ => 1.0,
+/// Per-action narrowing parameters. `value` = fraction of the (board-filtered)
+/// range kept from the strong top; `bluff` = fraction kept from the weak bottom
+/// as bluffs (0 for passive actions). A non-zero `bluff` makes the kept range
+/// POLARIZED (top value + busted-draw/air tail, the medium middle dropped) —
+/// the shape of a real betting/raising range, and what lets a bluff-catcher
+/// keep realistic equity instead of collapsing to ~0 against a value-only
+/// slice. Calls keep the contiguous, capped top (a merged/condensed range).
+/// Default bluff sizing is GTO-balanced (~2:1 value:bluff); reads move it via
+/// [_bluffTagFactor].
+({double value, double bluff}) _keepFractions(_StreetAct act) => switch (act) {
+      _StreetAct.allIn => (value: 0.18, bluff: 0.07),
+      _StreetAct.raise => (value: 0.22, bluff: 0.09),
+      _StreetAct.bet => (value: 0.30, bluff: 0.15),
+      _StreetAct.call => (value: 0.65, bluff: 0.0),
+      _ => (value: 1.0, bluff: 0.0),
     };
+
+/// How far a villain's bluff frequency deviates from the GTO-balanced default.
+/// Value-heavy players and nits barely bluff; maniacs/over-bluffers fire air far
+/// more often. Independent of the value-width factor (a nit value-bets a normal
+/// width but almost never bluffs), so a tagged opponent's bluff-catch equity
+/// moves the way the read implies.
+double _bluffTagFactor(Set<String> tags) {
+  var f = 1.0;
+  if (tags.contains('over_bluffs')) f *= 1.6;
+  if (tags.contains('maniac')) f *= 1.5;
+  if (tags.contains('lag_player')) f *= 1.3;
+  if (tags.contains('nit')) f *= 0.4;
+  if (tags.contains('value_heavy')) f *= 0.3;
+  return f.clamp(0.0, 2.5);
+}
 
 String _actLabel(_StreetAct act) => switch (act) {
       _StreetAct.allIn => 'all-in',
@@ -515,16 +542,13 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
     for (final r in reads) r.playerLabel.toLowerCase(): r.tags.toSet(),
   };
 
-  // Dead cards every villain range must exclude: hero's cards plus any
-  // recorded villain hole cards.
+  // Dead cards for every villain range: hero's cards only. Recorded villain
+  // hole cards (showdown) are deliberately NOT treated as known — using them
+  // would make the equity result-dependent ("hero vs the one hand villain
+  // turned over"), which craters to 0% exactly when the runout completes that
+  // hand. Coaching must judge the decision under the uncertainty hero faced, so
+  // every villain is modeled by RANGE regardless of what they later showed.
   final knownCards = <int>{h1, h2};
-  for (final p in opponents) {
-    final hc = p.holeCards;
-    if (hc != null && hc.length == 2) {
-      final c1 = parseCard(hc[0]), c2 = parseCard(hc[1]);
-      if (c1 >= 0 && c2 >= 0) knownCards.addAll([c1, c2]);
-    }
-  }
 
   final trn = hand.isTournament;
   final villains = <_VillainState>[];
@@ -532,22 +556,10 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
   for (final p in opponents) {
     final pos = hand.tableSetup.positionName(p.seatIndex);
     final tags = readMap[p.name.toLowerCase()] ?? const <String>{};
-    final hc = p.holeCards;
-    final exact = (hc != null && hc.length == 2) ? hc : const <String>[];
-    final v = _VillainState(p, pos, tags, exact);
-
-    if (exact.isNotEmpty) {
-      final c1 = parseCard(exact[0]), c2 = parseCard(exact[1]);
-      if (c1 >= 0 && c2 >= 0) {
-        v.combos = [
-          [c1, c2]
-        ];
-        v.trail.add('Hole cards recorded (${exact.join(' ')}) — exact, '
-            'no range assumption.');
-        villains.add(v);
-        continue;
-      }
-    }
+    // Recorded showdown cards are intentionally ignored (see knownCards above)
+    // so the cross-check stays result-independent: every villain is modeled by
+    // range, never collapsed to the exact hand they later turned over.
+    final v = _VillainState(p, pos, tags, const <String>[]);
 
     final line = _classifyPreflop(preflop, p.seatIndex);
     // A villain whose only preflop involvement was folding never contests the
@@ -668,7 +680,6 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
       // Narrow each active villain's range from their action on this street
       // (board-collision combos drop out first), then simulate.
       for (final v in active) {
-        if (v.exactCards.isNotEmpty) continue;
         v.combos = v.combos
             .where((c) =>
                 !boardSoFar.contains(c[0]) && !boardSoFar.contains(c[1]))
@@ -676,27 +687,72 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
         if (street.street == Street.preflop) continue; // preflop range is set
 
         final act = _strongestAction(street, v.player.seatIndex);
-        var keep = _keepFraction(act) * _postflopTagFactor(v.tags, act, street.street);
-        keep = keep.clamp(0.06, 1.0);
-        if (keep >= 1.0 || v.combos.length <= 6) {
+        final aggressive = act == _StreetAct.bet ||
+            act == _StreetAct.raise ||
+            act == _StreetAct.allIn;
+        final fr = _keepFractions(act);
+        // Value width scales with the aggressive/passive tag factor (a maniac
+        // value-bets wider, a nit tighter). Bluff width scales independently —
+        // nits/value-heavy players almost never bluff, maniacs over-bluff.
+        final valueFrac =
+            (fr.value * _postflopTagFactor(v.tags, act, street.street))
+                .clamp(0.06, 1.0);
+        final bluffFrac = aggressive
+            ? (fr.bluff * _bluffTagFactor(v.tags)).clamp(0.0, 0.6)
+            : 0.0;
+
+        if ((valueFrac >= 1.0 && bluffFrac <= 0.0) || v.combos.length <= 6) {
           if (act != _StreetAct.none) {
             v.trail.add('${street.street.label}: ${_actLabel(act)} → '
                 'range unchanged');
           }
           continue;
         }
+
         final isRiver = street.street == Street.river;
         final scored = v.combos
-            .map((c) =>
-                (c, _comboScore(c, boardSoFar, isRiver: isRiver)))
+            .map((c) => (c, _comboScore(c, boardSoFar, isRiver: isRiver)))
             .toList()
           ..sort((a, b) => b.$2.compareTo(a.$2));
-        final floor = max(6, (scored.length * 0.04).round());
-        final keepCount =
-            max(floor, (scored.length * keep).round());
-        v.combos = scored.take(keepCount).map((e) => e.$1).toList();
-        v.trail.add('${street.street.label}: ${_actLabel(act)} → kept top '
-            '${(keep * 100).round()}% of range');
+        final n = scored.length;
+        final floor = max(6, (n * 0.04).round());
+        final valueCount = max(floor, (n * valueFrac).round());
+
+        if (bluffFrac <= 0.0) {
+          // Merged / capped range (a call, or a tag-suppressed bluff-free
+          // aggressor): keep the contiguous top by strength.
+          v.combos = scored.take(valueCount).map((e) => e.$1).toList();
+          v.trail.add('${street.street.label}: ${_actLabel(act)} → kept top '
+              '${(valueFrac * 100).round()}% of range');
+        } else {
+          // Polarized range: top value combos PLUS a tail of the weakest combos
+          // (busted draws / air) as bluffs. The medium middle — hands that would
+          // check rather than bet — is dropped. This is what keeps a
+          // bluff-catcher's equity realistic against a bet/raise instead of
+          // collapsing it to ~0 (the value-only-slice bug).
+          // Floor of 1 combo whenever there is room: a villain who fires a bet
+          // (let alone a triple-barrel) is never literally bluff-free, so a
+          // bluff-catcher must never read a hard 0%. Reads still drive the
+          // number low — they just can't zero it by rounding.
+          final bluffCount = max(1, (n * bluffFrac).round())
+              .clamp(0, max(0, n - valueCount))
+              .toInt();
+          v.combos = [
+            ...scored.take(valueCount).map((e) => e.$1),
+            if (bluffCount > 0)
+              ...scored.sublist(n - bluffCount).map((e) => e.$1),
+          ];
+          // Report the bluffs actually kept, not the requested fraction — when
+          // value already takes the whole range (valueFrac clamped to 1.0) or
+          // the range is tiny, bluffCount can clamp to 0 or below the requested
+          // %, and the trail must not claim a bluff tail that isn't there.
+          v.trail.add(bluffCount > 0
+              ? '${street.street.label}: ${_actLabel(act)} → polarized: '
+                  'top ${(valueFrac * 100).round()}% value + bottom '
+                  '${(bluffCount / n * 100).round()}% bluffs'
+              : '${street.street.label}: ${_actLabel(act)} → kept top '
+                  '${(valueFrac * 100).round()}% value (no bluffs added)');
+        }
       }
 
       final simVillains =

@@ -114,7 +114,8 @@ const COACHING_TOOL: any = {
       },
       keyMistake: {
         anyOf: [{ type: "null" }, { type: "string" }],
-        description: "The single biggest error hero made, written in 1-2 sentences. Set to null if the hand was played well.",
+        description:
+          "The single biggest error hero made, in 1-2 sentences. MUST match the per-street feedback: only name a street whose feedback you marked wasGto:false, and never contradict the equity/pot-odds FACTs (do not call a price-meeting call a mistake). Set to null when the hand was played fine — that includes a bluff-catch call whose equity meets its pot-odds price.",
       },
       preflop: streetFeedbackSchema,
       flop: streetFeedbackSchema,
@@ -361,7 +362,10 @@ function computeBoardSummary(boardCards: string[]): string {
   };
   const flushSuit = Object.entries(suitCnt).find(([, n]) => n === maxSuit)?.[0] ?? "";
 
-  // ── Straight possibility: any 5-rank window with >=3 distinct board ranks ──
+  // ── Straight possibility: enumerate every 5-rank window a player can
+  // complete with at most two hole cards (board supplies >=3 of the 5 ranks).
+  // Listing the EXACT windows + the ranks needed stops the model inventing
+  // straights the board can't make (and denying ones it can).
   const present = new Set<number>();
   for (const c of boardCards) {
     const v = RANK_VAL[cRank(c)];
@@ -370,12 +374,24 @@ function computeBoardSummary(boardCards: string[]): string {
       if (v === 14) present.add(1); // wheel ace
     }
   }
-  let straightPossible = false;
+  const rankLabel = (v: number) => VAL_RANK[v === 1 ? 14 : v];
+  const straightWindows: string[] = [];
   for (let low = 1; low <= 10; low++) {
-    let inWindow = 0;
-    for (let v = low; v < low + 5; v++) if (present.has(v)) inWindow++;
-    if (inWindow >= 3) { straightPossible = true; break; }
+    const win: number[] = [];
+    for (let v = low; v < low + 5; v++) win.push(v);
+    const need = win.filter((v) => !present.has(v));
+    // board supplies >=3 ranks (5 - need.length >= 3) → makeable with 2 cards
+    if (need.length <= 2) {
+      const label = win.map(rankLabel).join("-");
+      const needStr = need.length === 0
+        ? "already on the board"
+        : need.length === 1
+          ? `needs a ${rankLabel(need[0])}`
+          : `needs ${need.map(rankLabel).join("+")}`;
+      straightWindows.push(`${label} (${needStr})`);
+    }
   }
+  const straightPossible = straightWindows.length > 0;
 
   const parts: string[] = [];
   if (maxRankCnt >= 4) {
@@ -400,7 +416,9 @@ function computeBoardSummary(boardCards: string[]): string {
     parts.push("no flush is possible (no suit has three or more cards on the board)");
   }
 
-  parts.push(straightPossible ? "a straight is possible" : "no straight is possible");
+  parts.push(straightPossible
+    ? `the ONLY possible straights are ${straightWindows.join(", ")} — no other straight exists on this board, so do not name one`
+    : "no straight is possible");
 
   return `[FACT — Board texture (${boardCards.join(" ")}): ${parts.join("; ")}. Do NOT credit any hand — hero's or villain's — with a category the board does not allow.]`;
 }
@@ -504,6 +522,9 @@ function buildPrompt(
     const potBeforeStreet = runningPot;
     // Per-player cumulative contributions on this street (reset each street)
     const streetContrib = new Map<number, number>();
+    // Deterministic pot-odds FACTs for hero's calls on this street — the model
+    // must not compute its own (it has fabricated wildly wrong percentages).
+    const streetPotOdds: string[] = [];
 
     const actionParts: string[] = [];
     for (const a of street.actions) {
@@ -519,6 +540,53 @@ function buildPrompt(
         const increment = Math.max(0, a.amount - prevContrib);
         streetContrib.set(a.seat, a.amount);
         runningPot += increment;
+
+        // Hero calling a wager: emit the exact break-even price. runningPot now
+        // includes hero's call AND the bet(s) hero is facing. When hero calls
+        // all-in for LESS than a villain's bet, the uncalled excess is returned
+        // (or side-potted) and is NOT part of the pot hero is getting odds on —
+        // so subtract, from every other player, whatever they put in beyond
+        // hero's matched amount this street. potBefore is then the live pot hero
+        // can actually win; required equity = call / (potBefore + call).
+        if (p.isHero && a.type === "call" && increment > 0) {
+          const heroStreetTotal = a.amount;
+          let uncalledExcess = 0;
+          for (const [seat, contrib] of streetContrib) {
+            if (seat !== a.seat && contrib > heroStreetTotal) {
+              uncalledExcess += contrib - heroStreetTotal;
+            }
+          }
+          const potBefore = runningPot - increment - uncalledExcess;
+          const reqPct = Math.round((increment / (potBefore + increment)) * 100);
+
+          // Direct pot odds are DECISIVE only when hero faces NO further
+          // betting decision after this call — either it closes a river bet
+          // (hand ends at showdown) or hero's own call is all-in (hero is
+          // committed and the board just runs out). In both cases the street's
+          // equity FACT already is hero's equity to showdown, so the price is a
+          // verdict. Otherwise (hero has chips behind, more betting/streets to
+          // come) implied / reverse-implied odds apply and the price is only a
+          // floor; the FACT says which so the model applies the right rule.
+          // NOTE: only HERO being all-in counts — another player's all-in does
+          // not stop hero and a remaining deep player from betting a side pot
+          // on later streets, so it must not be treated as decisive.
+          const idx = street.actions.indexOf(a);
+          const closesAction = street.actions
+            .slice(idx + 1)
+            .every((x) => x.type === "fold");
+          const heroAllIn = a.allIn === true;
+          const decisive =
+            closesAction && (street.street === "river" || heroAllIn);
+          const decisiveReason = street.street === "river"
+            ? "the hand ends at showdown"
+            : "hero is all-in, so the board simply runs out with no more betting decisions for hero";
+
+          streetPotOdds.push(
+            decisive
+              ? `[FACT — Price for hero to call on the ${street.street}: call ${increment} into a ${potBefore} pot, so hero needs ~${reqPct}% equity to break even. After this call there is no further betting — ${decisiveReason} — so direct pot odds are DECISIVE: hero's equity FACT for this street is hero's equity all the way to showdown, so if it is at or above ${reqPct}%, calling is correct and is never a leak; if it is below ${reqPct}%, folding is correct. Use this number verbatim; do NOT compute your own pot-odds percentage.]`
+              : `[FACT — Price for hero to call on the ${street.street}: call ${increment} into a ${potBefore} pot, so hero needs ~${reqPct}% direct equity to break even right now. This is a FLOOR, not the whole decision: betting and/or later streets remain, so implied odds (hero wins more when ahead) and reverse-implied odds (hero loses more when behind, or gets blown off the hand) also apply — meeting ${reqPct}% is necessary but not automatically sufficient, and falling slightly short can still be a call when implied odds are strong. Use this number verbatim; do NOT compute your own pot-odds percentage.]`,
+          );
+        }
 
         switch (a.type) {
           case "call":
@@ -570,6 +638,12 @@ function buildPrompt(
       lines.push(fact);
       facts.push(fact);
     }
+    // Pot-odds FACTs for hero's calls on this street (after the texture/draw
+    // facts so they sit next to the street they apply to).
+    for (const f of streetPotOdds) {
+      lines.push(f);
+      facts.push(f);
+    }
   }
 
   if (hand.notes) lines.push(`Hand note: "${hand.notes}"`);
@@ -605,15 +679,17 @@ COACHING PRINCIPLES:
 - Be specific. Reference actual cards, board texture, stack depth, position, and opponent tags in every coaching point.
 - When a read exists: always name the player and tag ("Justin is tagged Calling Station — bluffing river is -EV, valuebet thin instead").
 - When no read exists: state you are using GTO population defaults.
-- keyMistake must be the single highest-impact error in the hand, written in 1-2 sentences. If the hand was played well, set keyMistake to null.
+- keyMistake must be the single highest-impact error in the hand, written in 1-2 sentences, and it MUST reconcile with the per-street cards and the pot-odds rule below: it can only name a street you marked non-GTO (wasGto:false), and it must NOT call a decision a mistake that the equity/pot-odds FACTs show was correct. If every street was fine — including a call whose equity FACT meets its pot-odds price — set keyMistake to null and set verdict to highEV or neutral (never leakDetected).
 - confidence per street: "high" only for standard spots with a well-established answer; "medium" when the verdict depends on reads or assumptions; "low" when the spot is genuinely close or key information is missing. Do not default everything to high.
 - alternative per street: when a second line is genuinely defensible, state it in one sentence. Set it to null when the optimal play is clearly unique — do not invent alternatives for trivial spots.
+- BE CONCISE: keep each rationale to roughly 3-4 sentences. State your conclusions about hero's made hand, the relevant draws, and villain's range. Do NOT spell out your rank-by-rank straight-window enumeration, pot-odds arithmetic, or other step-by-step working in the output — that reasoning is silent scratch work. A wall of "67 makes 4-5-6-7 needing a 3 or 8, 78 makes…" is a leak, not coaching.
 
 RANGE-VS-EQUITY CONSISTENCY (critical — your recommendation MUST agree with the range you describe):
 - Before calling any FOLD a mistake, confirm hero's hand actually beats a meaningful share of the villain range you just enumerated. If hero's hand loses to (almost) the entire range you listed, then FOLDING IS CORRECT — never label it an over-fold, and never claim hero "retains showdown value." A hand that beats nothing in the range has ~0% equity no matter how few bluffs villain has.
 - Pot odds justify a call ONLY when hero's real equity against that range meets them. State hero's rough equity vs the range before invoking pot odds; do not assert an overpair/bluff-catcher "has enough showdown value" without checking it against the specific made hands you enumerated.
 - "Villain rarely bluffs" makes calling WORSE, not better, when hero loses to villain's value hands: a non-bluffing range means a bluff-catcher beats nothing. Against nits and value-heavy players, exploitatively fold MORE to their aggression — their raises/shoves are near-pure value. The "don't over-fold vs nits" idea applies only to folding hands that still beat part of their value range, never to folding to a range that dominates hero.
-- Self-check before writing: if your rationale enumerates hands and then recommends the opposite of what beating-or-losing-to those hands implies, you have contradicted yourself — fix the verdict.
+- The CONVERSE is equally important — do NOT over-fold a +EV call. When a "Price for hero to call" FACT is present, hero's call CLOSES the action (e.g. calling a river bet), and hero's equity FACT meets or exceeds the required %, the call is CORRECT by direct pot odds: mark the street as fine (wasGto-aligned), never label it a leak, and do not recommend folding on vague "feels value-heavy / a GTO-default range skews to value / no reason to deviate" grounds. The equity FACT already counts villain's bluffs — if it clears the price, the bluff-catch is profitable. Recommend a fold over a price-meeting call ONLY when hero's equity is BELOW the required %, or (on a non-closing street) when a specific implied/reverse-implied-odds reason makes the direct price misleading — and then state that reason explicitly.
+- Self-check before writing: (a) if your rationale enumerates hands and then recommends the opposite of what beating-or-losing-to those hands implies, fix it; (b) if you recommend a FOLD while hero's equity FACT meets or beats the pot-odds FACT on a closing-action call, fix it — that is the over-fold error; (c) keyMistake, the overall verdict, and every per-street optimal/wasGto must tell ONE consistent story — never call a decision a mistake in one field and correct in another.
 
 TOURNAMENT COACHING (applies when tournament stage is provided):
 5. ICM AWARENESS: When tournament stage is "bubble", "ft_bubble", or "final_table", ICM pressure fundamentally changes correct play. Calling off a big stack near the bubble is often a mistake even with strong equity. Pushing ranges tighten; calling ranges tighten more. State ICM implications explicitly.
@@ -651,7 +727,12 @@ ACCURACY RULES:
    • A full house or quads is possible ONLY when the board is paired or tripled. On an UNPAIRED board no one can have a full house or quads — a set does NOT become a full house unless the board itself pairs. Never list "full houses" or "boats" in a villain range on an unpaired board.
    • A flush is possible only when three or more cards of one suit are on the board; with two or fewer of every suit, no flush exists for anyone.
    • A straight is possible only when the board supplies enough connected ranks (three within a five-rank window).
-   • When you enumerate a villain's value range, every hand you name must be makeable from two hole cards plus this exact board. If the board does not allow a category, do not put it in the range.`;
+   • When you enumerate a villain's value range, every hand you name must be makeable from two hole cards plus this exact board. If the board does not allow a category, do not put it in the range.
+
+6. RESULT-INDEPENDENCE & GROUNDED NUMBERS:
+   • You are NOT told who won the hand. Unless a villain's hole cards are explicitly listed in the input, you do not know them — reason only from ranges and the provided equity FACTs. Never assume hero won or lost, and never let an imagined outcome shade the verdict. Evaluate the decision on the information available when it was made.
+   • The "Hero equity vs the modeled villain range" FACT already accounts for a GTO-balanced share of villain bluffs. Treat it as the true bluff-catch equity. Do not silently override it with a gut feeling that "villain always has it."
+   • When a "Price for hero to call" FACT is present, use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Follow the FACT's own framing: if it says the price is DECISIVE (no further betting can follow — a river call that closes the hand, or a call where hero is all-in and the board just runs out), then equity at or above the threshold means calling is correct and below means folding is correct — full stop. This applies on ANY street: a flop or turn call where hero is all-in is decided purely by whether hero's equity meets the price, never by implied odds. If it says the price is a FLOOR (a non-closing call with betting still to come), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so a call can be right slightly under the price or a fold right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.`;
 
 // A stable signature of the reads that drive the analysis (and the modeled
 // equity). The cache is keyed on (user_id, hand_id), but reads also shape the
