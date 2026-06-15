@@ -77,7 +77,9 @@ flutter_native_splash:
     # the sides. This is a dedicated, pre-padded asset: the neon logo on a
     # transparent background, scaled to fit within the safe circle. icon_background
     # matches the window color (#111811) so the masked circle blends invisibly.
-    image: assets/icon/app_icon_android12.png
+    # Kept outside assets/icon/ (a bundled dir) since it's a build-time-only input
+    # to flutter_native_splash and never loaded at runtime — avoids shipping it.
+    image: flutter_native_splash/app_icon_android12.png
     icon_background_color: "#111811"
   web: false
   fullscreen: false
