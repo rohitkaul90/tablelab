@@ -1,0 +1,14 @@
+project_id = "mxjdroihsoihaughopxi"
+
+# scrape-tournaments is a machine-to-machine cron endpoint (GitHub Actions weekly
+# cron) authed by a shared SCRAPE_SECRET that the function checks itself — NOT a
+# Supabase user JWT. Gateway-level JWT verification must stay OFF, or the cron
+# gets `401 UNAUTHORIZED_INVALID_JWT_FORMAT` from the gateway before the function
+# runs (SCRAPE_SECRET isn't a JWT). A bare `supabase functions deploy
+# scrape-tournaments` defaults verify_jwt back to TRUE and silently breaks the
+# scraper (this is exactly what happened in the 2026-06-10 alerting redeploy).
+# Pinning it here keeps it off across redeploys. The app-called functions
+# (analyze-session, analyze-hand, delete-account) deliberately keep the default
+# verify_jwt = true — they're called with a real user token.
+[functions.scrape-tournaments]
+verify_jwt = false
