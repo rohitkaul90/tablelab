@@ -105,8 +105,9 @@ List<String> equityCheckFacts(HandEquityCheck check) {
         '$perStreet. These are deterministic ground truth — your assessment of '
         'each street MUST be consistent with them. The modeled villain ranges '
         'already include a GTO-balanced share of bluffs, so this is hero\'s true '
-        'bluff-catch equity — compare it directly to any "Price for hero to '
-        'call" pot-odds FACT to decide call vs fold. A low number means hero '
+        'bluff-catch equity — compare it directly to any pot-odds price FACT '
+        '(whether labelled "Price for hero to call" or "Price hero was getting '
+        'when he folded") to decide call vs fold. A low number means hero '
         'loses to most of villain\'s range and is at best a weak bluff-catcher.'
         '$caveat]',
   ];

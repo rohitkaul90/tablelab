@@ -436,6 +436,58 @@ function positionName(seat: number, setup: TableSetup): string {
   return off < n.length ? n[off] : `P${seat + 1}`;
 }
 
+// Shared pot-odds math + FACT wording for any spot where hero faces a wager.
+// Both the call site (hero continued) and the fold site (hero gave up, but we
+// still want the break-even he was offered) resolve their inputs and call this,
+// so the price formula, the uncalled-excess strip, and the DECISIVE/FLOOR
+// wording live in ONE place and can never drift apart (they previously did:
+// the fold path was missing the stack cap + excess strip the call path had).
+//   • callAmount        — hero's effective chips to continue. The call caller
+//     passes the real (already-recorded, inherently ≤ stack) call; the fold
+//     caller reconstructs it and must stack-cap it itself (it has no recorded
+//     amount). The helper does NOT cap — pass a value hero could actually put in.
+//   • livePotBeforeCall  — pot hero can win EXCLUDING his own call, before the strip
+//   • heroMatchTotal     — hero's total this-street contribution if he continues
+// The caller decides `decisive` (no further betting decision for hero) and the
+// cause clause; this function only formats and computes the price.
+function heroPotOddsFact(opts: {
+  street: string;
+  mode: "call" | "fold";
+  callAmount: number;
+  livePotBeforeCall: number;
+  heroMatchTotal: number;
+  streetContrib: Map<number, number>;
+  heroSeat: number;
+  decisive: boolean;
+  decisiveReason: string;
+}): string {
+  let uncalledExcess = 0;
+  for (const [seat, contrib] of opts.streetContrib) {
+    if (seat !== opts.heroSeat && contrib > opts.heroMatchTotal) {
+      uncalledExcess += contrib - opts.heroMatchTotal;
+    }
+  }
+  const potBefore = opts.livePotBeforeCall - uncalledExcess;
+  const reqPct = Math.round(
+    (opts.callAmount / (potBefore + opts.callAmount)) * 100,
+  );
+  const isFold = opts.mode === "fold";
+  const lead = isFold
+    ? `Price hero was getting when he folded on the ${opts.street}: to call ${opts.callAmount}`
+    : `Price for hero to call on the ${opts.street}: call ${opts.callAmount}`;
+  const needs = isFold ? "needed" : "needs";
+  if (opts.decisive) {
+    const verdict = isFold
+      ? `if it is at or above ${reqPct}%, folding was a mistake (an over-fold) and calling was correct; if it is below ${reqPct}%, folding was correct`
+      : `if it is at or above ${reqPct}%, calling is correct and is never a leak; if it is below ${reqPct}%, folding is correct`;
+    return `[FACT — ${lead} into a ${potBefore} pot, so hero ${needs} ~${reqPct}% equity to break even. Because ${opts.decisiveReason}, direct pot odds are DECISIVE: hero's equity FACT for this street is hero's equity all the way to showdown, so ${verdict}. Use this number verbatim; do NOT compute your own pot-odds percentage.]`;
+  }
+  const floorBody = isFold
+    ? `betting and/or later streets remain, so folding can still be correct below it when hero realises his equity poorly, and a large surplus over ${reqPct}% points to an over-fold`
+    : `betting and/or later streets remain, so implied odds (hero wins more when ahead) and reverse-implied odds (hero loses more when behind, or gets blown off the hand) also apply — meeting ${reqPct}% is necessary but not automatically sufficient, and falling slightly short can still be a call when implied odds are strong`;
+  return `[FACT — ${lead} into a ${potBefore} pot, so hero ${needs} ~${reqPct}% direct equity to break even right now. This is a FLOOR, not the whole decision: ${floorBody}. Use this number verbatim; do NOT compute your own pot-odds percentage.]`;
+}
+
 function buildPrompt(
   hand: PokerHand,
   reads: PlayerRead[],
@@ -509,6 +561,11 @@ function buildPrompt(
   // size at each street header.
   const boardSoFar: string[] = [];
   let runningPot = 0;
+  // Hero's cumulative chips committed across the whole hand, so we can derive
+  // his remaining stack at any point (hero.stack is the STARTING stack). Used
+  // to cap a fold's pot-odds call amount at what hero could actually have put
+  // in — a bet larger than hero's stack is only callable up to that stack.
+  let heroPaid = 0;
   // Collected so the client can show "what the AI was told" verbatim.
   const facts: string[] = [];
 
@@ -540,36 +597,18 @@ function buildPrompt(
         const increment = Math.max(0, a.amount - prevContrib);
         streetContrib.set(a.seat, a.amount);
         runningPot += increment;
+        if (p.isHero) heroPaid += increment;
 
-        // Hero calling a wager: emit the exact break-even price. runningPot now
-        // includes hero's call AND the bet(s) hero is facing. When hero calls
-        // all-in for LESS than a villain's bet, the uncalled excess is returned
-        // (or side-potted) and is NOT part of the pot hero is getting odds on —
-        // so subtract, from every other player, whatever they put in beyond
-        // hero's matched amount this street. potBefore is then the live pot hero
-        // can actually win; required equity = call / (potBefore + call).
+        // Hero calling a wager: emit the exact break-even price (the model must
+        // not compute its own). runningPot already includes hero's call, so the
+        // live pot before his call is runningPot - increment; the helper strips
+        // any uncalled excess (when hero called all-in for less than the bet).
         if (p.isHero && a.type === "call" && increment > 0) {
-          const heroStreetTotal = a.amount;
-          let uncalledExcess = 0;
-          for (const [seat, contrib] of streetContrib) {
-            if (seat !== a.seat && contrib > heroStreetTotal) {
-              uncalledExcess += contrib - heroStreetTotal;
-            }
-          }
-          const potBefore = runningPot - increment - uncalledExcess;
-          const reqPct = Math.round((increment / (potBefore + increment)) * 100);
-
-          // Direct pot odds are DECISIVE only when hero faces NO further
-          // betting decision after this call — either it closes a river bet
-          // (hand ends at showdown) or hero's own call is all-in (hero is
-          // committed and the board just runs out). In both cases the street's
-          // equity FACT already is hero's equity to showdown, so the price is a
-          // verdict. Otherwise (hero has chips behind, more betting/streets to
-          // come) implied / reverse-implied odds apply and the price is only a
-          // floor; the FACT says which so the model applies the right rule.
-          // NOTE: only HERO being all-in counts — another player's all-in does
-          // not stop hero and a remaining deep player from betting a side pot
-          // on later streets, so it must not be treated as decisive.
+          // Direct pot odds are DECISIVE only when hero faces NO further betting
+          // decision after this call — it closes a river bet (hand ends at
+          // showdown) or hero's own call is all-in (board just runs out). Only
+          // HERO being all-in counts: another player's all-in does not stop hero
+          // and a remaining deep player from betting a side pot on later streets.
           const idx = street.actions.indexOf(a);
           const closesAction = street.actions
             .slice(idx + 1)
@@ -577,15 +616,19 @@ function buildPrompt(
           const heroAllIn = a.allIn === true;
           const decisive =
             closesAction && (street.street === "river" || heroAllIn);
-          const decisiveReason = street.street === "river"
-            ? "the hand ends at showdown"
-            : "hero is all-in, so the board simply runs out with no more betting decisions for hero";
-
-          streetPotOdds.push(
-            decisive
-              ? `[FACT — Price for hero to call on the ${street.street}: call ${increment} into a ${potBefore} pot, so hero needs ~${reqPct}% equity to break even. After this call there is no further betting — ${decisiveReason} — so direct pot odds are DECISIVE: hero's equity FACT for this street is hero's equity all the way to showdown, so if it is at or above ${reqPct}%, calling is correct and is never a leak; if it is below ${reqPct}%, folding is correct. Use this number verbatim; do NOT compute your own pot-odds percentage.]`
-              : `[FACT — Price for hero to call on the ${street.street}: call ${increment} into a ${potBefore} pot, so hero needs ~${reqPct}% direct equity to break even right now. This is a FLOOR, not the whole decision: betting and/or later streets remain, so implied odds (hero wins more when ahead) and reverse-implied odds (hero loses more when behind, or gets blown off the hand) also apply — meeting ${reqPct}% is necessary but not automatically sufficient, and falling slightly short can still be a call when implied odds are strong. Use this number verbatim; do NOT compute your own pot-odds percentage.]`,
-          );
+          streetPotOdds.push(heroPotOddsFact({
+            street: street.street,
+            mode: "call",
+            callAmount: increment,
+            livePotBeforeCall: runningPot - increment,
+            heroMatchTotal: a.amount,
+            streetContrib,
+            heroSeat: a.seat,
+            decisive,
+            decisiveReason: street.street === "river"
+              ? "the hand ends at showdown"
+              : "hero is already all-in and the board simply runs out with no more betting decisions",
+          }));
         }
 
         switch (a.type) {
@@ -616,6 +659,65 @@ function buildPrompt(
           case "fold": actionStr = `${whoStr} folds`; break;
           case "check": actionStr = `${whoStr} checks`; break;
           default: actionStr = `${whoStr} ${a.type}`; break;
+        }
+
+        // Hero FOLDING to a wager: emit the same break-even price the fold was
+        // getting, so the model judges over-folds against the correct number
+        // instead of fabricating its own. Reconstruct hero's effective call
+        // (capped at his remaining stack — hero.stack is the STARTING stack, so
+        // hero.stack - heroPaid is what he had behind) and hand off to the shared
+        // helper, which applies the same uncalled-excess strip as the call path.
+        // Only when hero folded to a real WAGER (a bet/raise/all-in this street),
+        // not when he merely open-folds to the posted blinds/straddle — pricing
+        // a routine preflop open-fold would feed the model a meaningless price.
+        const idx = p.isHero && a.type === "fold"
+          ? street.actions.indexOf(a)
+          : -1;
+        const facedWager = idx > 0 &&
+          street.actions
+            .slice(0, idx)
+            .some((x) => x.type === "raise" || x.type === "allIn");
+        if (p.isHero && a.type === "fold" && facedWager) {
+          const heroContrib = streetContrib.get(a.seat) ?? 0;
+          let maxOther = 0;
+          for (const [seat, contrib] of streetContrib) {
+            if (seat !== a.seat && contrib > maxOther) maxOther = contrib;
+          }
+          const fullToCall = maxOther - heroContrib;
+          const heroRemaining = typeof hero?.stack === "number"
+            ? Math.max(0, hero.stack - heroPaid)
+            : null;
+          const callAmount = heroRemaining != null
+            ? Math.min(fullToCall, heroRemaining)
+            : fullToCall;
+          if (callAmount > 0) {
+            // DECISIVE only when the hypothetical call would leave hero no
+            // further betting decision: nobody live acts behind him (the call
+            // closes the action) AND either it is the river (hand ends at
+            // showdown) or calling would put hero all-in (board just runs out).
+            // Otherwise — a player still to act behind, or chips behind with
+            // streets to come — it is only a floor. Mirrors the call-side guard.
+            const closesAction = street.actions
+              .slice(idx + 1)
+              .every((x) => x.type === "fold");
+            const heroWouldBeAllIn = heroRemaining != null &&
+              fullToCall >= heroRemaining;
+            const decisive = closesAction &&
+              (street.street === "river" || heroWouldBeAllIn);
+            streetPotOdds.push(heroPotOddsFact({
+              street: street.street,
+              mode: "fold",
+              callAmount,
+              livePotBeforeCall: runningPot,
+              heroMatchTotal: heroContrib + callAmount,
+              streetContrib,
+              heroSeat: a.seat,
+              decisive,
+              decisiveReason: street.street === "river"
+                ? "the fold closes the hand at showdown"
+                : "calling here would put hero all-in and the board simply runs out with no more betting decisions",
+            }));
+          }
         }
       }
       actionParts.push(actionStr);
@@ -688,8 +790,8 @@ RANGE-VS-EQUITY CONSISTENCY (critical — your recommendation MUST agree with th
 - Before calling any FOLD a mistake, confirm hero's hand actually beats a meaningful share of the villain range you just enumerated. If hero's hand loses to (almost) the entire range you listed, then FOLDING IS CORRECT — never label it an over-fold, and never claim hero "retains showdown value." A hand that beats nothing in the range has ~0% equity no matter how few bluffs villain has.
 - Pot odds justify a call ONLY when hero's real equity against that range meets them. State hero's rough equity vs the range before invoking pot odds; do not assert an overpair/bluff-catcher "has enough showdown value" without checking it against the specific made hands you enumerated.
 - "Villain rarely bluffs" makes calling WORSE, not better, when hero loses to villain's value hands: a non-bluffing range means a bluff-catcher beats nothing. Against nits and value-heavy players, exploitatively fold MORE to their aggression — their raises/shoves are near-pure value. The "don't over-fold vs nits" idea applies only to folding hands that still beat part of their value range, never to folding to a range that dominates hero.
-- The CONVERSE is equally important — do NOT over-fold a +EV call. When a "Price for hero to call" FACT is present, hero's call CLOSES the action (e.g. calling a river bet), and hero's equity FACT meets or exceeds the required %, the call is CORRECT by direct pot odds: mark the street as fine (wasGto-aligned), never label it a leak, and do not recommend folding on vague "feels value-heavy / a GTO-default range skews to value / no reason to deviate" grounds. The equity FACT already counts villain's bluffs — if it clears the price, the bluff-catch is profitable. Recommend a fold over a price-meeting call ONLY when hero's equity is BELOW the required %, or (on a non-closing street) when a specific implied/reverse-implied-odds reason makes the direct price misleading — and then state that reason explicitly.
-- Self-check before writing: (a) if your rationale enumerates hands and then recommends the opposite of what beating-or-losing-to those hands implies, fix it; (b) if you recommend a FOLD while hero's equity FACT meets or beats the pot-odds FACT on a closing-action call, fix it — that is the over-fold error; (c) keyMistake, the overall verdict, and every per-street optimal/wasGto must tell ONE consistent story — never call a decision a mistake in one field and correct in another.
+- The CONVERSE is equally important — do NOT over-fold a +EV call. When a pot-odds price FACT marks the price DECISIVE (a "Price for hero to call" FACT on a closing/all-in spot, OR a "Price hero was getting when he folded" FACT), and hero's equity FACT meets or exceeds the required %, continuing is CORRECT by direct pot odds: if hero called, mark the street fine (wasGto-aligned) and never label it a leak; if hero actually FOLDED, that fold was the over-fold error — recommend the call and mark the street non-GTO. Do not recommend folding on vague "feels value-heavy / a GTO-default range skews to value / no reason to deviate" grounds. The equity FACT already counts villain's bluffs — if it clears the price, the bluff-catch is profitable. Recommend a fold over a price-meeting call ONLY when hero's equity is BELOW the required %, or (on a non-closing street) when a specific implied/reverse-implied-odds reason makes the direct price misleading — and then state that reason explicitly.
+- Self-check before writing: (a) if your rationale enumerates hands and then recommends the opposite of what beating-or-losing-to those hands implies, fix it; (b) if you bless a fold (or recommend folding) while hero's equity FACT meets or beats a DECISIVE pot-odds FACT — whether labelled "Price for hero to call" or "Price hero was getting when he folded" — fix it: that is the over-fold error, and the correct play is the call; (c) keyMistake, the overall verdict, and every per-street optimal/wasGto must tell ONE consistent story — never call a decision a mistake in one field and correct in another.
 
 TOURNAMENT COACHING (applies when tournament stage is provided):
 5. ICM AWARENESS: When tournament stage is "bubble", "ft_bubble", or "final_table", ICM pressure fundamentally changes correct play. Calling off a big stack near the bubble is often a mistake even with strong equity. Pushing ranges tighten; calling ranges tighten more. State ICM implications explicitly.
@@ -732,7 +834,7 @@ ACCURACY RULES:
 6. RESULT-INDEPENDENCE & GROUNDED NUMBERS:
    • You are NOT told who won the hand. Unless a villain's hole cards are explicitly listed in the input, you do not know them — reason only from ranges and the provided equity FACTs. Never assume hero won or lost, and never let an imagined outcome shade the verdict. Evaluate the decision on the information available when it was made.
    • The "Hero equity vs the modeled villain range" FACT already accounts for a GTO-balanced share of villain bluffs. Treat it as the true bluff-catch equity. Do not silently override it with a gut feeling that "villain always has it."
-   • When a "Price for hero to call" FACT is present, use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Follow the FACT's own framing: if it says the price is DECISIVE (no further betting can follow — a river call that closes the hand, or a call where hero is all-in and the board just runs out), then equity at or above the threshold means calling is correct and below means folding is correct — full stop. This applies on ANY street: a flop or turn call where hero is all-in is decided purely by whether hero's equity meets the price, never by implied odds. If it says the price is a FLOOR (a non-closing call with betting still to come), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so a call can be right slightly under the price or a fold right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.`;
+   • When a pot-odds price FACT is present — either a "Price for hero to call" FACT (hero continued) or a "Price hero was getting when he folded" FACT (hero gave up) — use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Both kinds are computed the same way and carry the same DECISIVE/FLOOR framing; the only difference is the verb. Follow the FACT's own framing: if it says the price is DECISIVE (no further betting can follow — a river spot that ends the hand, or a spot where calling leaves hero all-in and the board just runs out), then hero's equity at or above the threshold means CALLING is correct and equity below means FOLDING is correct — full stop. For a "folded" FACT that resolves to "calling was correct", hero's actual fold was the over-fold error: say so and recommend the call. This applies on ANY street: a flop or turn spot where calling is all-in is decided purely by whether hero's equity meets the price, never by implied odds. If it says the price is a FLOOR (a non-closing spot with betting still to come), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so continuing can be right slightly under the price or folding right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.`;
 
 // A stable signature of the reads that drive the analysis (and the modeled
 // equity). The cache is keyed on (user_id, hand_id), but reads also shape the
