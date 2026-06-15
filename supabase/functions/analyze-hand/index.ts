@@ -442,7 +442,10 @@ function positionName(seat: number, setup: TableSetup): string {
 // so the price formula, the uncalled-excess strip, and the DECISIVE/FLOOR
 // wording live in ONE place and can never drift apart (they previously did:
 // the fold path was missing the stack cap + excess strip the call path had).
-//   • callAmount        — hero's effective chips to continue, ALREADY stack-capped
+//   • callAmount        — hero's effective chips to continue. The call caller
+//     passes the real (already-recorded, inherently ≤ stack) call; the fold
+//     caller reconstructs it and must stack-cap it itself (it has no recorded
+//     amount). The helper does NOT cap — pass a value hero could actually put in.
 //   • livePotBeforeCall  — pot hero can win EXCLUDING his own call, before the strip
 //   • heroMatchTotal     — hero's total this-street contribution if he continues
 // The caller decides `decisive` (no further betting decision for hero) and the
@@ -664,7 +667,17 @@ function buildPrompt(
         // (capped at his remaining stack — hero.stack is the STARTING stack, so
         // hero.stack - heroPaid is what he had behind) and hand off to the shared
         // helper, which applies the same uncalled-excess strip as the call path.
-        if (p.isHero && a.type === "fold") {
+        // Only when hero folded to a real WAGER (a bet/raise/all-in this street),
+        // not when he merely open-folds to the posted blinds/straddle — pricing
+        // a routine preflop open-fold would feed the model a meaningless price.
+        const idx = p.isHero && a.type === "fold"
+          ? street.actions.indexOf(a)
+          : -1;
+        const facedWager = idx > 0 &&
+          street.actions
+            .slice(0, idx)
+            .some((x) => x.type === "raise" || x.type === "allIn");
+        if (p.isHero && a.type === "fold" && facedWager) {
           const heroContrib = streetContrib.get(a.seat) ?? 0;
           let maxOther = 0;
           for (const [seat, contrib] of streetContrib) {
@@ -678,12 +691,19 @@ function buildPrompt(
             ? Math.min(fullToCall, heroRemaining)
             : fullToCall;
           if (callAmount > 0) {
-            // DECISIVE when calling would leave hero no further betting decision:
-            // a river fold (hand ends at showdown) or a fold where calling would
-            // put hero all-in (board just runs out). Otherwise it is a floor.
+            // DECISIVE only when the hypothetical call would leave hero no
+            // further betting decision: nobody live acts behind him (the call
+            // closes the action) AND either it is the river (hand ends at
+            // showdown) or calling would put hero all-in (board just runs out).
+            // Otherwise — a player still to act behind, or chips behind with
+            // streets to come — it is only a floor. Mirrors the call-side guard.
+            const closesAction = street.actions
+              .slice(idx + 1)
+              .every((x) => x.type === "fold");
             const heroWouldBeAllIn = heroRemaining != null &&
               fullToCall >= heroRemaining;
-            const decisive = street.street === "river" || heroWouldBeAllIn;
+            const decisive = closesAction &&
+              (street.street === "river" || heroWouldBeAllIn);
             streetPotOdds.push(heroPotOddsFact({
               street: street.street,
               mode: "fold",
