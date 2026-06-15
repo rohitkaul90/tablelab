@@ -20,6 +20,20 @@ import 'screens/session_history_screen.dart';
 import 'screens/tools_screen.dart';
 import 'widgets/app_drawer.dart';
 
+/// Expected, recoverable auth failures that should not be reported as fatal
+/// crashes. The canonical case is a revoked/expired refresh token surfacing
+/// asynchronously during `recoverSession()` on cold start (Crashlytics issue
+/// "Invalid Refresh Token: Refresh Token Not Found"): the SDK signs the user
+/// out and `AuthGate` shows the login screen — the user simply re-authenticates.
+bool _isRecoverableAuthError(Object error) {
+  if (error is! AuthException) return false;
+  final code = error.code?.toLowerCase() ?? '';
+  final message = error.message.toLowerCase();
+  return error is AuthSessionMissingException ||
+      code.contains('refresh_token') ||
+      message.contains('refresh token');
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -31,9 +45,21 @@ void main() async {
     // can't happen in release. Collection stays on for release/profile builds.
     await FirebaseCrashlytics.instance
         .setCrashlyticsCollectionEnabled(!kDebugMode);
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    FlutterError.onError = (details) {
+      if (_isRecoverableAuthError(details.exception)) {
+        FirebaseCrashlytics.instance.recordFlutterError(details); // non-fatal
+        return;
+      }
+      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+    };
     PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      // A revoked/expired stored refresh token makes the SDK throw
+      // asynchronously from inside recoverSession() at startup — there's no
+      // app-level call site to try/catch. It's not a crash: the SDK emits a
+      // signedOut event and AuthGate falls back to the login screen. Record it
+      // non-fatal for visibility instead of letting it count as a fatal crash.
+      FirebaseCrashlytics.instance
+          .recordError(error, stack, fatal: !_isRecoverableAuthError(error));
       return true;
     };
   }
