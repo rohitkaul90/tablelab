@@ -509,6 +509,11 @@ function buildPrompt(
   // size at each street header.
   const boardSoFar: string[] = [];
   let runningPot = 0;
+  // Hero's cumulative chips committed across the whole hand, so we can derive
+  // his remaining stack at any point (hero.stack is the STARTING stack). Used
+  // to cap a fold's pot-odds call amount at what hero could actually have put
+  // in — a bet larger than hero's stack is only callable up to that stack.
+  let heroPaid = 0;
   // Collected so the client can show "what the AI was told" verbatim.
   const facts: string[] = [];
 
@@ -540,6 +545,7 @@ function buildPrompt(
         const increment = Math.max(0, a.amount - prevContrib);
         streetContrib.set(a.seat, a.amount);
         runningPot += increment;
+        if (p.isHero) heroPaid += increment;
 
         // Hero calling a wager: emit the exact break-even price. runningPot now
         // includes hero's call AND the bet(s) hero is facing. When hero calls
@@ -621,30 +627,60 @@ function buildPrompt(
         // Hero FOLDING to a wager: emit the exact break-even price the fold was
         // getting, so the model judges over-folds against the correct number
         // instead of fabricating its own (it has invented wildly wrong prices).
-        // Mirrors the call-side FACT: hero would call (maxOther - heroContrib)
-        // to win the live pot; required equity = call / (potBefore + call).
+        // Mirrors the call-side FACT, including its two corrections:
+        //  (1) cap the call at hero's REMAINING stack — a bet bigger than hero's
+        //      stack is only callable up to that stack (the rest is returned), so
+        //      the uncapped maxOther would overstate the price; and
+        //  (2) drop that uncalled excess from the pot, since chips hero can never
+        //      match are not part of the pot he is getting odds on.
+        // required equity = call / (potBefore + call).
         if (p.isHero && a.type === "fold") {
           const heroContrib = streetContrib.get(a.seat) ?? 0;
           let maxOther = 0;
           for (const [seat, contrib] of streetContrib) {
             if (seat !== a.seat && contrib > maxOther) maxOther = contrib;
           }
-          const callAmount = maxOther - heroContrib;
+          const fullToCall = maxOther - heroContrib;
+          // hero.stack is the STARTING stack; heroPaid is everything committed
+          // so far, so the difference is what hero had behind at the fold.
+          const heroRemaining = typeof hero?.stack === "number"
+            ? Math.max(0, hero.stack - heroPaid)
+            : null;
+          const callAmount = heroRemaining != null
+            ? Math.min(fullToCall, heroRemaining)
+            : fullToCall;
           if (callAmount > 0) {
-            // runningPot has NOT included any hero call (hero is folding), so it
-            // is exactly the pot hero could win before putting in the call.
-            const potBefore = runningPot;
+            // Any villain chips beyond what hero's (possibly capped) call matches
+            // are uncalled and returned — not part of the pot hero can win.
+            const heroStreetTotalIfCall = heroContrib + callAmount;
+            let uncalledExcess = 0;
+            for (const [seat, contrib] of streetContrib) {
+              if (seat !== a.seat && contrib > heroStreetTotalIfCall) {
+                uncalledExcess += contrib - heroStreetTotalIfCall;
+              }
+            }
+            // runningPot has NOT included any hero call (hero is folding); strip
+            // the uncalled excess to get the live pot hero could actually win.
+            const potBefore = runningPot - uncalledExcess;
             const reqPct = Math.round(
               (callAmount / (potBefore + callAmount)) * 100,
             );
-            // On the river the fold closes the hand at showdown, so the price is
-            // DECISIVE: the street's equity FACT is hero's equity all the way to
-            // showdown and the comparison is a verdict. Earlier streets give up
-            // implied-odds / future equity realisation, so the price is a floor.
-            const decisive = street.street === "river";
+            // The price is DECISIVE when calling would leave hero no further
+            // betting decision: a river fold (the hand ends at showdown) OR a
+            // fold where calling would put hero all-in (the board just runs out).
+            // In both cases the street's equity FACT is hero's equity all the way
+            // to showdown, so the comparison is a verdict. Otherwise (chips
+            // behind, more streets to come) implied/reverse-implied odds apply
+            // and the price is only a floor.
+            const heroWouldBeAllIn = heroRemaining != null &&
+              fullToCall >= heroRemaining;
+            const decisive = street.street === "river" || heroWouldBeAllIn;
+            const decisiveReason = street.street === "river"
+              ? "the fold closes the hand at showdown"
+              : "calling here would put hero all-in, so the board simply runs out with no more betting decisions";
             streetPotOdds.push(
               decisive
-                ? `[FACT — Price hero was getting when he folded on the river: to call ${callAmount} into a ${potBefore} pot, hero needed ~${reqPct}% equity to break even. The fold closes the hand at showdown, so direct pot odds are DECISIVE: hero's equity FACT for this street is his equity all the way to showdown, so if it is at or above ${reqPct}%, folding was a mistake (an over-fold) and calling was correct; if it is below ${reqPct}%, folding was correct. Use this number verbatim; do NOT compute your own pot-odds percentage.]`
+                ? `[FACT — Price hero was getting when he folded on the ${street.street}: to call ${callAmount} into a ${potBefore} pot, hero needed ~${reqPct}% equity to break even. Because ${decisiveReason}, direct pot odds are DECISIVE: hero's equity FACT for this street is his equity all the way to showdown, so if it is at or above ${reqPct}%, folding was a mistake (an over-fold) and calling was correct; if it is below ${reqPct}%, folding was correct. Use this number verbatim; do NOT compute your own pot-odds percentage.]`
                 : `[FACT — Price hero was getting when he folded on the ${street.street}: to call ${callAmount} into a ${potBefore} pot, hero needed ~${reqPct}% direct equity to break even right now. This is a FLOOR, not the whole decision: betting and/or later streets remain, so folding can still be correct below it when hero realises his equity poorly, and a large surplus over ${reqPct}% points to an over-fold. Use this number verbatim; do NOT compute your own pot-odds percentage.]`,
             );
           }
