@@ -1276,6 +1276,13 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
   }) {
     final theme = Theme.of(context);
     final prev = _contributions[actingSeat] ?? 0;
+    // Most this player can put out this street: their whole stack on top of
+    // what they've already contributed. A short all-in for LESS than a full
+    // min-raise is always legal poker, so the raise input's floor must drop to
+    // the all-in amount when the stack can't cover a full min-raise — otherwise
+    // `clamp(_minRaise, …)` has lower > upper, throws, and blocks the all-in.
+    final maxRaiseTo = stack + prev;
+    final effMinRaise = min(_minRaise, maxRaiseTo);
 
     return Container(
       decoration: const BoxDecoration(
@@ -1371,7 +1378,7 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
                   color: const Color(0xFFF57C00),
                   onTap: stack > toCall
                       ? () {
-                          _raiseCtrl.text = _minRaise.toString();
+                          _raiseCtrl.text = effMinRaise.toString();
                           setState(() => _raiseMode = true);
                         }
                       : null,
@@ -1424,7 +1431,7 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
                         _         => stack + prev,
                       };
                       _raiseCtrl.text =
-                          amt.clamp(_minRaise, stack + prev).toString();
+                          amt.clamp(effMinRaise, maxRaiseTo).toString();
                     },
                   ),
                 ),
@@ -1433,8 +1440,8 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
           const SizedBox(height: 6),
           FilledButton(
             onPressed: () {
-              final amt = int.tryParse(_raiseCtrl.text) ?? _minRaise;
-              _doRaise(amt.clamp(_minRaise, stack + prev));
+              final amt = int.tryParse(_raiseCtrl.text) ?? effMinRaise;
+              _doRaise(amt.clamp(effMinRaise, maxRaiseTo));
             },
             style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(44)),
