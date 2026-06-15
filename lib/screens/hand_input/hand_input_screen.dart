@@ -410,7 +410,17 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
 
     final prevBet = _currentBet;
     _currentBet = _contributions[seat]!;
-    _lastRaiseSize = _currentBet - prevBet;
+    final raiseSize = _currentBet - prevBet;
+    // A raise only "reopens" betting — resetting the min-raise increment — when
+    // it is a FULL raise. A short all-in for less than a full raise is legal but
+    // incomplete and must NOT shrink the min-raise the next player faces, so
+    // only update _lastRaiseSize for an opening bet or a full-size raise.
+    // Otherwise an $80 all-in over a $50 bet would wrongly let the next player
+    // "min-raise" by the $30 increment instead of a full raise.
+    final minFullRaiseSize = max(_setup.bigBlind, _lastRaiseSize);
+    if (isOpeningBet || raiseSize >= minFullRaiseSize) {
+      _lastRaiseSize = raiseSize;
+    }
 
     if (isAllIn) _allInSeats.add(seat);
     _streetActions.add(HandAction(
