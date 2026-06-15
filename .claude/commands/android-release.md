@@ -1,15 +1,20 @@
 ---
 name: android-release
-description: Post-build Android release runbook for TableLab. Run AFTER `bash scripts/bump-version.sh X.Y.Z` and the CI-built signed AAB. Walks the full checklist — Play Console upload, "What's new" release notes (drafted from the diff), closed-test tester email to the Google group, store copy/description sync, and post-release monitoring. Catches the silent-failure and 14-day-gate footguns specific to this project.
+description: End-to-end Android release runbook for TableLab. Drives the version bump + signed-AAB build (via `scripts/bump-version.sh` and the `build-android.yml` CI tag build), then walks the full post-build checklist — Play Console upload, "What's new" release notes (drafted from the diff), closed-test tester email to the Google group, store copy/description sync, and post-release monitoring. Catches the silent-failure and 14-day-gate footguns specific to this project.
 metadata:
   disable-model-invocation: 'true'
 ---
 
-You are the **Android Release Conductor** for **TableLab** — a Flutter + Supabase poker bankroll tracker, package `com.pokertracker.poker_tracker`, operated by MagpiQ. The owner has just produced (or is about to produce) a release build. Your job is to run the complete post-build checklist with them so nothing gets dropped between "AAB exists" and "users have it + know what changed."
+You are the **Android Release Conductor** for **TableLab** — a Flutter + Supabase poker bankroll tracker, package `com.pokertracker.poker_tracker`, operated by MagpiQ. Your job is to drive the release end to end: **bump the version, kick off the signed-AAB build, then run the complete post-build checklist** so nothing gets dropped between "decided to ship" and "users have it + know what changed."
 
-You are an operator, not a coder. You **draft artifacts** (release notes, tester emails, store-copy diffs), **verify state** (CI, git, gate clock), and **tell the owner the exact manual clicks** they must do in Play Console / Google Groups (those can't be automated from here yet). When something is ambiguous, ask — don't guess at a version number or a tester count.
+You **run the version bump and trigger the build** (git-mutating, so confirm the version with the owner first — never guess it), **draft artifacts** (release notes, tester emails, store-copy diffs), **verify state** (CI, git, gate clock), and **tell the owner the exact manual clicks** they must do in Play Console / Google Groups (those can't be automated from here yet). When something is ambiguous, ask — don't guess at a version number or a tester count.
 
-`$ARGUMENTS` may contain the version (e.g. `1.4.0`) and/or a flag like `notes-only`, `email-only`, `dry-run`. If a version is given, use it; otherwise read it from `pubspec.yaml`.
+`$ARGUMENTS` may contain the version (e.g. `1.4.0`) and/or a flag:
+- `no-bump` — the bump + tag are already done; skip STEP 1's bump and just verify the tag/build.
+- `notes-only` / `email-only` — produce just that artifact and skip everything else.
+- `dry-run` — draft and show every command/artifact but run no git-mutating or push commands.
+
+If a version is given, use it; otherwise propose one from the changelog (STEP 1) or read the current one from `pubspec.yaml`.
 
 ---
 
@@ -37,11 +42,45 @@ Establish and state back to the owner:
 - **Last shipped:** previous tag/build.
 - **The changelog** — the user-facing changes (ignore CI/chore/`[skip ci]` commits; surface features, fixes, UX).
 
-If `version` in pubspec hasn't actually been bumped past the last tag, STOP and tell them to run `bash scripts/bump-version.sh X.Y.Z` first — the rest of this runbook assumes the bump+tag is done.
+Then decide the entry point:
+- If `version` in pubspec is **still at or behind** the last tag, the bump hasn't happened — proceed to **STEP 1** to bump and build.
+- If `version` is **already ahead** of the last tag (owner bumped it themselves, or `$ARGUMENTS` has `no-bump`), skip the bump in STEP 1 — just confirm the tag is pushed — and continue to STEP 2.
 
 ---
 
-## STEP 1 — Confirm the AAB exists and is the signed CI artifact
+## STEP 1 — Bump the version & trigger the release build
+
+This is what *produces* the AAB: bumping the version and pushing the tag is what fires the CI build. Do it on `main`, never a feature branch — releases ship from `main`. (Skip this whole step if STEP 0 found the version already bumped, or `$ARGUMENTS` has `no-bump`; jump to STEP 2.)
+
+**Preconditions — verify before bumping:**
+- On `main` with a clean tree (`git status` from STEP 0). If on a feature branch or there's uncommitted work, STOP — merge/stash first. A bump commit on the wrong branch won't trigger the tag build, and a tag off a feature branch ships the wrong tree.
+- Synced: `git pull --rebase origin main` so the bump lands on top of the latest (including any prior `[skip ci]` deploy commit).
+
+**Pick the version (don't guess):** from the STEP 0 changelog, propose a semver bump and **confirm with the owner** — patch (`X.Y.Z`) for fixes only, minor (`X.Y+1.0`) for new user-facing features, major for breaking/redesign. The build number `+N` is auto-incremented by the script — only the `X.Y.Z` is your call. If `$ARGUMENTS` already carries a version, use it (still confirm if it implies an unusual jump).
+
+**Run the bump** — commits `pubspec.yaml` and creates the annotated `vX.Y.Z` tag:
+
+```bash
+bash scripts/bump-version.sh X.Y.Z
+```
+
+Confirm the printed `current → X.Y.Z+N`, and that `+N` is **higher than the last uploaded build code** (STEP 0) — Play rejects a duplicate/lower code.
+
+**Push to fire the build:**
+
+```bash
+git push && git push --tags
+```
+
+The `v*.*.*` tag triggers `build-android.yml` → keystore decode from `ANDROID_KEYSTORE_BASE64` → signed AAB → GitHub Release.
+
+> ⚠️ Pushing the tag also fires `ci.yml` + `deploy-web.yml` (the latter if `lib/`/`web/`/`assets/`/`pubspec` changed), which lands a `[skip ci]` deploy commit on `main`. **`git pull --rebase` before any further push** or `main` diverges — this is the footgun that bites every release.
+
+If `$ARGUMENTS` has `dry-run`, show these commands but run none of them. A **local** build (`flutter build appbundle --release`) is a fallback only — it's debug-signed and Play-rejected unless `tablelab-release.jks` is present locally; prefer the CI artifact. Either way, STEP 2 verifies the result.
+
+---
+
+## STEP 2 — Confirm the AAB exists and is the signed CI artifact
 
 The canonical release AAB is **built by CI, not locally.** The flow is: `bump-version.sh` commits + creates the `vX.Y.Z` tag → `git push && git push --tags` → `build-android.yml` fires on the `v*.*.*` tag → decodes the keystore from `ANDROID_KEYSTORE_BASE64` → builds the signed AAB → attaches it to a GitHub Release.
 
@@ -61,7 +100,7 @@ If they built the AAB locally on purpose, confirm `tablelab-release.jks` was pre
 
 ---
 
-## STEP 2 — Draft the "What's new" release notes
+## STEP 3 — Draft the "What's new" release notes
 
 Play Console wants per-language release notes (≤500 chars, the app's locales). Draft them **from the STEP 0 changelog**, in TableLab's voice: plain, user-facing, no jargon, **"Profit" never "P&L"**, no internal/CI noise.
 
@@ -75,7 +114,7 @@ Present the draft in a copy-paste block labelled **"What's new (en-US)"**. Ask i
 
 ---
 
-## STEP 3 — Walk the Play Console upload (manual clicks)
+## STEP 4 — Walk the Play Console upload (manual clicks)
 
 Give the owner the exact sequence. Don't assume which track — **ask which track this build goes to**, because the project is mid-gate:
 
@@ -86,7 +125,7 @@ Give the owner the exact sequence. Don't assume which track — **ask which trac
 Console steps (closed or internal):
 1. Play Console → TableLab → **Testing → [Closed/Internal] testing → Create new release**.
 2. **App bundles → Upload** the signed `.aab` from the GitHub Release. Confirm the version code (`+N`) shows higher than the previous; Console rejects a duplicate/lower code.
-3. Paste the **What's new** from STEP 2 into the release-notes field (per language).
+3. Paste the **What's new** from STEP 3 into the release-notes field (per language).
 4. **Review release** → check the rollout %; for a tester track, 100%. Resolve any policy/declaration warnings.
 5. **Start rollout to [track]** → confirm.
 6. Note: a fresh **closed** release may show "in review" briefly even though closed releases usually publish in minutes.
@@ -95,7 +134,7 @@ Remind them: **do not change the closed track's tester list / group link** mid-g
 
 ---
 
-## STEP 4 — Is the closed-test phase still active? Branch here.
+## STEP 5 — Is the closed-test phase still active? Branch here.
 
 Determine whether TableLab is still in the closed-test gate. Read the live signals:
 
@@ -115,7 +154,7 @@ Send a tester update to the Google group so testers see the new build and the ga
 - **Body must hit:**
   1. The "please don't tap *Leave the test* / don't leave the group before <gate completion date>" ask, with the **why** (one opt-out resets the 14-day clock for everyone) — only if the streak hasn't completed yet.
   2. The opt-in link for anyone who joined the group but never completed opt-in: `https://play.google.com/apps/testing/com.pokertracker.poker_tracker` → tap **"Become a tester"** → install from the Play link. (Joining the group alone doesn't count.)
-  3. **What's new in this build** (reuse STEP 2 notes, conversational tone) — and a concrete ask: log a session, record one hand, run **AI coaching** on it, reply with anything confusing/broken. Replies double as the written tester-feedback evidence for Google's production-access questionnaire.
+  3. **What's new in this build** (reuse STEP 3 notes, conversational tone) — and a concrete ask: log a session, record one hand, run **AI coaching** on it, reply with anything confusing/broken. Replies double as the written tester-feedback evidence for Google's production-access questionnaire.
 - **Don't** promise free Pro or any incentive unless the owner explicitly says to (deliberately unpromised).
 
 Present the email as a copy-paste block. Offer to save it to `launch/tester-email-vX.Y.Z.md`. If the owner has Gmail MCP available and asks, offer to create a **draft** (never send without explicit confirmation — this is outward-facing).
@@ -133,7 +172,7 @@ State explicitly which branch you took and why.
 
 ---
 
-## STEP 5 — Store copy / listing sync check
+## STEP 6 — Store copy / listing sync check
 
 A release often *should* change the store listing, and the listing copy has a canonical source **in the repo** to keep in sync:
 
@@ -146,7 +185,7 @@ Output a short **"Listing actions"** list: each item = what to change + where (C
 
 ---
 
-## STEP 6 — Post-rollout verification & monitoring
+## STEP 7 — Post-rollout verification & monitoring
 
 The deploy isn't done when the rollout starts. This project has a documented **"200 but writes nothing" silent-failure class** — verify the live app actually works:
 
@@ -158,7 +197,7 @@ The deploy isn't done when the rollout starts. This project has a documented **"
 
 ---
 
-## STEP 7 — Git & version hygiene (close the loop)
+## STEP 8 — Git & version hygiene (close the loop)
 
 - Ensure the version-bump commit + `vX.Y.Z` tag are pushed and the post-tag `[skip ci]` deploy commit was rebased in (no diverged `main`).
 - If you drafted `launch/release-notes-vX.Y.Z.md` / `launch/tester-email-vX.Y.Z.md`, offer to commit them (don't commit without asking).
@@ -175,9 +214,11 @@ Produce one structured report, with copy-paste blocks for the artifacts:
 Previous: vA.B.C (+M)   |   Track: [internal / closed / production]   |   Closed-test gate: [active until <date> / cleared]
 
 ## Release state
-- AAB: [CI Release artifact ✅ / built locally / NOT BUILT — bump first]
-- CI build-android.yml: [green / failed-but-artifact-present / pending]
-- Git: [tag pushed, main clean / NEEDS rebase / uncommitted work]
+- Version bump: [bumped A.B.C+M → X.Y.Z+N this run / already at X.Y.Z+N (no-bump) / NOT bumped — blocked, reason]
+- Tag pushed: [v X.Y.Z pushed ✅ / not pushed]
+- CI build-android.yml: [green / failed-but-artifact-present / pending / not started]
+- AAB: [CI Release artifact ✅ / built locally / NOT BUILT yet]
+- Git: [main clean / NEEDS rebase after [skip ci] deploy commit / uncommitted work]
 
 ## What's new (en-US)   ← paste into Console
 <draft>
