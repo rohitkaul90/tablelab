@@ -72,8 +72,13 @@ flutter_native_splash:
   color: "#111811"
   image: assets/icon/app_icon.png
   android_12:
-    image: assets/icon/app_icon.png
-    icon_background_color: "#1B5E20"
+    # Android 12+ masks the splash icon into a circle showing only the inner ~2/3
+    # of the canvas, so the full-bleed app_icon (wide table logo) gets clipped on
+    # the sides. This is a dedicated, pre-padded asset: the neon logo on a
+    # transparent background, scaled to fit within the safe circle. icon_background
+    # matches the window color (#111811) so the masked circle blends invisibly.
+    image: assets/icon/app_icon_android12.png
+    icon_background_color: "#111811"
   web: false
   fullscreen: false
 
