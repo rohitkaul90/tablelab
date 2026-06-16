@@ -120,5 +120,169 @@ void main() {
       expect(session.currency, equals('CAD'));
       expect(session.tableSize, isNull);
     });
+
+    test('legacy session (no live columns) defaults to completed', () {
+      final session = SessionModel.fromMap(fullMap);
+      expect(session.status, equals('completed'));
+      expect(session.isLive, isFalse);
+      expect(session.startedAt, isNull);
+      expect(session.buyinEvents, isEmpty);
+      expect(session.currentStack, isNull);
+      // totalBuyIn falls back to the buy_in column when no events recorded.
+      expect(session.totalBuyIn, equals(200.0));
+    });
+  });
+
+  // ── live session recorder ───────────────────────────────────────────────────
+
+  group('SessionModel live fields', () {
+    final liveMap = {
+      'id': 'live-1',
+      'date': '2026-06-16',
+      'stakes': '2/5',
+      'game_type': 'cash',
+      'buy_in': 800.0, // running sum of the events below
+      'cash_out': 0,
+      'profit_loss': 0,
+      'start_time': '19:00',
+      'end_time': '19:00',
+      'duration_minutes': 0,
+      'created_at': '2026-06-16T19:00:00Z',
+      'currency': 'USD',
+      'status': 'live',
+      'started_at': '2026-06-16T19:00:00Z',
+      'current_stack': 1100.0,
+      'buyin_events': [
+        {'amount': 500.0, 'ts': '2026-06-16T19:00:00Z', 'kind': 'buyin'},
+        {'amount': 300.0, 'ts': '2026-06-16T20:30:00Z', 'kind': 'rebuy'},
+      ],
+    };
+
+    test('parses status, startedAt, currentStack and events', () {
+      final s = SessionModel.fromMap(liveMap);
+      expect(s.isLive, isTrue);
+      expect(s.startedAt, equals(DateTime.parse('2026-06-16T19:00:00Z')));
+      expect(s.currentStack, equals(1100.0));
+      expect(s.buyinEvents.length, equals(2));
+      expect(s.buyinEvents[1].kind, equals('rebuy'));
+      expect(s.buyinEvents[1].amount, equals(300.0));
+    });
+
+    test('totalBuyIn sums the events (not the buy_in column)', () {
+      final s = SessionModel.fromMap(liveMap);
+      expect(s.totalBuyIn, equals(800.0));
+      // Live net = currentStack - totalBuyIn.
+      expect(s.currentStack! - s.totalBuyIn, equals(300.0));
+    });
+
+    test('BuyinEvent round-trips through json', () {
+      final e = BuyinEvent.fromJson(
+          {'amount': 250.0, 'ts': '2026-06-16T21:00:00Z', 'kind': 'addon'});
+      final j = e.toJson();
+      final back = BuyinEvent.fromJson(j);
+      expect(back.amount, equals(250.0));
+      expect(back.kind, equals('addon'));
+      expect(back.ts, equals(DateTime.parse('2026-06-16T21:00:00Z')));
+    });
+
+    test('malformed buyin_events falls back to empty', () {
+      final s = SessionModel.fromMap({...liveMap, 'buyin_events': 'oops'});
+      expect(s.buyinEvents, isEmpty);
+      // With no parseable events, totalBuyIn falls back to the column.
+      expect(s.totalBuyIn, equals(800.0));
+    });
+
+    test('parses break fields and isOnBreak', () {
+      final s = SessionModel.fromMap({
+        ...liveMap,
+        'break_minutes': 15,
+        'break_started_at': '2026-06-16T21:00:00Z',
+      });
+      expect(s.breakMinutes, equals(15));
+      expect(s.isOnBreak, isTrue);
+      expect(s.breakStartedAt, equals(DateTime.parse('2026-06-16T21:00:00Z')));
+    });
+  });
+
+  // ── expenses ────────────────────────────────────────────────────────────────
+
+  group('SessionModel expenses', () {
+    final baseMap = {
+      'id': 'e-1',
+      'date': '2026-06-16',
+      'stakes': '2/5',
+      'game_type': 'cash',
+      'buy_in': 500.0,
+      'cash_out': 900.0,
+      'profit_loss': 400.0, // pure poker result
+      'start_time': '19:00',
+      'end_time': '23:00',
+      'duration_minutes': 240,
+      'created_at': '2026-06-16T19:00:00Z',
+      'currency': 'USD',
+      'expense_events': [
+        {'amount': 40.0, 'category': 'tip', 'ts': '2026-06-16T23:00:00Z'},
+        {
+          'amount': 25.0,
+          'category': 'food',
+          'note': 'dinner',
+          'ts': '2026-06-16T21:00:00Z'
+        },
+      ],
+    };
+
+    test('parses expense events and totals', () {
+      final s = SessionModel.fromMap(baseMap);
+      expect(s.expenseEvents.length, equals(2));
+      expect(s.expenseEvents[1].note, equals('dinner'));
+      expect(s.totalExpenses, equals(65.0));
+    });
+
+    test('profitLoss stays pure; net is derived', () {
+      final s = SessionModel.fromMap(baseMap);
+      expect(s.profitLoss, equals(400.0));
+      expect(s.netAfterExpenses, equals(335.0));
+    });
+
+    test('no expenses → net equals profitLoss', () {
+      final s = SessionModel.fromMap(
+          Map<String, dynamic>.from(baseMap)..remove('expense_events'));
+      expect(s.totalExpenses, equals(0.0));
+      expect(s.netAfterExpenses, equals(400.0));
+    });
+
+    test('ExpenseEvent round-trips and omits empty note', () {
+      final e = ExpenseEvent(
+          amount: 30, category: 'massage', ts: DateTime.parse('2026-06-16T22:00:00Z'));
+      final j = e.toJson();
+      expect(j.containsKey('note'), isFalse);
+      final back = ExpenseEvent.fromJson(j);
+      expect(back.category, equals('massage'));
+      expect(back.amount, equals(30.0));
+    });
+
+    test('expenseCategoryLabel maps known + unknown', () {
+      expect(expenseCategoryLabel('travel'), equals('Travel / trip'));
+      expect(expenseCategoryLabel('nonsense'), equals('Other'));
+    });
+
+    test('a malformed event entry is skipped, not fatal to the fetch', () {
+      final s = SessionModel.fromMap({
+        ...baseMap,
+        'expense_events': [
+          {'amount': 40.0, 'category': 'tip', 'ts': '2026-06-16T23:00:00Z'},
+          {'category': 'food'}, // missing amount + ts → skipped, not thrown
+          'garbage', // non-map → skipped
+        ],
+        'buyin_events': [
+          {'amount': 500.0, 'ts': '2026-06-16T19:00:00Z', 'kind': 'buyin'},
+          {'kind': 'rebuy'}, // missing amount + ts → skipped
+        ],
+      });
+      expect(s.expenseEvents.length, equals(1));
+      expect(s.totalExpenses, equals(40.0));
+      expect(s.buyinEvents.length, equals(1));
+      expect(s.totalBuyIn, equals(500.0));
+    });
   });
 }

@@ -119,10 +119,24 @@ class SessionDetailScreen extends ConsumerWidget {
                 label: 'Rake / Fees',
                 value: '$sym${session.rakePaid!.toStringAsFixed(0)}'),
 
+          if (session.expenseEvents.isNotEmpty) ...[
+            _Row(
+                label: 'Expenses',
+                value: '-$sym${session.totalExpenses.toStringAsFixed(0)}'),
+            _Row(
+                label: 'Net (after exp.)',
+                value: formatPLWithCurrency(
+                    session.netAfterExpenses, currency)),
+          ],
+
           _Row(label: 'Currency', value: currency),
           _Row(
               label: 'Duration',
               value: formatDuration(session.durationMinutes)),
+          if ((session.breakMinutes ?? 0) > 0)
+            _Row(
+                label: 'Break',
+                value: formatDuration(session.breakMinutes!)),
           _Row(label: 'Time',
               value: '${session.startTime} → ${session.endTime}'),
 
@@ -180,6 +194,38 @@ class SessionDetailScreen extends ConsumerWidget {
             _Row(label: 'Country', value: session.country!),
           if (session.notes != null && session.notes!.isNotEmpty)
             _Row(label: 'Notes', value: session.notes!),
+
+          if (session.expenseEvents.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'EXPENSES',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            for (final e in session.expenseEvents)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${expenseCategoryLabel(e.category)}'
+                        '${e.note != null && e.note!.isNotEmpty ? ' · ${e.note}' : ''}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('$sym${e.amount.toStringAsFixed(0)}',
+                        style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+          ],
 
           const SizedBox(height: 24),
           _HandsSection(sessionId: session.id),

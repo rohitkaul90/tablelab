@@ -517,6 +517,44 @@ ACCURACY RULES — follow these precisely:
 
    STEP 5 — NEVER invent draws or made hands not supported by the cards listed in steps 1–4.`;
 
+// ── Cache invalidation signature ──────────────────────────────────────────────
+// The cache is keyed on (user_id, session_id), but the analysis also depends on
+// the session's mutable fields, the linked hands, and the relevant reads. A
+// cached analysis is only valid if produced under the same inputs — so linking
+// a hand or editing the session auto-invalidates the cache instead of serving
+// stale coaching (the user previously had to hit "Re-analyze"). Stored in
+// analysis_json so no schema change is needed; the client ignores the
+// underscore-prefixed field. Mirrors analyze-hand's readsSignature.
+function readsSignature(reads: PlayerRead[]): string {
+  return reads
+    .map((r) => `${r.playerLabel.toLowerCase()}:${[...r.tags].sort().join(",")}`)
+    .sort()
+    .join("|");
+}
+
+function inputsSignature(
+  session: Session,
+  hands: PokerHand[],
+  reads: PlayerRead[],
+): string {
+  // Session fields that feed the prompt (financials, context, notes).
+  const s = [
+    session.buyIn,
+    session.cashOut,
+    session.profitLoss,
+    session.prizeWon ?? "",
+    session.stakes,
+    session.gameType,
+    session.durationMinutes,
+    session.finishPosition ?? "",
+    session.totalEntrants ?? "",
+    (session.notes ?? "").trim(),
+  ].join(",");
+  // Sorted hand IDs so order doesn't matter; count makes link/unlink visible.
+  const h = `${hands.length}#${hands.map((x) => x.id).sort().join(",")}`;
+  return `${s}||${h}||${readsSignature(reads)}`;
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
@@ -574,6 +612,8 @@ serve(async (req: Request) => {
       });
     }
 
+    const sig = inputsSignature(session, hands, reads);
+
     // ── Cache check ──────────────────────────────────────────────────────────
     if (!forceRefresh) {
       const { data: cached, error: cacheErr } = await db
@@ -587,7 +627,11 @@ serve(async (req: Request) => {
         await reportError("analyze-session", `cache read failed: ${cacheErr.code} ${cacheErr.message}`);
       }
 
-      if (cached) {
+      // Only reuse a cache entry produced under the same inputs — otherwise a
+      // newly linked hand or an edited session would serve stale coaching. A
+      // signature mismatch (or a pre-signature legacy row) falls through to a
+      // fresh analysis.
+      if (cached && cached.analysis_json?._inputsSignature === sig) {
         return new Response(JSON.stringify(cached.analysis_json), {
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
@@ -638,6 +682,10 @@ serve(async (req: Request) => {
     }
     // deno-lint-ignore no-explicit-any
     const analysis = (toolBlock as any).input as Record<string, unknown>;
+
+    // Stamp the inputs signature so this cache entry is only reused under the
+    // same session/hands/reads (see inputsSignature).
+    analysis._inputsSignature = sig;
 
     await logUsage(db, user.id, message.usage);
 

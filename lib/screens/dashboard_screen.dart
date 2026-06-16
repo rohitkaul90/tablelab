@@ -9,7 +9,7 @@ import '../widgets/app_drawer.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/session_tile.dart';
 import '../widgets/ai_usage_pill.dart';
-import 'log_session_screen.dart';
+import 'live_session_screen.dart';
 import 'session_detail_screen.dart';
 import 'import_source_screen.dart';
 import 'analytics_screen.dart';
@@ -146,7 +146,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final sessionsAsync = ref.watch(sessionsProvider);
+    final sessionsAsync = ref.watch(completedSessionsProvider);
     final showFab = _tabController.index == 0;
 
     return Scaffold(
@@ -193,10 +193,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       floatingActionButton: showFab
           ? FloatingActionButton.extended(
               heroTag: 'fab_dashboard',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LogSessionScreen()),
-              ),
+              onPressed: () => showLogSessionChooser(context, ref),
               icon: const Icon(Icons.add),
               label: const Text('Log Session'),
             )
@@ -237,7 +234,7 @@ class _OverviewTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionsAsync = ref.watch(sessionsProvider);
+    final sessionsAsync = ref.watch(completedSessionsProvider);
     return sessionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
@@ -301,6 +298,7 @@ class _OverviewBody extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       children: [
+        const LiveSessionCard(),
         // ── Game-type chip strip ───────────────────────────────────────────
         if (_showGameFilter) ...[
           SingleChildScrollView(
@@ -465,11 +463,7 @@ class _OverviewBody extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   FilledButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const LogSessionScreen()),
-                    ),
+                    onPressed: () => showLogSessionChooser(context, ref),
                     icon: const Icon(Icons.add),
                     label: const Text('Log Session'),
                   ),

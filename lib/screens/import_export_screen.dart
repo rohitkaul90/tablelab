@@ -63,8 +63,11 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
   Future<void> _exportCsv() async {
     setState(() => _busy = true);
     try {
-      final sessions =
-          await ref.read(supabaseServiceProvider).fetchAllSessions();
+      // Exclude any in-progress live session — it has no cash-out yet and
+      // would export as a phantom break-even/losing row.
+      final sessions = (await ref.read(supabaseServiceProvider).fetchAllSessions())
+          .where((s) => !s.isLive)
+          .toList();
       if (sessions.isEmpty) {
         _showSnack('No sessions to export.');
         return;
@@ -92,8 +95,10 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
   Future<void> _exportExcel() async {
     setState(() => _busy = true);
     try {
-      final sessions =
-          await ref.read(supabaseServiceProvider).fetchAllSessions();
+      // Exclude any in-progress live session (see _exportCsv).
+      final sessions = (await ref.read(supabaseServiceProvider).fetchAllSessions())
+          .where((s) => !s.isLive)
+          .toList();
       if (sessions.isEmpty) {
         _showSnack('No sessions to export.');
         return;

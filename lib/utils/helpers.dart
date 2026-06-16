@@ -27,6 +27,19 @@ String formatDuration(int minutes) {
   return '${h}h ${m}m';
 }
 
+/// Played time = time at the table minus breaks, floored at 0. The single
+/// source of truth for the gross−break formula used by both the live recorder
+/// (finalize) and the manual log form, so they can't drift.
+int playedMinutes(int grossMinutes, int breakMinutes) {
+  final played = grossMinutes - breakMinutes;
+  return played < 0 ? 0 : played;
+}
+
+/// `HH:MM` (24h, zero-padded) for a local clock time — used for session
+/// start/end times and the live recorder's event timestamps.
+String formatClockTime(DateTime t) =>
+    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
 final _numFmt = NumberFormat('#,##0', 'en_US');
 
 String formatPL(double amount, [String sym = '\$']) {

@@ -3,6 +3,19 @@ import 'package:tablelab/utils/helpers.dart';
 import 'package:tablelab/models/session_model.dart';
 
 void main() {
+  // ── playedMinutes ────────────────────────────────────────────────────────────
+
+  group('playedMinutes', () {
+    test('subtracts breaks from gross', () {
+      expect(playedMinutes(240, 30), equals(210));
+      expect(playedMinutes(60, 0), equals(60));
+    });
+    test('floors at zero when break exceeds gross', () {
+      expect(playedMinutes(120, 150), equals(0));
+      expect(playedMinutes(0, 0), equals(0));
+    });
+  });
+
   // ── parseBBFromStakes ────────────────────────────────────────────────────────
 
   group('parseBBFromStakes', () {

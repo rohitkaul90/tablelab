@@ -29,9 +29,27 @@ final sessionsProvider = FutureProvider<List<SessionModel>>((ref) {
 
 final filterProvider = StateProvider<SessionFilter>((ref) => const SessionFilter());
 
+/// The single in-progress (live) session, or null. There is at most one at a
+/// time (enforced by the start flow). Reads the raw [sessionsProvider] so it
+/// still sees the live row even though stats/list providers exclude it.
+final liveSessionProvider = Provider<AsyncValue<SessionModel?>>((ref) {
+  return ref.watch(sessionsProvider).whenData(
+        (sessions) => sessions.where((s) => s.isLive).firstOrNull,
+      );
+});
+
+/// Completed sessions only — the base for all stats, the bankroll graph, the
+/// Sessions list, and the filter/dropdown options. A live session is excluded
+/// until it's finalized (it would otherwise pollute P&L with a partial result).
+final completedSessionsProvider = Provider<AsyncValue<List<SessionModel>>>((ref) {
+  return ref.watch(sessionsProvider).whenData(
+        (sessions) => sessions.where((s) => !s.isLive).toList(),
+      );
+});
+
 final filteredSessionsProvider = Provider<AsyncValue<List<SessionModel>>>((ref) {
   final filter = ref.watch(filterProvider);
-  final sessionsAsync = ref.watch(sessionsProvider);
+  final sessionsAsync = ref.watch(completedSessionsProvider);
   if (filter.isEmpty) return sessionsAsync;
   return sessionsAsync.whenData(
     (sessions) => sessions.where(filter.matches).toList(),
@@ -39,7 +57,7 @@ final filteredSessionsProvider = Provider<AsyncValue<List<SessionModel>>>((ref) 
 });
 
 final distinctStakesProvider = Provider<AsyncValue<List<String>>>((ref) {
-  return ref.watch(sessionsProvider).whenData(
+  return ref.watch(completedSessionsProvider).whenData(
     (sessions) => sessions
         .map((s) => s.stakes)
         .where((s) => s != 'N/A')
@@ -50,7 +68,7 @@ final distinctStakesProvider = Provider<AsyncValue<List<String>>>((ref) {
 });
 
 final distinctLocationsProvider = Provider<AsyncValue<List<String>>>((ref) {
-  return ref.watch(sessionsProvider).whenData(
+  return ref.watch(completedSessionsProvider).whenData(
     (sessions) => sessions
         .map((s) => s.location)
         .whereType<String>()

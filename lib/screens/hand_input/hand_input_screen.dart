@@ -11,6 +11,7 @@ import '../../utils/helpers.dart';
 import '../../widgets/playing_card_widget.dart';
 import '../../widgets/chip_stack_widget.dart';
 import '../../widgets/hand_card_picker.dart';
+import '../../widgets/session_picker_tile.dart';
 import '../../theme/app_theme.dart';
 import '../hand_replayer/hand_replayer_screen.dart';
 
@@ -672,9 +673,9 @@ class _HandInputScreenState extends ConsumerState<HandInputScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // ── Session linking ──────────────────────────────────────────────────
         if (widget.prefilledSessionId != null)
-          _LinkedSessionBanner(label: widget.prefilledSessionLabel)
+          LinkedSessionBanner(label: widget.prefilledSessionLabel)
         else
-          _SessionPickerTile(
+          SessionPickerTile(
             selectedSessionId: _selectedSessionId,
             onChanged: (id) => setState(() => _selectedSessionId = id),
           ),
@@ -1729,125 +1730,6 @@ class _HandSnapshot {
     required this.turnCard,
     required this.riverCard,
   });
-}
-
-// ── session linking widgets ────────────────────────────────────────────────────
-
-class _LinkedSessionBanner extends StatelessWidget {
-  final String? label;
-  const _LinkedSessionBanner({this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.link_rounded,
-              size: 16, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label != null ? 'Linked to: $label' : 'Linked to session',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SessionPickerTile extends ConsumerWidget {
-  final String? selectedSessionId;
-  final ValueChanged<String?> onChanged;
-
-  const _SessionPickerTile({
-    required this.selectedSessionId,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sessionsAsync = ref.watch(sessionsProvider);
-
-    return sessionsAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (sessions) {
-        if (sessions.isEmpty) return const SizedBox.shrink();
-
-        final sorted = [...sessions]
-          ..sort((a, b) => b.date.compareTo(a.date));
-        final recent = sorted.take(20).toList();
-
-        final selected =
-            selectedSessionId != null
-                ? recent.where((s) => s.id == selectedSessionId).firstOrNull
-                : null;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Link to Session (optional)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String?>(
-              initialValue: selectedSessionId,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                isDense: true,
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-              hint: const Text('None'),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('None'),
-                ),
-                ...recent.map((s) {
-                  final date = s.date.length >= 10 ? s.date.substring(0, 10) : s.date;
-                  final loc = (s.location != null && s.location!.isNotEmpty)
-                      ? '  ·  ${s.location}'
-                      : '';
-                  // Location distinguishes multiple same-day sessions at
-                  // different venues.
-                  final label = '$date  ·  ${s.gameType}  ·  ${s.stakes}$loc';
-                  return DropdownMenuItem<String?>(
-                    value: s.id,
-                    child: Text(label,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13)),
-                  );
-                }),
-              ],
-              onChanged: onChanged,
-            ),
-            if (selected != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 5),
-                child: Text(
-                  'Session: ${selected.date.substring(0, 10)}  ·  ${selected.stakes}'
-                  '${selected.location != null && selected.location!.isNotEmpty ? '  ·  ${selected.location}' : ''}',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
 }
 
 // ── oval table painter (recording) ─────────────────────────────────────────────

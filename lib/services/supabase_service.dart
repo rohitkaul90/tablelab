@@ -35,6 +35,20 @@ class SupabaseService {
     return withSupabaseRetry(() => _client.from('sessions').insert({...data, 'user_id': uid}));
   }
 
+  /// Insert a session and return its server-generated id. Used by the live
+  /// recorder, which needs the id to keep updating the row (buy-ins, stack)
+  /// and to auto-link hands recorded during the session.
+  Future<String> insertSessionReturningId(Map<String, dynamic> data) async {
+    final uid = _uid;
+    if (uid == null) throw Exception('Not authenticated');
+    final row = await withSupabaseRetry(() => _client
+        .from('sessions')
+        .insert({...data, 'user_id': uid})
+        .select('id')
+        .single());
+    return row['id'] as String;
+  }
+
   Future<void> bulkInsertSessions(List<Map<String, dynamic>> sessions) {
     final uid = _uid;
     if (uid == null) throw Exception('Not authenticated');

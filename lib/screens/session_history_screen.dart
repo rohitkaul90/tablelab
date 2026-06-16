@@ -5,7 +5,7 @@ import '../models/session_model.dart';
 import '../providers/providers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/session_tile.dart';
-import 'log_session_screen.dart';
+import 'live_session_screen.dart';
 import 'session_detail_screen.dart';
 import 'import_export_screen.dart';
 import 'import_source_screen.dart';
@@ -47,14 +47,15 @@ class SessionHistoryScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab_sessions',
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const LogSessionScreen()),
-        ),
+        onPressed: () => showLogSessionChooser(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Log Session'),
       ),
-      body: sessionsAsync.when(
+      body: Column(
+        children: [
+          const LiveSessionCard(),
+          Expanded(
+            child: sessionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (sessions) {
@@ -104,11 +105,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                       )
                     else ...[
                       FilledButton.icon(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const LogSessionScreen()),
-                        ),
+                        onPressed: () => showLogSessionChooser(context, ref),
                         icon: const Icon(Icons.add),
                         label: const Text('Log Session'),
                       ),
@@ -130,6 +127,9 @@ class SessionHistoryScreen extends ConsumerWidget {
           }
           return _SessionList(sessions: sessions);
         },
+            ),
+          ),
+        ],
       ),
     );
   }
