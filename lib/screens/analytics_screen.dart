@@ -27,7 +27,7 @@ class AnalyticsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionsAsync = ref.watch(sessionsProvider);
+    final sessionsAsync = ref.watch(completedSessionsProvider);
     return sessionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
@@ -161,6 +161,10 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
         filtered.fold(0.0, (sum, s) => sum + toD(s.profitLoss, s.currency));
     final totalBuyIn =
         filtered.fold(0.0, (sum, s) => sum + toD(s.buyIn, s.currency));
+    final totalExpenses = filtered.fold(
+        0.0, (sum, s) => sum + toD(s.totalExpenses, s.currency));
+    final hasExpenses = totalExpenses > 0;
+    final netAfterExpenses = totalPL - totalExpenses;
     final hourlyRate = totalHours > 0 ? totalPL / totalHours : 0.0;
     final rateColor = hourlyRate >= 0 ? Colors.green : Colors.red;
     final plColor = totalPL >= 0 ? Colors.green : Colors.red;
@@ -200,6 +204,15 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
         plColor,
       ),
       _SummaryItem('Buy-In', formatAmount(totalBuyIn, displayCurrency)),
+      if (hasExpenses)
+        _SummaryItem(
+            'Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}'),
+      if (hasExpenses)
+        _SummaryItem(
+          'Net (a.e.)',
+          formatPLWithCurrency(netAfterExpenses, displayCurrency),
+          netAfterExpenses >= 0 ? Colors.green : Colors.red,
+        ),
       if (bb100 != null)
         _SummaryItem(
           'BB/100',

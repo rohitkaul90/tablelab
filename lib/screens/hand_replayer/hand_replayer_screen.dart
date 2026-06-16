@@ -551,7 +551,12 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
   // ── Link to session ───────────────────────────────────────────────────────
 
   Future<void> _showLinkSheet() async {
-    final sessions = ref.read(sessionsProvider).valueOrNull ?? [];
+    // A live (in-progress) session isn't a link target — record hands into it
+    // from the live screen instead; it becomes linkable once finalized.
+    final sessions =
+        (ref.read(sessionsProvider).valueOrNull ?? [])
+            .where((s) => !s.isLive)
+            .toList();
     if (sessions.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

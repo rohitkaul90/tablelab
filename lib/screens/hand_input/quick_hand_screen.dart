@@ -9,6 +9,7 @@ import '../../utils/helpers.dart';
 import '../../utils/quick_hand_synthesis.dart';
 import '../../widgets/hand_card_picker.dart';
 import '../../widgets/playing_card_widget.dart';
+import '../../widgets/session_picker_tile.dart';
 import 'hand_input_screen.dart';
 
 /// Quick Hand mode: capture the one decision that mattered in ~30 seconds —
@@ -63,11 +64,16 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   bool _saving = false;
 
+  /// Session to link the saved hand to. Seeded from a prefilled (locked)
+  /// session; otherwise chosen via the in-form picker (parity with the wizard).
+  String? _selectedSessionId;
+
   bool get _sessionLocked => widget.prefilledSessionId != null;
 
   @override
   void initState() {
     super.initState();
+    _selectedSessionId = widget.prefilledSessionId;
     _isTournament = widget.isTournamentSession;
     final prefill = widget.prefilledStakes?.trim();
     if (prefill != null && prefill.isNotEmpty) {
@@ -351,7 +357,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
             tableSetup: synth.tableSetup,
             players: synth.players,
             streets: synth.streets,
-            sessionId: widget.prefilledSessionId,
+            sessionId: _sessionLocked ? widget.prefilledSessionId : _selectedSessionId,
             notes: synth.notes,
             tournamentStage: _isTournament ? _tournamentStage : null,
             isTournament: _isTournament,
@@ -405,11 +411,14 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         children: [
-          if (widget.prefilledSessionLabel != null) ...[
-            Text('Session: ${widget.prefilledSessionLabel}',
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-            const SizedBox(height: 12),
-          ],
+          if (_sessionLocked)
+            LinkedSessionBanner(label: widget.prefilledSessionLabel)
+          else
+            SessionPickerTile(
+              selectedSessionId: _selectedSessionId,
+              onChanged: (id) => setState(() => _selectedSessionId = id),
+            ),
+          const SizedBox(height: 12),
           _sectionLabel('GAME'),
           if (_sessionLocked)
             Padding(

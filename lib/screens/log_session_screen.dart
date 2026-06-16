@@ -6,10 +6,13 @@ import '../models/session_model.dart';
 import '../providers/providers.dart';
 import '../services/analytics_service.dart';
 import '../utils/helpers.dart';
+import '../widgets/expense_dialog.dart';
 import '../widgets/star_rating_widget.dart';
 
-const _stakeOptions = ['1/2', '1/3', '2/5', '5/10', '10/20', '25/50', 'Other'];
-const _currencies = ['CAD', 'USD', 'GBP', 'EUR', 'AUD', 'NZD', 'INR'];
+/// Session stakes presets and supported currencies. Public so the live
+/// recorder's start form reuses the exact same lists (single source of truth).
+const kStakeOptions = ['1/2', '1/3', '2/5', '5/10', '10/20', '25/50', 'Other'];
+const kCurrencies = ['CAD', 'USD', 'GBP', 'EUR', 'AUD', 'NZD', 'INR'];
 const _countries = [
   'Canada', 'USA', 'United Kingdom', 'Australia', 'New Zealand',
   'India', 'France', 'Germany', 'Spain', 'Italy', 'Netherlands', 'Belgium',
@@ -47,6 +50,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   late String _currency;
   String? _country;
   final _notesCtrl = TextEditingController();
+  final _breakMinutesCtrl = TextEditingController();
+  final List<ExpenseEvent> _expenses = [];
   int? _tableQuality;
   int? _tableSize;
   bool _rakePresetLoaded = false;
@@ -70,9 +75,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _gameType = (s.gameType == 'sit_and_go') ? 'tournament' : s.gameType;
       final existingStake = s.stakes;
       _isCustomStake =
-          !_stakeOptions.contains(existingStake) && existingStake != 'N/A';
+          !kStakeOptions.contains(existingStake) && existingStake != 'N/A';
       _selectedStake =
-          (_isCustomStake || existingStake == 'N/A') ? _stakeOptions[0] : existingStake;
+          (_isCustomStake || existingStake == 'N/A') ? kStakeOptions[0] : existingStake;
       if (_isCustomStake) _customStakeCtrl.text = existingStake;
       _buyInCtrl.text = s.buyIn.toStringAsFixed(0);
       _cashOutCtrl.text = s.cashOut.toStringAsFixed(0);
@@ -101,12 +106,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _notesCtrl.text = s.notes ?? '';
       _tableQuality = s.tableQuality;
       _tableSize = s.tableSize;
+      if ((s.breakMinutes ?? 0) > 0) {
+        _breakMinutesCtrl.text = s.breakMinutes.toString();
+      }
+      _expenses.addAll(s.expenseEvents);
       _livePL = s.profitLoss;
       _liveDuration = s.durationMinutes;
     } else {
       _date = DateTime.now();
       _gameType = 'cash';
-      _selectedStake = _stakeOptions[0];
+      _selectedStake = kStakeOptions[0];
       _startTime = TimeOfDay.now();
       _endTime = TimeOfDay.now();
       _liveDuration = 0;
@@ -116,6 +125,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _buyInCtrl.addListener(_updateLive);
     _cashOutCtrl.addListener(_updateLive);
     _prizeWonCtrl.addListener(_updateLive);
+    // Keep the duration card in sync as the break field changes so it shows
+    // played time (gross − break) consistently, never a gross/played flip.
+    _breakMinutesCtrl.addListener(_updateLive);
   }
 
   @override
@@ -129,7 +141,24 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _rakeCtrl.dispose();
     _handsPerHourCtrl.dispose();
     _notesCtrl.dispose();
+    _breakMinutesCtrl.dispose();
     super.dispose();
+  }
+
+  double get _totalExpenses =>
+      _expenses.fold(0.0, (sum, e) => sum + e.amount);
+
+  Future<void> _addExpense() async {
+    final e = await showExpenseDialog(context, _currency);
+    if (e == null) return;
+    setState(() => _expenses.add(e));
+  }
+
+  Future<void> _editExpense(int index) async {
+    final e = await showExpenseDialog(context, _currency,
+        existing: _expenses[index]);
+    if (e == null) return;
+    setState(() => _expenses[index] = e);
   }
 
   TimeOfDay _parseTime(String t) {
@@ -141,6 +170,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
   String _formatTime(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  /// Gross window minutes from the start/end pickers.
+  int get _grossDuration =>
+      calcDurationMinutes(_formatTime(_startTime), _formatTime(_endTime));
+
+  /// Break minutes entered, clamped to the session window so a typo can't
+  /// produce more break than the session itself.
+  int get _breakInput =>
+      (int.tryParse(_breakMinutesCtrl.text.trim()) ?? 0).clamp(0, _grossDuration);
 
   void _updateLive() {
     final buyIn = double.tryParse(_buyInCtrl.text);
@@ -154,15 +192,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         _livePL =
             (buyIn != null && cashOut != null) ? cashOut - buyIn : null;
       }
-      _liveDuration =
-          calcDurationMinutes(_formatTime(_startTime), _formatTime(_endTime));
+      // Show PLAYED time (gross − break) so the card matches what's stored.
+      _liveDuration = playedMinutes(_grossDuration, _breakInput);
     });
   }
 
   Future<void> _selectLocation() async {
     final result = await showDialog<(PokerRoom?, String)>(
       context: context,
-      builder: (_) => _LocationPickerDialog(currentKey: _locationName),
+      builder: (_) => LocationPickerDialog(currentKey: _locationName),
     );
     if (result == null) return;
     final (room, name) = result;
@@ -213,11 +251,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final picked =
         await showTimePicker(context: context, initialTime: _startTime);
     if (picked != null) {
-      setState(() {
-        _startTime = picked;
-        _liveDuration =
-            calcDurationMinutes(_formatTime(_startTime), _formatTime(_endTime));
-      });
+      setState(() => _startTime = picked);
+      _updateLive();
     }
   }
 
@@ -225,11 +260,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final picked =
         await showTimePicker(context: context, initialTime: _endTime);
     if (picked != null) {
-      setState(() {
-        _endTime = picked;
-        _liveDuration =
-            calcDurationMinutes(_formatTime(_startTime), _formatTime(_endTime));
-      });
+      setState(() => _endTime = picked);
+      _updateLive();
     }
   }
 
@@ -246,7 +278,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     final buyIn = double.parse(_buyInCtrl.text);
     final startStr = _formatTime(_startTime);
     final endStr = _formatTime(_endTime);
-    final dur = calcDurationMinutes(startStr, endStr);
+    final grossDur = calcDurationMinutes(startStr, endStr);
+    // duration_minutes is PLAYED time (gross − breaks) so hourly stats stay
+    // accurate; break_minutes is kept separately as metadata. Break is clamped
+    // to the window so it can never exceed the session length.
+    final breakMin = _breakInput; // already clamped to [0, grossDur]
+    final dur = playedMinutes(grossDur, breakMin);
     final dateStr = DateFormat('yyyy-MM-dd').format(_date);
     final now = DateTime.now().toIso8601String();
 
@@ -290,6 +327,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       'currency': _currency,
       'hands_per_hour': hphText.isEmpty ? null : int.tryParse(hphText),
       'country': _country,
+      'break_minutes': breakMin == 0 ? null : breakMin,
+      'expense_events':
+          _expenses.isEmpty ? null : _expenses.map((e) => e.toJson()).toList(),
     };
 
     final service = ref.read(supabaseServiceProvider);
@@ -425,7 +465,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 labelText: 'Currency',
                 border: OutlineInputBorder(),
               ),
-              items: _currencies
+              items: kCurrencies
                   .map((c) => DropdownMenuItem(
                       value: c,
                       child: Text('$c  (${currencySymbol(c)})')))
@@ -443,7 +483,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   labelText: 'Stakes',
                   border: OutlineInputBorder(),
                 ),
-                items: _stakeOptions
+                items: kStakeOptions
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                     .toList(),
                 onChanged: (v) {
@@ -640,6 +680,19 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+
+            // Break time (optional) — excluded from played hours / hourly rate
+            TextFormField(
+              controller: _breakMinutesCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Break time (minutes, optional)',
+                hintText: 'Excluded from hours played',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 8),
 
             // Live summary card
             Card(
@@ -708,6 +761,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               const SizedBox(height: 16),
             ],
 
+            // Expenses (optional)
+            _buildExpensesSection(theme),
+            const SizedBox(height: 16),
+
             // Notes
             TextFormField(
               controller: _notesCtrl,
@@ -735,20 +792,91 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       ),
     );
   }
+
+  Widget _buildExpensesSection(ThemeData theme) {
+    final cs = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Expenses (optional)', style: theme.textTheme.titleSmall),
+            Text(formatPLWithCurrency(_totalExpenses, _currency),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Tips, food, massage, travel — tracked separately from your result.',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        for (var i = 0; i < _expenses.length; i++)
+          Card(
+            margin: const EdgeInsets.only(bottom: 6),
+            child: ListTile(
+              dense: true,
+              title: Text(expenseCategoryLabel(_expenses[i].category)),
+              subtitle:
+                  (_expenses[i].note != null && _expenses[i].note!.isNotEmpty)
+                      ? Text(_expenses[i].note!)
+                      : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(formatPLWithCurrency(_expenses[i].amount, _currency)),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    tooltip: 'Remove',
+                    onPressed: () => setState(() => _expenses.removeAt(i)),
+                  ),
+                ],
+              ),
+              onTap: () => _editExpense(i),
+            ),
+          ),
+        OutlinedButton.icon(
+          onPressed: _addExpense,
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Add expense'),
+        ),
+        if (_totalExpenses > 0 && _livePL != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Net after expenses', style: theme.textTheme.bodyMedium),
+              Text(
+                formatPLWithCurrency(_livePL! - _totalExpenses, _currency),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: (_livePL! - _totalExpenses) >= 0
+                      ? Colors.green
+                      : Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 // ─── Location Picker Dialog ───────────────────────────────────────────────────
 
-class _LocationPickerDialog extends StatefulWidget {
+class LocationPickerDialog extends StatefulWidget {
   final String currentKey;
 
-  const _LocationPickerDialog({required this.currentKey});
+  const LocationPickerDialog({super.key, required this.currentKey});
 
   @override
-  State<_LocationPickerDialog> createState() => _LocationPickerDialogState();
+  State<LocationPickerDialog> createState() => _LocationPickerDialogState();
 }
 
-class _LocationPickerDialogState extends State<_LocationPickerDialog> {
+class _LocationPickerDialogState extends State<LocationPickerDialog> {
   final _searchCtrl = TextEditingController();
   String _query = '';
 
