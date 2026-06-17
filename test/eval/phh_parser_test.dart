@@ -80,12 +80,15 @@ void main() {
       final flopBet = flop.actions.firstWhere((a) => a.type == ActionType.raise);
       expect(flopBet.isOpeningBet, isTrue);
 
-      // Hero's turn call is stack-capped and flagged all-in (553500 total).
+      // Hero's turn call is stack-capped and flagged all-in. His 500 ante is
+      // folded into his committed chips (it leaves the stack before betting),
+      // so the all-in call is 553500 − 500 ante − 23000 pre − 35000 flop −
+      // 232600 turn-bet = 262400, i.e. a cumulative turn total of 495000.
       final turn = hand.streets.firstWhere((s) => s.street == Street.turn);
       final heroCall =
           turn.actions.lastWhere((a) => a.seat == 2 && a.type == ActionType.call);
       expect(heroCall.isAllIn, isTrue);
-      expect(heroCall.amount, 495500); // cumulative this street, capped
+      expect(heroCall.amount, 495000); // cumulative this street, ante-aware cap
     });
 
     test('6-max Pluribus: single-line actions, T rank, check/bet/fold', () {

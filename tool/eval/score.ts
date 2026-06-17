@@ -155,6 +155,7 @@ const JUDGE_SYSTEM =
   `Do NOT judge whether the advice is good — only surface the concrete factual assertions: ` +
   `made hands attributed to hero or a villain, named straights, flushes, equity/pot-odds percentages, and exact card identities. ` +
   `A "draw" (e.g. "flush draw","gutshot") is NOT a made-hand claim — only report handCategoryNamed when the prose asserts the made hand EXISTS now. ` +
+  `Set handCategoryNamed (and straightRanks) to null for NEGATED or HYPOTHETICAL hands: "the board is unpaired so no full house exists", "no flush is possible", "villain COULD boat up if it pairs", "a straight would complete with a 9" — none of these assert a present made hand. Only a positive present-tense assertion counts. ` +
   `Attribute each claim to the street whose discussion it appears in. Be exhaustive but do not invent claims the text does not make.`;
 
 async function extractClaims(fx: Fixture, analysis: Record<string, unknown>): Promise<Claim[]> {
@@ -208,8 +209,17 @@ function labelForStreet(fx: Fixture, street: string): StreetLabel | null {
   return found ?? ps[ps.length - 1];
 }
 
-function adjudicate(fx: Fixture, claims: Claim[]): Violation[] {
+interface AdjudResult {
+  violations: Violation[];
+  // Equity claims that couldn't be checked because the claim's street has no
+  // baked equity label (e.g. a villain folded earlier so the street wasn't
+  // modeled). Surfaced in the report — no silent caps.
+  unscoredEquity: number;
+}
+
+function adjudicate(fx: Fixture, claims: Claim[]): AdjudResult {
   const out: Violation[] = [];
+  let unscoredEquity = 0;
   const add = (c: Claim, detail: string) =>
     out.push({ fixtureId: fx.id, street: c.street, category: c.category, detail, claim: c.text });
 
@@ -217,42 +227,47 @@ function adjudicate(fx: Fixture, claims: Claim[]): Violation[] {
     const lab = labelForStreet(fx, c.street);
     if (!lab) continue;
 
-    // 1. Boat/quads on an unpaired board (the documented failure class).
+    // Each board-constraint claim is checked against the label of the street
+    // it was attributed to — NOT pooled across the whole hand. A boat/flush/
+    // straight named while discussing an early street must be makeable from
+    // THAT street's board; a later runout card that enables it does not excuse
+    // the claim (this is the exact early-street-hallucination class the harness
+    // exists to catch). "overall"/"preflop" claims fall back to the final board.
+
+    // 1. Boat/quads claim on a board that street doesn't pair.
+    // Trust the judge's structured handCategoryNamed (set only when the prose
+    // asserts the hand EXISTS) — do NOT raw-text-scan c.text, which fires on
+    // negations ("no full house yet") and hypotheticals ("could boat up").
     const named = (c.handCategoryNamed ?? "").toLowerCase();
-    const mentionsBoat = _boatWords.some((w) => named.includes(w) || c.text.toLowerCase().includes(w));
-    if (mentionsBoat && !anyStreetAllows(fx, "boat")) {
-      add(c, `claims a full house/quads but no board in this hand is paired (boat/quads impossible)`);
+    const mentionsBoat = _boatWords.some((w) => named.includes(w));
+    if (mentionsBoat && !lab.boatOrQuadsPossible) {
+      add(c, `claims a full house/quads but the ${lab.street} board (${lab.board.join(" ")}) is unpaired — boat/quads impossible`);
       continue;
     }
 
-    // 2. Made flush when the board can't make one.
+    // 2. Made-flush claim when that street's board can't make one.
     const mentionsFlush = named.includes("flush") || (c.category === "flush" && (c.handCategoryNamed != null));
-    if (mentionsFlush && !named.includes("straight flush") && !lab.flushPossible && !anyStreetAllows(fx, "flush")) {
-      add(c, `claims a flush but no board reaches 3+ of a suit (flush impossible)`);
+    if (mentionsFlush && !named.includes("straight flush") && !lab.flushPossible) {
+      add(c, `claims a flush but the ${lab.street} board (${lab.board.join(" ")}) has no 3+ of a suit — flush impossible`);
       continue;
     }
 
-    // 3. A specifically-named straight that the board cannot complete.
+    // 3. A specifically-named straight that street's board cannot complete.
     if (c.straightRanks) {
       const norm = normalizeWindow(c.straightRanks);
-      const allowedAnywhere = new Set(fx.labels.perStreet.flatMap((s) => s.allowedStraightWindows.map(normalizeWindow)));
-      if (norm && !allowedAnywhere.has(norm)) {
-        add(c, `names straight ${c.straightRanks} which no board window allows (${[...allowedAnywhere].join(", ") || "no straights possible"})`);
+      const allowedHere = new Set(lab.allowedStraightWindows.map(normalizeWindow));
+      if (norm && !allowedHere.has(norm)) {
+        add(c, `names straight ${c.straightRanks} which the ${lab.street} board cannot make (allowed: ${lab.allowedStraightWindows.join(", ") || "none"})`);
         continue;
       }
     }
 
     // 4. A stated HERO-EQUITY % that contradicts the injected equity FACT.
     // Strict: only an `equity` claim about hero, matched to the SAME street's
-    // label (no fall-back to another street — preflop/overall claims have no
-    // equity label and are not scored). Pot-odds claims are a different
-    // quantity (the required price, not hero's equity) and are deliberately
-    // NOT checked here — that needs the baked pot-odds FACT (verdict scorer, PR3).
-    if (
-      c.percent != null &&
-      c.category === "equity" &&
-      c.subject === "hero"
-    ) {
+    // label. Pot-odds claims are a different quantity (the required price, not
+    // hero's equity) and are NOT checked here (verdict scorer, PR3). When the
+    // street has no equity label, the claim is counted as unscored, not passed.
+    if (c.percent != null && c.category === "equity" && c.subject === "hero") {
       const exact = fx.labels.perStreet.find((s) => s.street === c.street);
       if (exact?.heroEquity != null) {
         const factPct = Math.round(exact.heroEquity * 100);
@@ -260,14 +275,12 @@ function adjudicate(fx: Fixture, claims: Claim[]): Violation[] {
           add(c, `states hero equity ${c.percent}% but the ${c.street} equity FACT is ~${factPct}% (>12pt)`);
           continue;
         }
+      } else {
+        unscoredEquity++;
       }
     }
   }
-  return out;
-}
-
-function anyStreetAllows(fx: Fixture, kind: "boat" | "flush"): boolean {
-  return fx.labels.perStreet.some((s) => kind === "boat" ? s.boatOrQuadsPossible : s.flushPossible);
+  return { violations: out, unscoredEquity };
 }
 
 const _rankOrder = "23456789TJQKA";
@@ -294,34 +307,64 @@ async function main() {
   fixtures.sort((a, b) => a.id.localeCompare(b.id));
   console.log(`Scoring ${fixtures.length} fixtures against the real ${COACH_MODEL} prompt...\n`);
 
-  const results: { id: string; bucket: string; claims: number; violations: Violation[] }[] = [];
+  interface SpotResult {
+    id: string;
+    bucket: string;
+    claims: number;
+    violations: Violation[];
+    unscoredEquity: number;
+    // A harness/API failure (refusal, 5xx, timeout) — NOT a card-logic error.
+    // Excluded from the accuracy denominator so an API blip can't move the
+    // published number; reported separately.
+    errored: boolean;
+    errorDetail?: string;
+  }
+
+  const results: SpotResult[] = [];
   for (const fx of fixtures) {
     try {
       const analysis = await runCoaching(fx);
       const claims = await extractClaims(fx, analysis);
-      const violations = adjudicate(fx, claims);
-      results.push({ id: fx.id, bucket: fx.bucket, claims: claims.length, violations });
+      const { violations, unscoredEquity } = adjudicate(fx, claims);
+      results.push({ id: fx.id, bucket: fx.bucket, claims: claims.length, violations, unscoredEquity, errored: false });
       const mark = violations.length === 0 ? "OK " : "ERR";
       console.log(`${mark} ${fx.id}  (${claims.length} claims, ${violations.length} violations)`);
       for (const v of violations) console.log(`      - [${v.street}/${v.category}] ${v.detail}`);
     } catch (e) {
-      console.error(`FAIL ${fx.id}: ${e instanceof Error ? e.message : e}`);
-      results.push({ id: fx.id, bucket: fx.bucket, claims: 0, violations: [{ fixtureId: fx.id, street: "-", category: "harness_error", detail: String(e), claim: "" }] });
+      const detail = e instanceof Error ? e.message : String(e);
+      console.error(`ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
+      results.push({ id: fx.id, bucket: fx.bucket, claims: 0, violations: [], unscoredEquity: 0, errored: true, errorDetail: detail });
     }
   }
 
-  const clean = results.filter((r) => r.violations.length === 0).length;
-  const accuracy = results.length ? (100 * clean / results.length) : 0;
+  // Accuracy is over SCORED spots only — harness errors are excluded, never
+  // conflated with card-logic failures.
+  const scored = results.filter((r) => !r.errored);
+  const erroredCount = results.length - scored.length;
+  const clean = scored.filter((r) => r.violations.length === 0).length;
+  const accuracy = scored.length ? (100 * clean / scored.length) : 0;
+  const unscoredEquityTotal = results.reduce((n, r) => n + r.unscoredEquity, 0);
   const byCategory: Record<string, number> = {};
   for (const r of results) {
     for (const v of r.violations) byCategory[v.category] = (byCategory[v.category] ?? 0) + 1;
   }
 
-  const report = { generatedFor: COACH_MODEL, total: results.length, clean, cardLogicAccuracyPct: Number(accuracy.toFixed(1)), byCategory, results };
+  const report = {
+    generatedFor: COACH_MODEL,
+    total: results.length,
+    scored: scored.length,
+    errored: erroredCount,
+    clean,
+    cardLogicAccuracyPct: Number(accuracy.toFixed(1)),
+    unscoredEquityClaims: unscoredEquityTotal,
+    byCategory,
+    results,
+  };
   await Deno.writeTextFile(`${outDir}/report.json`, JSON.stringify(report, null, 2));
   await Deno.writeTextFile(`${outDir}/report.md`, renderMarkdown(report));
 
-  console.log(`\nCard-logic accuracy: ${accuracy.toFixed(1)}%  (${clean}/${results.length} spots clean)`);
+  console.log(`\nCard-logic accuracy: ${accuracy.toFixed(1)}%  (${clean}/${scored.length} scored spots clean${erroredCount ? `; ${erroredCount} errored, excluded` : ""})`);
+  if (unscoredEquityTotal) console.log(`Unscored equity claims (no street label): ${unscoredEquityTotal}`);
   console.log(`Report: ${outDir}/report.md`);
 }
 
@@ -331,7 +374,9 @@ function renderMarkdown(r: any): string {
     `# Eval harness — card-logic report`,
     ``,
     `- Model under test: \`${r.generatedFor}\``,
-    `- **Card-logic accuracy: ${r.cardLogicAccuracyPct}%** (${r.clean}/${r.total} spots with zero card-logic errors)`,
+    `- **Card-logic accuracy: ${r.cardLogicAccuracyPct}%** (${r.clean}/${r.scored} scored spots with zero card-logic errors)`,
+    `- Errored (harness/API, excluded from accuracy): ${r.errored}`,
+    `- Unscored equity claims (no street label): ${r.unscoredEquityClaims}`,
     ``,
     `## Violations by category`,
     ``,
@@ -341,10 +386,10 @@ function renderMarkdown(r: any): string {
     ``,
     `## Per-spot`,
     ``,
-    `| Spot | Bucket | Claims | Violations |`,
-    `|---|---|---|---|`,
+    `| Spot | Bucket | Claims | Violations | Status |`,
+    `|---|---|---|---|---|`,
     // deno-lint-ignore no-explicit-any
-    ...r.results.map((s: any) => `| ${s.id} | ${s.bucket} | ${s.claims} | ${s.violations.length} |`),
+    ...r.results.map((s: any) => `| ${s.id} | ${s.bucket} | ${s.claims} | ${s.violations.length} | ${s.errored ? "errored" : "scored"} |`),
   ];
   return lines.join("\n") + "\n";
 }

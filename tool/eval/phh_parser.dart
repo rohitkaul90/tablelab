@@ -264,8 +264,19 @@ List<StreetData> _buildStreets(PhhHand h, TableSetup ts) {
   final handContrib = List<int>.filled(n, 0);
   final stacks = h.startingStacks;
 
-  // Seed preflop with blind/ante posts (the app records these as actions and
-  // the pot/pot-odds math depends on them).
+  // Antes leave each seat's stack before the betting rounds. The app models
+  // antes as a TableSetup.ante label, NOT as posted actions — so we must NOT
+  // emit ante post actions here (that would diverge from how the app represents
+  // the hand and shift the pot the prompt computes). But antes DO reduce chips
+  // behind, so fold them into hand-level contribution to keep all-in detection
+  // and call stack-caps correct on tournament hands.
+  final antes = h.antes;
+  for (var s = 0; s < n && s < antes.length; s++) {
+    if (antes[s] > 0) handContrib[s] += antes[s];
+  }
+
+  // Seed preflop with blind/straddle posts (the app records these as actions
+  // and the pot/pot-odds math depends on them).
   var streetIdx = 0;
   final perStreetActions = <int, List<HandAction>>{0: []};
   final perStreetBoard = <int, List<String>>{};
@@ -319,8 +330,16 @@ List<StreetData> _buildStreets(PhhHand h, TableSetup ts) {
       // Board deal -> advance street.
       final cards = _splitCards(t.substring(5).trim());
       // Each board deal advances one street: preflop=0 -> flop=1 (3 cards) ->
-      // turn=2 (1 card) -> river=3 (1 card).
+      // turn=2 (1 card) -> river=3 (1 card). A 4th board deal means run-it-twice
+      // or a multi-board variant, which the single-board PokerHand model can't
+      // represent (the s.clamp(0,3) below would collapse two Streets onto the
+      // river). Fail loudly rather than emit a corrupt hand; the baker filters
+      // these out up front.
       streetIdx += 1;
+      if (streetIdx > 3) {
+        throw StateError(
+            'hand has >3 board deals (run-it-twice / multi-board not supported)');
+      }
       for (var s = 0; s < n; s++) {
         streetContrib[s] = 0;
       }

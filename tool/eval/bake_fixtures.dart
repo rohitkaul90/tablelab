@@ -31,18 +31,6 @@ import 'package:tablelab/models/player_read.dart';
 
 import 'phh_parser.dart';
 
-const _categoryNames = [
-  'HIGH_CARD',
-  'ONE_PAIR',
-  'TWO_PAIR',
-  'THREE_OF_A_KIND',
-  'STRAIGHT',
-  'FLUSH',
-  'FULL_HOUSE',
-  'FOUR_OF_A_KIND',
-  'STRAIGHT_FLUSH',
-];
-
 // Reproducible timestamp for every fixture (no DateTime.now()).
 final _bakedAt = DateTime.utc(2026, 1, 1);
 
@@ -81,6 +69,14 @@ Future<void> main(List<String> args) async {
       skipped++;
       continue;
     }
+    final boardDeals =
+        phh.actionTokens.where((t) => t.trim().startsWith('d db ')).length;
+    if (boardDeals > 3) {
+      stderr.writeln('SKIP $id: $boardDeals board deals '
+          '(run-it-twice / multi-board not supported)');
+      skipped++;
+      continue;
+    }
 
     final hand = phhToPokerHand(
       phh,
@@ -101,6 +97,15 @@ Future<void> main(List<String> args) async {
     final facts = equityCheckFacts(equity);
 
     final labels = _buildLabels(hand, equity);
+
+    // A spot with no postflop street has no board-level card-logic to score —
+    // every claim would be skipped and the spot would report 100% clean
+    // regardless of model errors. Don't bake it; it would inflate accuracy.
+    if ((labels['perStreet'] as List).isEmpty) {
+      stderr.writeln('SKIP $id: no postflop street to score (board never reached the flop)');
+      skipped++;
+      continue;
+    }
 
     final fixture = <String, dynamic>{
       'id': id,
@@ -167,14 +172,14 @@ Map<String, dynamic> _buildLabels(PokerHand hand, HandEquityCheck equity) {
 }
 
 /// Hero's best made-hand category (objective, from the 7-card evaluator).
+/// Uses the evaluator's own [handCategoryName] so the encoding (bit offset +
+/// category ordering) lives in exactly one place.
 String _heroCategory(List<String> hole, List<String> board) {
   final cards = [...hole, ...board].map(parseCard).where((c) => c >= 0).toList();
-  if (cards.length < 5) return 'INCOMPLETE';
-  final value = evaluateBest(cards);
-  final cat = value >> 20;
-  return cat >= 0 && cat < _categoryNames.length
-      ? _categoryNames[cat]
-      : 'UNKNOWN';
+  // evaluateBest asserts 5..7 cards. 2 hole + ≤5 board satisfies it; guard both
+  // bounds so a malformed fixture is labelled, not an assertion crash.
+  if (cards.length < 5 || cards.length > 7) return 'INCOMPLETE';
+  return handCategoryName(evaluateBest(cards));
 }
 
 /// Board-level possibility flags + the exact straight windows the board allows.

@@ -88,6 +88,14 @@ Hybrid, so the score's authority never rests on a model:
 a per-spot table. `report.json` has the full claim/violation detail and is
 diffable run-to-run (which spots regressed/improved).
 
+Accuracy is over **scored** spots only. Two integrity counters sit beside it:
+**errored** (a refusal / 5xx / timeout — excluded from the denominator so an API
+blip can't move the number) and **unscored equity claims** (an equity claim on a
+street with no baked equity label — surfaced, never silently dropped). Each
+board-constraint claim is checked against the label of the street it was
+attributed to, so an early-street hallucination is not excused by a later runout
+card. Spot-audit a few `report.json` claims each run to keep the judge honest.
+
 ## Regression gate
 
 Before shipping a prompt/`SYSTEM_PROMPT`/model change: re-bake if the benchmark
