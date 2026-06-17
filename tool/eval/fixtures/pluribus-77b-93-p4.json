@@ -1,0 +1,257 @@
+{
+  "id": "pluribus-77b-93-p4",
+  "source": "pluribus/77b/93",
+  "heroPlayer": 4,
+  "bucket": "card-logic",
+  "reads": [],
+  "hand": {
+    "id": "pluribus-77b-93-p4",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 3,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "Hattori",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "Budd",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "9h",
+          "Th"
+        ]
+      },
+      {
+        "seat": 4,
+        "name": "MrWhite",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "raise",
+            "amount": 225,
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "raise",
+            "amount": 525,
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "call",
+            "amount": 525,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "6c",
+          "Qc",
+          "Ts"
+        ],
+        "actions": [
+          {
+            "seat": 3,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "raise",
+            "amount": 900,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 3,
+            "type": "call",
+            "amount": 900,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "Js"
+        ],
+        "actions": [
+          {
+            "seat": 3,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "Jd"
+        ],
+        "actions": [
+          {
+            "seat": 3,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "paired board 6c Qc Ts Js Jd",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~34%, flop ~44%, turn ~40%, river ~39%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrWhite (CO) range behind the equity above: Pre-flop: 3-bet vs a middle-position open → 3-bet range (~6% of hands); Flop: bet → polarized: top 30% value + bottom 16% bluffs; Turn: check → range unchanged; River: check → range unchanged.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "9h",
+      "Th"
+    ],
+    "finalBoard": [
+      "6c",
+      "Qc",
+      "Ts",
+      "Js",
+      "Jd"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "6c",
+          "Qc",
+          "Ts"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.43855,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "turn",
+        "board": [
+          "6c",
+          "Qc",
+          "Ts",
+          "Js"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.3983,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "8-9-T-J-Q",
+          "9-T-J-Q-K",
+          "T-J-Q-K-A"
+        ]
+      },
+      {
+        "street": "river",
+        "board": [
+          "6c",
+          "Qc",
+          "Ts",
+          "Js",
+          "Jd"
+        ],
+        "heroCategory": "TWO_PAIR",
+        "heroEquity": 0.3899,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "8-9-T-J-Q",
+          "9-T-J-Q-K",
+          "T-J-Q-K-A"
+        ]
+      }
+    ]
+  }
+}

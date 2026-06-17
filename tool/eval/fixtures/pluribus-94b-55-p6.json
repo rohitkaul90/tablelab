@@ -1,0 +1,274 @@
+{
+  "id": "pluribus-94b-55-p6",
+  "source": "pluribus/94b/55",
+  "heroPlayer": 6,
+  "bucket": "card-logic",
+  "reads": [],
+  "hand": {
+    "id": "pluribus-94b-55-p6",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 5,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "MrPink",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "Eddie",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "Bill",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "2h",
+          "Ah"
+        ]
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "raise",
+            "amount": 200,
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "call",
+            "amount": 200,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 200,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "Ts",
+          "8h",
+          "9s"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 450,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 1,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "call",
+            "amount": 450,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "9c"
+        ],
+        "actions": [
+          {
+            "seat": 3,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "Ac"
+        ],
+        "actions": [
+          {
+            "seat": 3,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 1050,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "paired board Ts 8h 9s 9c Ac",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~29%, flop ~9%, turn ~11%, river ~53%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrBlue (BB) range behind the equity above: Pre-flop: called a middle-position open → BB defending range (~17% of hands); Flop: check → range unchanged.]",
+    "[FACT — Villain Eddie (HJ) range behind the equity above: Pre-flop: open-raised → HJ opening range (~16% of hands); Flop: call → kept top 65% of range; Turn: check → range unchanged; River: check → range unchanged.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "2h",
+      "Ah"
+    ],
+    "finalBoard": [
+      "Ts",
+      "8h",
+      "9s",
+      "9c",
+      "Ac"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "Ts",
+          "8h",
+          "9s"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.09291666666666691,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "6-7-8-9-T",
+          "7-8-9-T-J",
+          "8-9-T-J-Q"
+        ]
+      },
+      {
+        "street": "turn",
+        "board": [
+          "Ts",
+          "8h",
+          "9s",
+          "9c"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.10725,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "6-7-8-9-T",
+          "7-8-9-T-J",
+          "8-9-T-J-Q"
+        ]
+      },
+      {
+        "street": "river",
+        "board": [
+          "Ts",
+          "8h",
+          "9s",
+          "9c",
+          "Ac"
+        ],
+        "heroCategory": "TWO_PAIR",
+        "heroEquity": 0.5281,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "6-7-8-9-T",
+          "7-8-9-T-J",
+          "8-9-T-J-Q"
+        ]
+      }
+    ]
+  }
+}

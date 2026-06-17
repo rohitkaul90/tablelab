@@ -1,0 +1,182 @@
+{
+  "id": "pluribus-114b-110-p6",
+  "source": "pluribus/114b/110",
+  "heroPlayer": 6,
+  "bucket": "card-logic",
+  "reads": [],
+  "hand": {
+    "id": "pluribus-114b-110-p6",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 5,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "MrBrown",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "Eddie",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "MrPink",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "Jd",
+          "Jh"
+        ]
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 225,
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 700,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 700,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "7h",
+          "9h",
+          "Th"
+        ],
+        "actions": [
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 350,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 2,
+            "type": "fold",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "flush board 7h 9h Th",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~71%, flop ~70%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrBlue (UTG) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~5% of hands); Flop: check → range unchanged.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "Jd",
+      "Jh"
+    ],
+    "finalBoard": [
+      "7h",
+      "9h",
+      "Th"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "7h",
+          "9h",
+          "Th"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.6962,
+        "boatOrQuadsPossible": false,
+        "flushPossible": true,
+        "flushSuit": "hearts",
+        "allowedStraightWindows": [
+          "6-7-8-9-T",
+          "7-8-9-T-J"
+        ]
+      }
+    ]
+  }
+}

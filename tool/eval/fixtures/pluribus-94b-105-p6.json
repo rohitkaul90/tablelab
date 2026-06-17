@@ -1,0 +1,259 @@
+{
+  "id": "pluribus-94b-105-p6",
+  "source": "pluribus/94b/105",
+  "heroPlayer": 6,
+  "bucket": "card-logic",
+  "reads": [],
+  "hand": {
+    "id": "pluribus-94b-105-p6",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 5,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "MrPink",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "Eddie",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "Bill",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "Ts",
+          "9c"
+        ]
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 225,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 225,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "8s",
+          "Jd",
+          "Qs"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "7d"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 375,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 375,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "Js"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "raise",
+            "amount": 125,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 1250,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "fold",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "paired board 8s Jd Qs 7d Js",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~42%, flop ~89%, turn ~89%, river ~46%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain Eddie (BB) range behind the equity above: Pre-flop: called a late-position open → BB defending range (~22% of hands); Flop: check → range unchanged; Turn: call → kept top 65% of range; River: bet → polarized: top 30% value + bottom 15% bluffs.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "Ts",
+      "9c"
+    ],
+    "finalBoard": [
+      "8s",
+      "Jd",
+      "Qs",
+      "7d",
+      "Js"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "8s",
+          "Jd",
+          "Qs"
+        ],
+        "heroCategory": "STRAIGHT",
+        "heroEquity": 0.88605,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "8-9-T-J-Q"
+        ]
+      },
+      {
+        "street": "turn",
+        "board": [
+          "8s",
+          "Jd",
+          "Qs",
+          "7d"
+        ],
+        "heroCategory": "STRAIGHT",
+        "heroEquity": 0.88755,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "7-8-9-T-J",
+          "8-9-T-J-Q"
+        ]
+      },
+      {
+        "street": "river",
+        "board": [
+          "8s",
+          "Jd",
+          "Qs",
+          "7d",
+          "Js"
+        ],
+        "heroCategory": "STRAIGHT",
+        "heroEquity": 0.4619,
+        "boatOrQuadsPossible": true,
+        "flushPossible": true,
+        "flushSuit": "spades",
+        "allowedStraightWindows": [
+          "7-8-9-T-J",
+          "8-9-T-J-Q"
+        ]
+      }
+    ]
+  }
+}

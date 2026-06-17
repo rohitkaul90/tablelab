@@ -1,0 +1,272 @@
+{
+  "id": "pluribus-102b-89-p5",
+  "source": "pluribus/102b/89",
+  "heroPlayer": 5,
+  "bucket": "card-logic",
+  "reads": [],
+  "hand": {
+    "id": "pluribus-102b-89-p5",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 4,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "MrBlonde",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "MrWhite",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "MrPink",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "Qh",
+          "Kc"
+        ]
+      },
+      {
+        "seat": 5,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "raise",
+            "amount": 210,
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "call",
+            "amount": 210,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "fold",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "9s",
+          "Th",
+          "8h"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "raise",
+            "amount": 160,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 0,
+            "type": "call",
+            "amount": 160,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "7d"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "raise",
+            "amount": 250,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 0,
+            "type": "call",
+            "amount": 250,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "2d"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "raise",
+            "amount": 1340,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "straight board 9s Th 8h 7d 2d",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~47%, flop ~31%, turn ~11%, river ~0%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain Pluribus (SB) range behind the equity above: Pre-flop: called a middle-position open → SB defending range (~8% of hands); Flop: call → kept top 65% of range; Turn: call → kept top 65% of range; River: check → range unchanged.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "Qh",
+      "Kc"
+    ],
+    "finalBoard": [
+      "9s",
+      "Th",
+      "8h",
+      "7d",
+      "2d"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "9s",
+          "Th",
+          "8h"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.31295,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "6-7-8-9-T",
+          "7-8-9-T-J",
+          "8-9-T-J-Q"
+        ]
+      },
+      {
+        "street": "turn",
+        "board": [
+          "9s",
+          "Th",
+          "8h",
+          "7d"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.1067,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "5-6-7-8-9",
+          "6-7-8-9-T",
+          "7-8-9-T-J",
+          "8-9-T-J-Q"
+        ]
+      },
+      {
+        "street": "river",
+        "board": [
+          "9s",
+          "Th",
+          "8h",
+          "7d",
+          "2d"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.0,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "5-6-7-8-9",
+          "6-7-8-9-T",
+          "7-8-9-T-J",
+          "8-9-T-J-Q"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "id": "pluribus-32-23-p3",
+  "source": "pluribus/32/23",
+  "heroPlayer": 3,
+  "bucket": "solver-checkable",
+  "reads": [],
+  "hand": {
+    "id": "pluribus-32-23-p3",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 2,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "MrWhite",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "Gogo",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "Kd",
+          "Ad"
+        ]
+      },
+      {
+        "seat": 3,
+        "name": "Budd",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "Eddie",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "Bill",
+        "stack": 10000,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 200,
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 725,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 725,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 2900,
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 10000,
+            "allIn": true
+          },
+          {
+            "seat": 1,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 10000,
+            "allIn": true
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "Th",
+          "5h",
+          "8c"
+        ],
+        "actions": []
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "5d"
+        ],
+        "actions": []
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "Ks"
+        ],
+        "actions": []
+      }
+    ],
+    "notes": "solver board Th 5h 8c 5d Ks (preflop all-in)",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~33%, flop ~33%, turn ~30%, river ~57%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrWhite (BB) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~4% of hands).]",
+    "[FACT — Villain Bill (BTN) range behind the equity above: Pre-flop: 4-bet+ → premium value range (~2% of hands).]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "Kd",
+      "Ad"
+    ],
+    "finalBoard": [
+      "Th",
+      "5h",
+      "8c",
+      "5d",
+      "Ks"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "Th",
+          "5h",
+          "8c"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.33105,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "turn",
+        "board": [
+          "Th",
+          "5h",
+          "8c",
+          "5d"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.29895,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "river",
+        "board": [
+          "Th",
+          "5h",
+          "8c",
+          "5d",
+          "Ks"
+        ],
+        "heroCategory": "TWO_PAIR",
+        "heroEquity": 0.57105,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      }
+    ]
+  }
+}

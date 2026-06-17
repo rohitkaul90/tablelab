@@ -1,0 +1,263 @@
+{
+  "id": "pluribus-95b-86-p1",
+  "source": "pluribus/95b/86",
+  "heroPlayer": 1,
+  "bucket": "card-logic",
+  "reads": [],
+  "hand": {
+    "id": "pluribus-95b-86-p1",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 0,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "7s",
+          "6s"
+        ]
+      },
+      {
+        "seat": 1,
+        "name": "MrPink",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "Eddie",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "Bill",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "call",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "raise",
+            "amount": 300,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "call",
+            "amount": 300,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "6d",
+          "6h",
+          "Kh"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "raise",
+            "amount": 190,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 680,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 680,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "8h"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "raise",
+            "amount": 490,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 0,
+            "type": "call",
+            "amount": 490,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "2d"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "paired board 6d 6h Kh 8h 2d",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~36%, flop ~88%, turn ~81%, river ~91%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrPink (BB) range behind the equity above: Pre-flop: open-raised → BB opening range (~23% of hands); Flop: bet → polarized: top 30% value + bottom 15% bluffs; Turn: bet → polarized: top 30% value + bottom 15% bluffs; River: check → range unchanged.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "7s",
+      "6s"
+    ],
+    "finalBoard": [
+      "6d",
+      "6h",
+      "Kh",
+      "8h",
+      "2d"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "6d",
+          "6h",
+          "Kh"
+        ],
+        "heroCategory": "THREE_OF_A_KIND",
+        "heroEquity": 0.88415,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "turn",
+        "board": [
+          "6d",
+          "6h",
+          "Kh",
+          "8h"
+        ],
+        "heroCategory": "THREE_OF_A_KIND",
+        "heroEquity": 0.81115,
+        "boatOrQuadsPossible": true,
+        "flushPossible": true,
+        "flushSuit": "hearts",
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "river",
+        "board": [
+          "6d",
+          "6h",
+          "Kh",
+          "8h",
+          "2d"
+        ],
+        "heroCategory": "THREE_OF_A_KIND",
+        "heroEquity": 0.90715,
+        "boatOrQuadsPossible": true,
+        "flushPossible": true,
+        "flushSuit": "hearts",
+        "allowedStraightWindows": []
+      }
+    ]
+  }
+}

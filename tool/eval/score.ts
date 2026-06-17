@@ -32,6 +32,30 @@ import {
 
 const COACH_MODEL = "claude-sonnet-4-6"; // must mirror analyze-hand/index.ts
 const JUDGE_MODEL = "claude-opus-4-8"; // strongest card logic for claim extraction
+const CONCURRENCY = 8; // fixtures scored in parallel (SDK auto-retries 429s)
+
+/// Run `fn` over `items` with at most `limit` in flight; results stay in input
+/// order. A ~300-spot run is two API calls per item, so sequential execution is
+/// ~2h of mostly-idle wall-clock — bounded concurrency cuts it to minutes.
+async function mapPool<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, i: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) break;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => worker()),
+  );
+  return results;
+}
 
 // ── Fixture / label types (the Stage-1 bake output) ──────────────────────────
 
@@ -324,22 +348,26 @@ async function main() {
     errorDetail?: string;
   }
 
-  const results: SpotResult[] = [];
-  for (const fx of fixtures) {
-    try {
-      const analysis = await runCoaching(fx);
-      const claims = await extractClaims(fx, analysis);
-      const { violations, unscoredEquity } = adjudicate(fx, claims);
-      results.push({ id: fx.id, bucket: fx.bucket, claims, violations, unscoredEquity, errored: false });
-      const mark = violations.length === 0 ? "OK " : "ERR";
-      console.log(`${mark} ${fx.id}  (${claims.length} claims, ${violations.length} violations)`);
-      for (const v of violations) console.log(`      - [${v.street}/${v.category}] ${v.detail}`);
-    } catch (e) {
-      const detail = e instanceof Error ? e.message : String(e);
-      console.error(`ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
-      results.push({ id: fx.id, bucket: fx.bucket, claims: [], violations: [], unscoredEquity: 0, errored: true, errorDetail: detail });
-    }
-  }
+  let done = 0;
+  const results: SpotResult[] = await mapPool(
+    fixtures,
+    CONCURRENCY,
+    async (fx): Promise<SpotResult> => {
+      try {
+        const analysis = await runCoaching(fx);
+        const claims = await extractClaims(fx, analysis);
+        const { violations, unscoredEquity } = adjudicate(fx, claims);
+        const mark = violations.length === 0 ? "OK " : "ERR";
+        console.log(`[${++done}/${fixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} violations)`);
+        for (const v of violations) console.log(`      - [${v.street}/${v.category}] ${v.detail}`);
+        return { id: fx.id, bucket: fx.bucket, claims, violations, unscoredEquity, errored: false };
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e);
+        console.error(`[${++done}/${fixtures.length}] ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
+        return { id: fx.id, bucket: fx.bucket, claims: [], violations: [], unscoredEquity: 0, errored: true, errorDetail: detail };
+      }
+    },
+  );
 
   // Accuracy is over SCORED spots only — harness errors are excluded, never
   // conflated with card-logic failures.
