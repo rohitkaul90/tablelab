@@ -163,7 +163,8 @@ const EXTRACT_TOOL: any = {
             suit: { anyOf: [{ type: "null" }, { type: "string" }] },
             percent: {
               anyOf: [{ type: "null" }, { type: "number" }],
-              description: "a stated equity/pot-odds percentage as a number 0-100, else null",
+              description:
+                "For category 'equity', the percent MUST be HERO's own equity/chance-to-win against the range, as a point estimate FOR THIS STREET, else null. Do NOT put a number here when it is: a required/break-even/FLOOR pot-odds price ('needs 19%', 'the 19% floor', 'clears the price') — that is category 'pot_odds'; a percentage of the VILLAIN's range ('loses to 93% of his range' — hero's equity is the complement, not 93); a PRIOR-street equity quoted while discussing a later street ('from 84% preflop to 63%' on the flop → only 63 is the flop equity); or a bound rather than a point estimate ('exceeds 50%', 'at least 30%').",
             },
           },
           required: ["street", "subject", "category", "text", "handCategoryNamed", "straightRanks", "suit", "percent"],
@@ -180,6 +181,7 @@ const JUDGE_SYSTEM =
   `made hands attributed to hero or a villain, named straights, flushes, equity/pot-odds percentages, and exact card identities. ` +
   `A "draw" (e.g. "flush draw","gutshot") is NOT a made-hand claim — only report handCategoryNamed when the prose asserts the made hand EXISTS now. ` +
   `Set handCategoryNamed (and straightRanks) to null for NEGATED or HYPOTHETICAL hands: "the board is unpaired so no full house exists", "no flush is possible", "villain COULD boat up if it pairs", "a straight would complete with a 9" — none of these assert a present made hand. Only a positive present-tense assertion counts. ` +
+  `EQUITY vs POT-ODDS: a category 'equity' claim's percent is HERO's own chance to win, for THAT street, as a point estimate. A required/break-even/FLOOR price ("needs 19%", "the 19% floor") is category 'pot_odds', not equity. "Hero loses to 93% of the range" is NOT 93% equity (hero's equity is the complement). A prior-street number quoted on a later street ("84% preflop ... 63% now") contributes only the current-street value. A bound ("exceeds 50%") is not a point estimate — null. ` +
   `Attribute each claim to the street whose discussion it appears in. Be exhaustive but do not invent claims the text does not make.`;
 
 async function extractClaims(fx: Fixture, analysis: Record<string, unknown>): Promise<Claim[]> {
