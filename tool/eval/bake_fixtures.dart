@@ -108,44 +108,53 @@ Future<void> main(List<String> args) async {
       continue;
     }
 
-    // Fixed seed → reproducible equity, so re-baking an unchanged spot produces
-    // a byte-identical fixture (checked-in fixtures must be diffable).
-    final equity = await computeHandEquityCheck(hand, reads: reads, seed: 1234);
-    if (equity == null) {
-      stderr.writeln('SKIP $id: equity check unmodelable (no opponents/cards)');
+    // The equity sim, labelling (incl. computeForcedDecision), and write are
+    // guarded too — like the parse step, a throw on one pathological hand must
+    // skip the spot, not abort the whole batch.
+    try {
+      // Fixed seed → reproducible equity, so re-baking an unchanged spot
+      // produces a byte-identical fixture (checked-in fixtures must be diffable).
+      final equity = await computeHandEquityCheck(hand, reads: reads, seed: 1234);
+      if (equity == null) {
+        stderr.writeln('SKIP $id: equity check unmodelable (no opponents/cards)');
+        skipped++;
+        continue;
+      }
+      final facts = equityCheckFacts(equity);
+
+      final labels = _buildLabels(hand, equity);
+
+      // A spot with no postflop street has no board-level card-logic to score —
+      // every claim would be skipped and the spot would report 100% clean
+      // regardless of model errors. Don't bake it; it would inflate accuracy.
+      if ((labels['perStreet'] as List).isEmpty) {
+        stderr.writeln('SKIP $id: no postflop street to score (board never reached the flop)');
+        skipped++;
+        continue;
+      }
+
+      final fixture = <String, dynamic>{
+        'id': id,
+        'source': spot['source'] ?? file,
+        'heroPlayer': hero,
+        'bucket': bucket,
+        'reads': reads
+            .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
+            .toList(),
+        'hand': hand.toJson(),
+        'equityFacts': facts,
+        'labels': labels,
+      };
+
+      File('$outDir/$id.json')
+          .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(fixture));
+      baked++;
+      stdout.writeln('baked $id  ($bucket, ${labels['perStreet'].length} street labels)');
+    } catch (e) {
+      stderr.writeln('SKIP $id: labelling/equity error ($e)');
       skipped++;
       continue;
     }
-    final facts = equityCheckFacts(equity);
-
-    final labels = _buildLabels(hand, equity);
-
-    // A spot with no postflop street has no board-level card-logic to score —
-    // every claim would be skipped and the spot would report 100% clean
-    // regardless of model errors. Don't bake it; it would inflate accuracy.
-    if ((labels['perStreet'] as List).isEmpty) {
-      stderr.writeln('SKIP $id: no postflop street to score (board never reached the flop)');
-      skipped++;
-      continue;
-    }
-
-    final fixture = <String, dynamic>{
-      'id': id,
-      'source': spot['source'] ?? file,
-      'heroPlayer': hero,
-      'bucket': bucket,
-      'reads': reads
-          .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
-          .toList(),
-      'hand': hand.toJson(),
-      'equityFacts': facts,
-      'labels': labels,
-    };
-
-    File('$outDir/$id.json')
-        .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(fixture));
-    baked++;
-    stdout.writeln('baked $id  ($bucket, ${labels['perStreet'].length} street labels)');
   }
 
   stdout.writeln('\nDone: $baked baked, $skipped skipped -> $outDir');

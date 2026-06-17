@@ -357,7 +357,12 @@ interface VerdictIssue {
 // A "real" keyMistake names an error; a benign null-stand-in ("none", "no
 // significant mistakes", "well played") is the model failing to use null but is
 // NOT a strategic contradiction — don't treat it as a present mistake.
-const _benignMistake = /^\s*(null|none|n\/a|no\b.*\b(mistake|leak|error|issue)|well[- ]played|no significant|nothing\b)/i;
+// Word boundaries matter: without them "Nonetheless…", "Nullified…", and
+// "No, calling was an error" prefix-match and a REAL mistake gets suppressed.
+// "no <mistake-word>" is matched tightly (a qualifier then a mistake noun) so
+// "no calling was an error" / "No, …" do NOT count as benign.
+const _benignMistake =
+  /^\s*(null\b|none\b|n\/?a\b|no\s+(significant\s+|major\s+|real\s+|notable\s+|obvious\s+|clear\s+|other\s+)?(mistakes?|leaks?|errors?|issues?|blunders?)\b|well[-\s]?played\b|nothing\b)/i;
 
 function checkVerdictConsistency(
   analysis: Record<string, unknown>,
@@ -379,6 +384,10 @@ function checkVerdictConsistency(
   // (no leak verdict, no real keyMistake, all streets GTO) or consistently a
   // LEAK (leakDetected + keyMistake + a non-GTO street). Any disagreement is
   // the self-contradiction class the trust pack exists to catch.
+  // Scope note: this checks the AGGREGATE signals only — it does NOT verify that
+  // keyMistake names the SAME street marked non-GTO (the prompt's finer rule).
+  // That needs parsing which street the prose names (judge/NLP) and risks false
+  // positives, so it's deliberately out of this tightly-scoped MVP.
   if (isLeak === hasMistake && hasMistake === N) return [];
 
   const kmSnip = kmText
