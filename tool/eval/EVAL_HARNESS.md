@@ -109,6 +109,26 @@ changed, run `score.ts`, and block on a card-logic regression vs the previous
 2. Add an entry to `spots.json` (pick a hero with known cards; choose the bucket).
 3. `dart run tool/eval/bake_fixtures.dart` and commit the new fixture.
 
+### Bulk curation (`curate.dart`)
+
+To generate a balanced set at scale instead of hand-picking, point the curator
+at a Pluribus corpus:
+
+```bash
+# one-time: sparse-clone just the Pluribus data
+git clone --depth 1 --filter=blob:none --sparse https://github.com/uoftcprg/phh-dataset.git /tmp/phh
+( cd /tmp/phh && git sparse-checkout set data/pluribus )
+
+dart run tool/eval/curate.dart /tmp/phh/data/pluribus 30   # -> spots.json + samples/pluribus/*.phh
+dart run tool/eval/bake_fixtures.dart                       # -> fixtures/
+```
+
+It classifies each hand's final board texture and fills quotas weighted toward
+the hallucination-prone shapes (flush / paired / straight boards), plus a small
+solver-checkable set (preflop all-ins). Hero = a known-cards player who never
+folded, so every spot has postflop streets to score. Re-running overwrites
+`spots.json`; commit the chosen `.phh` files + baked fixtures.
+
 Curate toward the two buckets: **card-logic stress** (paired/tripled boards,
 straight-completing boards, monotone/two-tone flush boards, thin bluff-catches —
 the patched-bug triggers) and **solver-checkable** (preflop all-ins, pot-odds-

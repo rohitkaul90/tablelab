@@ -1,20 +1,263 @@
 [
   {
-    "id": "pluribus-100-1-mrpink",
-    "file": "tool/eval/samples/pluribus-100-1.phh",
-    "source": "pluribus/100/1",
-    "hero": 3,
+    "id": "pluribus-100b-112-p5",
+    "file": "tool/eval/samples/pluribus/pluribus-100b-112.phh",
+    "source": "pluribus/100b/112",
+    "hero": 5,
     "bucket": "card-logic",
-    "notes": "UTG open KcJh, c-bets flop and turn on a club-heavy 7s9cTc2c board; BB folds turn. Flush/straight-texture board.",
+    "notes": "flush board Ah 7h Kh",
     "reads": []
   },
   {
-    "id": "dwan-ivey-2009-dwan",
-    "file": "tool/eval/samples/dwan-ivey-2009.phh",
-    "source": "dwan-ivey-2009",
+    "id": "pluribus-102b-82-p3",
+    "file": "tool/eval/samples/pluribus/pluribus-102b-82.phh",
+    "source": "pluribus/102b/82",
     "hero": 3,
     "bucket": "card-logic",
-    "notes": "Dwan 76s flops a combo draw vs Ivey, gets it in on the turn (4h) — straight+flush draws on Jc3d5c4h.",
+    "notes": "paired board 4c Ah 4h Qs 7h",
+    "reads": []
+  },
+  {
+    "id": "pluribus-104-47-p1",
+    "file": "tool/eval/samples/pluribus/pluribus-104-47.phh",
+    "source": "pluribus/104/47",
+    "hero": 1,
+    "bucket": "solver-checkable",
+    "notes": "solver board 8c Tc 5h 6s Jc (preflop all-in)",
+    "reads": []
+  },
+  {
+    "id": "pluribus-112b-124-p5",
+    "file": "tool/eval/samples/pluribus/pluribus-112b-124.phh",
+    "source": "pluribus/112b/124",
+    "hero": 5,
+    "bucket": "card-logic",
+    "notes": "straight board 6h 9c Kc Qd",
+    "reads": []
+  },
+  {
+    "id": "pluribus-113b-84-p5",
+    "file": "tool/eval/samples/pluribus/pluribus-113b-84.phh",
+    "source": "pluribus/113b/84",
+    "hero": 5,
+    "bucket": "card-logic",
+    "notes": "flush board 8s Kc 3d Tc Jc",
+    "reads": []
+  },
+  {
+    "id": "pluribus-114b-122-p1",
+    "file": "tool/eval/samples/pluribus/pluribus-114b-122.phh",
+    "source": "pluribus/114b/122",
+    "hero": 1,
+    "bucket": "card-logic",
+    "notes": "straight board 8s 4c Qd 6c",
+    "reads": []
+  },
+  {
+    "id": "pluribus-32-55-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-32-55.phh",
+    "source": "pluribus/32/55",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "flush board Ks 3s As 6d 4c",
+    "reads": []
+  },
+  {
+    "id": "pluribus-35-35-p6",
+    "file": "tool/eval/samples/pluribus/pluribus-35-35.phh",
+    "source": "pluribus/35/35",
+    "hero": 6,
+    "bucket": "card-logic",
+    "notes": "flush board As 7s 6s",
+    "reads": []
+  },
+  {
+    "id": "pluribus-40b-205-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-40b-205.phh",
+    "source": "pluribus/40b/205",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "flush board Qd Th 9h 5s Jh",
+    "reads": []
+  },
+  {
+    "id": "pluribus-41b-123-p4",
+    "file": "tool/eval/samples/pluribus/pluribus-41b-123.phh",
+    "source": "pluribus/41b/123",
+    "hero": 4,
+    "bucket": "card-logic",
+    "notes": "straight board Jc 9s As 6c 8d",
+    "reads": []
+  },
+  {
+    "id": "pluribus-44b-53-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-44b-53.phh",
+    "source": "pluribus/44b/53",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "straight board Js 9h 6d Th Qd",
+    "reads": []
+  },
+  {
+    "id": "pluribus-44b-89-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-44b-89.phh",
+    "source": "pluribus/44b/89",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "flush board Jd 2h 9d 7d",
+    "reads": []
+  },
+  {
+    "id": "pluribus-45b-59-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-45b-59.phh",
+    "source": "pluribus/45b/59",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "paired board 6h 7d 6d",
+    "reads": []
+  },
+  {
+    "id": "pluribus-45b-94-p1",
+    "file": "tool/eval/samples/pluribus/pluribus-45b-94.phh",
+    "source": "pluribus/45b/94",
+    "hero": 1,
+    "bucket": "card-logic",
+    "notes": "paired board 8d 7c 7d 7s 9d",
+    "reads": []
+  },
+  {
+    "id": "pluribus-45b-95-p5",
+    "file": "tool/eval/samples/pluribus/pluribus-45b-95.phh",
+    "source": "pluribus/45b/95",
+    "hero": 5,
+    "bucket": "card-logic",
+    "notes": "paired board 6s 2d 2c",
+    "reads": []
+  },
+  {
+    "id": "pluribus-52b-105-p6",
+    "file": "tool/eval/samples/pluribus/pluribus-52b-105.phh",
+    "source": "pluribus/52b/105",
+    "hero": 6,
+    "bucket": "card-logic",
+    "notes": "dry board 6c Th 2h",
+    "reads": []
+  },
+  {
+    "id": "pluribus-53-36-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-53-36.phh",
+    "source": "pluribus/53/36",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "flush board As 7h 6s 9s Qd",
+    "reads": []
+  },
+  {
+    "id": "pluribus-75b-24-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-75b-24.phh",
+    "source": "pluribus/75b/24",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "paired board 2s 9s 6d Js 9c",
+    "reads": []
+  },
+  {
+    "id": "pluribus-75b-37-p1",
+    "file": "tool/eval/samples/pluribus/pluribus-75b-37.phh",
+    "source": "pluribus/75b/37",
+    "hero": 1,
+    "bucket": "card-logic",
+    "notes": "paired board Jd 7c 9c Jc Qh",
+    "reads": []
+  },
+  {
+    "id": "pluribus-76b-71-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-76b-71.phh",
+    "source": "pluribus/76b/71",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "straight board Jd 4h 2s 5c Qs",
+    "reads": []
+  },
+  {
+    "id": "pluribus-77b-46-p1",
+    "file": "tool/eval/samples/pluribus/pluribus-77b-46.phh",
+    "source": "pluribus/77b/46",
+    "hero": 1,
+    "bucket": "card-logic",
+    "notes": "straight board 6s 9h 3d 2c 7h",
+    "reads": []
+  },
+  {
+    "id": "pluribus-77b-65-p4",
+    "file": "tool/eval/samples/pluribus/pluribus-77b-65.phh",
+    "source": "pluribus/77b/65",
+    "hero": 4,
+    "bucket": "card-logic",
+    "notes": "paired board 7h Kc Kd Ad",
+    "reads": []
+  },
+  {
+    "id": "pluribus-95b-79-p3",
+    "file": "tool/eval/samples/pluribus/pluribus-95b-79.phh",
+    "source": "pluribus/95b/79",
+    "hero": 3,
+    "bucket": "card-logic",
+    "notes": "paired board 3d 5c 5h",
+    "reads": []
+  },
+  {
+    "id": "pluribus-96b-135-p5",
+    "file": "tool/eval/samples/pluribus/pluribus-96b-135.phh",
+    "source": "pluribus/96b/135",
+    "hero": 5,
+    "bucket": "card-logic",
+    "notes": "straight board Ad 5s Tc Jd Qc",
+    "reads": []
+  },
+  {
+    "id": "pluribus-96b-153-p1",
+    "file": "tool/eval/samples/pluribus/pluribus-96b-153.phh",
+    "source": "pluribus/96b/153",
+    "hero": 1,
+    "bucket": "card-logic",
+    "notes": "flush board 5c 7d Qd 2s 8d",
+    "reads": []
+  },
+  {
+    "id": "pluribus-96b-42-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-96b-42.phh",
+    "source": "pluribus/96b/42",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "straight board Jc Ad Th 9s",
+    "reads": []
+  },
+  {
+    "id": "pluribus-96b-98-p2",
+    "file": "tool/eval/samples/pluribus/pluribus-96b-98.phh",
+    "source": "pluribus/96b/98",
+    "hero": 2,
+    "bucket": "card-logic",
+    "notes": "paired board 4h 6h 7c 8d 6c",
+    "reads": []
+  },
+  {
+    "id": "pluribus-97b-146-p4",
+    "file": "tool/eval/samples/pluribus/pluribus-97b-146.phh",
+    "source": "pluribus/97b/146",
+    "hero": 4,
+    "bucket": "card-logic",
+    "notes": "flush board Js As 6s",
+    "reads": []
+  },
+  {
+    "id": "pluribus-97b-62-p5",
+    "file": "tool/eval/samples/pluribus/pluribus-97b-62.phh",
+    "source": "pluribus/97b/62",
+    "hero": 5,
+    "bucket": "card-logic",
+    "notes": "dry board Ts 3h Kd",
     "reads": []
   }
 ]
