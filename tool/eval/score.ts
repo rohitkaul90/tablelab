@@ -310,7 +310,11 @@ async function main() {
   interface SpotResult {
     id: string;
     bucket: string;
-    claims: number;
+    // The full extracted claims, persisted to report.json so a run can be
+    // spot-audited (did the judge extract real claims? did the adjudicator miss
+    // one?) — the spec's "keep the judge honest" check. The markdown report
+    // shows only counts.
+    claims: Claim[];
     violations: Violation[];
     unscoredEquity: number;
     // A harness/API failure (refusal, 5xx, timeout) — NOT a card-logic error.
@@ -326,14 +330,14 @@ async function main() {
       const analysis = await runCoaching(fx);
       const claims = await extractClaims(fx, analysis);
       const { violations, unscoredEquity } = adjudicate(fx, claims);
-      results.push({ id: fx.id, bucket: fx.bucket, claims: claims.length, violations, unscoredEquity, errored: false });
+      results.push({ id: fx.id, bucket: fx.bucket, claims, violations, unscoredEquity, errored: false });
       const mark = violations.length === 0 ? "OK " : "ERR";
       console.log(`${mark} ${fx.id}  (${claims.length} claims, ${violations.length} violations)`);
       for (const v of violations) console.log(`      - [${v.street}/${v.category}] ${v.detail}`);
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
       console.error(`ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
-      results.push({ id: fx.id, bucket: fx.bucket, claims: 0, violations: [], unscoredEquity: 0, errored: true, errorDetail: detail });
+      results.push({ id: fx.id, bucket: fx.bucket, claims: [], violations: [], unscoredEquity: 0, errored: true, errorDetail: detail });
     }
   }
 
@@ -389,7 +393,7 @@ function renderMarkdown(r: any): string {
     `| Spot | Bucket | Claims | Violations | Status |`,
     `|---|---|---|---|---|`,
     // deno-lint-ignore no-explicit-any
-    ...r.results.map((s: any) => `| ${s.id} | ${s.bucket} | ${s.claims} | ${s.violations.length} | ${s.errored ? "errored" : "scored"} |`),
+    ...r.results.map((s: any) => `| ${s.id} | ${s.bucket} | ${s.claims.length} | ${s.violations.length} | ${s.errored ? "errored" : "scored"} |`),
   ];
   return lines.join("\n") + "\n";
 }
