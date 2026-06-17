@@ -12,6 +12,36 @@ const int _kFullHouse = 6;
 const int _kFourOfAKind = 7;
 const int _kStraightFlush = 8;
 
+/// Bit offset where [evaluate7]/[evaluateBest] store the hand category.
+const int kCategoryShift = 20;
+
+/// Category names indexed by category value (0 = high card … 8 = straight
+/// flush). The single source of truth for the encoding, so external consumers
+/// (e.g. the eval harness's fixture baker) decode categories the same way the
+/// evaluator encodes them instead of hard-coding `>> 20` + their own list.
+const List<String> kHandCategoryNames = [
+  'HIGH_CARD',
+  'ONE_PAIR',
+  'TWO_PAIR',
+  'THREE_OF_A_KIND',
+  'STRAIGHT',
+  'FLUSH',
+  'FULL_HOUSE',
+  'FOUR_OF_A_KIND',
+  'STRAIGHT_FLUSH',
+];
+
+/// The category component of an evaluator result (0–8).
+int handCategory(int value) => value >> kCategoryShift;
+
+/// Name of the category component of an evaluator result.
+String handCategoryName(int value) {
+  final c = handCategory(value);
+  return c >= 0 && c < kHandCategoryNames.length
+      ? kHandCategoryNames[c]
+      : 'UNKNOWN';
+}
+
 /// Best 5-card value from 5, 6, or 7 cards. Same encoding as [evaluate7]
 /// (higher = better, compare with >). Used to score a 2-card combo against a
 /// partial board (flop = 5 cards, turn = 6, river = 7).

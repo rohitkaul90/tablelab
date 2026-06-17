@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:flutter/foundation.dart';
+import 'compute_compat.dart';
 import 'evaluator.dart';
 
 class SimulationResult {
@@ -21,11 +21,13 @@ class _SimParams {
   final List<List<List<int>>> ranges; // [player][combo][0 or 1]
   final List<int> boardCards; // 0-5 known board cards
   final int iterations;
+  final int? seed; // null = nondeterministic (app); set for reproducible runs
 
   const _SimParams({
     required this.ranges,
     required this.boardCards,
     required this.iterations,
+    this.seed,
   });
 }
 
@@ -33,11 +35,13 @@ Future<SimulationResult> runSimulation({
   required List<List<List<int>>> ranges,
   required List<int> boardCards,
   int iterations = 50000,
+  int? seed,
 }) {
   final params = _SimParams(
     ranges: ranges,
     boardCards: boardCards,
     iterations: iterations,
+    seed: seed,
   );
   return compute(_isolatedSim, params);
 }
@@ -49,11 +53,13 @@ SimulationResult runSimulationSync({
   required List<List<List<int>>> ranges,
   required List<int> boardCards,
   int iterations = 50000,
+  int? seed,
 }) =>
     _isolatedSim(_SimParams(
       ranges: ranges,
       boardCards: boardCards,
       iterations: iterations,
+      seed: seed,
     ));
 
 // Top-level function for compute()
@@ -64,7 +70,7 @@ SimulationResult _isolatedSim(_SimParams p) {
   final equitySum = List.filled(n, 0.0);
   int validIter = 0;
 
-  final rng = Random();
+  final rng = p.seed != null ? Random(p.seed) : Random();
 
   for (int iter = 0; iter < p.iterations; iter++) {
     final used = <int>{...p.boardCards};

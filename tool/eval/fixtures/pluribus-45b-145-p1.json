@@ -1,0 +1,247 @@
+{
+  "id": "pluribus-45b-145-p1",
+  "source": "pluribus/45b/145",
+  "heroPlayer": 1,
+  "bucket": "card-logic",
+  "reads": [],
+  "hand": {
+    "id": "pluribus-45b-145-p1",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 0,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "Hattori",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "Tc",
+          "8d"
+        ]
+      },
+      {
+        "seat": 1,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "Bill",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "ORen",
+        "stack": 10000,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 250,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 250,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "9d",
+          "6d",
+          "Qc"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 150,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 150,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "2d"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 600,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 600,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "Kc"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 1600,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 1600,
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "flush board 9d 6d Qc 2d Kc",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~40%, flop ~39%, turn ~25%, river ~0%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrBlue (BB) range behind the equity above: Pre-flop: called a late-position open → BB defending range (~24% of hands); Flop: call → kept top 65% of range; Turn: call → kept top 65% of range; River: call → kept top 65% of range.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "Tc",
+      "8d"
+    ],
+    "finalBoard": [
+      "9d",
+      "6d",
+      "Qc",
+      "2d",
+      "Kc"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "9d",
+          "6d",
+          "Qc"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.39365,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "turn",
+        "board": [
+          "9d",
+          "6d",
+          "Qc",
+          "2d"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.2511,
+        "boatOrQuadsPossible": false,
+        "flushPossible": true,
+        "flushSuit": "diamonds",
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "river",
+        "board": [
+          "9d",
+          "6d",
+          "Qc",
+          "2d",
+          "Kc"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.0,
+        "boatOrQuadsPossible": false,
+        "flushPossible": true,
+        "flushSuit": "diamonds",
+        "allowedStraightWindows": [
+          "9-T-J-Q-K"
+        ]
+      }
+    ],
+    "forcedDecision": null
+  }
+}

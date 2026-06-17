@@ -16,7 +16,7 @@
 
 import 'dart:math';
 
-import 'package:flutter/foundation.dart' show compute;
+import 'compute_compat.dart';
 
 import '../models/hand_model.dart';
 import '../models/player_read.dart';
@@ -509,20 +509,26 @@ Future<HandEquityCheck?> computeHandEquityCheck(
   PokerHand hand, {
   List<PlayerRead> reads = const [],
   int iterations = 10000,
+  // null = nondeterministic (the app). Pass a fixed seed for reproducible
+  // output — used by the eval-harness baker so checked-in fixtures don't churn.
+  int? seed,
 }) =>
-    compute(_computeEquityCheckSync, _EquityArgs(hand, reads, iterations));
+    compute(
+        _computeEquityCheckSync, _EquityArgs(hand, reads, iterations, seed));
 
 class _EquityArgs {
   final PokerHand hand;
   final List<PlayerRead> reads;
   final int iterations;
-  const _EquityArgs(this.hand, this.reads, this.iterations);
+  final int? seed;
+  const _EquityArgs(this.hand, this.reads, this.iterations, this.seed);
 }
 
 HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
   final hand = args.hand;
   final reads = args.reads;
   final iterations = args.iterations;
+  final seed = args.seed;
 
   final hero = hand.hero;
   final heroCards = hero?.holeCards;
@@ -769,6 +775,8 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           ],
           boardCards: [...boardSoFar],
           iterations: iterations,
+          // Offset per street so each gets a distinct but reproducible stream.
+          seed: seed != null ? seed + streetResults.length : null,
         );
         streetResults.add(StreetEquityCheck(
           street: street.street,
