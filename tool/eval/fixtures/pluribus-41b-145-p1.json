@@ -253,6 +253,7 @@
         "flushSuit": "hearts",
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": null
   }
 }

@@ -253,6 +253,14 @@
         "flushSuit": "clubs",
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "river",
+      "heroCalled": true,
+      "requiredPct": 25,
+      "heroEquityPct": 34,
+      "forcedAction": "call",
+      "heroActionCorrect": true
+    }
   }
 }

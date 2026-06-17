@@ -239,6 +239,14 @@
           "T-J-Q-K-A"
         ]
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "river",
+      "heroCalled": true,
+      "requiredPct": 25,
+      "heroEquityPct": 33,
+      "forcedAction": "call",
+      "heroActionCorrect": true
+    }
   }
 }

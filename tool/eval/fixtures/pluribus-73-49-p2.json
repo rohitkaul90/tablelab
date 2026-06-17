@@ -225,6 +225,14 @@
           "2-3-4-5-6"
         ]
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "preflop",
+      "heroCalled": true,
+      "requiredPct": 40,
+      "heroEquityPct": 39,
+      "forcedAction": "fold",
+      "heroActionCorrect": false
+    }
   }
 }

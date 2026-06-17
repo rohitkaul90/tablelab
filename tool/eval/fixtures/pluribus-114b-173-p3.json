@@ -241,6 +241,14 @@
           "A-2-3-4-5"
         ]
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "river",
+      "heroCalled": true,
+      "requiredPct": 30,
+      "heroEquityPct": 29,
+      "forcedAction": "fold",
+      "heroActionCorrect": false
+    }
   }
 }

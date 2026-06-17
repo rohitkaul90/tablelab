@@ -232,6 +232,7 @@
         "flushSuit": "clubs",
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": null
   }
 }

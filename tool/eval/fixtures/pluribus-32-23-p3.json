@@ -222,6 +222,14 @@
         "flushSuit": null,
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "preflop",
+      "heroCalled": true,
+      "requiredPct": 34,
+      "heroEquityPct": 33,
+      "forcedAction": "fold",
+      "heroActionCorrect": false
+    }
   }
 }

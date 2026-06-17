@@ -199,6 +199,7 @@
         "flushSuit": null,
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": null
   }
 }

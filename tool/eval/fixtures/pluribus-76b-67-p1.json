@@ -241,6 +241,14 @@
           "7-8-9-T-J"
         ]
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "river",
+      "heroCalled": true,
+      "requiredPct": 26,
+      "heroEquityPct": 34,
+      "forcedAction": "call",
+      "heroActionCorrect": true
+    }
   }
 }

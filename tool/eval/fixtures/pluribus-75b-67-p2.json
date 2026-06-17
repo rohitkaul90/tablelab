@@ -216,6 +216,14 @@
         "flushSuit": "hearts",
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "preflop",
+      "heroCalled": true,
+      "requiredPct": 43,
+      "heroEquityPct": 39,
+      "forcedAction": "fold",
+      "heroActionCorrect": false
+    }
   }
 }

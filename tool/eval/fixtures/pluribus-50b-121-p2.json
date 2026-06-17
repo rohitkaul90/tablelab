@@ -167,6 +167,7 @@
         "flushSuit": "diamonds",
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": null
   }
 }

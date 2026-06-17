@@ -216,6 +216,7 @@
         "flushSuit": "spades",
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": null
   }
 }

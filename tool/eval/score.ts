@@ -77,6 +77,15 @@ interface StreetLabel {
   flushSuit: string | null;
   allowedStraightWindows: string[];
 }
+// The math-forced correct action on a pot-odds-decisive spot (null otherwise).
+interface ForcedDecisionLabel {
+  street: string;
+  heroCalled: boolean;
+  requiredPct: number;
+  heroEquityPct: number;
+  forcedAction: string; // 'call' | 'fold'
+  heroActionCorrect: boolean;
+}
 interface Fixture {
   id: string;
   source: string;
@@ -88,6 +97,7 @@ interface Fixture {
     heroHoleCards: string[];
     finalBoard: string[];
     perStreet: StreetLabel[];
+    forcedDecision?: ForcedDecisionLabel | null;
   };
 }
 
@@ -382,6 +392,35 @@ function checkVerdictConsistency(
   }];
 }
 
+// ── Forced-decision agreement (PR 3, part 2) ─────────────────────────────────
+// On a pot-odds-DECISIVE spot the correct action is mathematically forced (the
+// baked forcedDecision). Check whether the model's wasGto for the decision
+// street agrees with whether hero's actual action was the forced-correct one.
+// Only spots with a baked forcedDecision contribute; everything else is silent.
+
+interface ForcedVerdictResult {
+  scored: boolean; // could we compare (model gave a wasGto for the street)?
+  agreed: boolean;
+  detail: string;
+}
+
+function checkForcedVerdict(
+  fx: Fixture,
+  analysis: Record<string, unknown>,
+): ForcedVerdictResult | null {
+  const fd = fx.labels.forcedDecision;
+  if (!fd) return null;
+  const st = analysis[fd.street] as Record<string, unknown> | null | undefined;
+  const base =
+    `${fd.street}: hero ${fd.heroCalled ? "called" : "folded"}, forced=${fd.forcedAction} ` +
+    `(eq ${fd.heroEquityPct}% vs req ${fd.requiredPct}%), heroActionCorrect=${fd.heroActionCorrect}`;
+  if (!st || typeof st.wasGto !== "boolean") {
+    return { scored: false, agreed: false, detail: `${base}; model gave no wasGto for ${fd.street}` };
+  }
+  const agreed = st.wasGto === fd.heroActionCorrect;
+  return { scored: true, agreed, detail: `${base}; model wasGto=${st.wasGto} → ${agreed ? "AGREE" : "DISAGREE"}` };
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -412,6 +451,9 @@ async function main() {
     // Verdict self-consistency issues in the coach's own output (PR 3 part 1) —
     // a separate dimension from card-logic, scored from the structured fields.
     verdictIssues: VerdictIssue[];
+    // Forced-decision agreement (PR 3 part 2) — null unless this spot has a
+    // pot-odds-decisive forcedDecision label.
+    forcedVerdict: ForcedVerdictResult | null;
     // A harness/API failure (refusal, 5xx, timeout) — NOT a card-logic error.
     // Excluded from the accuracy denominator so an API blip can't move the
     // published number; reported separately.
@@ -421,7 +463,7 @@ async function main() {
 
   const errResult = (fx: Fixture, detail: string): SpotResult => ({
     id: fx.id, bucket: fx.bucket, claims: [], violations: [],
-    scoredEquity: 0, unscoredEquity: 0, verdictIssues: [], errored: true, errorDetail: detail,
+    scoredEquity: 0, unscoredEquity: 0, verdictIssues: [], forcedVerdict: null, errored: true, errorDetail: detail,
   });
 
   let done = 0;
@@ -434,11 +476,14 @@ async function main() {
         const claims = await extractClaims(fx, analysis);
         const { violations, scoredEquity, unscoredEquity } = adjudicate(fx, claims);
         const verdictIssues = checkVerdictConsistency(analysis);
+        const forcedVerdict = checkForcedVerdict(fx, analysis);
         const mark = violations.length === 0 && verdictIssues.length === 0 ? "OK " : "ERR";
-        console.log(`[${++done}/${fixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} card-logic, ${verdictIssues.length} verdict)`);
+        const fv = forcedVerdict ? `, forced:${forcedVerdict.scored ? (forcedVerdict.agreed ? "agree" : "DISAGREE") : "unscored"}` : "";
+        console.log(`[${++done}/${fixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} card-logic, ${verdictIssues.length} verdict${fv})`);
         for (const v of violations) console.log(`      - card-logic [${v.street}/${v.category}] ${v.detail}`);
         for (const v of verdictIssues) console.log(`      - verdict [${v.rule}] ${v.detail}`);
-        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, verdictIssues, errored: false };
+        if (forcedVerdict && forcedVerdict.scored && !forcedVerdict.agreed) console.log(`      - forced-verdict DISAGREE: ${forcedVerdict.detail}`);
+        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, verdictIssues, forcedVerdict, errored: false };
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
         console.error(`[${++done}/${fixtures.length}] ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
@@ -479,6 +524,14 @@ async function main() {
     for (const v of r.verdictIssues) byVerdictRule[v.rule] = (byVerdictRule[v.rule] ?? 0) + 1;
   }
 
+  // Forced-decision verdict agreement — only the pot-odds-decisive subset.
+  const fvScored = scored.filter((r) => r.forcedVerdict?.scored);
+  const fvAgreed = fvScored.filter((r) => r.forcedVerdict!.agreed).length;
+  const fvUnscored = scored.filter((r) => r.forcedVerdict && !r.forcedVerdict.scored).length;
+  const forcedVerdictAgreementPct = fvScored.length
+    ? Number((100 * fvAgreed / fvScored.length).toFixed(1))
+    : 0;
+
   const report = {
     generatedFor: COACH_MODEL,
     total: results.length,
@@ -491,6 +544,10 @@ async function main() {
     equityCoveragePct,
     verdictConsistent,
     verdictConsistencyPct,
+    forcedVerdictScored: fvScored.length,
+    forcedVerdictAgreed: fvAgreed,
+    forcedVerdictUnscored: fvUnscored,
+    forcedVerdictAgreementPct,
     byCategory,
     byVerdictRule,
     results,
@@ -498,8 +555,9 @@ async function main() {
   await Deno.writeTextFile(`${outDir}/report.json`, JSON.stringify(report, null, 2));
   await Deno.writeTextFile(`${outDir}/report.md`, renderMarkdown(report));
 
-  console.log(`\nCard-logic accuracy: ${accuracy.toFixed(1)}%  (${clean}/${scored.length} scored spots clean${erroredCount ? `; ${erroredCount} errored, excluded` : ""})`);
+  console.log(`\nCard-logic accuracy:  ${accuracy.toFixed(1)}%  (${clean}/${scored.length} scored spots clean${erroredCount ? `; ${erroredCount} errored, excluded` : ""})`);
   console.log(`Verdict consistency:  ${verdictConsistencyPct}%  (${verdictConsistent}/${scored.length} spots with self-consistent verdicts)`);
+  console.log(`Forced-verdict agree: ${forcedVerdictAgreementPct}%  (${fvAgreed}/${fvScored.length} decisive spots${fvUnscored ? `; ${fvUnscored} unscored` : ""})`);
   console.log(`Equity check coverage: ${equityCoveragePct}%  (${scoredEquityTotal} scored / ${equityClaimsTotal} hero-equity claims)`);
   console.log(`Report: ${outDir}/report.md`);
 }
@@ -512,6 +570,7 @@ function renderMarkdown(r: any): string {
     `- Model under test: \`${r.generatedFor}\``,
     `- **Card-logic accuracy: ${r.cardLogicAccuracyPct}%** (${r.clean}/${r.scored} scored spots with zero card-logic errors)`,
     `- **Verdict consistency: ${r.verdictConsistencyPct}%** (${r.verdictConsistent}/${r.scored} spots with self-consistent verdicts)`,
+    `- **Forced-verdict agreement: ${r.forcedVerdictAgreementPct}%** (${r.forcedVerdictAgreed}/${r.forcedVerdictScored} pot-odds-decisive spots${r.forcedVerdictUnscored ? `; ${r.forcedVerdictUnscored} unscored` : ""})`,
     `- Errored (harness/API, excluded): ${r.errored}`,
     `- Equity-check coverage: ${r.equityCoveragePct}% (${r.equityClaimsScored} scored / ${r.equityClaimsScored + r.equityClaimsUnscored} hero-equity claims)`,
     ``,

@@ -30,6 +30,7 @@ import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/models/player_read.dart';
 
 import 'board_texture.dart';
+import 'forced_decision.dart';
 import 'phh_parser.dart';
 
 // Reproducible timestamp for every fixture (no DateTime.now()).
@@ -185,10 +186,15 @@ Map<String, dynamic> _buildLabels(PokerHand hand, HandEquityCheck equity) {
     });
   }
 
+  // Forced-decision ground truth for verdict-agreement (null when the hand has
+  // no pot-odds-decisive spot — most do not).
+  final forced = computeForcedDecision(hand, equity);
+
   return {
     'heroHoleCards': heroCards,
     'finalBoard': hand.allCommunityCards,
     'perStreet': perStreet,
+    'forcedDecision': forced?.toJson(),
   };
 }
 

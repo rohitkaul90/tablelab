@@ -230,6 +230,14 @@
           "7-8-9-T-J"
         ]
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "preflop",
+      "heroCalled": true,
+      "requiredPct": 40,
+      "heroEquityPct": 32,
+      "forcedAction": "fold",
+      "heroActionCorrect": false
+    }
   }
 }

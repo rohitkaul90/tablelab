@@ -98,6 +98,24 @@ This is intermittent (temperature-0 isn't bitwise deterministic, so a model
 contradiction may appear on one run and not the next) — read it over the whole
 set, not per spot.
 
+## Forced-decision agreement (the spec's verdict-agreement, tightly scoped)
+
+On a **pot-odds-DECISIVE** spot — hero faces a wager that closes the action (a
+river call, or a call/fold that puts hero all-in) — the correct action is
+mathematically forced: call iff hero's equity meets the break-even price. Stage 1
+bakes this as `forcedDecision` (`tool/eval/forced_decision.dart` re-derives the
+decisive price by replaying the hand — an INDEPENDENT implementation of the Edge
+Function's `heroPotOddsFact`, so a mismatch is itself a bug; the equity is the
+on-device cross-check's). Most spots have no decisive decision → `null` → not
+scored.
+
+Stage 2 checks whether the model's `wasGto` for the decision street agrees with
+whether hero's actual action was the forced-correct one. **Metric:** **forced-
+verdict agreement %** over the decisive subset only (everything else silent; a
+decisive spot where the model gave no `wasGto` for the street is reported
+`unscored`, never guessed). This is the spec's math-forced verdict agreement —
+the equity/pot-odds consistency the card-logic MVP deliberately scoped out.
+
 ## Read the report
 
 `tool/eval/reports/report.md`: headline accuracy %, violations by category, and

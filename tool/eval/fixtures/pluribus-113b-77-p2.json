@@ -241,6 +241,14 @@
         "flushSuit": null,
         "allowedStraightWindows": []
       }
-    ]
+    ],
+    "forcedDecision": {
+      "street": "river",
+      "heroCalled": true,
+      "requiredPct": 30,
+      "heroEquityPct": 33,
+      "forcedAction": "call",
+      "heroActionCorrect": true
+    }
   }
 }
