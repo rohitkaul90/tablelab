@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:flutter/foundation.dart';
+import 'compute_compat.dart';
 import 'evaluator.dart';
 
 class SimulationResult {

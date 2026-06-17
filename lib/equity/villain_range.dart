@@ -16,7 +16,7 @@
 
 import 'dart:math';
 
-import 'package:flutter/foundation.dart' show compute;
+import 'compute_compat.dart';
 
 import '../models/hand_model.dart';
 import '../models/player_read.dart';

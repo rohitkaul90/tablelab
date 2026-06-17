@@ -1,0 +1,224 @@
+{
+  "id": "dwan-ivey-2009-dwan",
+  "source": "dwan-ivey-2009",
+  "heroPlayer": 3,
+  "bucket": "card-logic",
+  "reads": [],
+  "hand": {
+    "id": "dwan-ivey-2009-dwan",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 3,
+      "buttonSeat": 2,
+      "heroSeat": 2,
+      "smallBlind": 1000,
+      "bigBlind": 2000,
+      "ante": 500
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "Phil Ivey",
+        "stack": 1125600,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "Patrik Antonius",
+        "stack": 2000000,
+        "isHero": false
+      },
+      {
+        "seat": 2,
+        "name": "Tom Dwan",
+        "stack": 553500,
+        "isHero": true,
+        "holeCards": [
+          "7h",
+          "6h"
+        ]
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 1000,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 2000,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 7000,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 23000,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 23000,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "Jc",
+          "3d",
+          "5c"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 35000,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 35000,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "4h"
+        ],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 90000,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 232600,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 1067100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 495500,
+            "allIn": true
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "Jh"
+        ],
+        "actions": []
+      }
+    ],
+    "notes": "Dwan 76s flops a combo draw vs Ivey, gets it in on the turn (4h) — straight+flush draws on Jc3d5c4h.",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~36%, flop ~26%, turn ~88%, river ~89%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain Phil Ivey (SB) range behind the equity above: Pre-flop: 3-bet vs a late-position open → 3-bet range (~7% of hands); Flop: bet → polarized: top 30% value + bottom 15% bluffs; Turn: raise → polarized: top 22% value + bottom 8% bluffs.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "7h",
+      "6h"
+    ],
+    "finalBoard": [
+      "Jc",
+      "3d",
+      "5c",
+      "4h",
+      "Jh"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "Jc",
+          "3d",
+          "5c"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.2563,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "turn",
+        "board": [
+          "Jc",
+          "3d",
+          "5c",
+          "4h"
+        ],
+        "heroCategory": "STRAIGHT",
+        "heroEquity": 0.8834,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "A-2-3-4-5",
+          "2-3-4-5-6",
+          "3-4-5-6-7"
+        ]
+      },
+      {
+        "street": "river",
+        "board": [
+          "Jc",
+          "3d",
+          "5c",
+          "4h",
+          "Jh"
+        ],
+        "heroCategory": "STRAIGHT",
+        "heroEquity": 0.892,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "A-2-3-4-5",
+          "2-3-4-5-6",
+          "3-4-5-6-7"
+        ]
+      }
+    ]
+  }
+}

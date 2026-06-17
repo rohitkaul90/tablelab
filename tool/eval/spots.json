@@ -1,0 +1,20 @@
+[
+  {
+    "id": "pluribus-100-1-mrpink",
+    "file": "tool/eval/samples/pluribus-100-1.phh",
+    "source": "pluribus/100/1",
+    "hero": 3,
+    "bucket": "card-logic",
+    "notes": "UTG open KcJh, c-bets flop and turn on a club-heavy 7s9cTc2c board; BB folds turn. Flush/straight-texture board.",
+    "reads": []
+  },
+  {
+    "id": "dwan-ivey-2009-dwan",
+    "file": "tool/eval/samples/dwan-ivey-2009.phh",
+    "source": "dwan-ivey-2009",
+    "hero": 3,
+    "bucket": "card-logic",
+    "notes": "Dwan 76s flops a combo draw vs Ivey, gets it in on the turn (4h) — straight+flush draws on Jc3d5c4h.",
+    "reads": []
+  }
+]
