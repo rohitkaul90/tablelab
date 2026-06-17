@@ -82,6 +82,22 @@ Hybrid, so the score's authority never rests on a model:
 
 **Headline metric:** % of spots with **zero** card-logic violations.
 
+## Verdict consistency (a second dimension)
+
+Separate from card-logic, the scorer checks the coach output's **self-
+consistency** — directly from the structured fields, no judge, no extra API
+call. The `SYSTEM_PROMPT` requires `verdict=leakDetected ⟺ keyMistake present ⟺
+at least one street marked wasGto:false`; the three leak signals must agree (all
+"clean" or all "leak"). A disagreement (e.g. `leakDetected` + a keyMistake
+naming a river error, but every street `wasGto:true`) is the self-contradiction
+class the trust pack exists to catch. A benign null-stand-in keyMistake ("none",
+"null", "well-played") is treated as no mistake, not a contradiction.
+
+**Metric:** **verdict consistency %** = scored spots with zero verdict issues.
+This is intermittent (temperature-0 isn't bitwise deterministic, so a model
+contradiction may appear on one run and not the next) — read it over the whole
+set, not per spot.
+
 ## Read the report
 
 `tool/eval/reports/report.md`: headline accuracy %, violations by category, and

@@ -330,6 +330,58 @@ function normalizeWindow(s: string): string | null {
   return idxs.join("-");
 }
 
+// ── Verdict self-consistency (PR 3, part 1) ──────────────────────────────────
+// The coach's own output must tell ONE story (the SYSTEM_PROMPT's consistency
+// rules): leakDetected ⟺ keyMistake present ⟺ at least one street marked
+// non-GTO. This is the self-contradiction class the trust pack exists to catch
+// ("AA folds to a nit" — keyMistake names a fold while every street reads fine).
+// Checked directly from the structured output — no judge, no ground truth.
+
+const _STREETS = ["preflop", "flop", "turn", "river"] as const;
+
+interface VerdictIssue {
+  rule: string;
+  detail: string;
+}
+
+// A "real" keyMistake names an error; a benign null-stand-in ("none", "no
+// significant mistakes", "well played") is the model failing to use null but is
+// NOT a strategic contradiction — don't treat it as a present mistake.
+const _benignMistake = /^\s*(null|none|n\/a|no\b.*\b(mistake|leak|error|issue)|well[- ]played|no significant|nothing\b)/i;
+
+function checkVerdictConsistency(
+  analysis: Record<string, unknown>,
+): VerdictIssue[] {
+  const verdict = analysis.verdict as string | undefined;
+  const km = analysis.keyMistake;
+  const kmText = typeof km === "string" ? km.trim() : "";
+  const hasMistake = kmText.length > 0 && !_benignMistake.test(kmText);
+  const isLeak = verdict === "leakDetected";
+
+  let nonGto = 0;
+  for (const s of _STREETS) {
+    const st = analysis[s] as Record<string, unknown> | null | undefined;
+    if (st && st.wasGto === false) nonGto++;
+  }
+  const N = nonGto > 0;
+
+  // The three leak signals must agree: a hand is either consistently CLEAN
+  // (no leak verdict, no real keyMistake, all streets GTO) or consistently a
+  // LEAK (leakDetected + keyMistake + a non-GTO street). Any disagreement is
+  // the self-contradiction class the trust pack exists to catch.
+  if (isLeak === hasMistake && hasMistake === N) return [];
+
+  const kmSnip = kmText
+    ? `"${kmText.slice(0, 90)}${kmText.length > 90 ? "…" : ""}"`
+    : "null";
+  return [{
+    rule: "verdict-signals-disagree",
+    detail:
+      `verdict=${verdict ?? "?"}, keyMistake=${kmSnip}, non-GTO streets=${nonGto} — ` +
+      `leak signals must agree (all-clean or all-leak)`,
+  }];
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -357,6 +409,9 @@ async function main() {
     violations: Violation[];
     scoredEquity: number;
     unscoredEquity: number;
+    // Verdict self-consistency issues in the coach's own output (PR 3 part 1) —
+    // a separate dimension from card-logic, scored from the structured fields.
+    verdictIssues: VerdictIssue[];
     // A harness/API failure (refusal, 5xx, timeout) — NOT a card-logic error.
     // Excluded from the accuracy denominator so an API blip can't move the
     // published number; reported separately.
@@ -366,7 +421,7 @@ async function main() {
 
   const errResult = (fx: Fixture, detail: string): SpotResult => ({
     id: fx.id, bucket: fx.bucket, claims: [], violations: [],
-    scoredEquity: 0, unscoredEquity: 0, errored: true, errorDetail: detail,
+    scoredEquity: 0, unscoredEquity: 0, verdictIssues: [], errored: true, errorDetail: detail,
   });
 
   let done = 0;
@@ -378,10 +433,12 @@ async function main() {
         const analysis = await runCoaching(fx);
         const claims = await extractClaims(fx, analysis);
         const { violations, scoredEquity, unscoredEquity } = adjudicate(fx, claims);
-        const mark = violations.length === 0 ? "OK " : "ERR";
-        console.log(`[${++done}/${fixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} violations)`);
-        for (const v of violations) console.log(`      - [${v.street}/${v.category}] ${v.detail}`);
-        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, errored: false };
+        const verdictIssues = checkVerdictConsistency(analysis);
+        const mark = violations.length === 0 && verdictIssues.length === 0 ? "OK " : "ERR";
+        console.log(`[${++done}/${fixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} card-logic, ${verdictIssues.length} verdict)`);
+        for (const v of violations) console.log(`      - card-logic [${v.street}/${v.category}] ${v.detail}`);
+        for (const v of verdictIssues) console.log(`      - verdict [${v.rule}] ${v.detail}`);
+        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, verdictIssues, errored: false };
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
         console.error(`[${++done}/${fixtures.length}] ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
@@ -412,6 +469,16 @@ async function main() {
     for (const v of r.violations) byCategory[v.category] = (byCategory[v.category] ?? 0) + 1;
   }
 
+  // Verdict self-consistency is a separate dimension (over scored spots).
+  const verdictConsistent = scored.filter((r) => r.verdictIssues.length === 0).length;
+  const verdictConsistencyPct = scored.length
+    ? Number((100 * verdictConsistent / scored.length).toFixed(1))
+    : 0;
+  const byVerdictRule: Record<string, number> = {};
+  for (const r of results) {
+    for (const v of r.verdictIssues) byVerdictRule[v.rule] = (byVerdictRule[v.rule] ?? 0) + 1;
+  }
+
   const report = {
     generatedFor: COACH_MODEL,
     total: results.length,
@@ -422,13 +489,17 @@ async function main() {
     equityClaimsScored: scoredEquityTotal,
     equityClaimsUnscored: unscoredEquityTotal,
     equityCoveragePct,
+    verdictConsistent,
+    verdictConsistencyPct,
     byCategory,
+    byVerdictRule,
     results,
   };
   await Deno.writeTextFile(`${outDir}/report.json`, JSON.stringify(report, null, 2));
   await Deno.writeTextFile(`${outDir}/report.md`, renderMarkdown(report));
 
   console.log(`\nCard-logic accuracy: ${accuracy.toFixed(1)}%  (${clean}/${scored.length} scored spots clean${erroredCount ? `; ${erroredCount} errored, excluded` : ""})`);
+  console.log(`Verdict consistency:  ${verdictConsistencyPct}%  (${verdictConsistent}/${scored.length} spots with self-consistent verdicts)`);
   console.log(`Equity check coverage: ${equityCoveragePct}%  (${scoredEquityTotal} scored / ${equityClaimsTotal} hero-equity claims)`);
   console.log(`Report: ${outDir}/report.md`);
 }
@@ -436,25 +507,32 @@ async function main() {
 // deno-lint-ignore no-explicit-any
 function renderMarkdown(r: any): string {
   const lines = [
-    `# Eval harness — card-logic report`,
+    `# Eval harness — report`,
     ``,
     `- Model under test: \`${r.generatedFor}\``,
     `- **Card-logic accuracy: ${r.cardLogicAccuracyPct}%** (${r.clean}/${r.scored} scored spots with zero card-logic errors)`,
-    `- Errored (harness/API, excluded from accuracy): ${r.errored}`,
+    `- **Verdict consistency: ${r.verdictConsistencyPct}%** (${r.verdictConsistent}/${r.scored} spots with self-consistent verdicts)`,
+    `- Errored (harness/API, excluded): ${r.errored}`,
     `- Equity-check coverage: ${r.equityCoveragePct}% (${r.equityClaimsScored} scored / ${r.equityClaimsScored + r.equityClaimsUnscored} hero-equity claims)`,
     ``,
-    `## Violations by category`,
+    `## Card-logic violations by category`,
     ``,
     Object.keys(r.byCategory).length
       ? Object.entries(r.byCategory).map(([k, v]) => `- ${k}: ${v}`).join("\n")
       : `_None._`,
     ``,
+    `## Verdict-consistency issues by rule`,
+    ``,
+    Object.keys(r.byVerdictRule).length
+      ? Object.entries(r.byVerdictRule).map(([k, v]) => `- ${k}: ${v}`).join("\n")
+      : `_None._`,
+    ``,
     `## Per-spot`,
     ``,
-    `| Spot | Bucket | Claims | Violations | Status |`,
-    `|---|---|---|---|---|`,
+    `| Spot | Bucket | Claims | Card-logic | Verdict | Status |`,
+    `|---|---|---|---|---|---|`,
     // deno-lint-ignore no-explicit-any
-    ...r.results.map((s: any) => `| ${s.id} | ${s.bucket} | ${s.claims.length} | ${s.violations.length} | ${s.errored ? "errored" : "scored"} |`),
+    ...r.results.map((s: any) => `| ${s.id} | ${s.bucket} | ${s.claims.length} | ${s.violations.length} | ${s.verdictIssues.length} | ${s.errored ? "errored" : "scored"} |`),
   ];
   return lines.join("\n") + "\n";
 }
