@@ -176,9 +176,12 @@ async function extractClaims(fx: Fixture, analysis: Record<string, unknown>): Pr
   const prose = parts.join("\n");
 
   const message = await client.messages.create({
+    // NB: claude-opus-4-8 removed temperature/top_p/top_k (400 if sent) — unlike
+    // the coach's claude-sonnet-4-6, which still accepts temperature. The judge
+    // only proposes claims; the deterministic adjudicator decides, so the lack
+    // of a temperature knob here doesn't affect the score's authority.
     model: JUDGE_MODEL,
     max_tokens: 4000,
-    temperature: 0,
     system: [{ type: "text", text: JUDGE_SYSTEM }],
     tools: [EXTRACT_TOOL],
     tool_choice: { type: "tool", name: "report_claims" },
@@ -239,12 +242,24 @@ function adjudicate(fx: Fixture, claims: Claim[]): Violation[] {
       }
     }
 
-    // 4. Stated equity/pot-odds % that contradicts the injected FACT.
-    if (c.percent != null && (c.category === "equity" || c.category === "pot_odds") && lab.heroEquity != null) {
-      const factPct = Math.round(lab.heroEquity * 100);
-      if (Math.abs(c.percent - factPct) > 12) {
-        add(c, `states ${c.percent}% but the equity FACT for ${lab.street} is ~${factPct}% (>12pt deviation)`);
-        continue;
+    // 4. A stated HERO-EQUITY % that contradicts the injected equity FACT.
+    // Strict: only an `equity` claim about hero, matched to the SAME street's
+    // label (no fall-back to another street — preflop/overall claims have no
+    // equity label and are not scored). Pot-odds claims are a different
+    // quantity (the required price, not hero's equity) and are deliberately
+    // NOT checked here — that needs the baked pot-odds FACT (verdict scorer, PR3).
+    if (
+      c.percent != null &&
+      c.category === "equity" &&
+      c.subject === "hero"
+    ) {
+      const exact = fx.labels.perStreet.find((s) => s.street === c.street);
+      if (exact?.heroEquity != null) {
+        const factPct = Math.round(exact.heroEquity * 100);
+        if (Math.abs(c.percent - factPct) > 12) {
+          add(c, `states hero equity ${c.percent}% but the ${c.street} equity FACT is ~${factPct}% (>12pt)`);
+          continue;
+        }
       }
     }
   }
