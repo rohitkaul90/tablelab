@@ -31,11 +31,16 @@ class PhhHand {
   PhhHand(this.raw, this.actionTokens);
 
   int get numSeats => (raw['starting_stacks'] as List).length;
-  List<int> get startingStacks =>
-      (raw['starting_stacks'] as List).cast<int>();
-  List<int> get blinds => (raw['blinds_or_straddles'] as List).cast<int>();
-  List<int> get antes =>
-      (raw['antes'] as List?)?.cast<int>() ?? List.filled(numSeats, 0);
+  List<int> get startingStacks => _intList(raw['starting_stacks']);
+  List<int> get blinds => _intList(raw['blinds_or_straddles']);
+  List<int> get antes => raw['antes'] != null
+      ? _intList(raw['antes'])
+      : List.filled(numSeats, 0);
+
+  // PHH chip counts are integers, but tolerate a float-valued token (e.g.
+  // "20000.0" or cent amounts) instead of throwing an opaque CastError.
+  static List<int> _intList(dynamic v) =>
+      (v as List).map((e) => e is int ? e : (e as num).round()).toList();
   List<String> get playerNames {
     final p = raw['players'] as List?;
     if (p != null) return p.cast<String>();
@@ -125,26 +130,41 @@ int _bracketDepth(String s) {
 dynamic _parseValue(String v) {
   v = v.trim();
   if (v.startsWith('[')) {
-    // Array. Extract elements: quoted strings OR bare ints/bools.
+    // Split on top-level commas (commas inside quotes don't split), then parse
+    // each element independently via _parseScalar. This keeps BOTH quoted and
+    // bare elements in a mixed array — the old "if any quote present, return
+    // only the quoted matches" shortcut silently dropped every numeric element.
     final inner = v.substring(1, v.lastIndexOf(']'));
-    final out = <dynamic>[];
-    // Strings first (handles the actions array and players).
-    final strs = RegExp(r'''(['"])(.*?)\1''').allMatches(inner);
-    if (strs.isNotEmpty) {
-      for (final m in strs) {
-        out.add(m.group(2));
-      }
-      return out;
-    }
-    // Otherwise numeric/bool tokens.
-    for (final tok in inner.split(',')) {
-      final t = tok.trim();
-      if (t.isEmpty) continue;
-      out.add(_parseScalar(t));
-    }
-    return out;
+    return _splitArrayElements(inner).map(_parseScalar).toList();
   }
   return _parseScalar(v);
+}
+
+/// Split a TOML array body on its top-level commas. A comma inside a single- or
+/// double-quoted string is part of the element, not a separator.
+List<String> _splitArrayElements(String inner) {
+  final out = <String>[];
+  final buf = StringBuffer();
+  var inS = false, inD = false;
+  for (var i = 0; i < inner.length; i++) {
+    final c = inner[i];
+    if (c == "'" && !inD) {
+      inS = !inS;
+      buf.write(c);
+    } else if (c == '"' && !inS) {
+      inD = !inD;
+      buf.write(c);
+    } else if (c == ',' && !inS && !inD) {
+      final t = buf.toString().trim();
+      if (t.isNotEmpty) out.add(t);
+      buf.clear();
+    } else {
+      buf.write(c);
+    }
+  }
+  final last = buf.toString().trim();
+  if (last.isNotEmpty) out.add(last);
+  return out;
 }
 
 dynamic _parseScalar(String v) {
@@ -245,11 +265,23 @@ PokerHand phhToPokerHand(
   );
 }
 
+const _ranks = '23456789TJQKA';
+const _suits = 'cdhs';
+
 List<String> _splitCards(String s) {
-  // "Qh5c" -> ["Qh","5c"]; "7s9cTc" -> ["7s","9c","Tc"].
+  // "Qh5c" -> ["Qh","5c"]; "7s9cTc" -> ["7s","9c","Tc"]. A malformed token
+  // (odd length, or a 2-char chunk that isn't a real rank+suit) is a Format
+  // exception, not a silently-truncated card list — the baker skips the hand.
+  if (s.isEmpty || s.length.isOdd) {
+    throw FormatException('malformed card token: "$s"');
+  }
   final out = <String>[];
-  for (var i = 0; i + 1 < s.length; i += 2) {
-    out.add(s.substring(i, i + 2));
+  for (var i = 0; i < s.length; i += 2) {
+    final card = s.substring(i, i + 2);
+    if (!_ranks.contains(card[0]) || !_suits.contains(card[1])) {
+      throw FormatException('invalid card "$card" in token "$s"');
+    }
+    out.add(card);
   }
   return out;
 }

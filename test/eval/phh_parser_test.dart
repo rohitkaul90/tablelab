@@ -115,5 +115,38 @@ void main() {
       // BB folds to the turn bet.
       expect(turn.actions.any((a) => a.type == ActionType.fold), isTrue);
     });
+
+    test('TOML: mixed quoted+numeric array keeps every element', () {
+      // The old shortcut dropped the numerics whenever any quote was present.
+      final t = parseToml("vals = ['auto', 100, 200, true]");
+      expect(t['vals'], ['auto', 100, 200, true]);
+    });
+
+    test('TOML: float numeric values coerce to int (no CastError)', () {
+      final h = parsePhhText('''
+variant = "NT"
+antes = [0, 0]
+blinds_or_straddles = [50.0, 100]
+starting_stacks = [10000.0, 10000]
+actions = ['d dh p1 AhKh', 'd dh p2 ????', 'p1 cbr 200', 'p2 f']
+''');
+      expect(h.startingStacks, [10000, 10000]);
+      expect(h.blinds, [50, 100]);
+    });
+
+    test('malformed card token throws (not silently truncated)', () {
+      final h = parsePhhText('''
+variant = "NT"
+antes = [0, 0]
+blinds_or_straddles = [50, 100]
+starting_stacks = [10000, 10000]
+actions = ['d dh p1 AhKsT', 'd dh p2 ????', 'p1 cbr 200', 'p2 f']
+''');
+      expect(
+        () => phhToPokerHand(h,
+            heroPlayer: 1, id: 't', playedAt: DateTime.utc(2026, 1, 1)),
+        throwsFormatException,
+      );
+    });
   });
 }

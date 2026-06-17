@@ -78,15 +78,26 @@ Future<void> main(List<String> args) async {
       continue;
     }
 
-    final hand = phhToPokerHand(
-      phh,
-      heroPlayer: hero,
-      id: id,
-      playedAt: _bakedAt,
-      isTournament: spot['isTournament'] as bool? ?? false,
-      tournamentStage: spot['tournamentStage'] as String?,
-      notes: spot['notes'] as String?,
-    );
+    final PokerHand hand;
+    try {
+      hand = phhToPokerHand(
+        phh,
+        heroPlayer: hero,
+        id: id,
+        playedAt: _bakedAt,
+        isTournament: spot['isTournament'] as bool? ?? false,
+        tournamentStage: spot['tournamentStage'] as String?,
+        notes: spot['notes'] as String?,
+      );
+    } on FormatException catch (e) {
+      stderr.writeln('SKIP $id: malformed hand ($e)');
+      skipped++;
+      continue;
+    } on StateError catch (e) {
+      stderr.writeln('SKIP $id: unsupported hand ($e)');
+      skipped++;
+      continue;
+    }
 
     // Fixed seed → reproducible equity, so re-baking an unchanged spot produces
     // a byte-identical fixture (checked-in fixtures must be diffable).
