@@ -88,7 +88,9 @@ Future<void> main(List<String> args) async {
       notes: spot['notes'] as String?,
     );
 
-    final equity = await computeHandEquityCheck(hand, reads: reads);
+    // Fixed seed → reproducible equity, so re-baking an unchanged spot produces
+    // a byte-identical fixture (checked-in fixtures must be diffable).
+    final equity = await computeHandEquityCheck(hand, reads: reads, seed: 1234);
     if (equity == null) {
       stderr.writeln('SKIP $id: equity check unmodelable (no opponents/cards)');
       skipped++;
