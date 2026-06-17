@@ -29,6 +29,7 @@ import 'package:tablelab/equity/villain_range.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/models/player_read.dart';
 
+import 'board_texture.dart';
 import 'phh_parser.dart';
 
 // Reproducible timestamp for every fixture (no DateTime.now()).
@@ -63,23 +64,26 @@ Future<void> main(List<String> args) async {
       continue;
     }
 
-    final phh = parsePhhText(phhFile.readAsStringSync());
-    if (!phh.knownHolePlayers.contains(hero)) {
-      stderr.writeln('SKIP $id: hero p$hero has no known hole cards');
-      skipped++;
-      continue;
-    }
-    final boardDeals =
-        phh.actionTokens.where((t) => t.trim().startsWith('d db ')).length;
-    if (boardDeals > 3) {
-      stderr.writeln('SKIP $id: $boardDeals board deals '
-          '(run-it-twice / multi-board not supported)');
-      skipped++;
-      continue;
-    }
-
+    // Parse + model in one try: the stricter parser (quote-aware arrays, card
+    // validation, >3-board guard) can throw at PARSE time too (FormatException,
+    // StateError, or a RangeError/CastError on a malformed file), so one bad
+    // corpus file must skip the spot, not abort the whole batch.
     final PokerHand hand;
     try {
+      final phh = parsePhhText(phhFile.readAsStringSync());
+      if (!phh.knownHolePlayers.contains(hero)) {
+        stderr.writeln('SKIP $id: hero p$hero has no known hole cards');
+        skipped++;
+        continue;
+      }
+      final boardDeals =
+          phh.actionTokens.where((t) => t.trim().startsWith('d db ')).length;
+      if (boardDeals > 3) {
+        stderr.writeln('SKIP $id: $boardDeals board deals '
+            '(run-it-twice / multi-board not supported)');
+        skipped++;
+        continue;
+      }
       hand = phhToPokerHand(
         phh,
         heroPlayer: hero,
@@ -95,6 +99,10 @@ Future<void> main(List<String> args) async {
       continue;
     } on StateError catch (e) {
       stderr.writeln('SKIP $id: unsupported hand ($e)');
+      skipped++;
+      continue;
+    } catch (e) {
+      stderr.writeln('SKIP $id: parse error ($e)');
       skipped++;
       continue;
     }
@@ -195,59 +203,8 @@ String _heroCategory(List<String> hole, List<String> board) {
   return handCategoryName(evaluateBest(cards));
 }
 
-/// Board-level possibility flags + the exact straight windows the board allows.
-/// Independent reimplementation of the constraints computeBoardSummary asserts
-/// in the prompt — a mismatch between this and the prompt FACT is a real bug.
-Map<String, dynamic> _boardTexture(List<String> board) {
-  final ranks = board.map((c) => cardRank(parseCard(c))).toList(); // 0=2..12=A
-  final suits = board.map((c) => cardSuit(parseCard(c))).toList(); // 0=c..3=s
-
-  final rankCount = <int, int>{};
-  for (final r in ranks) {
-    rankCount[r] = (rankCount[r] ?? 0) + 1;
-  }
-  final maxRankCount = rankCount.values.fold(0, (a, b) => a > b ? a : b);
-
-  final suitCount = <int, int>{};
-  for (final s in suits) {
-    suitCount[s] = (suitCount[s] ?? 0) + 1;
-  }
-  int flushSuit = -1;
-  var maxSuit = 0;
-  suitCount.forEach((s, n) {
-    if (n > maxSuit) {
-      maxSuit = n;
-      flushSuit = s;
-    }
-  });
-
-  // Straight windows: rank values 2..14 (A high). Add A-low (1) for the wheel.
-  // Window low..low+4; board "supplies" a window if >=3 of its 5 ranks are on
-  // board (a player completes it with <=2 hole cards).
-  final present = <int>{};
-  for (final r in ranks) {
-    final v = r + 2; // 0->2 ... 12->14
-    present.add(v);
-    if (v == 14) present.add(1);
-  }
-  const valLabel = {
-    1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7',
-    8: '8', 9: '9', 10: 'T', 11: 'J', 12: 'Q', 13: 'K', 14: 'A',
-  };
-  final windows = <String>[];
-  for (var low = 1; low <= 10; low++) {
-    final win = [for (var v = low; v < low + 5; v++) v];
-    final onBoard = win.where(present.contains).length;
-    if (onBoard >= 3) {
-      windows.add(win.map((v) => valLabel[v]).join('-'));
-    }
-  }
-
-  const suitNames = ['clubs', 'diamonds', 'hearts', 'spades'];
-  return {
-    'boatOrQuadsPossible': maxRankCount >= 2,
-    'flushPossible': maxSuit >= 3,
-    'flushSuit': maxSuit >= 3 ? suitNames[flushSuit] : null,
-    'allowedStraightWindows': windows,
-  };
-}
+/// Board-level possibility flags + the exact straight windows the board allows
+/// (from the shared `analyzeBoard` — see board_texture.dart). Independent of the
+/// prompt's TS computeBoardSummary; that cross-check is the point.
+Map<String, dynamic> _boardTexture(List<String> board) =>
+    analyzeBoard(board).toLabel();

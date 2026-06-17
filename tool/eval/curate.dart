@@ -17,19 +17,15 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tablelab/equity/card.dart';
-
+import 'board_texture.dart';
 import 'phh_parser.dart';
-
-/// Texture category used to balance the benchmark.
-enum Texture { paired, flush, straight, dry }
 
 class Candidate {
   final String file; // absolute corpus path
   final String game; // pluribus game id (dir)
   final String hand; // hand id (file stem)
   final int hero; // 1-based p-index
-  final Texture texture;
+  final TextureCategory texture;
   final List<String> board;
   final bool preflopAllIn;
   Candidate(this.file, this.game, this.hand, this.hero, this.texture,
@@ -69,7 +65,12 @@ void main(List<String> args) {
   final picked = <String, List<Candidate>>{
     for (final k in quotas.keys) k: [],
   };
-  bool full() => quotas.keys.every((k) => picked[k]!.length >= quotas[k]!);
+  // Solver (preflop all-ins) is best-effort — deep-stacked Pluribus rarely has
+  // them, so an unfillable solver quota must not block completion or force a
+  // full-corpus scan. Done when the texture buckets are filled.
+  bool full() => quotas.keys
+      .where((k) => k != 'solver')
+      .every((k) => picked[k]!.length >= quotas[k]!);
 
   // Spread selection across games (avoid clustering in one Pluribus session) by
   // striding through the sorted file list.
@@ -79,9 +80,12 @@ void main(List<String> args) {
     scanned++;
     final cand = _classify(files[i]);
     if (cand == null) continue;
-    final bucket = cand.preflopAllIn ? 'solver' : cand.texture.name;
-    final list = picked[bucket];
-    if (list == null || list.length >= quotas[bucket]!) continue;
+    // Route a preflop all-in to the solver bucket, but if that's full fall back
+    // to its board-texture bucket rather than dropping the hand.
+    var bucket = cand.preflopAllIn ? 'solver' : cand.texture.name;
+    if (picked[bucket]!.length >= quotas[bucket]!) bucket = cand.texture.name;
+    final list = picked[bucket]!;
+    if (list.length >= quotas[bucket]!) continue;
     list.add(cand);
   }
 
@@ -126,67 +130,56 @@ Candidate? _classify(String path) {
     return null;
   }
 
-  // Final board from all `d db` deals.
+  // Walk the action log once: build the board, track who folded, and track who
+  // made a VOLUNTARY postflop action (cc = check/call, cbr = bet/raise).
   final board = <String>[];
-  var folds = <int>{};
+  final folds = <int>{};
+  final postflopActors = <int>{};
+  var boardDeals = 0;
+  var seenBoard = false;
   for (final t in phh.actionTokens) {
     final tt = t.trim();
     if (tt.startsWith('d db ')) {
       board.addAll(_splitBoard(tt.substring(5).trim()));
+      boardDeals++;
+      seenBoard = true;
+      continue;
     }
     final f = RegExp(r'^p(\d+) f$').firstMatch(tt);
-    if (f != null) folds.add(int.parse(f.group(1)!));
+    if (f != null) {
+      folds.add(int.parse(f.group(1)!));
+      continue;
+    }
+    if (seenBoard) {
+      final a = RegExp(r'^p(\d+) (cc|cbr)(?: |$)').firstMatch(tt);
+      if (a != null) postflopActors.add(int.parse(a.group(1)!));
+    }
   }
   if (board.length < 3) return null; // need a flop+ to have board texture
-
-  // Hero = lowest-index player with known cards who never folded.
-  final survivors = phh.knownHolePlayers.difference(folds).toList()..sort();
-  if (survivors.isEmpty) return null;
-  final hero = survivors.first;
-
-  // >3 board deals (run-it-twice) can't be represented; the baker skips these,
-  // so don't select them.
-  final boardDeals =
-      phh.actionTokens.where((t) => t.trim().startsWith('d db ')).length;
+  // >3 board deals (run-it-twice) can't be represented; the baker skips these.
   if (boardDeals > 3) return null;
 
-  final texture = _texture(board);
+  final survivors = phh.knownHolePlayers.difference(folds);
+  if (survivors.isEmpty) return null;
   final preflopAllIn = _hasPreflopAllIn(phh);
+
+  // Hero = lowest-index known-cards player who never folded. For a CARD-LOGIC
+  // spot the hero must also have a real postflop decision to grade (without
+  // this, a preflop all-in who never acts again could be the "hero" of a spot
+  // with no streets to score). A SOLVER spot is the opposite: the graded
+  // decision IS the preflop all-in, so the hero needn't act postflop.
+  final int hero;
+  if (preflopAllIn) {
+    hero = (survivors.toList()..sort()).first;
+  } else {
+    final heroes = survivors.intersection(postflopActors).toList()..sort();
+    if (heroes.isEmpty) return null;
+    hero = heroes.first;
+  }
+
+  final texture = analyzeBoard(board).category;
   return Candidate(path, _gameOf(path), _handOf(path), hero, texture, board,
       preflopAllIn);
-}
-
-Texture _texture(List<String> board) {
-  final ranks = board.map((c) => cardRank(parseCard(c))).toList();
-  final suits = board.map((c) => cardSuit(parseCard(c))).toList();
-
-  final rankCount = <int, int>{};
-  for (final r in ranks) {
-    rankCount[r] = (rankCount[r] ?? 0) + 1;
-  }
-  if (rankCount.values.any((n) => n >= 2)) return Texture.paired;
-
-  final suitCount = <int, int>{};
-  for (final s in suits) {
-    suitCount[s] = (suitCount[s] ?? 0) + 1;
-  }
-  if (suitCount.values.any((n) => n >= 3)) return Texture.flush;
-
-  // Straight-y: any 5-rank window the board supplies >=3 of.
-  final present = <int>{};
-  for (final r in ranks) {
-    final v = r + 2;
-    present.add(v);
-    if (v == 14) present.add(1);
-  }
-  for (var low = 1; low <= 10; low++) {
-    var on = 0;
-    for (var v = low; v < low + 5; v++) {
-      if (present.contains(v)) on++;
-    }
-    if (on >= 3) return Texture.straight;
-  }
-  return Texture.dry;
 }
 
 /// A preflop shove-and-call: a `cbr` for a player's full stack before any board

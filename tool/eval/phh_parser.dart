@@ -134,10 +134,36 @@ dynamic _parseValue(String v) {
     // each element independently via _parseScalar. This keeps BOTH quoted and
     // bare elements in a mixed array — the old "if any quote present, return
     // only the quoted matches" shortcut silently dropped every numeric element.
-    final inner = v.substring(1, v.lastIndexOf(']'));
+    // Find the matching close bracket QUOTE-AWARELY (a ']' inside a quoted
+    // element isn't the terminator), and fall back to end-of-string if there's
+    // no close (rather than substring(1, -1) → RangeError).
+    final close = _matchingClose(v);
+    final inner = v.substring(1, close);
     return _splitArrayElements(inner).map(_parseScalar).toList();
   }
   return _parseScalar(v);
+}
+
+/// Index of the `]` that closes the leading `[` in [v], ignoring brackets inside
+/// quotes. Returns `v.length` if unbalanced (no real close found).
+int _matchingClose(String v) {
+  var depth = 0;
+  var inS = false, inD = false;
+  for (var i = 0; i < v.length; i++) {
+    final c = v[i];
+    if (c == "'" && !inD) {
+      inS = !inS;
+    } else if (c == '"' && !inS) {
+      inD = !inD;
+    } else if (!inS && !inD) {
+      if (c == '[') depth++;
+      if (c == ']') {
+        depth--;
+        if (depth == 0) return i;
+      }
+    }
+  }
+  return v.length;
 }
 
 /// Split a TOML array body on its top-level commas. A comma inside a single- or

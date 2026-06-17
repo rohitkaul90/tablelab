@@ -41,14 +41,22 @@ async function mapPool<T, R>(
   items: T[],
   limit: number,
   fn: (item: T, i: number) => Promise<R>,
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
+): Promise<(R | undefined)[]> {
+  const results = new Array<R | undefined>(items.length);
   let next = 0;
   async function worker() {
     while (true) {
       const i = next++;
       if (i >= items.length) break;
-      results[i] = await fn(items[i], i);
+      // Never let one item's unexpected throw reject Promise.all — that would
+      // discard every other worker's completed result and lose a costed run
+      // with no report. The slot is left undefined; the caller fills it.
+      try {
+        results[i] = await fn(items[i], i);
+      } catch (e) {
+        console.error(`mapPool: item ${i} threw: ${e instanceof Error ? e.message : e}`);
+        results[i] = undefined;
+      }
     }
   }
   await Promise.all(
@@ -237,15 +245,19 @@ function labelForStreet(fx: Fixture, street: string): StreetLabel | null {
 
 interface AdjudResult {
   violations: Violation[];
-  // Equity claims that couldn't be checked because the claim's street has no
-  // baked equity label (e.g. a villain folded earlier so the street wasn't
-  // modeled). Surfaced in the report — no silent caps.
+  // Hero-equity claims that WERE checked against a baked equity label.
+  scoredEquity: number;
+  // Hero-equity claims that couldn't be checked because the claim's street has
+  // no baked equity label (e.g. a villain folded earlier so the street wasn't
+  // modeled). Reported as a coverage ratio so the equity dimension can't
+  // silently degrade to ~0 while the headline still reads ~100%.
   unscoredEquity: number;
 }
 
 function adjudicate(fx: Fixture, claims: Claim[]): AdjudResult {
   const out: Violation[] = [];
   let unscoredEquity = 0;
+  let scoredEquity = 0;
   const add = (c: Claim, detail: string) =>
     out.push({ fixtureId: fx.id, street: c.street, category: c.category, detail, claim: c.text });
 
@@ -296,6 +308,7 @@ function adjudicate(fx: Fixture, claims: Claim[]): AdjudResult {
     if (c.percent != null && c.category === "equity" && c.subject === "hero") {
       const exact = fx.labels.perStreet.find((s) => s.street === c.street);
       if (exact?.heroEquity != null) {
+        scoredEquity++;
         const factPct = Math.round(exact.heroEquity * 100);
         if (Math.abs(c.percent - factPct) > 12) {
           add(c, `states hero equity ${c.percent}% but the ${c.street} equity FACT is ~${factPct}% (>12pt)`);
@@ -306,7 +319,7 @@ function adjudicate(fx: Fixture, claims: Claim[]): AdjudResult {
       }
     }
   }
-  return { violations: out, unscoredEquity };
+  return { violations: out, scoredEquity, unscoredEquity };
 }
 
 const _rankOrder = "23456789TJQKA";
@@ -342,6 +355,7 @@ async function main() {
     // shows only counts.
     claims: Claim[];
     violations: Violation[];
+    scoredEquity: number;
     unscoredEquity: number;
     // A harness/API failure (refusal, 5xx, timeout) — NOT a card-logic error.
     // Excluded from the accuracy denominator so an API blip can't move the
@@ -350,25 +364,35 @@ async function main() {
     errorDetail?: string;
   }
 
+  const errResult = (fx: Fixture, detail: string): SpotResult => ({
+    id: fx.id, bucket: fx.bucket, claims: [], violations: [],
+    scoredEquity: 0, unscoredEquity: 0, errored: true, errorDetail: detail,
+  });
+
   let done = 0;
-  const results: SpotResult[] = await mapPool(
+  const raw = await mapPool(
     fixtures,
     CONCURRENCY,
     async (fx): Promise<SpotResult> => {
       try {
         const analysis = await runCoaching(fx);
         const claims = await extractClaims(fx, analysis);
-        const { violations, unscoredEquity } = adjudicate(fx, claims);
+        const { violations, scoredEquity, unscoredEquity } = adjudicate(fx, claims);
         const mark = violations.length === 0 ? "OK " : "ERR";
         console.log(`[${++done}/${fixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} violations)`);
         for (const v of violations) console.log(`      - [${v.street}/${v.category}] ${v.detail}`);
-        return { id: fx.id, bucket: fx.bucket, claims, violations, unscoredEquity, errored: false };
+        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, errored: false };
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
         console.error(`[${++done}/${fixtures.length}] ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
-        return { id: fx.id, bucket: fx.bucket, claims: [], violations: [], unscoredEquity: 0, errored: true, errorDetail: detail };
+        return errResult(fx, detail);
       }
     },
+  );
+  // A `undefined` slot means mapPool's worker caught an unexpected throw — treat
+  // it as an errored spot so the run still produces a complete report.
+  const results: SpotResult[] = raw.map(
+    (r, i) => r ?? errResult(fixtures[i], "worker crashed unexpectedly"),
   );
 
   // Accuracy is over SCORED spots only — harness errors are excluded, never
@@ -377,7 +401,12 @@ async function main() {
   const erroredCount = results.length - scored.length;
   const clean = scored.filter((r) => r.violations.length === 0).length;
   const accuracy = scored.length ? (100 * clean / scored.length) : 0;
+  const scoredEquityTotal = results.reduce((n, r) => n + r.scoredEquity, 0);
   const unscoredEquityTotal = results.reduce((n, r) => n + r.unscoredEquity, 0);
+  const equityClaimsTotal = scoredEquityTotal + unscoredEquityTotal;
+  const equityCoveragePct = equityClaimsTotal
+    ? Number((100 * scoredEquityTotal / equityClaimsTotal).toFixed(1))
+    : 0;
   const byCategory: Record<string, number> = {};
   for (const r of results) {
     for (const v of r.violations) byCategory[v.category] = (byCategory[v.category] ?? 0) + 1;
@@ -390,7 +419,9 @@ async function main() {
     errored: erroredCount,
     clean,
     cardLogicAccuracyPct: Number(accuracy.toFixed(1)),
-    unscoredEquityClaims: unscoredEquityTotal,
+    equityClaimsScored: scoredEquityTotal,
+    equityClaimsUnscored: unscoredEquityTotal,
+    equityCoveragePct,
     byCategory,
     results,
   };
@@ -398,7 +429,7 @@ async function main() {
   await Deno.writeTextFile(`${outDir}/report.md`, renderMarkdown(report));
 
   console.log(`\nCard-logic accuracy: ${accuracy.toFixed(1)}%  (${clean}/${scored.length} scored spots clean${erroredCount ? `; ${erroredCount} errored, excluded` : ""})`);
-  if (unscoredEquityTotal) console.log(`Unscored equity claims (no street label): ${unscoredEquityTotal}`);
+  console.log(`Equity check coverage: ${equityCoveragePct}%  (${scoredEquityTotal} scored / ${equityClaimsTotal} hero-equity claims)`);
   console.log(`Report: ${outDir}/report.md`);
 }
 
@@ -410,7 +441,7 @@ function renderMarkdown(r: any): string {
     `- Model under test: \`${r.generatedFor}\``,
     `- **Card-logic accuracy: ${r.cardLogicAccuracyPct}%** (${r.clean}/${r.scored} scored spots with zero card-logic errors)`,
     `- Errored (harness/API, excluded from accuracy): ${r.errored}`,
-    `- Unscored equity claims (no street label): ${r.unscoredEquityClaims}`,
+    `- Equity-check coverage: ${r.equityCoveragePct}% (${r.equityClaimsScored} scored / ${r.equityClaimsScored + r.equityClaimsUnscored} hero-equity claims)`,
     ``,
     `## Violations by category`,
     ``,
