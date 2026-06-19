@@ -3,16 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
 import '../models/session_model.dart';
 import '../models/profile_model.dart';
+import '../models/stats_filter.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/session_tile.dart';
 import '../widgets/ai_usage_pill.dart';
+import '../widgets/game_type_filter.dart';
 import 'live_session_screen.dart';
-import 'session_detail_screen.dart';
 import 'import_source_screen.dart';
 import 'analytics_screen.dart';
+import 'metric_chart_screen.dart';
 import 'ai_analysis/session_analysis_screen.dart';
 import '../providers/profile_provider.dart';
 import 'profile_screen.dart';
@@ -28,16 +29,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
-  // Overview filter state
-  String? _gameFilter;
-  String? _displayCurrency;
+  // Overview game-type pills. null = not yet initialised (defaults to the
+  // last-played game type once sessions load).
+  Set<String>? _gameTypes;
 
-  // Analytics filter state
-  String? _analyticsVenueFilter;
-  Set<String> _analyticsCountryFilter = {};
-  Set<String> _analyticsLocationFilter = {};
-  String? _analyticsDisplayCurrency;
-  String? _analyticsDateFilter;
+  // The AppBar "Display Options" filter — same options on both tabs, but each
+  // tab keeps its own independent selection.
+  StatsFilter _overviewFilter = const StatsFilter();
+  StatsFilter _analyticsFilter = const StatsFilter();
 
   @override
   void initState() {
@@ -52,46 +51,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     super.dispose();
   }
 
-  bool get _hasActiveFilter => _displayCurrency != null;
-
-  bool get _hasActiveAnalyticsFilter =>
-      _analyticsDisplayCurrency != null ||
-      _analyticsCountryFilter.isNotEmpty ||
-      _analyticsVenueFilter != null ||
-      _analyticsLocationFilter.isNotEmpty ||
-      _analyticsDateFilter != null;
-
-  void _showFilterSheet(List<SessionModel> sessions) {
-    final effectiveCurrency = _displayCurrency ??
-        (sessions.isEmpty
-            ? 'CAD'
-            : ([...sessions]..sort((a, b) => b.date.compareTo(a.date)))
-                .first
-                .currency);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => _DashboardFilterSheet(
-        displayCurrency: effectiveCurrency,
-        onCurrencyChanged: (c) => setState(() => _displayCurrency = c),
-        onReset: () => setState(() => _displayCurrency = null),
-      ),
-    );
-  }
-
-  void _showAnalyticsFilterSheet(List<SessionModel> sessions) {
-    final effectiveCurrency = _analyticsDisplayCurrency ??
-        (sessions.isEmpty
-            ? 'CAD'
-            : ([...sessions]..sort((a, b) => b.date.compareTo(a.date)))
-                .first
-                .currency);
-
+  // Opens the shared Display Options sheet for whichever tab is active.
+  void _openFilterSheet(
+    List<SessionModel> sessions,
+    StatsFilter current,
+    ValueChanged<StatsFilter> onApply,
+    VoidCallback onReset,
+  ) {
     final allCountries = sessions
         .map((s) => s.country)
         .whereType<String>()
@@ -115,31 +81,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => AnalyticsFilterSheet(
-        displayCurrency: effectiveCurrency,
-        countryFilter: _analyticsCountryFilter,
-        venueFilter: _analyticsVenueFilter,
-        locationFilter: _analyticsLocationFilter,
-        dateFilter: _analyticsDateFilter,
+      builder: (_) => StatsFilterSheet(
+        filter: current,
+        effectiveCurrency: current.effectiveCurrency(sessions),
         allCountries: allCountries,
         hasMultipleCountries: allCountries.length > 1,
         hasOnline: sessions.any((s) => isOnlineSession(s.location)),
         hasLive: sessions.any((s) => !isOnlineSession(s.location)),
         allLocations: allLocations,
-        onApply: (currency, country, venue, location, date) => setState(() {
-          _analyticsDisplayCurrency = currency;
-          _analyticsCountryFilter = country;
-          _analyticsVenueFilter = venue;
-          _analyticsLocationFilter = location;
-          _analyticsDateFilter = date;
-        }),
-        onReset: () => setState(() {
-          _analyticsDisplayCurrency = null;
-          _analyticsCountryFilter = {};
-          _analyticsVenueFilter = null;
-          _analyticsLocationFilter = {};
-          _analyticsDateFilter = null;
-        }),
+        onApply: onApply,
+        onReset: onReset,
       ),
     );
   }
@@ -157,30 +108,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
         title: const Text('Stats'),
         actions: [
-          if (_tabController.index == 0)
-            sessionsAsync.maybeWhen(
-              data: (sessions) => IconButton(
+          sessionsAsync.maybeWhen(
+            data: (sessions) {
+              final isOverview = _tabController.index == 0;
+              final filter = isOverview ? _overviewFilter : _analyticsFilter;
+              return IconButton(
                 icon: Badge(
-                  isLabelVisible: _hasActiveFilter,
+                  isLabelVisible: filter.isActive,
                   child: const Icon(Icons.tune),
                 ),
                 tooltip: 'Display options',
-                onPressed: () => _showFilterSheet(sessions),
-              ),
-              orElse: () => const SizedBox.shrink(),
-            ),
-          if (_tabController.index == 1)
-            sessionsAsync.maybeWhen(
-              data: (sessions) => IconButton(
-                icon: Badge(
-                  isLabelVisible: _hasActiveAnalyticsFilter,
-                  child: const Icon(Icons.tune),
+                onPressed: () => _openFilterSheet(
+                  sessions,
+                  filter,
+                  (f) => setState(() {
+                    if (isOverview) {
+                      _overviewFilter = f;
+                    } else {
+                      _analyticsFilter = f;
+                    }
+                  }),
+                  () => setState(() {
+                    if (isOverview) {
+                      _overviewFilter = const StatsFilter();
+                    } else {
+                      _analyticsFilter = const StatsFilter();
+                    }
+                  }),
                 ),
-                tooltip: 'Display options',
-                onPressed: () => _showAnalyticsFilterSheet(sessions),
-              ),
-              orElse: () => const SizedBox.shrink(),
-            ),
+              );
+            },
+            orElse: () => const SizedBox.shrink(),
+          ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -202,17 +161,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         controller: _tabController,
         children: [
           _OverviewTab(
-            gameFilter: _gameFilter,
-            displayCurrency: _displayCurrency,
-            onGameFilterChanged: (v) => setState(() => _gameFilter = v),
+            gameTypes: _gameTypes,
+            filter: _overviewFilter,
+            onGameTypesChanged: (v) => setState(() => _gameTypes = v),
           ),
-          AnalyticsScreen(
-            venueFilter: _analyticsVenueFilter,
-            countryFilter: _analyticsCountryFilter,
-            locationFilter: _analyticsLocationFilter,
-            displayCurrency: _analyticsDisplayCurrency,
-            dateFilter: _analyticsDateFilter,
-          ),
+          AnalyticsScreen(filter: _analyticsFilter),
         ],
       ),
     );
@@ -222,14 +175,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
 class _OverviewTab extends ConsumerWidget {
-  final String? gameFilter;
-  final String? displayCurrency;
-  final ValueChanged<String?> onGameFilterChanged;
+  final Set<String>? gameTypes;
+  final StatsFilter filter;
+  final ValueChanged<Set<String>> onGameTypesChanged;
 
   const _OverviewTab({
-    required this.gameFilter,
-    required this.displayCurrency,
-    required this.onGameFilterChanged,
+    required this.gameTypes,
+    required this.filter,
+    required this.onGameTypesChanged,
   });
 
   @override
@@ -240,9 +193,9 @@ class _OverviewTab extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (sessions) => _OverviewBody(
         sessions: sessions,
-        gameFilter: gameFilter,
-        displayCurrency: displayCurrency,
-        onGameFilterChanged: onGameFilterChanged,
+        gameTypes: gameTypes,
+        filter: filter,
+        onGameTypesChanged: onGameTypesChanged,
       ),
     );
   }
@@ -252,116 +205,118 @@ class _OverviewTab extends ConsumerWidget {
 
 class _OverviewBody extends ConsumerWidget {
   final List<SessionModel> sessions;
-  final String? gameFilter;
-  final String? displayCurrency;
-  final ValueChanged<String?> onGameFilterChanged;
+  final Set<String>? gameTypes;
+  final StatsFilter filter;
+  final ValueChanged<Set<String>> onGameTypesChanged;
 
   const _OverviewBody({
     required this.sessions,
-    required this.gameFilter,
-    required this.displayCurrency,
-    required this.onGameFilterChanged,
+    required this.gameTypes,
+    required this.filter,
+    required this.onGameTypesChanged,
   });
 
-  bool get _hasCash => sessions.any((s) => s.gameType == 'cash');
-  bool get _hasTournament =>
-      sessions.any((s) => isTournamentType(s.gameType));
-  bool get _showGameFilter => _hasCash && _hasTournament;
+  // The active selection. null (untouched) defaults to the last-played game
+  // type; an empty set means "all game types".
+  Set<String> get _effectiveTypes => gameTypes ?? defaultGameTypes(sessions);
 
-  String _effectiveCurrency() {
-    if (displayCurrency != null) return displayCurrency!;
-    if (sessions.isEmpty) return 'CAD';
-    return ([...sessions]..sort((a, b) => b.date.compareTo(a.date)))
-        .first
-        .currency;
-  }
-
-  List<SessionModel> get _filtered {
-    if (gameFilter == null) return sessions;
-    if (gameFilter == 'tournament') {
-      return sessions.where((s) => isTournamentType(s.gameType)).toList();
-    }
-    return sessions.where((s) => s.gameType == 'cash').toList();
-  }
+  List<SessionModel> get _filtered =>
+      filterByGameTypes(filter.apply(sessions), _effectiveTypes);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filtered = _filtered;
-    final currency = _effectiveCurrency();
+    final currency = filter.effectiveCurrency(sessions);
     final stats = _Stats.from(filtered, currency);
-    final recent = ([...sessions]
-          ..sort((a, b) => b.date.compareTo(a.date)))
-        .take(5)
-        .toList();
+    final types = _effectiveTypes;
+    // "All" = nothing selected (both pills off).
+    final isAllTypes = types.isEmpty;
+    final tournamentOnly = types.length == 1 && types.contains('tournament');
     final profile = ref.watch(profileProvider).valueOrNull;
+
+    final gtLabel = gameTypeChipLabel(types);
+    final activeFilters = <String>[
+      if (gtLabel != null) gtLabel,
+      ...filter.labels(),
+      currency,
+    ];
+
+    void openMetric(StatMetric metric) => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MetricChartScreen(
+              metric: metric,
+              sessions: filtered,
+              displayCurrency: currency,
+              activeFilters: activeFilters,
+            ),
+          ),
+        );
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       children: [
         const LiveSessionCard(),
-        // ── Game-type chip strip ───────────────────────────────────────────
-        if (_showGameFilter) ...[
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final entry in [
-                  (null, 'All'),
-                  ('cash', 'Cash'),
-                  ('tournament', 'Tournament'),
-                ])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(entry.$2),
-                      selected: gameFilter == entry.$1,
-                      onSelected: (_) => onGameFilterChanged(entry.$1),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
+        // ── Game-type filter pills (always shown) ──────────────────────────
+        GameTypeFilterChips(
+          selected: types,
+          onChanged: onGameTypesChanged,
+        ),
+        const SizedBox(height: 12),
 
         // ── Profit hero card (bankroll folded in) ──────────────────────────
         Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              children: [
-                Text(
-                  gameFilter == null
-                      ? 'Profit'
-                      : '${gameFilter == 'cash' ? 'Cash' : 'Tournament'} Profit',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  formatPLWithCurrency(stats.totalPL, currency),
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        color: stats.totalPL >= 0 ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.bold,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => openMetric(StatMetric.profit),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        isAllTypes
+                            ? 'Profit'
+                            : '${tournamentOnly ? 'Tournament' : 'Cash'} Profit',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                ),
-                // Bankroll is one overall figure (starting bankroll + total P&L
-                // across all game types) so it only makes sense unfiltered. It's
-                // folded in as a quiet secondary line rather than its own card —
-                // most established / recreational players don't track a separate
-                // poker bankroll.
-                if (gameFilter == null)
-                  _InlineBankroll(
-                    profile: profile,
-                    totalPL: stats.totalPL,
-                    currency: currency,
+                      const SizedBox(width: 4),
+                      Icon(Icons.show_chart,
+                          size: 16,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.6)),
+                    ],
                   ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    formatPLWithCurrency(stats.totalPL, currency),
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                          color: stats.totalPL >= 0 ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  // Bankroll is one overall figure (starting bankroll + total
+                  // P&L across all game types) so it only makes sense
+                  // unfiltered — hide it when a game-type pill or any
+                  // session-narrowing filter (date/location/etc.) is active.
+                  if (isAllTypes && !filter.narrowsSessions)
+                    _InlineBankroll(
+                      profile: profile,
+                      totalPL: stats.totalPL,
+                      currency: currency,
+                    ),
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: 12),
 
-        // ── Stat cards grid ────────────────────────────────────────────────
+        // ── Stat cards grid (each tile opens its trend chart) ──────────────
         LayoutBuilder(
           builder: (context, constraints) => GridView.count(
             shrinkWrap: true,
@@ -370,30 +325,35 @@ class _OverviewBody extends ConsumerWidget {
             childAspectRatio: 2.0,
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
-            children: gameFilter == 'tournament'
+            children: tournamentOnly
                 ? [
                     StatCard(
                       label: 'Sessions',
                       value: '${stats.sessionCount}',
+                      onTap: () => openMetric(StatMetric.sessions),
                     ),
                     StatCard(
                       label: 'ITM',
                       value: '${stats.itm}',
+                      onTap: () => openMetric(StatMetric.itm),
                     ),
                     StatCard(
                       label: 'ITM %',
                       value: '${stats.itmPct.toStringAsFixed(0)}%',
+                      onTap: () => openMetric(StatMetric.itmPct),
                     ),
                     StatCard(
                       label: 'ROI',
                       value: formatROI(stats.roi),
                       valueColor: stats.roi >= 0 ? Colors.green : Colors.red,
+                      onTap: () => openMetric(StatMetric.roi),
                     ),
                   ]
                 : [
                     StatCard(
                       label: 'Hours Played',
                       value: formatHours(stats.totalHours),
+                      onTap: () => openMetric(StatMetric.hours),
                     ),
                     StatCard(
                       label: 'Win Rate',
@@ -401,10 +361,12 @@ class _OverviewBody extends ConsumerWidget {
                           '${formatPLWithCurrency(stats.hourlyRate, currency)}/hr',
                       valueColor:
                           stats.hourlyRate >= 0 ? Colors.green : Colors.red,
+                      onTap: () => openMetric(StatMetric.winRate),
                     ),
                     StatCard(
                       label: 'Sessions',
                       value: '${stats.sessionCount}',
+                      onTap: () => openMetric(StatMetric.sessions),
                     ),
                     StatCard(
                       label: 'W / L',
@@ -414,73 +376,52 @@ class _OverviewBody extends ConsumerWidget {
                           : stats.losses > stats.wins
                               ? Colors.red
                               : null,
+                      onTap: () => openMetric(StatMetric.winLoss),
                     ),
                   ],
           ),
         ),
         const SizedBox(height: 20),
 
-        // ── Recent sessions ────────────────────────────────────────────────
-        if (recent.isNotEmpty) ...[
-          Text('Recent Sessions',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          ...recent.map(
-            (s) => SessionTile(
-              session: s,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => SessionDetailScreen(session: s)),
-              ),
-            ),
+        // ── AI coaching (sessions logged) or a compact first-session CTA ───
+        if (sessions.isNotEmpty)
+          _AiCoachingCard(
+            session: ([...sessions]..sort((a, b) => b.date.compareTo(a.date)))
+                .first,
+          )
+        else ...[
+          Text(
+            'No sessions yet — log your first to fill these in.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
           ),
-          const SizedBox(height: 16),
-          _AiCoachingCard(session: recent.first),
-        ] else
-          Padding(
-            padding: const EdgeInsets.only(top: 48),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.casino_outlined,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
-                  const SizedBox(height: 16),
-                  Text('No sessions yet',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Log your first session — or import your\nhistory from another app.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
-                    onPressed: () => showLogSessionChooser(context, ref),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Log Session'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ImportSourceScreen()),
-                    ),
-                    icon: const Icon(Icons.upload_file_outlined),
-                    label: const Text('Import from another app'),
-                  ),
-                ],
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FilledButton.icon(
+                onPressed: () => showLogSessionChooser(context, ref),
+                icon: const Icon(Icons.add),
+                label: const Text('Log Session'),
               ),
-            ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ImportSourceScreen()),
+                ),
+                icon: const Icon(Icons.upload_file_outlined),
+                label: const Text('Import'),
+              ),
+            ],
           ),
+        ],
       ],
     );
   }
@@ -604,106 +545,6 @@ class _AiCoachingCard extends StatelessWidget {
               Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.4)),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Dashboard filter sheet (currency) ─────────────────────────────────────────
-
-class _DashboardFilterSheet extends StatefulWidget {
-  final String displayCurrency;
-  final ValueChanged<String> onCurrencyChanged;
-  final VoidCallback onReset;
-
-  const _DashboardFilterSheet({
-    required this.displayCurrency,
-    required this.onCurrencyChanged,
-    required this.onReset,
-  });
-
-  @override
-  State<_DashboardFilterSheet> createState() => _DashboardFilterSheetState();
-}
-
-class _DashboardFilterSheetState extends State<_DashboardFilterSheet> {
-  late String _currency;
-
-  @override
-  void initState() {
-    super.initState();
-    _currency = widget.displayCurrency;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.45,
-      maxChildSize: 0.7,
-      builder: (context, scroll) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: ListView(
-          controller: scroll,
-          children: [
-            Center(
-              child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Text('Display Options',
-                style: theme.textTheme.titleLarge),
-            const SizedBox(height: 20),
-
-            Text('Currency', style: theme.textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: supportedDisplayCurrencies.map((c) {
-                final selected = _currency == c;
-                return ChoiceChip(
-                  label: Text('$c ${currencySymbol(c)}'),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _currency = c),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      widget.onReset();
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Reset'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () {
-                      widget.onCurrencyChanged(_currency);
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Apply'),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );

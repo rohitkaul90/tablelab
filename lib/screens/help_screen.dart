@@ -411,6 +411,10 @@ class _FaqTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ExpansionTile(
+      // Unique PageStorage slot per FAQ — keyless ExpansionTiles share the
+      // default slot and store a bool there, which a later scrollable reads as
+      // a scroll offset and crashes ("bool is not a subtype of double?").
+      key: PageStorageKey('faq_${faq.q}'),
       tilePadding: const EdgeInsets.symmetric(horizontal: 16),
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       title: Text(

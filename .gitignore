@@ -53,6 +53,9 @@ app.*.map.json
 # Scratch/dev-only directories
 /test_imports/
 
+# Build artifacts (signed AABs are produced by CI + attached to GitHub Releases)
+/dist/
+
 # Android release keystore — never commit
 android/app/tablelab-release.jks
 android/build/
