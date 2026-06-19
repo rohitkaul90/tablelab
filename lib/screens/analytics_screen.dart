@@ -1,29 +1,18 @@
-import 'dart:io' show Platform;
 import 'dart:math' as math;
-import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
 import '../models/session_model.dart';
+import '../models/stats_filter.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
+import '../widgets/game_type_filter.dart';
+import 'metric_chart_screen.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
-  final String? venueFilter;
-  final Set<String> countryFilter;
-  final Set<String> locationFilter;
-  final String? displayCurrency;
-  final String? dateFilter;
+  final StatsFilter filter;
 
-  const AnalyticsScreen({
-    super.key,
-    this.venueFilter,
-    this.countryFilter = const {},
-    this.locationFilter = const {},
-    this.displayCurrency,
-    this.dateFilter,
-  });
+  const AnalyticsScreen({super.key, this.filter = const StatsFilter()});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,111 +20,56 @@ class AnalyticsScreen extends ConsumerWidget {
     return sessionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
-      data: (sessions) {
-        if (sessions.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32),
-              child: Text(
-                'Log some sessions to see analytics here.',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
-        return _AnalyticsBody(
-          sessions: sessions,
-          venueFilter: venueFilter,
-          countryFilter: countryFilter,
-          locationFilter: locationFilter,
-          displayCurrency: displayCurrency,
-          dateFilter: dateFilter,
-        );
-      },
+      // The body shows the game-type pills + summary metrics even with no
+      // sessions (zeros), so new users see structure rather than a blank page.
+      data: (sessions) => _AnalyticsBody(sessions: sessions, filter: filter),
     );
   }
 }
 
 class _AnalyticsBody extends StatefulWidget {
   final List<SessionModel> sessions;
-  final String? venueFilter;
-  final Set<String> countryFilter;
-  final Set<String> locationFilter;
-  final String? displayCurrency;
-  final String? dateFilter;
+  final StatsFilter filter;
 
-  const _AnalyticsBody({
-    required this.sessions,
-    this.venueFilter,
-    this.countryFilter = const {},
-    this.locationFilter = const {},
-    this.displayCurrency,
-    this.dateFilter,
-  });
+  const _AnalyticsBody({required this.sessions, required this.filter});
 
   @override
   State<_AnalyticsBody> createState() => _AnalyticsBodyState();
 }
 
 class _AnalyticsBodyState extends State<_AnalyticsBody> {
-  String? _gameFilter;
+  // null = not yet chosen (defaults to the last-played game type). An empty
+  // set means "all game types".
+  Set<String>? _gameTypes;
 
-  String get _effectiveCurrency {
-    if (widget.displayCurrency != null) return widget.displayCurrency!;
-    if (widget.sessions.isEmpty) return 'CAD';
-    return widget.sessions
-        .reduce((a, b) => a.date.compareTo(b.date) >= 0 ? a : b)
-        .currency;
+  Set<String> get _effectiveTypes =>
+      _gameTypes ?? defaultGameTypes(widget.sessions);
+
+  // Read-only labels describing the active filters, shown on each chart screen.
+  List<String> _activeFilterLabels(String displayCurrency) {
+    final types = _effectiveTypes;
+    return [
+      if (types.isNotEmpty)
+        (types.contains('tournament') ? 'Tournament' : 'Cash'),
+      ...widget.filter.labels(),
+      displayCurrency,
+    ];
   }
 
+  String get _effectiveCurrency => widget.filter.effectiveCurrency(widget.sessions);
+
   List<SessionModel> get _filtered {
-    var result = widget.sessions;
-    if (widget.dateFilter != null) {
-      final days = switch (widget.dateFilter!) {
-        '1M' => 30,
-        '3M' => 90,
-        '6M' => 180,
-        '1Y' => 365,
-        _ => 0,
-      };
-      if (days > 0) {
-        final cutoff = DateTime.now().subtract(Duration(days: days));
-        result = result.where((s) {
-          final d = DateTime.tryParse(s.date);
-          return d != null && d.isAfter(cutoff);
-        }).toList();
-      }
-    }
-    if (widget.countryFilter.isNotEmpty) {
-      result =
-          result.where((s) => widget.countryFilter.contains(s.country)).toList();
-    }
-    if (_gameFilter != null) {
-      if (_gameFilter == 'tournament') {
-        result = result.where((s) => isTournamentType(s.gameType)).toList();
-      } else {
-        result = result.where((s) => s.gameType == 'cash').toList();
-      }
-    }
-    if (widget.venueFilter == 'online') {
-      result = result.where((s) => isOnlineSession(s.location)).toList();
-    } else if (widget.venueFilter == 'live') {
-      result = result.where((s) => !isOnlineSession(s.location)).toList();
-    }
-    if (widget.locationFilter.isNotEmpty) {
+    var result = widget.filter.apply(widget.sessions);
+    final types = _effectiveTypes;
+    if (types.isNotEmpty) {
+      // empty = all game types
       result = result
           .where((s) =>
-              s.location != null && widget.locationFilter.contains(s.location))
+              types.contains(isTournamentType(s.gameType) ? 'tournament' : 'cash'))
           .toList();
     }
     return result;
   }
-
-  // Intentionally check ALL sessions (unfiltered) so the game-type chip strip
-  // doesn't vanish when the active filter hides one type.
-  bool get _hasCash => widget.sessions.any((s) => s.gameType == 'cash');
-  bool get _hasTournament =>
-      widget.sessions.any((s) => isTournamentType(s.gameType));
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +77,6 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     final isWide = screenWidth > 800;
     final hPad = isWide ? math.max(16.0, (screenWidth - 960.0) / 2) : 16.0;
     final filtered = _filtered;
-    final sorted = [...filtered]..sort((a, b) => a.date.compareTo(b.date));
     final displayCurrency = _effectiveCurrency;
     final showingTournaments = filtered.any((s) => isTournamentType(s.gameType));
     final showingCash = filtered.any((s) => s.gameType == 'cash');
@@ -191,102 +124,89 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     final bb100 = calcBB100(cashSessions);
 
     final summaryItems = <_SummaryItem>[
-      _SummaryItem('Sessions', '${filtered.length}'),
-      _SummaryItem('Hours', formatHours(totalHours)),
+      _SummaryItem('Sessions', '${filtered.length}', null, StatMetric.sessions),
+      _SummaryItem('Hours', formatHours(totalHours), null, StatMetric.hours),
       _SummaryItem(
         'Win Rate',
         '$rateSign$sym${hourlyRate.abs().toStringAsFixed(0)}/hr',
         rateColor,
+        StatMetric.winRate,
       ),
       _SummaryItem(
         'Total Profit',
         formatPLWithCurrency(totalPL, displayCurrency),
         plColor,
+        StatMetric.profit,
       ),
-      _SummaryItem('Buy-In', formatAmount(totalBuyIn, displayCurrency)),
+      _SummaryItem(
+          'Buy-In', formatAmount(totalBuyIn, displayCurrency), null,
+          StatMetric.buyIn),
+      if (hasExpenses)
+        _SummaryItem('Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}',
+            null, StatMetric.expenses),
       if (hasExpenses)
         _SummaryItem(
-            'Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}'),
-      if (hasExpenses)
-        _SummaryItem(
-          'Net (a.e.)',
+          'Net Profit',
           formatPLWithCurrency(netAfterExpenses, displayCurrency),
           netAfterExpenses >= 0 ? Colors.green : Colors.red,
+          StatMetric.netAfterExpenses,
         ),
       if (bb100 != null)
         _SummaryItem(
           'BB/100',
           formatBB100(bb100),
           bb100 >= 0 ? Colors.green : Colors.red,
+          StatMetric.bb100,
         ),
       if (tournamentROI != null)
         _SummaryItem(
           'Tourn. ROI',
           formatROI(tournamentROI),
           tournamentROI >= 0 ? Colors.green : Colors.red,
+          StatMetric.roi,
         ),
-      if (itmPct != null) _SummaryItem('ITM', '$itmPct%'),
+      if (itmPct != null)
+        _SummaryItem('ITM', '$itmPct%', null, StatMetric.itmPct),
     ];
-
-    final summaryCols =
-        isWide ? (summaryItems.length <= 6 ? summaryItems.length : 4) : 3;
 
     return CustomScrollView(
       slivers: [
-        // ── Game-type chip strip (scrolls away) ───────────────────────────
-        if (_hasCash && _hasTournament)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 8),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final entry in [
-                      (null, 'All'),
-                      ('cash', 'Cash'),
-                      ('tournament', 'Tournament'),
-                    ])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(entry.$2),
-                          selected: _gameFilter == entry.$1,
-                          onSelected: (_) =>
-                              setState(() => _gameFilter = entry.$1),
-                        ),
-                      ),
-                  ],
-                ),
+        // ── Game-type filter pills (always shown) ─────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 4),
+            child: GameTypeFilterChips(
+              selected: _effectiveTypes,
+              onChanged: (v) => setState(() => _gameTypes = v),
+            ),
+          ),
+        ),
+
+        // ── Metric summary (always) + data-dependent breakdowns ───────────
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 88),
+          sliver: SliverList.list(
+            children: [
+              _MetricSummaryList(
+                items: summaryItems,
+                sessions: filtered,
+                displayCurrency: displayCurrency,
+                activeFilters: _activeFilterLabels(displayCurrency),
               ),
-            ),
-          ),
-
-        if (filtered.isEmpty)
-          const SliverFillRemaining(
-            child: Center(child: Text('No sessions match this filter.')),
-          )
-        else ...[
-          // ── Compact pinned summary ─────────────────────────────────────
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SummaryDelegate(
-              items: summaryItems,
-              columns: summaryCols,
-              labelSize: isWide ? 12.0 : 11.0,
-              valueSize: isWide ? 16.0 : 15.0,
-              rowHeight: isWide ? 52.0 : 48.0,
-              hPad: hPad,
-            ),
-          ),
-
-          // ── Charts and insight cards ───────────────────────────────────
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 88),
-            sliver: SliverList.list(
-              children: [
-                _PLChart(
-                    sessions: sorted, displayCurrency: displayCurrency),
+              if (filtered.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 32),
+                  child: Center(
+                    child: Text(
+                      'Log a session to unlock breakdowns and trends.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    ),
+                  ),
+                )
+              else ...[
                 const SizedBox(height: 20),
 
                 // Section header changes based on the primary game type in view.
@@ -367,9 +287,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                 ],
 
                 // ── Mixed game-type card (shown when both are in view) ───────
-                if (_gameFilter == null &&
-                    showingCash &&
-                    showingTournaments) ...[
+                if (showingCash && showingTournaments) ...[
                   _InsightCard(
                     title: 'By Game Type',
                     sessions: filtered,
@@ -471,9 +389,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                 const SizedBox(height: 20),
                 _sectionHeader(context, 'Recommendations'),
                 const SizedBox(height: 8),
-                if (_gameFilter == null &&
-                    showingCash &&
-                    showingTournaments) ...[
+                if (showingCash && showingTournaments) ...[
                   _RecommendationsCard(
                     sessions:
                         filtered.where((s) => s.gameType == 'cash').toList(),
@@ -504,9 +420,9 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                     displayCurrency: displayCurrency,
                   ),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
       ],
     );
   }
@@ -529,702 +445,90 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
       );
 }
 
-// ─── Compact Pinned Summary ───────────────────────────────────────────────────
+// ─── Metric summary (one per row, tappable → full-screen trend chart) ─────────
 
 class _SummaryItem {
   final String label;
   final String value;
   final Color? color;
-  const _SummaryItem(this.label, this.value, [this.color]);
+  final StatMetric? metric;
+  const _SummaryItem(this.label, this.value, [this.color, this.metric]);
 }
 
-class _SummaryDelegate extends SliverPersistentHeaderDelegate {
+/// The Analytics summary, rendered one metric per row. Each row is a CTA that
+/// opens the metric's full-screen trend chart (mirrors the Overview tab).
+class _MetricSummaryList extends StatelessWidget {
   final List<_SummaryItem> items;
-  final int columns;
-  final double labelSize;
-  final double valueSize;
-  final double rowHeight;
-  final double hPad;
+  final List<SessionModel> sessions;
+  final String displayCurrency;
+  final List<String> activeFilters;
 
-  static const double _vPad = 6.0;
-  static const double _borderH = 1.0;
-
-  const _SummaryDelegate({
+  const _MetricSummaryList({
     required this.items,
-    this.columns = 3,
-    this.labelSize = 10.0,
-    this.valueSize = 12.0,
-    this.rowHeight = 38.0,
-    this.hPad = 16.0,
+    required this.sessions,
+    required this.displayCurrency,
+    this.activeFilters = const [],
   });
 
-  int get _rowCount => (items.length / columns).ceil();
-
   @override
-  double get minExtent => _rowCount * rowHeight + _vPad * 2 + _borderH;
-
-  @override
-  double get maxExtent => minExtent;
-
-  @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate old) => true;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final rows = <List<_SummaryItem>>[];
-    for (int i = 0; i < items.length; i += columns) {
-      rows.add(items.sublist(i, math.min(i + columns, items.length)));
-    }
-    return Material(
-      color: theme.colorScheme.surface,
-      elevation: overlapsContent ? 2 : 0,
+    return Card(
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: _vPad, horizontal: hPad),
-            child: Column(
-              children: rows
-                  .map((row) => SizedBox(
-                        height: rowHeight,
-                        child: Row(
-                          children: List.generate(
-                            columns,
-                            (i) => Expanded(
-                              child: i < row.length
-                                  ? _cell(theme, row[i])
-                                  : const SizedBox(),
-                            ),
-                          ),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
-          Divider(
-            height: _borderH,
-            thickness: _borderH,
-            color: theme.colorScheme.outline.withAlpha(40),
-          ),
+          for (int i = 0; i < items.length; i++) ...[
+            if (i > 0)
+              Divider(
+                  height: 1,
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            _row(context, items[i]),
+          ],
         ],
       ),
     );
   }
 
-  Widget _cell(ThemeData theme, _SummaryItem item) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _row(BuildContext context, _SummaryItem item) {
+    final theme = Theme.of(context);
+    final body = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Row(
         children: [
-          Text(item.label,
-              style: TextStyle(fontSize: labelSize, color: theme.colorScheme.outline)),
+          Expanded(
+            child: Text(item.label,
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          ),
           Text(item.value,
-              style: TextStyle(
-                fontSize: valueSize,
+              style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: item.color,
               )),
-        ],
-      );
-}
-
-// ─── P&L Chart ────────────────────────────────────────────────────────────────
-
-enum _PLMode { cumulative, weekly, monthly, yearly }
-
-enum _Lookback { all, oneYear, sixMonths, threeMonths, oneMonth }
-
-class _PLChart extends StatefulWidget {
-  final List<SessionModel> sessions;
-  final String displayCurrency;
-  // When true, render the cumulative graph filling the available height (used
-  // by the full-screen view) — no card, no title, no mode toggle.
-  final bool fullScreen;
-  final _Lookback initialLookback;
-  const _PLChart({
-    required this.sessions,
-    required this.displayCurrency,
-    this.fullScreen = false,
-    this.initialLookback = _Lookback.all,
-  });
-
-  @override
-  State<_PLChart> createState() => _PLChartState();
-}
-
-class _PLChartFullScreen extends StatelessWidget {
-  final List<SessionModel> sessions;
-  final String displayCurrency;
-  final _Lookback initialLookback;
-  const _PLChartFullScreen({
-    required this.sessions,
-    required this.displayCurrency,
-    this.initialLookback = _Lookback.all,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profit Over Time')),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: _PLChart(
-          sessions: sessions,
-          displayCurrency: displayCurrency,
-          fullScreen: true,
-          initialLookback: initialLookback,
-        ),
-      ),
-    );
-  }
-}
-
-class _PLChartState extends State<_PLChart> {
-  _PLMode _mode = _PLMode.cumulative;
-  late _Lookback _lookback = widget.initialLookback;
-  final Set<String> _expandedYears = {DateTime.now().year.toString()};
-
-  static const _modeLabels = {
-    _PLMode.cumulative: 'Cumulative',
-    _PLMode.weekly: 'Weekly',
-    _PLMode.monthly: 'Monthly',
-    _PLMode.yearly: 'Yearly',
-  };
-
-  static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-
-  double _toD(double amount, String from) =>
-      convertCurrency(amount, from, widget.displayCurrency);
-
-  List<SessionModel> get _lookbackSessions {
-    if (_lookback == _Lookback.all) return widget.sessions;
-    final now = DateTime.now();
-    final days = switch (_lookback) {
-      _Lookback.oneMonth => 30,
-      _Lookback.threeMonths => 90,
-      _Lookback.sixMonths => 180,
-      _Lookback.oneYear => 365,
-      _Lookback.all => 0,
-    };
-    final cutoff = now.subtract(Duration(days: days));
-    return widget.sessions.where((s) {
-      final d = DateTime.tryParse(s.date);
-      return d != null && d.isAfter(cutoff);
-    }).toList();
-  }
-
-  // Lookback (All / 1Y / 6M / 3M / 1M) chip row — shared by the card and the
-  // full-screen view.
-  Widget _lookbackSelector() => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final entry in [
-              (_Lookback.all, 'All'),
-              (_Lookback.oneYear, '1Y'),
-              (_Lookback.sixMonths, '6M'),
-              (_Lookback.threeMonths, '3M'),
-              (_Lookback.oneMonth, '1M'),
-            ])
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: ChoiceChip(
-                  label: Text(entry.$2, style: const TextStyle(fontSize: 11)),
-                  selected: _lookback == entry.$1,
-                  onSelected: (_) => setState(() => _lookback = entry.$1),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
+          if (item.metric != null) ...[
+            const SizedBox(width: 6),
+            Icon(Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
           ],
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    final sym = currencySymbol(widget.displayCurrency);
-
-    // Full-screen: cumulative graph filling the height, with the lookback row.
-    if (widget.fullScreen) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _buildCumulative(context, sym)),
-          const SizedBox(height: 12),
-          _lookbackSelector(),
-        ],
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Profit Over Time',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                ),
-                if (_mode == _PLMode.cumulative)
-                  IconButton(
-                    icon: const Icon(Icons.open_in_full, size: 18),
-                    tooltip: 'Full screen',
-                    visualDensity: VisualDensity.compact,
-                    color: Theme.of(context).colorScheme.outline,
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => _PLChartFullScreen(
-                          sessions: widget.sessions,
-                          displayCurrency: widget.displayCurrency,
-                          initialLookback: _lookback,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // Graph first — sits directly under the title so it (and its x-axis)
-            // clears the fold. The view/timeframe controls live below it.
-            if (_mode == _PLMode.cumulative)
-              SizedBox(
-                height: (MediaQuery.of(context).size.height * 0.27)
-                    .clamp(170.0, 260.0),
-                child: _buildCumulative(context, sym),
-              )
-            else
-              _buildTable(context),
-            const SizedBox(height: 10),
-            // Mode toggle (below the graph)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _PLMode.values
-                    .map((mode) => Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(_modeLabels[mode]!,
-                                style: const TextStyle(fontSize: 11)),
-                            selected: _mode == mode,
-                            onSelected: (_) => setState(() => _mode = mode),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ))
-                    .toList(),
-              ),
-            ),
-            // Lookback period selector (cumulative only, below)
-            if (_mode == _PLMode.cumulative) ...[
-              const SizedBox(height: 8),
-              _lookbackSelector(),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCumulative(BuildContext context, String sym) {
-    final sessions = _lookbackSessions;
-    if (sessions.length < 2) {
-      return _emptyChart(context, 'Need at least 2 sessions');
-    }
-    double cum = 0;
-    final spots = sessions.asMap().entries.map((e) {
-      cum += _toD(e.value.profitLoss, e.value.currency);
-      return FlSpot(e.key.toDouble(), cum);
-    }).toList();
-    final minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
-    final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-    final padding = (maxY - minY).abs() * 0.1 + 50;
-    final color = cum >= 0 ? Colors.green : Colors.red;
-    return LineChart(LineChartData(
-      lineBarsData: [
-        LineChartBarData(
-          spots: spots,
-          isCurved: true,
-          color: color,
-          barWidth: 2,
-          dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(show: true, color: color.withAlpha(30)),
-        ),
-      ],
-      lineTouchData: LineTouchData(
-        // fl_chart hover crashes on Windows — disable there, keep on web/Android.
-        enabled: kIsWeb || !Platform.isWindows,
-        touchTooltipData: LineTouchTooltipData(
-          getTooltipColor: (_) => Theme.of(context).colorScheme.inverseSurface,
-          getTooltipItems: (spots) => spots.map((spot) {
-            final idx = spot.x.toInt().clamp(0, sessions.length - 1);
-            final date = DateTime.tryParse(sessions[idx].date) ?? DateTime.now();
-            final label = '${_months[date.month - 1]} ${date.day}, ${date.year}';
-            final sign = spot.y >= 0 ? '+' : '-';
-            return LineTooltipItem(
-              '$label\n$sign$sym${spot.y.abs().toStringAsFixed(0)}',
-              TextStyle(
-                  color: Theme.of(context).colorScheme.onInverseSurface,
-                  fontSize: 11,
-                  height: 1.4),
-            );
-          }).toList(),
-        ),
-      ),
-      minY: minY - padding,
-      maxY: maxY + padding,
-      titlesData: _leftTitlesOnly(sym),
-      gridData: FlGridData(
-        show: true,
-        drawVerticalLine: false,
-        getDrawingHorizontalLine: (_) =>
-            FlLine(color: Theme.of(context).colorScheme.outlineVariant, strokeWidth: 1),
-      ),
-      borderData: FlBorderData(show: false),
-    ));
-  }
-
-  Widget _buildTable(BuildContext context) {
-    final sym = currencySymbol(widget.displayCurrency);
-    final theme = Theme.of(context);
-    final headerStyle = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.outline,
-      fontWeight: FontWeight.bold,
-    );
-
-    final header = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(flex: 3, child: Text('Period', style: headerStyle)),
-          Expanded(
-              flex: 2,
-              child: Text('Profit ($sym)',
-                  style: headerStyle, textAlign: TextAlign.right)),
-          Expanded(
-              flex: 1,
-              child: Text('#',
-                  style: headerStyle, textAlign: TextAlign.right)),
-          Expanded(
-              flex: 2,
-              child: Text('$sym/hr',
-                  style: headerStyle, textAlign: TextAlign.right)),
-          Expanded(
-              flex: 2,
-              child: Text('Hrs',
-                  style: headerStyle, textAlign: TextAlign.right)),
         ],
       ),
     );
 
-    if (_mode == _PLMode.yearly) {
-      return _buildFlatTable(context, header, theme);
-    }
-    return _buildNestedTable(context, header, theme);
-  }
-
-  Widget _buildFlatTable(
-      BuildContext context, Widget header, ThemeData theme) {
-    final periodMap = <String, ({double pl, int count, double hours})>{};
-    for (final s in widget.sessions) {
-      final key = _periodKey(s.date);
-      final pl = _toD(s.profitLoss, s.currency);
-      final hours = s.durationMinutes / 60.0;
-      final existing = periodMap[key];
-      if (existing == null) {
-        periodMap[key] = (pl: pl, count: 1, hours: hours);
-      } else {
-        periodMap[key] = (
-          pl: existing.pl + pl,
-          count: existing.count + 1,
-          hours: existing.hours + hours,
-        );
-      }
-    }
-    final entries = periodMap.entries.toList()
-      ..sort((a, b) => b.key.compareTo(a.key));
-    if (entries.isEmpty) {
-      return Center(
-          child: Text('Not enough sessions for this view',
-              style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.75))));
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        header,
-        const Divider(height: 1),
-        for (final e in entries) ...[
-          _tableDataRow(context, _periodLabel(e.key), e.value, theme),
-          Divider(
-              height: 1,
-              color:
-                  theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildNestedTable(
-      BuildContext context, Widget header, ThemeData theme) {
-    final byYear =
-        <String, Map<String, ({double pl, int count, double hours})>>{};
-    for (final s in widget.sessions) {
-      final year = s.date.length >= 4 ? s.date.substring(0, 4) : s.date;
-      final key = _periodKey(s.date);
-      final pl = _toD(s.profitLoss, s.currency);
-      final hours = s.durationMinutes / 60.0;
-      byYear.putIfAbsent(year, () => {});
-      final existing = byYear[year]![key];
-      if (existing == null) {
-        byYear[year]![key] = (pl: pl, count: 1, hours: hours);
-      } else {
-        byYear[year]![key] = (
-          pl: existing.pl + pl,
-          count: existing.count + 1,
-          hours: existing.hours + hours,
-        );
-      }
-    }
-    final years = byYear.keys.toList()..sort((a, b) => b.compareTo(a));
-    if (years.isEmpty) {
-      return Center(
-          child: Text('Not enough sessions for this view',
-              style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.75))));
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        header,
-        const Divider(height: 1),
-        for (final year in years)
-          _buildYearSection(context, year, byYear[year]!, theme),
-      ],
-    );
-  }
-
-  Widget _buildYearSection(
-    BuildContext context,
-    String year,
-    Map<String, ({double pl, int count, double hours})> periods,
-    ThemeData theme,
-  ) {
-    double yearPL = 0;
-    int yearCount = 0;
-    double yearHours = 0;
-    for (final p in periods.values) {
-      yearPL += p.pl;
-      yearCount += p.count;
-      yearHours += p.hours;
-    }
-    final yearRate = yearHours > 0 ? yearPL / yearHours : 0.0;
-    final plColor = yearPL >= 0 ? Colors.green : Colors.red;
-    final rateColor = yearRate >= 0 ? Colors.green : Colors.red;
-    final isExpanded = _expandedYears.contains(year);
-
-    final sortedPeriods = periods.entries.toList()
-      ..sort((a, b) => b.key.compareTo(a.key));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => setState(() {
-            if (isExpanded) {
-              _expandedYears.remove(year);
-            } else {
-              _expandedYears.add(year);
-            }
-          }),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            color: theme.colorScheme.surfaceContainerHighest.withAlpha(60),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Row(
-                    children: [
-                      Icon(
-                        isExpanded ? Icons.expand_less : Icons.expand_more,
-                        size: 16,
-                        color: theme.colorScheme.outline,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(year,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(_fmtNum(yearPL),
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: plColor, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.right),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Text('$yearCount',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.outline),
-                      textAlign: TextAlign.right),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(_fmtNum(yearRate),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                          color: rateColor, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.right),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(yearHours.toStringAsFixed(0),
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.colorScheme.outline),
-                      textAlign: TextAlign.right),
-                ),
-              ],
-            ),
+    if (item.metric == null) return body;
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MetricChartScreen(
+            metric: item.metric!,
+            sessions: sessions,
+            displayCurrency: displayCurrency,
+            activeFilters: activeFilters,
           ),
         ),
-        if (isExpanded)
-          for (final e in sortedPeriods) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: _tableDataRow(context, _periodLabel(e.key), e.value, theme),
-            ),
-            Divider(
-                height: 1,
-                color:
-                    theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          ],
-      ],
-    );
-  }
-
-  Widget _tableDataRow(
-    BuildContext context,
-    String label,
-    ({double pl, int count, double hours}) data,
-    ThemeData theme,
-  ) {
-    final plColor = data.pl >= 0 ? Colors.green : Colors.red;
-    final hourlyRate = data.hours > 0 ? data.pl / data.hours : 0.0;
-    final rateColor = hourlyRate >= 0 ? Colors.green : Colors.red;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Text(label, style: theme.textTheme.bodySmall),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(_fmtNum(data.pl),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: plColor, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.right),
-          ),
-          Expanded(
-            flex: 1,
-            child: Text('${data.count}',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.outline),
-                textAlign: TextAlign.right),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(_fmtNum(hourlyRate),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: rateColor, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.right),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(data.hours.toStringAsFixed(0),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.outline),
-                textAlign: TextAlign.right),
-          ),
-        ],
       ),
+      child: body,
     );
-  }
-
-  String _fmtNum(double v) => formatPL(v, '');
-
-  String _periodKey(String dateStr) {
-    return switch (_mode) {
-      _PLMode.weekly => _weekKey(dateStr),
-      _PLMode.monthly => dateStr.substring(0, 7),
-      _PLMode.yearly => dateStr.substring(0, 4),
-      _PLMode.cumulative => dateStr,
-    };
-  }
-
-  String _weekKey(String dateStr) {
-    final date = DateTime.tryParse(dateStr) ?? DateTime.now();
-    final monday = date.subtract(Duration(days: date.weekday - 1));
-    return '${monday.year}-${monday.month.toString().padLeft(2, '0')}-${monday.day.toString().padLeft(2, '0')}';
-  }
-
-  String _periodLabel(String key) {
-    if (_mode == _PLMode.weekly) {
-      final date = DateTime.tryParse(key) ?? DateTime.now();
-      return 'Wk ${_months[date.month - 1]} ${date.day}';
-    }
-    if (_mode == _PLMode.monthly) {
-      final parts = key.split('-');
-      final month = (int.tryParse(parts.length > 1 ? parts[1] : '') ?? 1)
-          .clamp(1, 12);
-      final yearSuffix =
-          parts[0].length >= 4 ? parts[0].substring(2) : parts[0];
-      return "${_months[month - 1]} '$yearSuffix";
-    }
-    return key; // yearly (cumulative never calls _buildTable)
-  }
-
-  FlTitlesData _leftTitlesOnly(String sym) => FlTitlesData(
-        topTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        bottomTitles:
-            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 64,
-            getTitlesWidget: (v, _) => Text(
-              _compact(v, sym),
-              style: const TextStyle(fontSize: 9),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ),
-      );
-
-  String _compact(double v, String sym) {
-    final abs = v.abs();
-    final sign = v >= 0 ? '+' : '-';
-    if (abs >= 10000) return '$sign$sym${(abs / 1000).toStringAsFixed(0)}k';
-    if (abs >= 1000) return '$sign$sym${(abs / 1000).toStringAsFixed(1)}k';
-    return '$sign$sym${abs.toStringAsFixed(0)}';
   }
 }
 
@@ -1337,7 +641,7 @@ class _InsightCard extends StatelessWidget {
                 displayCurrency: displayCurrency,
                 isTournament: isTournament,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
             ],
           ],
         ),
@@ -1369,50 +673,48 @@ class _InsightRow extends StatelessWidget {
         ? (primaryValue.abs() / maxAbsValue).clamp(0.0, 1.0)
         : 0.0;
 
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Label gets its own full-width line so long names (e.g. casinos,
+        // "Evening (6pm–11pm)") aren't clipped by the figures beside them.
+        Text(label,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 2),
+        // Figures: hours/entries on the left, $/hr + profit on the right.
         Row(
           children: [
-            Expanded(
-              flex: 3,
-              child: Text(label,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis),
+            Text(
+              isTournament ? '${stats.count}×' : formatHours(stats.totalHours),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.outline),
             ),
-            if (isTournament)
-              Text('${stats.count}×',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ))
-            else
-              Text('${stats.totalHours.toStringAsFixed(1)}h',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      )),
-            const SizedBox(width: 8),
+            const Spacer(),
             Text(
               isTournament
                   ? formatROI(stats.roi)
                   : '${formatPLWithCurrency(stats.hourlyRate, displayCurrency)}/hr',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: barColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: barColor, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Text(
               formatPLWithCurrency(stats.totalPL, displayCurrency),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: theme.textTheme.bodyMedium?.copyWith(
                     color: stats.totalPL >= 0 ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,
                   ),
             ),
           ],
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 6),
         LayoutBuilder(
           builder: (_, constraints) {
+            const barHeight = 12.0;
             final totalWidth = constraints.maxWidth;
             final halfWidth = totalWidth / 2;
             final isPositive = primaryValue >= 0;
@@ -1421,30 +723,33 @@ class _InsightRow extends StatelessWidget {
               children: [
                 // Background track
                 Container(
-                  height: 4,
+                  height: barHeight,
                   width: totalWidth,
                   decoration: BoxDecoration(
                     color: Theme.of(context)
                         .colorScheme
                         .outlineVariant
                         .withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(barHeight / 2),
                   ),
                 ),
                 // Positive bar extends right from center; negative extends left
                 Positioned(
                   left: isPositive ? halfWidth : halfWidth - barWidth,
                   child: Container(
-                    height: 4,
+                    height: barHeight,
                     width: barWidth,
-                    color: barColor,
+                    decoration: BoxDecoration(
+                      color: barColor,
+                      borderRadius: BorderRadius.circular(barHeight / 2),
+                    ),
                   ),
                 ),
                 // Zero center tick
                 Positioned(
                   left: halfWidth - 0.5,
                   child: Container(
-                      height: 4,
+                      height: barHeight,
                       width: 1,
                       color: Theme.of(context)
                           .colorScheme
@@ -1459,18 +764,6 @@ class _InsightRow extends StatelessWidget {
     );
   }
 }
-
-// ─── Shared ───────────────────────────────────────────────────────────────────
-
-Widget _emptyChart(BuildContext context, String message) => Center(
-      child: Text(message,
-          style: TextStyle(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant
-                  .withValues(alpha: 0.75),
-              fontSize: 13)),
-    );
 
 // ─── Recommendations (Welch's t-test, actionable) ─────────────────────────────
 
@@ -1791,30 +1084,23 @@ class _RecommendationsCard extends StatelessWidget {
   }
 }
 
-// ─── Analytics filter bottom sheet ───────────────────────────────────────────
+// ─── Stats filter bottom sheet (shared by Overview + Analytics) ───────────────
 
-class AnalyticsFilterSheet extends StatefulWidget {
-  final String displayCurrency;
-  final Set<String> countryFilter;
-  final String? venueFilter;
-  final Set<String> locationFilter;
-  final String? dateFilter;
+class StatsFilterSheet extends StatefulWidget {
+  final StatsFilter filter;
+  final String effectiveCurrency;
   final List<String> allCountries;
   final bool hasMultipleCountries;
   final bool hasOnline;
   final bool hasLive;
   final List<String> allLocations;
-  final void Function(String? currency, Set<String> country, String? venue,
-      Set<String> location, String? date) onApply;
+  final ValueChanged<StatsFilter> onApply;
   final VoidCallback onReset;
 
-  const AnalyticsFilterSheet({
+  const StatsFilterSheet({
     super.key,
-    required this.displayCurrency,
-    required this.countryFilter,
-    required this.venueFilter,
-    required this.locationFilter,
-    required this.dateFilter,
+    required this.filter,
+    required this.effectiveCurrency,
     required this.allCountries,
     required this.hasMultipleCountries,
     required this.hasOnline,
@@ -1825,24 +1111,73 @@ class AnalyticsFilterSheet extends StatefulWidget {
   });
 
   @override
-  State<AnalyticsFilterSheet> createState() => _AnalyticsFilterSheetState();
+  State<StatsFilterSheet> createState() => _StatsFilterSheetState();
 }
 
-class _AnalyticsFilterSheetState extends State<AnalyticsFilterSheet> {
+class _StatsFilterSheetState extends State<StatsFilterSheet> {
   late String _currency;
   late Set<String> _country;
   late String? _venue;
   late Set<String> _location;
-  late String? _date;
+  late String? _datePreset;
+  DateTimeRange? _dateRange;
 
   @override
   void initState() {
     super.initState();
-    _currency = widget.displayCurrency;
-    _country = {...widget.countryFilter};
-    _venue = widget.venueFilter;
-    _location = {...widget.locationFilter};
-    _date = widget.dateFilter;
+    _currency = widget.filter.displayCurrency ?? widget.effectiveCurrency;
+    _country = {...widget.filter.country};
+    _venue = widget.filter.venue;
+    _location = {...widget.filter.location};
+    _datePreset = widget.filter.datePreset;
+    _dateRange = widget.filter.dateRange;
+  }
+
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(now.year, now.month, now.day),
+      initialDateRange: _dateRange,
+    );
+    if (!mounted || picked == null) return;
+    setState(() {
+      _dateRange = picked;
+      _datePreset = null;
+    });
+  }
+
+  String _summary(Set<String> sel, String allLabel, String noun) =>
+      sel.isEmpty
+          ? allLabel
+          : (sel.length == 1 ? sel.first : '${sel.length} $noun');
+
+  /// A collapsed filter section: only the parent (title + current-selection
+  /// summary) shows until tapped — keeps the sheet compact even with 100+
+  /// locations. Borders are suppressed for a clean list look.
+  Widget _section({
+    required String title,
+    required String summary,
+    required List<Widget> children,
+    bool initiallyExpanded = false,
+  }) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: PageStorageKey('filter_$title'),
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 12),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        initiallyExpanded: initiallyExpanded,
+        title: Text(title, style: theme.textTheme.titleMedium),
+        subtitle: Text(summary,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.outline)),
+        children: children,
+      ),
+    );
   }
 
   @override
@@ -1870,129 +1205,158 @@ class _AnalyticsFilterSheetState extends State<AnalyticsFilterSheet> {
               ),
             ),
             Text('Display Options', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 20),
-
-            // Date Range
-            Text('Date Range', style: theme.textTheme.labelLarge),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+
+            // ── Date Range (presets + custom range) ─────────────────────────
+            _section(
+              title: 'Date Range',
+              summary: StatsFilter(
+                      datePreset: _dateRange == null ? _datePreset : null,
+                      dateRange: _dateRange)
+                  .dateSummary,
               children: [
-                for (final entry in [
-                  (null, 'All Time'),
-                  ('1Y', '1 Year'),
-                  ('6M', '6 Months'),
-                  ('3M', '3 Months'),
-                  ('1M', '1 Month'),
-                ])
-                  ChoiceChip(
-                    label: Text(entry.$2),
-                    selected: _date == entry.$1,
-                    onSelected: (_) => setState(() => _date = entry.$1),
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final entry in [
+                      (null, 'All Time'),
+                      ('1Y', '1 Year'),
+                      ('6M', '6 Months'),
+                      ('3M', '3 Months'),
+                      ('1M', '1 Month'),
+                    ])
+                      ChoiceChip(
+                        label: Text(entry.$2),
+                        selected: _dateRange == null && _datePreset == entry.$1,
+                        onSelected: (_) => setState(() {
+                          _datePreset = entry.$1;
+                          _dateRange = null;
+                        }),
+                      ),
+                    ChoiceChip(
+                      avatar: const Icon(Icons.event, size: 18),
+                      label: Text(_dateRange == null
+                          ? 'Custom…'
+                          : StatsFilter(dateRange: _dateRange).dateLabel!),
+                      selected: _dateRange != null,
+                      onSelected: (_) => _pickRange(),
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 20),
 
-            // Currency
-            Text('Currency', style: theme.textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: supportedDisplayCurrencies
-                  .map((c) => ChoiceChip(
-                        label: Text('$c ${currencySymbol(c)}'),
-                        selected: _currency == c,
-                        onSelected: (_) => setState(() => _currency = c),
-                      ))
-                  .toList(),
+            // ── Currency ────────────────────────────────────────────────────
+            _section(
+              title: 'Currency',
+              summary: '$_currency ${currencySymbol(_currency)}',
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: supportedDisplayCurrencies
+                      .map((c) => ChoiceChip(
+                            label: Text('$c ${currencySymbol(c)}'),
+                            selected: _currency == c,
+                            onSelected: (_) => setState(() => _currency = c),
+                          ))
+                      .toList(),
+                ),
+              ],
             ),
 
-            // Country (only if multiple)
-            if (widget.hasMultipleCountries) ...[
-              const SizedBox(height: 20),
-              Text('Country', style: theme.textTheme.labelLarge),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+            // ── Country (only if multiple) ──────────────────────────────────
+            if (widget.hasMultipleCountries)
+              _section(
+                title: 'Country',
+                summary: _summary(_country, 'All countries', 'selected'),
                 children: [
-                  FilterChip(
-                    label: const Text('All Countries'),
-                    selected: _country.isEmpty,
-                    onSelected: (_) => setState(() => _country = {}),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilterChip(
+                        label: const Text('All Countries'),
+                        selected: _country.isEmpty,
+                        onSelected: (_) => setState(() => _country = {}),
+                      ),
+                      ...widget.allCountries.map((c) => FilterChip(
+                            label: Text(c),
+                            selected: _country.contains(c),
+                            onSelected: (on) => setState(() {
+                              final next = {..._country};
+                              if (on) {
+                                next.add(c);
+                              } else {
+                                next.remove(c);
+                              }
+                              _country = next;
+                            }),
+                          )),
+                    ],
                   ),
-                  ...widget.allCountries.map((c) => FilterChip(
-                        label: Text(c),
-                        selected: _country.contains(c),
-                        onSelected: (on) => setState(() {
-                          final next = {..._country};
-                          if (on) {
-                            next.add(c);
-                          } else {
-                            next.remove(c);
-                          }
-                          _country = next;
-                        }),
-                      )),
                 ],
               ),
-            ],
 
-            // Venue (only if both live and online exist)
-            if (widget.hasLive && widget.hasOnline) ...[
-              const SizedBox(height: 20),
-              Text('Venue', style: theme.textTheme.labelLarge),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
+            // ── Venue (only if both live and online exist) ──────────────────
+            if (widget.hasLive && widget.hasOnline)
+              _section(
+                title: 'Venue',
+                summary: _venue == null
+                    ? 'All venues'
+                    : (_venue == 'online' ? 'Online' : 'Live'),
                 children: [
-                  for (final entry in [
-                    (null, 'All Venues'),
-                    ('live', 'Live'),
-                    ('online', 'Online'),
-                  ])
-                    ChoiceChip(
-                      label: Text(entry.$2),
-                      selected: _venue == entry.$1,
-                      onSelected: (_) => setState(() => _venue = entry.$1),
-                    ),
-                ],
-              ),
-            ],
-
-            // Location (only if multiple locations exist)
-            if (widget.allLocations.length > 1) ...[
-              const SizedBox(height: 20),
-              Text('Location', style: theme.textTheme.labelLarge),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilterChip(
-                    label: const Text('All Locations'),
-                    selected: _location.isEmpty,
-                    onSelected: (_) => setState(() => _location = {}),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final entry in [
+                        (null, 'All Venues'),
+                        ('live', 'Live'),
+                        ('online', 'Online'),
+                      ])
+                        ChoiceChip(
+                          label: Text(entry.$2),
+                          selected: _venue == entry.$1,
+                          onSelected: (_) => setState(() => _venue = entry.$1),
+                        ),
+                    ],
                   ),
-                  ...widget.allLocations.map((l) => FilterChip(
-                        label: Text(l),
-                        selected: _location.contains(l),
-                        onSelected: (on) => setState(() {
-                          final next = {..._location};
-                          if (on) {
-                            next.add(l);
-                          } else {
-                            next.remove(l);
-                          }
-                          _location = next;
-                        }),
-                      )),
                 ],
               ),
-            ],
+
+            // ── Location (only if multiple) ─────────────────────────────────
+            if (widget.allLocations.length > 1)
+              _section(
+                title: 'Location',
+                summary: _summary(_location, 'All locations', 'selected'),
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilterChip(
+                        label: const Text('All Locations'),
+                        selected: _location.isEmpty,
+                        onSelected: (_) => setState(() => _location = {}),
+                      ),
+                      ...widget.allLocations.map((l) => FilterChip(
+                            label: Text(l),
+                            selected: _location.contains(l),
+                            onSelected: (on) => setState(() {
+                              final next = {..._location};
+                              if (on) {
+                                next.add(l);
+                              } else {
+                                next.remove(l);
+                              }
+                              _location = next;
+                            }),
+                          )),
+                    ],
+                  ),
+                ],
+              ),
 
             const SizedBox(height: 24),
             Row(
@@ -2010,7 +1374,14 @@ class _AnalyticsFilterSheetState extends State<AnalyticsFilterSheet> {
                 Expanded(
                   child: FilledButton(
                     onPressed: () {
-                      widget.onApply(_currency, _country, _venue, _location, _date);
+                      widget.onApply(StatsFilter(
+                        displayCurrency: _currency,
+                        country: _country,
+                        venue: _venue,
+                        location: _location,
+                        datePreset: _dateRange == null ? _datePreset : null,
+                        dateRange: _dateRange,
+                      ));
                       Navigator.pop(context);
                     },
                     child: const Text('Apply'),
