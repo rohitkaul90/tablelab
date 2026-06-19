@@ -115,6 +115,14 @@ String fieldSizeBucket(int? totalEntrants) {
 bool isTournamentType(String gameType) =>
     gameType == 'tournament' || gameType == 'sit_and_go';
 
+/// The most-recently-played session (by date), or null when [sessions] is
+/// empty. O(n), no allocation — used to seed the default game-type filter and
+/// the default display currency.
+SessionModel? mostRecentSession(List<SessionModel> sessions) {
+  if (sessions.isEmpty) return null;
+  return sessions.reduce((a, b) => a.date.compareTo(b.date) >= 0 ? a : b);
+}
+
 /// A tournament session is ITM when either:
 /// - prizeWon is explicitly recorded and > 0, OR
 /// - prizeWon was not recorded (e.g. HUD imports) but profitLoss > 0,

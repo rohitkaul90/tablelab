@@ -220,17 +220,8 @@ class _OverviewBody extends ConsumerWidget {
   // type; an empty set means "all game types".
   Set<String> get _effectiveTypes => gameTypes ?? defaultGameTypes(sessions);
 
-  List<SessionModel> get _filtered {
-    var result = filter.apply(sessions);
-    final types = _effectiveTypes;
-    if (types.isNotEmpty) {
-      result = result
-          .where((s) =>
-              types.contains(isTournamentType(s.gameType) ? 'tournament' : 'cash'))
-          .toList();
-    }
-    return result;
-  }
+  List<SessionModel> get _filtered =>
+      filterByGameTypes(filter.apply(sessions), _effectiveTypes);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -243,8 +234,9 @@ class _OverviewBody extends ConsumerWidget {
     final tournamentOnly = types.length == 1 && types.contains('tournament');
     final profile = ref.watch(profileProvider).valueOrNull;
 
+    final gtLabel = gameTypeChipLabel(types);
     final activeFilters = <String>[
-      if (!isAllTypes) (tournamentOnly ? 'Tournament' : 'Cash'),
+      if (gtLabel != null) gtLabel,
       ...filter.labels(),
       currency,
     ];

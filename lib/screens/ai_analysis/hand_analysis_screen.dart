@@ -418,6 +418,11 @@ class _StreetCoachingCard extends StatelessWidget {
 
     return Card(
       child: ExpansionTile(
+        // Unique key so this tile's expansion bool is stored under its own
+        // PageStorage slot — keyless ExpansionTiles all write to the shared
+        // default slot, which a later scrollable then reads as a scroll offset
+        // and crashes ("bool is not a subtype of double?").
+        key: PageStorageKey('street_${entry.name}'),
         initiallyExpanded: true,
         // Badges live on their own row below the title (a Wrap) rather than in
         // `trailing` — in trailing they overlapped the community cards in the
@@ -712,6 +717,9 @@ class _FactsCard extends StatelessWidget {
     final outline = Theme.of(context).colorScheme.outline;
     return Card(
       child: ExpansionTile(
+        // Unique PageStorage slot — see _StreetCoachingCard for why a keyless
+        // ExpansionTile crashes a later scrollable.
+        key: const PageStorageKey('ai_facts'),
         leading: Icon(Icons.fact_check_outlined,
             size: 20, color: Theme.of(context).colorScheme.primary),
         title: Text('What the AI was told',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show DateTimeRange;
 import 'session_model.dart';
 import '../data/poker_rooms.dart' show isOnlineSession;
+import '../utils/helpers.dart' show mostRecentSession;
 
 const _monthAbbr = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -50,10 +51,7 @@ class StatsFilter {
 
   String effectiveCurrency(List<SessionModel> sessions) {
     if (displayCurrency != null) return displayCurrency!;
-    if (sessions.isEmpty) return 'CAD';
-    return ([...sessions]..sort((a, b) => b.date.compareTo(a.date)))
-        .first
-        .currency;
+    return mostRecentSession(sessions)?.currency ?? 'CAD';
   }
 
   /// Applies every dimension except game type to [sessions].

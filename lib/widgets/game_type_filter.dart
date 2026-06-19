@@ -59,8 +59,27 @@ class GameTypeFilterChips extends StatelessWidget {
 /// (= all) — so the default "triggers" to the last-played type only once the
 /// user starts recording.
 Set<String> defaultGameTypes(List<SessionModel> sessions) {
-  if (sessions.isEmpty) return <String>{};
-  final mostRecent =
-      sessions.reduce((a, b) => a.date.compareTo(b.date) >= 0 ? a : b);
+  final mostRecent = mostRecentSession(sessions);
+  if (mostRecent == null) return <String>{};
   return {isTournamentType(mostRecent.gameType) ? 'tournament' : 'cash'};
+}
+
+/// The game-type key ('cash' | 'tournament') a session falls under.
+String gameTypeKey(SessionModel s) =>
+    isTournamentType(s.gameType) ? 'tournament' : 'cash';
+
+/// Narrows [sessions] to the selected game-type [types]. An empty set means
+/// "all game types" (no filtering). Shared by the Overview and Analytics tabs
+/// so the two never drift on how game type is matched.
+List<SessionModel> filterByGameTypes(
+    List<SessionModel> sessions, Set<String> types) {
+  if (types.isEmpty) return sessions;
+  return sessions.where((s) => types.contains(gameTypeKey(s))).toList();
+}
+
+/// The active game-type filter as a chip label ('Cash' | 'Tournament'), or null
+/// when no single type is selected (= all).
+String? gameTypeChipLabel(Set<String> types) {
+  if (types.isEmpty) return null;
+  return types.contains('tournament') ? 'Tournament' : 'Cash';
 }

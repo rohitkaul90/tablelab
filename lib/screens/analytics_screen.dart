@@ -47,10 +47,9 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
 
   // Read-only labels describing the active filters, shown on each chart screen.
   List<String> _activeFilterLabels(String displayCurrency) {
-    final types = _effectiveTypes;
+    final gt = gameTypeChipLabel(_effectiveTypes);
     return [
-      if (types.isNotEmpty)
-        (types.contains('tournament') ? 'Tournament' : 'Cash'),
+      if (gt != null) gt,
       ...widget.filter.labels(),
       displayCurrency,
     ];
@@ -58,18 +57,8 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
 
   String get _effectiveCurrency => widget.filter.effectiveCurrency(widget.sessions);
 
-  List<SessionModel> get _filtered {
-    var result = widget.filter.apply(widget.sessions);
-    final types = _effectiveTypes;
-    if (types.isNotEmpty) {
-      // empty = all game types
-      result = result
-          .where((s) =>
-              types.contains(isTournamentType(s.gameType) ? 'tournament' : 'cash'))
-          .toList();
-    }
-    return result;
-  }
+  List<SessionModel> get _filtered =>
+      filterByGameTypes(widget.filter.apply(widget.sessions), _effectiveTypes);
 
   @override
   Widget build(BuildContext context) {
@@ -104,13 +93,16 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     final tSessions =
         filtered.where((s) => isTournamentType(s.gameType)).toList();
     final hasTournaments = tSessions.isNotEmpty;
-    final tournamentROI = hasTournaments
-        ? tSessions.fold(
-                0.0,
-                (sum, s) =>
-                    sum + (s.buyIn > 0 ? s.profitLoss / s.buyIn * 100 : 0.0)) /
-            tSessions.length
-        : null;
+    // Pooled ROI (total profit / total buy-in) — matches the Overview ROI tile
+    // and the metric chart; a per-session average would overweight small
+    // buy-ins and disagree with the chart it drills into.
+    final tournamentBuyIn =
+        tSessions.fold(0.0, (sum, s) => sum + toD(s.buyIn, s.currency));
+    final tournamentPL =
+        tSessions.fold(0.0, (sum, s) => sum + toD(s.profitLoss, s.currency));
+    final tournamentROI = hasTournaments && tournamentBuyIn > 0
+        ? tournamentPL / tournamentBuyIn * 100
+        : (hasTournaments ? 0.0 : null);
     final itmCount = hasTournaments
         ? tSessions
             .where((s) => isSessionItm(s.prizeWon, s.profitLoss))
@@ -198,7 +190,13 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                   padding: const EdgeInsets.only(top: 32),
                   child: Center(
                     child: Text(
-                      'Log a session to unlock breakdowns and trends.',
+                      // Distinguish "you have no data yet" from "your filters
+                      // hid everything" — otherwise an established user who
+                      // filters to an empty range is wrongly told to log a
+                      // session.
+                      widget.sessions.isEmpty
+                          ? 'Log a session to unlock breakdowns and trends.'
+                          : 'No sessions match these filters.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.outline,

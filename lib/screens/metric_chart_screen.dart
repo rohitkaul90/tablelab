@@ -73,8 +73,25 @@ class MetricChartScreen extends StatefulWidget {
 class _MetricChartScreenState extends State<MetricChartScreen> {
   // Period + lookback live here so they can sit in the AppBar (the
   // Per-period/Cumulative + Graph/Table toggles stay inside the chart body).
-  _Period _period = _Period.monthly;
+  late _Period _period;
   _Lookback _lookback = _Lookback.all;
+
+  @override
+  void initState() {
+    super.initState();
+    _period = _defaultPeriod(widget.sessions);
+  }
+
+  /// Pick the finest period that yields ≥2 buckets so the chart isn't greeted
+  /// by "Need at least 2 periods" — a user whose sessions all fall in one month
+  /// opens on Weekly instead of an empty Monthly view. Defaults to Monthly.
+  static _Period _defaultPeriod(List<SessionModel> sessions) {
+    int distinct(_Period p) =>
+        sessions.map((s) => _periodKey(s.date, p)).toSet().length;
+    if (distinct(_Period.monthly) >= 2) return _Period.monthly;
+    if (distinct(_Period.weekly) >= 2) return _Period.weekly;
+    return _Period.monthly;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,6 +215,18 @@ class _MetricSpec {
   final bool signed; // green/red coloring
   final bool rich; // profit/net → extra $/hr + Hrs table columns
 
+  /// Pre-filters the session set before grouping/aggregating. Used to scope a
+  /// metric to the only sessions it's defined over — tournament-only for
+  /// ROI/ITM (so cash wins aren't miscounted), cash-with-parseable-blinds for
+  /// BB/100 (so periods with no qualifying session drop out instead of
+  /// charting a fake 0). Null = use every session.
+  final bool Function(SessionModel)? sessionFilter;
+
+  /// Whether the Per-period/Cumulative toggle is meaningful. False for rate
+  /// metrics (win rate, BB/100, ROI, ITM %) where a running total is nonsense —
+  /// the "cumulative" view would silently show a converging lifetime average.
+  final bool cumulativeSupported;
+
   const _MetricSpec({
     required this.title,
     required this.aggregate,
@@ -206,6 +235,8 @@ class _MetricSpec {
     required this.valueLabel,
     this.signed = false,
     this.rich = false,
+    this.sessionFilter,
+    this.cumulativeSupported = true,
   }) : isWinLoss = false;
 
   const _MetricSpec.winLoss()
@@ -216,7 +247,9 @@ class _MetricSpec {
         axisLabel = _emptyFmt,
         valueLabel = '',
         signed = false,
-        rich = false;
+        rich = false,
+        sessionFilter = null,
+        cumulativeSupported = true;
 }
 
 _MetricSpec _specFor(StatMetric m, String cur) {
@@ -264,6 +297,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         axisLabel: moneyAxis,
         valueLabel: '$sym/hr',
         signed: true,
+        cumulativeSupported: false,
       );
     case StatMetric.hours:
       return _MetricSpec(
@@ -300,15 +334,24 @@ _MetricSpec _specFor(StatMetric m, String cur) {
     case StatMetric.bb100:
       return _MetricSpec(
         title: 'BB / 100',
+        // Scope to the cash sessions calcBB100 actually counts, so a period
+        // with no qualifying session drops out of the chart entirely rather
+        // than plotting a misleading 0 (no-data ≠ break-even).
+        sessionFilter: _countsForBB100,
         aggregate: (l) => calcBB100(l) ?? 0.0,
         headline: formatBB100,
         axisLabel: (v) => '${v.round()}',
         valueLabel: 'BB/100',
         signed: true,
+        cumulativeSupported: false,
       );
     case StatMetric.roi:
       return _MetricSpec(
         title: 'Tournament ROI',
+        // Tournament-only, pooled (total profit / total buy-in) — matches the
+        // Overview ROI tile and the Analytics summary row; cash sessions must
+        // not pollute the buy-in denominator.
+        sessionFilter: (s) => isTournamentType(s.gameType),
         aggregate: (l) {
           final b = l.fold(0.0, (a, s) => a + buyin(s));
           final p = l.fold(0.0, (a, s) => a + pl(s));
@@ -318,9 +361,12 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         axisLabel: (v) => '${v.round()}%',
         valueLabel: 'ROI',
         signed: true,
+        cumulativeSupported: false,
       );
     case StatMetric.itm:
       return _MetricSpec(
+        // Tournament-only: a winning cash session is not "in the money".
+        sessionFilter: (s) => isTournamentType(s.gameType),
         title: 'In the Money',
         aggregate: (l) => l
             .where((s) => isSessionItm(s.prizeWon, s.profitLoss))
@@ -333,6 +379,8 @@ _MetricSpec _specFor(StatMetric m, String cur) {
     case StatMetric.itmPct:
       return _MetricSpec(
         title: 'ITM %',
+        // Tournament-only denominator — cash sessions would dilute the rate.
+        sessionFilter: (s) => isTournamentType(s.gameType),
         aggregate: (l) {
           if (l.isEmpty) return 0.0;
           final itm =
@@ -342,6 +390,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         headline: (v) => '${v.round()}%',
         axisLabel: (v) => '${v.round()}%',
         valueLabel: 'ITM %',
+        cumulativeSupported: false,
       );
     case StatMetric.winLoss:
       return const _MetricSpec.winLoss();
@@ -349,6 +398,16 @@ _MetricSpec _specFor(StatMetric m, String cur) {
 }
 
 // ─── Shared lookback / period helpers ─────────────────────────────────────────
+
+/// Whether a session contributes to BB/100 — mirrors the per-session test in
+/// [calcBB100] (cash, parseable positive blind, non-zero estimated hands). Kept
+/// in sync so per-period scoping matches the headline figure.
+bool _countsForBB100(SessionModel s) {
+  if (s.gameType != 'cash') return false;
+  final bb = parseBBFromStakes(s.stakes);
+  if (bb == null || bb <= 0) return false;
+  return (s.handsPerHour ?? 25) * (s.durationMinutes / 60.0) > 0;
+}
 
 List<SessionModel> _applyLookback(List<SessionModel> sessions, _Lookback lb) {
   if (lb == _Lookback.all) return sessions;
@@ -431,8 +490,9 @@ Widget _aggViewRow(
   bool cumulative,
   bool table,
   ValueChanged<bool> onAgg,
-  ValueChanged<bool> onView,
-) {
+  ValueChanged<bool> onView, {
+  bool showCumulative = true,
+}) {
   Widget chip(String label, bool selected, VoidCallback onTap) => Padding(
         padding: const EdgeInsets.only(right: 6),
         child: ChoiceChip(
@@ -446,9 +506,13 @@ Widget _aggViewRow(
     scrollDirection: Axis.horizontal,
     child: Row(
       children: [
-        chip('Per-period', !cumulative, () => onAgg(false)),
-        chip('Cumulative', cumulative, () => onAgg(true)),
-        const SizedBox(width: 16),
+        // Rate metrics (win rate, ROI, …) hide the Per-period/Cumulative
+        // toggle — a running total of a ratio is meaningless.
+        if (showCumulative) ...[
+          chip('Per-period', !cumulative, () => onAgg(false)),
+          chip('Cumulative', cumulative, () => onAgg(true)),
+          const SizedBox(width: 16),
+        ],
         chip('Graph', !table, () => onView(false)),
         chip('Table', table, () => onView(true)),
       ],
@@ -457,6 +521,149 @@ Widget _aggViewRow(
 }
 
 bool get _touchEnabled => kIsWeb || !Platform.isWindows;
+
+// ─── Shared period bucketing + table scaffolding ──────────────────────────────
+
+/// Buckets [sessions] by period and pre-builds the expanding cumulative windows.
+/// Shared by the metric and win/loss charts so the bucketing math can't drift.
+class _PeriodBuckets {
+  final List<String> keys;
+  final Map<String, List<SessionModel>> groups;
+  final Map<String, List<SessionModel>> cum;
+  const _PeriodBuckets(this.keys, this.groups, this.cum);
+
+  List<SessionModel> window(String k, bool cumulative) =>
+      cumulative ? cum[k]! : groups[k]!;
+}
+
+_PeriodBuckets _bucketByPeriod(List<SessionModel> sessions, _Period period) {
+  final groups = <String, List<SessionModel>>{};
+  for (final s in sessions) {
+    groups.putIfAbsent(_periodKey(s.date, period), () => []).add(s);
+  }
+  final keys = groups.keys.toList()..sort();
+  final cum = <String, List<SessionModel>>{};
+  final acc = <SessionModel>[];
+  for (final k in keys) {
+    acc.addAll(groups[k]!);
+    cum[k] = List.of(acc);
+  }
+  return _PeriodBuckets(keys, groups, cum);
+}
+
+/// The shared metric/win-loss table: yearly → flat; weekly/monthly → grouped
+/// under collapsible year headers. The caller supplies the column [header] and
+/// the per-window [cells]; everything else (layout, year collapse, cumulative
+/// year subtotals) is identical across charts.
+Widget _periodTable({
+  required BuildContext context,
+  required List<String> keys,
+  required _Period period,
+  required bool cumulative,
+  required List<SessionModel> Function(String) windowFor,
+  required Set<String> collapsedYears,
+  required void Function(String year) onToggleYear,
+  required Widget header,
+  required List<Widget> Function(List<SessionModel> window) cells,
+}) {
+  final theme = Theme.of(context);
+  if (keys.isEmpty) return _emptyChart(context, 'No data for this view');
+
+  Widget divider() => Divider(
+      height: 1, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5));
+
+  Widget dataRow(String label, List<SessionModel> window) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          children: [
+            Expanded(
+                flex: 3,
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge)),
+            ...cells(window),
+          ],
+        ),
+      );
+
+  if (period == _Period.yearly) {
+    final ordered = [...keys]..sort((a, b) => b.compareTo(a));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        header,
+        const Divider(height: 1),
+        for (final k in ordered) ...[
+          dataRow(_periodLabel(k, period), windowFor(k)),
+          divider(),
+        ],
+      ],
+    );
+  }
+
+  final byYear = <String, List<String>>{};
+  for (final k in keys) {
+    byYear.putIfAbsent(k.substring(0, 4), () => []).add(k);
+  }
+  final years = byYear.keys.toList()..sort((a, b) => b.compareTo(a));
+
+  Widget yearSection(String year, List<String> periodKeys) {
+    final isExpanded = !collapsedYears.contains(year);
+    final sortedKeys = [...periodKeys]..sort((a, b) => b.compareTo(a));
+    final lastKey = periodKeys.reduce((a, b) => a.compareTo(b) >= 0 ? a : b);
+    final yearWindow = cumulative
+        ? windowFor(lastKey)
+        : [for (final k in periodKeys) ...windowFor(k)];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => onToggleYear(year),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            color: theme.colorScheme.surfaceContainerHighest.withAlpha(60),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Row(
+                    children: [
+                      Icon(isExpanded ? Icons.expand_less : Icons.expand_more,
+                          size: 18, color: theme.colorScheme.outline),
+                      const SizedBox(width: 4),
+                      Text(year,
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                ...cells(yearWindow),
+              ],
+            ),
+          ),
+        ),
+        if (isExpanded)
+          for (final k in sortedKeys) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: dataRow(_periodLabel(k, period), windowFor(k)),
+            ),
+            divider(),
+          ],
+      ],
+    );
+  }
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      header,
+      const Divider(height: 1),
+      for (final year in years) yearSection(year, byYear[year]!),
+    ],
+  );
+}
 
 int _labelEvery(double width, int count) {
   final maxLabels = (width / 48).floor().clamp(2, count);
@@ -514,31 +721,26 @@ class _MetricChartState extends State<_MetricChart> {
 
   _MetricSpec get _spec => widget.spec;
 
+  // Cumulative only applies when the metric supports it (rate metrics don't).
+  bool get _cumEffective => _spec.cumulativeSupported && _cumulative;
+
   double _hours(List<SessionModel> l) =>
       l.fold(0, (a, s) => a + s.durationMinutes) / 60.0;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lb = _applyLookback(widget.sessions, _lookback);
+    // Scope to the sessions this metric is defined over before grouping.
+    final source = _spec.sessionFilter == null
+        ? widget.sessions
+        : widget.sessions.where(_spec.sessionFilter!).toList();
+    final lb = _applyLookback(source, _lookback);
 
-    // Group by period (chronological — keys are sortable strings).
-    final groups = <String, List<SessionModel>>{};
-    for (final s in lb) {
-      groups.putIfAbsent(_periodKey(s.date, _period), () => []).add(s);
-    }
-    final keys = groups.keys.toList()..sort();
-
-    // Expanding windows for cumulative mode.
-    final cum = <String, List<SessionModel>>{};
-    final acc = <SessionModel>[];
-    for (final k in keys) {
-      acc.addAll(groups[k]!);
-      cum[k] = List.of(acc);
-    }
-
-    List<SessionModel> windowFor(String k) =>
-        _cumulative ? cum[k]! : groups[k]!;
+    final b = _bucketByPeriod(lb, _period);
+    final groups = b.groups;
+    final cum = b.cum;
+    final keys = b.keys;
+    List<SessionModel> windowFor(String k) => b.window(k, _cumEffective);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,10 +755,22 @@ class _MetricChartState extends State<_MetricChart> {
             ),
           ),
         Expanded(
+          // A per-period bar chart reads fine with a single bar; only the
+          // cumulative line needs ≥2 points to draw a trend.
           child: _table
               ? SingleChildScrollView(
-                  child: _buildTable(context, keys, windowFor))
-              : (keys.length < 2
+                  child: _periodTable(
+                    context: context,
+                    keys: keys,
+                    period: _period,
+                    cumulative: _cumEffective,
+                    windowFor: windowFor,
+                    collapsedYears: _collapsedYears,
+                    onToggleYear: _toggleYear,
+                    header: _tableHeader(theme),
+                    cells: (w) => _valueCells(theme, w),
+                  ))
+              : (keys.length < (_cumEffective ? 2 : 1)
                   ? _emptyChart(context, 'Need at least 2 periods of data')
                   : LayoutBuilder(
                       builder: (_, c) =>
@@ -568,6 +782,7 @@ class _MetricChartState extends State<_MetricChart> {
           _table,
           (v) => setState(() => _cumulative = v),
           (v) => setState(() => _table = v),
+          showCumulative: _spec.cumulativeSupported,
         ),
       ],
     );
@@ -577,7 +792,7 @@ class _MetricChartState extends State<_MetricChart> {
 
   Widget _graph(BuildContext context, Map<String, List<SessionModel>> groups,
       Map<String, List<SessionModel>> cum, List<String> keys, double width) {
-    return _cumulative
+    return _cumEffective
         ? _lineChart(context, cum, keys, width)
         : _barChart(context, groups, keys, width);
   }
@@ -732,106 +947,12 @@ class _MetricChartState extends State<_MetricChart> {
   }
 
   // ── Table ────────────────────────────────────────────────────────────────
-  // Yearly → flat. Weekly/monthly → grouped under collapsible year headers,
-  // expanded by default (the full screen has room to show everything).
+  // Layout/year-grouping live in the shared [_periodTable]; this class only
+  // supplies the column header + value cells.
 
-  Widget _buildTable(
-    BuildContext context,
-    List<String> keys,
-    List<SessionModel> Function(String) windowFor,
-  ) {
-    final theme = Theme.of(context);
-    if (keys.isEmpty) return _emptyChart(context, 'No data for this view');
-
-    if (_period == _Period.yearly) {
-      final ordered = [...keys]..sort((a, b) => b.compareTo(a));
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _tableHeader(theme),
-          const Divider(height: 1),
-          for (final k in ordered) ...[
-            _dataRow(theme, _periodLabel(k, _period), windowFor(k)),
-            Divider(
-                height: 1,
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          ],
-        ],
-      );
-    }
-
-    final byYear = <String, List<String>>{};
-    for (final k in keys) {
-      byYear.putIfAbsent(k.substring(0, 4), () => []).add(k);
-    }
-    final years = byYear.keys.toList()..sort((a, b) => b.compareTo(a));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _tableHeader(theme),
-        const Divider(height: 1),
-        for (final year in years)
-          _yearSection(theme, year, byYear[year]!, windowFor),
-      ],
-    );
-  }
-
-  Widget _yearSection(ThemeData theme, String year, List<String> periodKeys,
-      List<SessionModel> Function(String) windowFor) {
-    final isExpanded = !_collapsedYears.contains(year);
-    final sortedKeys = [...periodKeys]..sort((a, b) => b.compareTo(a));
-    final lastKey = periodKeys.reduce((a, b) => a.compareTo(b) >= 0 ? a : b);
-    final yearWindow = _cumulative
-        ? windowFor(lastKey)
-        : [for (final k in periodKeys) ...windowFor(k)];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => setState(() {
-            if (isExpanded) {
-              _collapsedYears.add(year);
-            } else {
-              _collapsedYears.remove(year);
-            }
-          }),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            color: theme.colorScheme.surfaceContainerHighest.withAlpha(60),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Row(
-                    children: [
-                      Icon(isExpanded ? Icons.expand_less : Icons.expand_more,
-                          size: 18, color: theme.colorScheme.outline),
-                      const SizedBox(width: 4),
-                      Text(year,
-                          style: theme.textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                ..._valueCells(theme, yearWindow),
-              ],
-            ),
-          ),
-        ),
-        if (isExpanded)
-          for (final k in sortedKeys) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: _dataRow(theme, _periodLabel(k, _period), windowFor(k)),
-            ),
-            Divider(
-                height: 1,
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          ],
-      ],
-    );
-  }
+  void _toggleYear(String year) => setState(() {
+        if (!_collapsedYears.remove(year)) _collapsedYears.add(year);
+      });
 
   Widget _tableHeader(ThemeData theme) {
     final sym = currencySymbol(widget.displayCurrency);
@@ -906,21 +1027,6 @@ class _MetricChartState extends State<_MetricChart> {
     ];
   }
 
-  Widget _dataRow(ThemeData theme, String label, List<SessionModel> window) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-                flex: 3,
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge)),
-            ..._valueCells(theme, window),
-          ],
-        ),
-      );
 }
 
 // ─── Wins-vs-Losses chart (two series) ────────────────────────────────────────
@@ -957,19 +1063,11 @@ class _WinLossChartState extends State<_WinLossChart> {
     final theme = Theme.of(context);
     final lb = _applyLookback(widget.sessions, _lookback);
 
-    final groups = <String, List<SessionModel>>{};
-    for (final s in lb) {
-      groups.putIfAbsent(_periodKey(s.date, _period), () => []).add(s);
-    }
-    final keys = groups.keys.toList()..sort();
-    final cum = <String, List<SessionModel>>{};
-    final acc = <SessionModel>[];
-    for (final k in keys) {
-      acc.addAll(groups[k]!);
-      cum[k] = List.of(acc);
-    }
-    List<SessionModel> windowFor(String k) =>
-        _cumulative ? cum[k]! : groups[k]!;
+    final b = _bucketByPeriod(lb, _period);
+    final groups = b.groups;
+    final cum = b.cum;
+    final keys = b.keys;
+    List<SessionModel> windowFor(String k) => b.window(k, _cumulative);
 
     final total = _tally(lb);
 
@@ -994,10 +1092,21 @@ class _WinLossChartState extends State<_WinLossChart> {
             ),
           ),
         Expanded(
+          // Bar chart reads fine with one period; the cumulative line needs ≥2.
           child: _table
               ? SingleChildScrollView(
-                  child: _buildTable(context, keys, windowFor))
-              : (keys.length < 2
+                  child: _periodTable(
+                    context: context,
+                    keys: keys,
+                    period: _period,
+                    cumulative: _cumulative,
+                    windowFor: windowFor,
+                    collapsedYears: _collapsedYears,
+                    onToggleYear: _toggleYear,
+                    header: _tableHeader(theme),
+                    cells: (w) => _wlCells(theme, w),
+                  ))
+              : (keys.length < (_cumulative ? 2 : 1)
                   ? _emptyChart(context, 'Need at least 2 periods of data')
                   : LayoutBuilder(
                       builder: (_, c) =>
@@ -1013,6 +1122,10 @@ class _WinLossChartState extends State<_WinLossChart> {
       ],
     );
   }
+
+  void _toggleYear(String year) => setState(() {
+        if (!_collapsedYears.remove(year)) _collapsedYears.add(year);
+      });
 
   Widget _legendDot(Color c) => Container(
       width: 10,
@@ -1177,105 +1290,8 @@ class _WinLossChartState extends State<_WinLossChart> {
     ));
   }
 
-  // ── Table (yearly flat; weekly/monthly grouped by year, expanded) ─────────
-
-  Widget _buildTable(
-    BuildContext context,
-    List<String> keys,
-    List<SessionModel> Function(String) windowFor,
-  ) {
-    final theme = Theme.of(context);
-    if (keys.isEmpty) return _emptyChart(context, 'No data for this view');
-
-    if (_period == _Period.yearly) {
-      final ordered = [...keys]..sort((a, b) => b.compareTo(a));
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _tableHeader(theme),
-          const Divider(height: 1),
-          for (final k in ordered) ...[
-            _wlRow(theme, _periodLabel(k, _period), windowFor(k)),
-            Divider(
-                height: 1,
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          ],
-        ],
-      );
-    }
-
-    final byYear = <String, List<String>>{};
-    for (final k in keys) {
-      byYear.putIfAbsent(k.substring(0, 4), () => []).add(k);
-    }
-    final years = byYear.keys.toList()..sort((a, b) => b.compareTo(a));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _tableHeader(theme),
-        const Divider(height: 1),
-        for (final year in years)
-          _yearSection(theme, year, byYear[year]!, windowFor),
-      ],
-    );
-  }
-
-  Widget _yearSection(ThemeData theme, String year, List<String> periodKeys,
-      List<SessionModel> Function(String) windowFor) {
-    final isExpanded = !_collapsedYears.contains(year);
-    final sortedKeys = [...periodKeys]..sort((a, b) => b.compareTo(a));
-    final lastKey = periodKeys.reduce((a, b) => a.compareTo(b) >= 0 ? a : b);
-    final yearWindow = _cumulative
-        ? windowFor(lastKey)
-        : [for (final k in periodKeys) ...windowFor(k)];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => setState(() {
-            if (isExpanded) {
-              _collapsedYears.add(year);
-            } else {
-              _collapsedYears.remove(year);
-            }
-          }),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            color: theme.colorScheme.surfaceContainerHighest.withAlpha(60),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Row(
-                    children: [
-                      Icon(isExpanded ? Icons.expand_less : Icons.expand_more,
-                          size: 18, color: theme.colorScheme.outline),
-                      const SizedBox(width: 4),
-                      Text(year,
-                          style: theme.textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                ..._wlCells(theme, yearWindow),
-              ],
-            ),
-          ),
-        ),
-        if (isExpanded)
-          for (final k in sortedKeys) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: _wlRow(theme, _periodLabel(k, _period), windowFor(k)),
-            ),
-            Divider(
-                height: 1,
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          ],
-      ],
-    );
-  }
+  // ── Table — layout lives in the shared [_periodTable]; this class supplies
+  // the W/L column header + cells.
 
   Widget _tableHeader(ThemeData theme) {
     final hs = theme.textTheme.titleSmall
@@ -1310,20 +1326,4 @@ class _WinLossChartState extends State<_WinLossChart> {
         ));
     return [cell(t.wins, Colors.green), cell(t.losses, Colors.red)];
   }
-
-  Widget _wlRow(ThemeData theme, String label, List<SessionModel> window) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-                flex: 3,
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge)),
-            ..._wlCells(theme, window),
-          ],
-        ),
-      );
 }
