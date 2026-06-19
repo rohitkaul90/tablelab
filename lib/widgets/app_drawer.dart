@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
 import '../providers/reads_provider.dart';
@@ -12,6 +11,7 @@ import '../screens/terms_of_service_screen.dart';
 import '../screens/help_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/tournament_calendar_screen.dart';
+import 'feedback_sheet.dart';
 
 // Key for the root nav scaffold so any tab screen can open the drawer.
 final mainScaffoldKey = GlobalKey<ScaffoldState>();
@@ -181,11 +181,7 @@ class AppDrawer extends ConsumerWidget {
                           style: TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
-                        launchUrl(Uri(
-                          scheme: 'mailto',
-                          path: 'feedback@tablelab.app',
-                          queryParameters: {'subject': 'TableLab Feedback'},
-                        ));
+                        showFeedbackSheet(context);
                       },
                     ),
                     ListTile(

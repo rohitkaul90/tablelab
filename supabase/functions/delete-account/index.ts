@@ -62,6 +62,11 @@ Deno.serve(async (req) => {
     "rake_presets",
     "hands",
     "sessions",
+    // feedback FKs user_id with ON DELETE SET NULL (rows are kept by default),
+    // so it must be deleted explicitly here — otherwise the row survives with
+    // the user's email/free-text message, leaving PII after "delete account".
+    // Requires service_role DELETE grant (20260619_feedback.sql).
+    "feedback",
   ];
 
   for (const table of userScopedTables) {

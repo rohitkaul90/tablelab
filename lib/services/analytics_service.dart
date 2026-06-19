@@ -91,6 +91,15 @@ class AnalyticsService {
     Posthog().capture(eventName: 'equity_calculator_used');
   }
 
+  // ── Feedback ────────────────────────────────────────────────────────────────
+
+  static void feedbackSubmitted({required String category}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(eventName: 'feedback_submitted', properties: {
+      'category': category, // 'bug' | 'idea' | 'praise' | 'other'
+    });
+  }
+
   // ── Import / Export ─────────────────────────────────────────────────────────
 
   static void exportTriggered({required String format}) {

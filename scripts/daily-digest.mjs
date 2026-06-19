@@ -149,7 +149,15 @@ async function activityStatus() {
   // lexicographically, so gte works.
   const sessions = await sbCount("sessions", `created_at=gte.${encodeURIComponent(cutoff24h)}${notSmoke}`);
   const hands = await sbCount("hands", `created_at=gte.${encodeURIComponent(cutoff24h)}${notSmoke}`);
-  return { line: `📈 yesterday: ${newUsers ?? "?"} new accounts · ${sessions} sessions · ${hands} hands` };
+  // feedback table may not exist on older deploys — never let it break the digest.
+  // No `notSmoke`: the synthetic account never submits feedback, and `user_id=neq`
+  // would drop rows whose user_id is NULL (set on account deletion) — undercounting.
+  let feedback = null;
+  try {
+    feedback = await sbCount("feedback", `created_at=gte.${encodeURIComponent(cutoff24h)}`);
+  } catch { /* table missing or not yet granted — omit */ }
+  const fbPart = feedback == null ? "" : ` · ${feedback} feedback`;
+  return { line: `📈 yesterday: ${newUsers ?? "?"} new accounts · ${sessions} sessions · ${hands} hands${fbPart}` };
 }
 
 async function post(text) {
