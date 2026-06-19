@@ -8,6 +8,7 @@ import '../models/tournament_listing.dart';
 import '../services/supabase_service.dart';
 import '../services/hand_service.dart';
 import '../services/ai_service.dart';
+import '../services/feedback_service.dart';
 
 export '../models/session_filter.dart' show SessionFilter, SessionResult;
 
@@ -105,4 +106,6 @@ final aiUsageProvider = FutureProvider<AiUsage>((ref) {
 final tournamentListingsProvider = FutureProvider.autoDispose<List<TournamentListing>>((ref) {
   return ref.read(supabaseServiceProvider).fetchTournamentListings();
 });
+
+final feedbackServiceProvider = Provider<FeedbackService>((ref) => FeedbackService());
 

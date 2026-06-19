@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import '../feedback_sheet.dart';
 
 /// Thumbs up/down row shown under an AI analysis. Persists via [onRate]
 /// (1 = up, -1 = down) with a saving guard against double-taps; the rating
 /// can be changed but not cleared. Feedback is best-effort — failures revert
 /// the selection silently.
+///
+/// A "Tell us more" link opens the full feedback sheet so users can describe
+/// what the AI got wrong/right — richer signal than a thumb.
 class AnalysisFeedbackBar extends StatefulWidget {
   final Future<void> Function(int rating) onRate;
 
@@ -41,8 +45,9 @@ class _AnalysisFeedbackBarState extends State<AnalysisFeedbackBar> {
   Widget build(BuildContext context) {
     final outline = Theme.of(context).colorScheme.outline;
     final primary = Theme.of(context).colorScheme.primary;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
           _rating == null ? 'Was this analysis helpful?' : 'Thanks for the feedback!',
@@ -67,6 +72,14 @@ class _AnalysisFeedbackBarState extends State<AnalysisFeedbackBar> {
           ),
           tooltip: 'Not helpful',
           onPressed: () => _rate(-1),
+        ),
+        TextButton(
+          onPressed: () => showFeedbackSheet(
+            context,
+            initialCategory: 'other',
+            prefillMessage: 'About the AI coaching: ',
+          ),
+          child: const Text('Tell us more'),
         ),
       ],
     );
