@@ -25,8 +25,10 @@ create table if not exists public.feedback (
 alter table public.feedback enable row level security;
 
 -- Writes happen server-side with the service-role client (user_id scoped
--- explicitly in the function) — no client INSERT policy needed.
-grant select, insert on public.feedback to service_role, postgres;
+-- explicitly in the function) — no client INSERT policy needed. DELETE is
+-- needed so delete-account can purge a user's feedback (the FK is SET NULL, so
+-- the row would otherwise survive account deletion with the user's email/PII).
+grant select, insert, delete on public.feedback to service_role, postgres;
 
 -- Let a signed-in user read back their own submissions (optional future UI).
 grant select on public.feedback to authenticated;

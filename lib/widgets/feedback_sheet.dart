@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/providers.dart';
 import '../services/analytics_service.dart';
+import '../services/feedback_service.dart';
 
 /// Opens the in-app feedback sheet. [initialCategory] preselects a chip and
 /// [prefillMessage] seeds the text field (used by the AI screens' "tell us
@@ -97,8 +98,17 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
   }
 
   String _friendlyError(Object e) {
-    final msg = e.toString();
-    if (msg.contains('limit')) return 'Daily feedback limit reached — try again tomorrow.';
+    if (e is FeedbackException) {
+      if (e.status == 429) {
+        return 'Daily feedback limit reached — try again tomorrow.';
+      }
+      // 4xx validation errors carry a useful server message; show it verbatim.
+      if (e.status < 500 && (e.message?.isNotEmpty ?? false)) {
+        return e.message!;
+      }
+      return "Couldn't send feedback. Please try again.";
+    }
+    // Network / transport error — couldn't reach the server.
     return "Couldn't send feedback. Check your connection and try again.";
   }
 

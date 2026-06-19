@@ -94,7 +94,7 @@ void main() {
     expect(find.text('Thanks for the feedback! 🙏'), findsOneWidget);
   });
 
-  testWidgets('surfaces an error and keeps the sheet open on failure',
+  testWidgets('surfaces a network error and keeps the sheet open on failure',
       (tester) async {
     final fake = _FakeFeedbackService()..throwThis = Exception('network');
     await _open(tester, fake);
@@ -106,8 +106,22 @@ void main() {
     expect(fake.wasCalled, isTrue);
     expect(find.text('Send'), findsOneWidget); // still open
     expect(
-      find.textContaining("Couldn't send feedback"),
+      find.textContaining("Couldn't send feedback. Check your connection"),
       findsOneWidget,
     );
+  });
+
+  testWidgets('shows the limit message on a 429 FeedbackException',
+      (tester) async {
+    final fake = _FakeFeedbackService()
+      ..throwThis = const FeedbackException(status: 429, message: 'Daily feedback limit reached.');
+    await _open(tester, fake);
+
+    await tester.enterText(find.byType(TextField), 'One too many');
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Send'), findsOneWidget); // still open
+    expect(find.textContaining('Daily feedback limit reached'), findsOneWidget);
   });
 }
