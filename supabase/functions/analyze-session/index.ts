@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.36.3";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { reportError } from "../_shared/alert.ts";
+import { CAPACITY_MESSAGE, isCapacityError } from "../_shared/capacity.ts";
 
 const allowedOrigins = new Set([
   "https://tablelab.app",
@@ -717,6 +718,15 @@ serve(async (req: Request) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("analyze-session error:", msg);
+    // "At capacity" (spend cap / credit / rate-limit / overload): clear, honest
+    // 503 and NO alert — every call fails at once when the cap binds, so per-call
+    // alerts would flood the ops channel; spend is already monitored elsewhere.
+    if (msg !== "CLAUDE_TIMEOUT" && isCapacityError(err)) {
+      return new Response(
+        JSON.stringify({ error: CAPACITY_MESSAGE }),
+        { status: 503, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
+      );
+    }
     await reportError("analyze-session", msg);
     if (msg === "CLAUDE_TIMEOUT") {
       return new Response(
