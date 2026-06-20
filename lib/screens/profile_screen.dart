@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile_model.dart';
 import '../providers/profile_provider.dart';
+import '../widgets/profile_avatar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -153,21 +154,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          CircleAvatar(
+                          ProfileAvatar(
+                            imageUrl: avatarUrl,
+                            initials: initials,
                             radius: 48,
                             backgroundColor:
                                 theme.colorScheme.primary.withAlpha(60),
-                            backgroundImage: avatarUrl != null
-                                ? NetworkImage(avatarUrl)
-                                : null,
-                            child: avatarUrl == null
-                                ? Text(initials,
-                                    style: TextStyle(
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.primary,
-                                    ))
-                                : null,
+                            initialsStyle: TextStyle(
+                              fontSize: 34,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
                           if (avatarUrl != null)
                             Container(

@@ -12,6 +12,7 @@ import '../screens/help_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/tournament_calendar_screen.dart';
 import 'feedback_sheet.dart';
+import 'profile_avatar.dart';
 
 // Key for the root nav scaffold so any tab screen can open the drawer.
 final mainScaffoldKey = GlobalKey<ScaffoldState>();
@@ -58,22 +59,16 @@ class AppDrawer extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
                 child: Row(
                   children: [
-                    CircleAvatar(
+                    ProfileAvatar(
+                      imageUrl: googleAvatarUrl,
+                      initials: initials,
                       radius: 28,
                       backgroundColor: theme.colorScheme.primary.withAlpha(60),
-                      backgroundImage: googleAvatarUrl != null
-                          ? NetworkImage(googleAvatarUrl)
-                          : null,
-                      child: googleAvatarUrl == null
-                          ? Text(
-                              initials,
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
-                              ),
-                            )
-                          : null,
+                      initialsStyle: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -283,7 +278,15 @@ class AppDrawer extends ConsumerWidget {
       ),
     );
     if (confirmed == true) {
-      await Supabase.instance.client.auth.signOut();
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (_) {
+        // GoTrue clears the local session and fires the signed-out event BEFORE
+        // the network logout call, so the user is already signed out (AuthGate
+        // routes to LoginScreen) even if that call fails. Swallow the offline
+        // error (AuthRetryableFetchException / SocketException) so a network
+        // blip during sign-out can't crash the app (crash-issues-11).
+      }
       // Providers watch authUserIdProvider and restart automatically on sign-out.
       // Explicit invalidation below is a belt-and-suspenders guard for edge cases
       // (e.g. rapid account switching). Swallow errors if the widget was already
