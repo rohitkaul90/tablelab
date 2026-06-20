@@ -40,4 +40,51 @@ void main() {
       expect(AiUsage.fromRows(const [], exempt: false).exempt, isFalse);
     });
   });
+
+  group('AiException.fromResponse', () {
+    test('429 with server message → rate-limited, uses server text', () {
+      final e = AiException.fromResponse(
+        429,
+        {'error': 'Daily analysis limit reached. Please try again tomorrow.'},
+      );
+      expect(e.status, 429);
+      expect(e.isRateLimited, isTrue);
+      expect(e.isAtCapacity, isFalse);
+      expect(e.message, contains('Daily analysis limit'));
+    });
+
+    test('503 with server message → at-capacity, uses server text', () {
+      final e = AiException.fromResponse(
+        503,
+        {'error': 'AI coaching is temporarily at capacity. Please try again later.'},
+      );
+      expect(e.status, 503);
+      expect(e.isAtCapacity, isTrue);
+      expect(e.isRateLimited, isFalse);
+      expect(e.message, contains('at capacity'));
+    });
+
+    test('429 with no {error} body (gateway) → generic + retryable, NOT daily limit', () {
+      // A Supabase gateway 429 (platform rate-limit) has no {error: ...} body —
+      // it must not be mislabeled "Daily limit reached / try tomorrow".
+      final e = AiException.fromResponse(429, null);
+      expect(e.fromServer, isFalse);
+      expect(e.isRateLimited, isFalse);
+      expect(e.message, 'Analysis failed. Please try again.');
+    });
+
+    test('503 with non-map details (gateway) → generic, NOT at-capacity', () {
+      final e = AiException.fromResponse(503, 'oops');
+      expect(e.fromServer, isFalse);
+      expect(e.isAtCapacity, isFalse);
+      expect(e.message, 'Analysis failed. Please try again.');
+    });
+
+    test('500 → generic fallback, neither flag set', () {
+      final e = AiException.fromResponse(500, null);
+      expect(e.isRateLimited, isFalse);
+      expect(e.isAtCapacity, isFalse);
+      expect(e.message, 'Analysis failed. Please try again.');
+    });
+  });
 }

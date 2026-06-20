@@ -31,6 +31,53 @@ class AiUsage {
   }
 }
 
+/// A failed AI Edge Function call, mapped to a user-facing message plus the
+/// HTTP status so the UI can tell a daily-limit (429) / at-capacity (503) /
+/// generic failure apart. `functions.invoke` **throws** `FunctionException` on
+/// any non-2xx (functions_client ≥2.x), carrying the server's `{error: ...}`
+/// body in `details` — so callers must catch it rather than read `res.status`.
+class AiException implements Exception {
+  final int status;
+  final String message;
+
+  /// True only when our Edge Function produced the `{error: ...}` body. A
+  /// non-2xx WITHOUT that body is a gateway/transport error (Supabase platform
+  /// rate-limit, cold-boot, etc.) — **not** the function's own daily-limit or
+  /// at-capacity response — so its status must not be read as those semantics.
+  final bool fromServer;
+
+  const AiException({
+    required this.status,
+    required this.message,
+    this.fromServer = true,
+  });
+
+  bool get isRateLimited => fromServer && status == 429;
+  bool get isAtCapacity => fromServer && status == 503;
+
+  /// Builds from a `FunctionException`'s `status` + `details`. Pure + testable
+  /// (takes the primitives, not the exception object). When `details` carries
+  /// our function's `{error: <text>}`, that message + status are authoritative.
+  /// Otherwise it's a gateway/transport failure → generic + retryable, and the
+  /// status is not interpreted as a daily-limit / capacity signal.
+  factory AiException.fromResponse(int status, dynamic details) {
+    final serverMsg = (details is Map && details['error'] is String)
+        ? details['error'] as String
+        : null;
+    if (serverMsg == null) {
+      return AiException(
+        status: status,
+        message: 'Analysis failed. Please try again.',
+        fromServer: false,
+      );
+    }
+    return AiException(status: status, message: serverMsg);
+  }
+
+  @override
+  String toString() => 'AiException($status): $message';
+}
+
 class AiService {
   /// [client] is injectable for tests; production uses the global Supabase
   /// client, resolved lazily so the service can be constructed without an
@@ -74,30 +121,28 @@ class AiService {
     List<PlayerRead> reads = const [],
     bool forceRefresh = false,
   }) async {
-    final res = await _client.functions.invoke(
-      'analyze-session',
-      body: {
-        'session': _sessionJson(session),
-        'hands': hands.map((h) => h.toJson()).toList(),
-        'reads': reads
-            .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
-            .toList(),
-        'forceRefresh': forceRefresh,
-      },
-    );
-
-    final data = res.data;
-    if (data is Map<String, dynamic> && data.containsKey('error')) {
-      if (res.status == 429) {
+    try {
+      final res = await _client.functions.invoke(
+        'analyze-session',
+        body: {
+          'session': _sessionJson(session),
+          'hands': hands.map((h) => h.toJson()).toList(),
+          'reads': reads
+              .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
+              .toList(),
+          'forceRefresh': forceRefresh,
+        },
+      );
+      AnalyticsService.aiSessionAnalysisRequested();
+      return SessionAnalysis.fromJson(res.data as Map<String, dynamic>);
+    } on FunctionException catch (e) {
+      // invoke() throws on any non-2xx; the server's message is in
+      // details['error'] (daily limit 429, at-capacity 503, else generic).
+      if (e.status == 429) {
         AnalyticsService.aiRateLimitHit(featureType: 'session');
-      } else {
-        AnalyticsService.aiSessionAnalysisRequested();
       }
-      throw Exception(data['error']);
+      throw AiException.fromResponse(e.status, e.details);
     }
-
-    AnalyticsService.aiSessionAnalysisRequested();
-    return SessionAnalysis.fromJson(data as Map<String, dynamic>);
   }
 
   Future<HandCoachingAnalysis> analyzeHand(
@@ -106,32 +151,30 @@ class AiService {
     bool forceRefresh = false,
     List<String> equityFacts = const [],
   }) async {
-    final res = await _client.functions.invoke(
-      'analyze-hand',
-      body: {
-        'hand': hand.toJson(),
-        'reads': reads
-            .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
-            .toList(),
-        'forceRefresh': forceRefresh,
-        // Deterministic on-device equity, injected into the prompt as ground
-        // truth so the coaching can't contradict the math (see analyze-hand).
-        if (equityFacts.isNotEmpty) 'equityFacts': equityFacts,
-      },
-    );
-
-    final data = res.data;
-    if (data is Map<String, dynamic> && data.containsKey('error')) {
-      if (res.status == 429) {
+    try {
+      final res = await _client.functions.invoke(
+        'analyze-hand',
+        body: {
+          'hand': hand.toJson(),
+          'reads': reads
+              .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
+              .toList(),
+          'forceRefresh': forceRefresh,
+          // Deterministic on-device equity, injected into the prompt as ground
+          // truth so the coaching can't contradict the math (see analyze-hand).
+          if (equityFacts.isNotEmpty) 'equityFacts': equityFacts,
+        },
+      );
+      AnalyticsService.aiHandAnalysisRequested();
+      return HandCoachingAnalysis.fromJson(res.data as Map<String, dynamic>);
+    } on FunctionException catch (e) {
+      // invoke() throws on any non-2xx; the server's message is in
+      // details['error'] (daily limit 429, at-capacity 503, else generic).
+      if (e.status == 429) {
         AnalyticsService.aiRateLimitHit(featureType: 'hand');
-      } else {
-        AnalyticsService.aiHandAnalysisRequested();
       }
-      throw Exception(data['error']);
+      throw AiException.fromResponse(e.status, e.details);
     }
-
-    AnalyticsService.aiHandAnalysisRequested();
-    return HandCoachingAnalysis.fromJson(data as Map<String, dynamic>);
   }
 
   /// Thumbs up/down on a cached hand analysis. [rating] is 1 (up) or -1
