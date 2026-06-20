@@ -32,11 +32,16 @@ export function isCapacityError(err: unknown): boolean {
   if (status === 429 || status === 529) return true;
   if (type === "rate_limit_error" || type === "overloaded_error") return true;
 
-  // Billing / spend-cap / credit exhaustion (surfaces as 400 or 403).
+  // Spend cap / credit exhaustion. IMPORTANT: Anthropic surfaces this as an
+  // HTTP 400 `invalid_request_error` ("Your credit balance is too low…"), NOT a
+  // `billing_error` type — so the billing-wording match below is the PRIMARY
+  // detector for the spend cap; the `type` check is only defensive for other
+  // surfaces (and intentionally tested separately). The SDK's makeMessage
+  // JSON-stringifies the response body into `message`, so the wording lands
+  // there. Kept billing-specific (no broad "insufficient"/"quota") so a genuine
+  // request bug isn't misclassified as capacity and have its ops alert silenced.
   if (type === "billing_error") return true;
-  if (/credit balance|billing|insufficient|quota|spend limit/.test(message)) {
-    return true;
-  }
+  if (/credit balance|billing|spend limit/.test(message)) return true;
 
   return false;
 }

@@ -10,19 +10,54 @@ Deno.test("529 (overloaded) is capacity", () => {
   assert(isCapacityError({ status: 529 }));
 });
 
-Deno.test("billing_error type is capacity", () => {
+// Defensive `billing_error` type branch — not the shape Anthropic emits for the
+// spend cap (that's an invalid_request_error, see the prod-shape test below),
+// but kept for other/future surfaces.
+Deno.test("billing_error type is capacity (defensive branch)", () => {
   assert(isCapacityError({ status: 400, error: { type: "billing_error" } }));
 });
 
-Deno.test("nested error.error.type billing_error is capacity", () => {
+Deno.test("nested error.error.type billing_error is capacity (defensive)", () => {
   assert(isCapacityError({ status: 403, error: { error: { type: "billing_error" } } }));
 });
 
-Deno.test("credit-balance message is capacity (spend cap)", () => {
+// The ACTUAL production spend-cap error: HTTP 400, type invalid_request_error,
+// with the credit-balance wording in the SDK-stringified `message`. This is the
+// path that runs in prod — if the message-regex branch is ever dropped, THIS
+// test fails (the type check alone does not catch invalid_request_error).
+Deno.test("real spend-cap shape (400 invalid_request_error + credit balance) is capacity", () => {
+  const body = {
+    type: "error",
+    error: {
+      type: "invalid_request_error",
+      message: "Your credit balance is too low to access the Anthropic API.",
+    },
+  };
   assert(isCapacityError({
     status: 400,
-    message: "Your credit balance is too low to access the Anthropic API.",
+    error: body,
+    message: `400 ${JSON.stringify(body)}`,
   }));
+});
+
+// Guards the tightened regex (#3): a genuine request bug whose body happens to
+// contain broad words like "insufficient"/"quota" must NOT be swallowed as
+// capacity (which would suppress its ops alert).
+Deno.test("400 invalid_request mentioning 'insufficient'/'quota' is NOT capacity", () => {
+  const body = {
+    type: "error",
+    error: {
+      type: "invalid_request_error",
+      message: "tool input has insufficient fields; token quota schema invalid",
+    },
+  };
+  assert(
+    !isCapacityError({
+      status: 400,
+      error: body,
+      message: `400 ${JSON.stringify(body)}`,
+    }),
+  );
 });
 
 Deno.test("malformed-request 400 is NOT capacity (real bug → should still alert)", () => {

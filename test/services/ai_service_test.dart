@@ -64,16 +64,20 @@ void main() {
       expect(e.message, contains('at capacity'));
     });
 
-    test('429 with no usable details → falls back to the limit message', () {
+    test('429 with no {error} body (gateway) → generic + retryable, NOT daily limit', () {
+      // A Supabase gateway 429 (platform rate-limit) has no {error: ...} body —
+      // it must not be mislabeled "Daily limit reached / try tomorrow".
       final e = AiException.fromResponse(429, null);
-      expect(e.isRateLimited, isTrue);
-      expect(e.message, contains('tomorrow'));
+      expect(e.fromServer, isFalse);
+      expect(e.isRateLimited, isFalse);
+      expect(e.message, 'Analysis failed. Please try again.');
     });
 
-    test('503 with non-map details → falls back to the capacity message', () {
+    test('503 with non-map details (gateway) → generic, NOT at-capacity', () {
       final e = AiException.fromResponse(503, 'oops');
-      expect(e.isAtCapacity, isTrue);
-      expect(e.message, contains('later'));
+      expect(e.fromServer, isFalse);
+      expect(e.isAtCapacity, isFalse);
+      expect(e.message, 'Analysis failed. Please try again.');
     });
 
     test('500 → generic fallback, neither flag set', () {

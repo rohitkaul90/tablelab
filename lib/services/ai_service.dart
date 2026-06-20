@@ -39,29 +39,39 @@ class AiUsage {
 class AiException implements Exception {
   final int status;
   final String message;
-  const AiException({required this.status, required this.message});
 
-  bool get isRateLimited => status == 429;
-  bool get isAtCapacity => status == 503;
+  /// True only when our Edge Function produced the `{error: ...}` body. A
+  /// non-2xx WITHOUT that body is a gateway/transport error (Supabase platform
+  /// rate-limit, cold-boot, etc.) — **not** the function's own daily-limit or
+  /// at-capacity response — so its status must not be read as those semantics.
+  final bool fromServer;
+
+  const AiException({
+    required this.status,
+    required this.message,
+    this.fromServer = true,
+  });
+
+  bool get isRateLimited => fromServer && status == 429;
+  bool get isAtCapacity => fromServer && status == 503;
 
   /// Builds from a `FunctionException`'s `status` + `details`. Pure + testable
-  /// (takes the primitives, not the exception object).
+  /// (takes the primitives, not the exception object). When `details` carries
+  /// our function's `{error: <text>}`, that message + status are authoritative.
+  /// Otherwise it's a gateway/transport failure → generic + retryable, and the
+  /// status is not interpreted as a daily-limit / capacity signal.
   factory AiException.fromResponse(int status, dynamic details) {
     final serverMsg = (details is Map && details['error'] is String)
         ? details['error'] as String
         : null;
-    return AiException(status: status, message: serverMsg ?? _fallback(status));
-  }
-
-  static String _fallback(int status) {
-    switch (status) {
-      case 429:
-        return 'Daily analysis limit reached. Please try again tomorrow.';
-      case 503:
-        return 'AI coaching is temporarily at capacity. Please try again later.';
-      default:
-        return 'Analysis failed. Please try again.';
+    if (serverMsg == null) {
+      return AiException(
+        status: status,
+        message: 'Analysis failed. Please try again.',
+        fromServer: false,
+      );
     }
+    return AiException(status: status, message: serverMsg);
   }
 
   @override
