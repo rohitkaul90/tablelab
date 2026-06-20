@@ -40,4 +40,47 @@ void main() {
       expect(AiUsage.fromRows(const [], exempt: false).exempt, isFalse);
     });
   });
+
+  group('AiException.fromResponse', () {
+    test('429 with server message → rate-limited, uses server text', () {
+      final e = AiException.fromResponse(
+        429,
+        {'error': 'Daily analysis limit reached. Please try again tomorrow.'},
+      );
+      expect(e.status, 429);
+      expect(e.isRateLimited, isTrue);
+      expect(e.isAtCapacity, isFalse);
+      expect(e.message, contains('Daily analysis limit'));
+    });
+
+    test('503 with server message → at-capacity, uses server text', () {
+      final e = AiException.fromResponse(
+        503,
+        {'error': 'AI coaching is temporarily at capacity. Please try again later.'},
+      );
+      expect(e.status, 503);
+      expect(e.isAtCapacity, isTrue);
+      expect(e.isRateLimited, isFalse);
+      expect(e.message, contains('at capacity'));
+    });
+
+    test('429 with no usable details → falls back to the limit message', () {
+      final e = AiException.fromResponse(429, null);
+      expect(e.isRateLimited, isTrue);
+      expect(e.message, contains('tomorrow'));
+    });
+
+    test('503 with non-map details → falls back to the capacity message', () {
+      final e = AiException.fromResponse(503, 'oops');
+      expect(e.isAtCapacity, isTrue);
+      expect(e.message, contains('later'));
+    });
+
+    test('500 → generic fallback, neither flag set', () {
+      final e = AiException.fromResponse(500, null);
+      expect(e.isRateLimited, isFalse);
+      expect(e.isAtCapacity, isFalse);
+      expect(e.message, 'Analysis failed. Please try again.');
+    });
+  });
 }

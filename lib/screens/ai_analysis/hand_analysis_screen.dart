@@ -5,6 +5,7 @@ import '../../models/hand_model.dart';
 import '../../models/ai_analysis_model.dart';
 import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
+import '../../services/ai_service.dart';
 import '../../reads/tag_definitions.dart';
 import '../../widgets/ai/analysis_feedback_bar.dart';
 import '../../widgets/playing_card_widget.dart';
@@ -23,6 +24,8 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   HandEquityCheck? _equityCheck;
   bool _loading = true;
   String? _error;
+  String _errorTitle = 'Analysis failed';
+  bool _errorCanRetry = true;
 
   @override
   void initState() {
@@ -64,7 +67,24 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
         ref.invalidate(aiUsageProvider);
       }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        if (e is AiException) {
+          _error = e.message;
+          _errorTitle = e.isRateLimited
+              ? 'Daily limit reached'
+              : e.isAtCapacity
+                  ? 'Temporarily at capacity'
+                  : 'Analysis failed';
+          // Retrying a daily limit won't help until tomorrow.
+          _errorCanRetry = !e.isRateLimited;
+        } else {
+          _error = 'Something went wrong. Please try again.';
+          _errorTitle = 'Analysis failed';
+          _errorCanRetry = true;
+        }
+      });
     }
   }
 
@@ -108,7 +128,11 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
       body: _loading
           ? _LoadingView()
           : _error != null
-              ? _ErrorView(error: _error!, onRetry: _runAnalysis)
+              ? _ErrorView(
+                  title: _errorTitle,
+                  error: _error!,
+                  onRetry: _errorCanRetry ? _runAnalysis : null,
+                )
               : _CoachingView(
                   hand: widget.hand,
                   analysis: _analysis!,
@@ -152,10 +176,11 @@ class _LoadingView extends StatelessWidget {
 // ── Error ─────────────────────────────────────────────────────────────────────
 
 class _ErrorView extends StatelessWidget {
+  final String title;
   final String error;
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
 
-  const _ErrorView({required this.error, required this.onRetry});
+  const _ErrorView({required this.title, required this.error, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -168,14 +193,16 @@ class _ErrorView extends StatelessWidget {
             Icon(Icons.error_outline,
                 size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
-            Text('Analysis failed',
+            Text(title,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(error,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 24),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            if (onRetry != null) ...[
+              const SizedBox(height: 24),
+              FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            ],
           ],
         ),
       ),

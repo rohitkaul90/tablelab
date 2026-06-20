@@ -31,6 +31,43 @@ class AiUsage {
   }
 }
 
+/// A failed AI Edge Function call, mapped to a user-facing message plus the
+/// HTTP status so the UI can tell a daily-limit (429) / at-capacity (503) /
+/// generic failure apart. `functions.invoke` **throws** `FunctionException` on
+/// any non-2xx (functions_client ≥2.x), carrying the server's `{error: ...}`
+/// body in `details` — so callers must catch it rather than read `res.status`.
+class AiException implements Exception {
+  final int status;
+  final String message;
+  const AiException({required this.status, required this.message});
+
+  bool get isRateLimited => status == 429;
+  bool get isAtCapacity => status == 503;
+
+  /// Builds from a `FunctionException`'s `status` + `details`. Pure + testable
+  /// (takes the primitives, not the exception object).
+  factory AiException.fromResponse(int status, dynamic details) {
+    final serverMsg = (details is Map && details['error'] is String)
+        ? details['error'] as String
+        : null;
+    return AiException(status: status, message: serverMsg ?? _fallback(status));
+  }
+
+  static String _fallback(int status) {
+    switch (status) {
+      case 429:
+        return 'Daily analysis limit reached. Please try again tomorrow.';
+      case 503:
+        return 'AI coaching is temporarily at capacity. Please try again later.';
+      default:
+        return 'Analysis failed. Please try again.';
+    }
+  }
+
+  @override
+  String toString() => 'AiException($status): $message';
+}
+
 class AiService {
   /// [client] is injectable for tests; production uses the global Supabase
   /// client, resolved lazily so the service can be constructed without an
@@ -74,30 +111,28 @@ class AiService {
     List<PlayerRead> reads = const [],
     bool forceRefresh = false,
   }) async {
-    final res = await _client.functions.invoke(
-      'analyze-session',
-      body: {
-        'session': _sessionJson(session),
-        'hands': hands.map((h) => h.toJson()).toList(),
-        'reads': reads
-            .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
-            .toList(),
-        'forceRefresh': forceRefresh,
-      },
-    );
-
-    final data = res.data;
-    if (data is Map<String, dynamic> && data.containsKey('error')) {
-      if (res.status == 429) {
+    try {
+      final res = await _client.functions.invoke(
+        'analyze-session',
+        body: {
+          'session': _sessionJson(session),
+          'hands': hands.map((h) => h.toJson()).toList(),
+          'reads': reads
+              .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
+              .toList(),
+          'forceRefresh': forceRefresh,
+        },
+      );
+      AnalyticsService.aiSessionAnalysisRequested();
+      return SessionAnalysis.fromJson(res.data as Map<String, dynamic>);
+    } on FunctionException catch (e) {
+      // invoke() throws on any non-2xx; the server's message is in
+      // details['error'] (daily limit 429, at-capacity 503, else generic).
+      if (e.status == 429) {
         AnalyticsService.aiRateLimitHit(featureType: 'session');
-      } else {
-        AnalyticsService.aiSessionAnalysisRequested();
       }
-      throw Exception(data['error']);
+      throw AiException.fromResponse(e.status, e.details);
     }
-
-    AnalyticsService.aiSessionAnalysisRequested();
-    return SessionAnalysis.fromJson(data as Map<String, dynamic>);
   }
 
   Future<HandCoachingAnalysis> analyzeHand(
@@ -106,32 +141,30 @@ class AiService {
     bool forceRefresh = false,
     List<String> equityFacts = const [],
   }) async {
-    final res = await _client.functions.invoke(
-      'analyze-hand',
-      body: {
-        'hand': hand.toJson(),
-        'reads': reads
-            .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
-            .toList(),
-        'forceRefresh': forceRefresh,
-        // Deterministic on-device equity, injected into the prompt as ground
-        // truth so the coaching can't contradict the math (see analyze-hand).
-        if (equityFacts.isNotEmpty) 'equityFacts': equityFacts,
-      },
-    );
-
-    final data = res.data;
-    if (data is Map<String, dynamic> && data.containsKey('error')) {
-      if (res.status == 429) {
+    try {
+      final res = await _client.functions.invoke(
+        'analyze-hand',
+        body: {
+          'hand': hand.toJson(),
+          'reads': reads
+              .map((r) => {'playerLabel': r.playerLabel, 'tags': r.tags})
+              .toList(),
+          'forceRefresh': forceRefresh,
+          // Deterministic on-device equity, injected into the prompt as ground
+          // truth so the coaching can't contradict the math (see analyze-hand).
+          if (equityFacts.isNotEmpty) 'equityFacts': equityFacts,
+        },
+      );
+      AnalyticsService.aiHandAnalysisRequested();
+      return HandCoachingAnalysis.fromJson(res.data as Map<String, dynamic>);
+    } on FunctionException catch (e) {
+      // invoke() throws on any non-2xx; the server's message is in
+      // details['error'] (daily limit 429, at-capacity 503, else generic).
+      if (e.status == 429) {
         AnalyticsService.aiRateLimitHit(featureType: 'hand');
-      } else {
-        AnalyticsService.aiHandAnalysisRequested();
       }
-      throw Exception(data['error']);
+      throw AiException.fromResponse(e.status, e.details);
     }
-
-    AnalyticsService.aiHandAnalysisRequested();
-    return HandCoachingAnalysis.fromJson(data as Map<String, dynamic>);
   }
 
   /// Thumbs up/down on a cached hand analysis. [rating] is 1 (up) or -1
