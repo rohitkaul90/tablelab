@@ -16,6 +16,7 @@ void main() {
       'hourly_rate_goal': 30.0,
       'starting_bankroll': 5000.0,
       'starting_bankroll_currency': 'CAD',
+      'display_currency': 'USD',
       'has_seen_onboarding': true,
     };
 
@@ -31,6 +32,7 @@ void main() {
       expect(p.hourlyRateGoal, equals(30.0));
       expect(p.startingBankroll, equals(5000.0));
       expect(p.startingBankrollCurrency, equals('CAD'));
+      expect(p.displayCurrency, equals('USD'));
       expect(p.hasSeenOnboarding, isTrue);
     });
 
@@ -63,6 +65,7 @@ void main() {
       expect(p.playingSince, isNull);
       expect(p.hourlyRateGoal, isNull);
       expect(p.startingBankroll, isNull);
+      expect(p.displayCurrency, isNull);
     });
 
     test('coerces int numeric fields to double', () {
@@ -87,6 +90,7 @@ void main() {
         hourlyRateGoal: 50.0,
         startingBankroll: 10000.0,
         startingBankrollCurrency: 'GBP',
+        displayCurrency: 'EUR',
         hasSeenOnboarding: true,
       );
       final map = p.toUpsert();
@@ -99,7 +103,14 @@ void main() {
       expect(map['hourly_rate_goal'], equals(50.0));
       expect(map['starting_bankroll'], equals(10000.0));
       expect(map['starting_bankroll_currency'], equals('GBP'));
+      expect(map['display_currency'], equals('EUR'));
       expect(map['has_seen_onboarding'], isTrue);
+    });
+
+    test('display_currency round-trips null (Auto) without dropping', () {
+      const p = ProfileModel(id: 'u1');
+      expect(p.toUpsert().containsKey('display_currency'), isTrue);
+      expect(p.toUpsert()['display_currency'], isNull);
     });
 
     test('includes updated_at timestamp string', () {
@@ -154,6 +165,16 @@ void main() {
     test('update startingBankrollCurrency', () {
       final updated = base.copyWith(startingBankrollCurrency: 'USD');
       expect(updated.startingBankrollCurrency, equals('USD'));
+    });
+
+    test('update displayCurrency, and clearDisplayCurrency resets it to null',
+        () {
+      final set = base.copyWith(displayCurrency: 'USD');
+      expect(set.displayCurrency, equals('USD'));
+      final cleared = set.copyWith(clearDisplayCurrency: true);
+      expect(cleared.displayCurrency, isNull);
+      // unrelated fields preserved through both copies
+      expect(cleared.startingBankrollCurrency, equals('CAD'));
     });
   });
 
