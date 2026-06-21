@@ -437,9 +437,14 @@ function preflopRolesFact(
   // 2nd = 3-bet, 3rd = 4-bet, … (an all-in raise counts as a raise).
   const raises: { seat: number; level: number }[] = [];
   let heroFinal: string | null = null;
+  // The level of hero's OWN highest raise, if hero ever raised preflop — so a
+  // hero who 3-bet and then called a 4-bet isn't mislabeled a capped caller.
+  let heroRaiseLevel: number | null = null;
   for (const a of pre.actions) {
     if (a.type === "raise" || a.type === "allIn") {
-      raises.push({ seat: a.seat, level: raises.length + 2 });
+      const level = raises.length + 2;
+      raises.push({ seat: a.seat, level });
+      if (a.seat === hero.seat) heroRaiseLevel = level;
     }
     if (a.seat === hero.seat && a.type !== "post" && a.type !== "postStraddle") {
       heroFinal = a.type;
@@ -451,10 +456,19 @@ function preflopRolesFact(
   const lvl = levelLabel(last.level);
   const aggrPos = positionName(last.seat, ts);
   const heroPos = positionName(hero.seat, ts);
-  const heroClause = last.seat === hero.seat
-    ? `Hero(${heroPos}) made that ${lvl} and IS the preflop aggressor`
-    : `Hero(${heroPos}) called the ${lvl} and is the CALLER, holding a capped calling range`;
-  return `[FACT — Preflop roles: the last preflop raise was a ${lvl} by ${aggrPos}; ${heroClause}. The ${lvl} player is the aggressor with the raising range; a player who only called holds the calling range. Do NOT describe the aggressor's range as a 'calling range', and do not swap who raised vs who called.]`;
+  let heroClause: string;
+  if (last.seat === hero.seat) {
+    heroClause = `Hero(${heroPos}) made that ${lvl} and IS the preflop aggressor`;
+  } else if (heroRaiseLevel != null) {
+    // Hero raised earlier (e.g. 3-bet) then called a bigger raise — a strong
+    // raise-and-call range, NOT a capped flat-calling range.
+    heroClause =
+      `Hero(${heroPos}) ${levelLabel(heroRaiseLevel)} then called the ${lvl} — a strong raise-and-call range, NOT a capped flat-calling range`;
+  } else {
+    heroClause =
+      `Hero(${heroPos}) only called the ${lvl} and is the CALLER, holding a capped calling range`;
+  }
+  return `[FACT — Preflop roles: the last preflop raise was a ${lvl} by ${aggrPos}; ${heroClause}. The ${lvl} player is the aggressor; describe each player's range by the strongest action they took (raise = raising range, call-only = calling range). Do NOT describe a player who raised as having a 'calling range', and do not swap who raised vs who called.]`;
 }
 
 // Shared pot-odds math + FACT wording for any spot where hero faces a wager.

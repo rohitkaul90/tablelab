@@ -198,7 +198,7 @@
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~25%, flop ~38%, turn ~65%, river ~100%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
     "[FACT — Villain MrPink (UTG) range behind the equity above: Pre-flop: open-raised → UTG opening range (~5% of hands); Flop: check → range unchanged.]",
-    "[FACT — Villain MrBlue (BTN) range behind the equity above: Pre-flop: called a early-position open → BTN defending range (~7% of hands); Flop: bet (~150% pot) → polarized: top 30% value + bottom 15% bluffs; Turn: check → range unchanged.]"
+    "[FACT — Villain MrBlue (BTN) range behind the equity above: Pre-flop: called a early-position open → BTN defending range (~7% of hands); Flop: bet (~50% pot) → polarized: top 30% value + bottom 15% bluffs; Turn: check → range unchanged.]"
   ],
   "labels": {
     "heroHoleCards": [

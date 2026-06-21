@@ -74,6 +74,11 @@ function parseRatings() {
 async function resolveOperatorId() {
   if (process.env.OPERATOR_USER_ID) return process.env.OPERATOR_USER_ID;
   const target = OPERATOR_EMAIL.toLowerCase();
+  // GoTrue caps per_page server-side (often well below 1000), so we can't break
+  // on "< 1000" — that stops after page 1 whenever the server returns its own
+  // (smaller) cap. Learn the real page size from page 1 and paginate until a
+  // short/empty page.
+  let effPageSize = null;
   for (let page = 1; ; page++) {
     const res = await fetch(
       `${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=1000`,
@@ -87,7 +92,9 @@ async function resolveOperatorId() {
     const users = Array.isArray(body) ? body : (body.users ?? []);
     const found = users.find((u) => (u.email ?? "").toLowerCase() === target);
     if (found) return found.id;
-    if (users.length < 1000) break;
+    if (users.length === 0) break; // exhausted
+    if (effPageSize === null) effPageSize = users.length; // server's real cap
+    if (users.length < effPageSize) break; // last (partial) page
   }
   throw new Error(
     `operator email ${OPERATOR_EMAIL} not found — set OPERATOR_USER_ID explicitly`,

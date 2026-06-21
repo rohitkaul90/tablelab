@@ -483,18 +483,34 @@ const double _kSmallBetFrac = 0.4; // ≤ ~⅓-pot → merged
   return base;
 }
 
-/// One villain's largest cumulative wager on [street] as a fraction of
-/// [potBefore] (the pot at the start of the street). Null when unknowable.
-double? _betSizeFrac(StreetData street, int seat, int potBefore) {
-  if (potBefore <= 0) return null;
-  var contrib = 0;
+/// [seat]'s bet/raise on [street] sized as a fraction of the pot AT THE MOMENT
+/// it was made — the chips that action committed over the pot it faced. Replays
+/// the street from [potAtStreetStart] so a raise is measured against the pot
+/// that already includes the bet it raises (not the street-start pot, which
+/// would overstate every raise). For a first-in bet this is just bet ÷ pot.
+/// Returns the strongest (last) aggressive action by [seat]; null if none.
+double? _betSizeFrac(StreetData street, int seat, int potAtStreetStart) {
+  if (potAtStreetStart <= 0) return null;
+  var pot = potAtStreetStart.toDouble();
+  final contrib = <int, int>{};
+  double? sizeFrac;
   for (final a in street.actions) {
-    if (a.seat == seat) {
-      final amt = a.amount ?? 0;
-      if (amt > contrib) contrib = amt;
+    final amt = a.amount;
+    if (amt == null) continue; // check/fold commit no chips
+    final inc = amt - (contrib[a.seat] ?? 0);
+    if (inc <= 0) continue;
+    final potFaced = pot;
+    pot += inc;
+    contrib[a.seat] = amt;
+    final act = _actOf(a);
+    final aggressive = act == _StreetAct.bet ||
+        act == _StreetAct.raise ||
+        act == _StreetAct.allIn;
+    if (a.seat == seat && aggressive && potFaced > 0) {
+      sizeFrac = inc / potFaced; // last aggressive action wins (the strongest)
     }
   }
-  return contrib > 0 ? contrib / potBefore : null;
+  return sizeFrac;
 }
 
 /// Chips added to the pot on [street] — sum of each seat's largest cumulative
