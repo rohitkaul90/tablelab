@@ -83,7 +83,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => StatsFilterSheet(
         filter: current,
-        effectiveCurrency: current.effectiveCurrency(sessions),
+        effectiveCurrency: current.effectiveCurrency(sessions,
+            homeCurrency:
+                ref.read(profileProvider).valueOrNull?.displayCurrency),
         allCountries: allCountries,
         hasMultipleCountries: allCountries.length > 1,
         hasOnline: sessions.any((s) => isOnlineSession(s.location)),
@@ -226,13 +228,14 @@ class _OverviewBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filtered = _filtered;
-    final currency = filter.effectiveCurrency(sessions);
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final currency = filter.effectiveCurrency(sessions,
+        homeCurrency: profile?.displayCurrency);
     final stats = _Stats.from(filtered, currency);
     final types = _effectiveTypes;
     // "All" = nothing selected (both pills off).
     final isAllTypes = types.isEmpty;
     final tournamentOnly = types.length == 1 && types.contains('tournament');
-    final profile = ref.watch(profileProvider).valueOrNull;
 
     final gtLabel = gameTypeChipLabel(types);
     final activeFilters = <String>[
@@ -293,7 +296,8 @@ class _OverviewBody extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    formatPLWithCurrency(stats.totalPL, currency),
+                    '${isMultiCurrency(filtered) ? '≈ ' : ''}'
+                    '${formatPLWithCurrency(stats.totalPL, currency)}',
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           color: stats.totalPL >= 0 ? Colors.green : Colors.red,
                           fontWeight: FontWeight.bold,
@@ -308,6 +312,9 @@ class _OverviewBody extends ConsumerWidget {
                       profile: profile,
                       totalPL: stats.totalPL,
                       currency: currency,
+                      approx: isMultiCurrency(sessions) ||
+                          (profile?.startingBankrollCurrency ?? currency) !=
+                              currency,
                     ),
                 ],
               ),
@@ -438,10 +445,15 @@ class _InlineBankroll extends StatelessWidget {
   final double totalPL;
   final String currency;
 
+  /// True when the figure involved FX conversion (multi-currency sessions, or a
+  /// starting bankroll in a different currency) — shown with a "≈" prefix.
+  final bool approx;
+
   const _InlineBankroll({
     required this.profile,
     required this.totalPL,
     required this.currency,
+    this.approx = false,
   });
 
   @override
@@ -482,7 +494,7 @@ class _InlineBankroll extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Text(
-        'Bankroll ${formatAmount(current, currency)}$growthStr',
+        'Bankroll ${approx ? '≈ ' : ''}${formatAmount(current, currency)}$growthStr',
         style: theme.textTheme.bodySmall?.copyWith(color: subtle),
       ),
     );

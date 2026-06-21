@@ -49,8 +49,11 @@ class StatsFilter {
       datePreset != null ||
       dateRange != null;
 
-  String effectiveCurrency(List<SessionModel> sessions) {
+  /// Display currency precedence: explicit per-view filter → the user's home
+  /// currency ([homeCurrency], from the profile) → most-recent session → CAD.
+  String effectiveCurrency(List<SessionModel> sessions, {String? homeCurrency}) {
     if (displayCurrency != null) return displayCurrency!;
+    if (homeCurrency != null) return homeCurrency;
     return mostRecentSession(sessions)?.currency ?? 'CAD';
   }
 
