@@ -48,6 +48,14 @@ const _lookbackLabels = {
   _Lookback.oneMonth: '1M',
 };
 
+// Per-period vs Cumulative now lives in the top filter row as a dropdown
+// (alongside period + lookback), so it shares the menu format and frees the
+// bottom row for the Graph/Table toggle alone.
+const _aggLabels = {
+  false: 'Per-period',
+  true: 'Cumulative',
+};
+
 class MetricChartScreen extends StatefulWidget {
   final StatMetric metric;
   final List<SessionModel> sessions;
@@ -71,10 +79,11 @@ class MetricChartScreen extends StatefulWidget {
 }
 
 class _MetricChartScreenState extends State<MetricChartScreen> {
-  // Period + lookback live here so they can sit in the AppBar (the
-  // Per-period/Cumulative + Graph/Table toggles stay inside the chart body).
+  // Period + lookback + Per-period/Cumulative live here so they can sit in the
+  // AppBar filter row (only the Graph/Table toggle stays inside the chart body).
   late _Period _period;
   _Lookback _lookback = _Lookback.all;
+  bool _cumulative = false;
 
   @override
   void initState() {
@@ -105,7 +114,8 @@ class _MetricChartScreenState extends State<MetricChartScreen> {
           preferredSize: const Size.fromHeight(44),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Padding(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -115,6 +125,13 @@ class _MetricChartScreenState extends State<MetricChartScreen> {
                   const SizedBox(width: 8),
                   _menu<_Lookback>(_lookback, _lookbackLabels,
                       (v) => setState(() => _lookback = v)),
+                  // Rate metrics (win rate, ROI, …) hide the toggle — a running
+                  // total of a ratio is meaningless.
+                  if (spec.cumulativeSupported) ...[
+                    const SizedBox(width: 8),
+                    _menu<bool>(_cumulative, _aggLabels,
+                        (v) => setState(() => _cumulative = v)),
+                  ],
                 ],
               ),
             ),
@@ -133,6 +150,7 @@ class _MetricChartScreenState extends State<MetricChartScreen> {
                       sessions: widget.sessions,
                       period: _period,
                       lookback: _lookback,
+                      cumulative: _cumulative,
                     )
                   : _MetricChart(
                       sessions: widget.sessions,
@@ -140,6 +158,7 @@ class _MetricChartScreenState extends State<MetricChartScreen> {
                       spec: spec,
                       period: _period,
                       lookback: _lookback,
+                      cumulative: _cumulative,
                     ),
             ),
           ],
@@ -483,16 +502,10 @@ Widget _emptyChart(BuildContext context, String message) => Center(
               fontSize: 13)),
     );
 
-/// The two view toggles that stay below the chart: Per-period/Cumulative and
-/// Graph/Table, on one horizontally-scrollable row (period + lookback live in
-/// the AppBar).
-Widget _aggViewRow(
-  bool cumulative,
-  bool table,
-  ValueChanged<bool> onAgg,
-  ValueChanged<bool> onView, {
-  bool showCumulative = true,
-}) {
+/// The Graph/Table view toggle that stays below the chart, on one
+/// horizontally-scrollable row (period + lookback + Per-period/Cumulative live
+/// in the AppBar filter row).
+Widget _viewRow(bool table, ValueChanged<bool> onView) {
   Widget chip(String label, bool selected, VoidCallback onTap) => Padding(
         padding: const EdgeInsets.only(right: 6),
         child: ChoiceChip(
@@ -506,13 +519,6 @@ Widget _aggViewRow(
     scrollDirection: Axis.horizontal,
     child: Row(
       children: [
-        // Rate metrics (win rate, ROI, …) hide the Per-period/Cumulative
-        // toggle — a running total of a ratio is meaningless.
-        if (showCumulative) ...[
-          chip('Per-period', !cumulative, () => onAgg(false)),
-          chip('Cumulative', cumulative, () => onAgg(true)),
-          const SizedBox(width: 16),
-        ],
         chip('Graph', !table, () => onView(false)),
         chip('Table', table, () => onView(true)),
       ],
@@ -697,6 +703,7 @@ class _MetricChart extends StatefulWidget {
   final _MetricSpec spec;
   final _Period period;
   final _Lookback lookback;
+  final bool cumulative;
 
   const _MetricChart({
     required this.sessions,
@@ -704,6 +711,7 @@ class _MetricChart extends StatefulWidget {
     required this.spec,
     required this.period,
     required this.lookback,
+    required this.cumulative,
   });
 
   @override
@@ -711,10 +719,10 @@ class _MetricChart extends StatefulWidget {
 }
 
 class _MetricChartState extends State<_MetricChart> {
-  bool _cumulative = false;
   bool _table = false;
   _Period get _period => widget.period;
   _Lookback get _lookback => widget.lookback;
+  bool get _cumulative => widget.cumulative;
   // Weekly/monthly tables group by year, expanded by default; a year is
   // collapsed only if the user taps it (so this starts empty).
   final Set<String> _collapsedYears = {};
@@ -777,13 +785,7 @@ class _MetricChartState extends State<_MetricChart> {
                           _graph(context, groups, cum, keys, c.maxWidth))),
         ),
         const SizedBox(height: 12),
-        _aggViewRow(
-          _cumulative,
-          _table,
-          (v) => setState(() => _cumulative = v),
-          (v) => setState(() => _table = v),
-          showCumulative: _spec.cumulativeSupported,
-        ),
+        _viewRow(_table, (v) => setState(() => _table = v)),
       ],
     );
   }
@@ -1035,11 +1037,13 @@ class _WinLossChart extends StatefulWidget {
   final List<SessionModel> sessions;
   final _Period period;
   final _Lookback lookback;
+  final bool cumulative;
 
   const _WinLossChart({
     required this.sessions,
     required this.period,
     required this.lookback,
+    required this.cumulative,
   });
 
   @override
@@ -1047,10 +1051,10 @@ class _WinLossChart extends StatefulWidget {
 }
 
 class _WinLossChartState extends State<_WinLossChart> {
-  bool _cumulative = false;
   bool _table = false;
   _Period get _period => widget.period;
   _Lookback get _lookback => widget.lookback;
+  bool get _cumulative => widget.cumulative;
   final Set<String> _collapsedYears = {};
 
   ({int wins, int losses}) _tally(List<SessionModel> sessions) {
@@ -1113,12 +1117,7 @@ class _WinLossChartState extends State<_WinLossChart> {
                           _graph(context, groups, cum, keys, c.maxWidth))),
         ),
         const SizedBox(height: 12),
-        _aggViewRow(
-          _cumulative,
-          _table,
-          (v) => setState(() => _cumulative = v),
-          (v) => setState(() => _table = v),
-        ),
+        _viewRow(_table, (v) => setState(() => _table = v)),
       ],
     );
   }
