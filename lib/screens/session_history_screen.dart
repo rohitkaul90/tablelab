@@ -571,13 +571,20 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
     final content = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          month,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.bold,
+        // Flexible + ellipsis so a long month label can't overflow the row
+        // (the FittedBox only scales the summary side, not the month).
+        Flexible(
+          child: Text(
+            month,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
+        const SizedBox(width: 8),
         // Scale the (possibly two-currency) summary down rather than overflow.
         Flexible(
           child: FittedBox(
