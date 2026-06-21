@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
 import '../models/session_model.dart';
 import '../models/stats_filter.dart';
+import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
 import '../widgets/game_type_filter.dart';
@@ -22,7 +23,11 @@ class AnalyticsScreen extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       // The body shows the game-type pills + summary metrics even with no
       // sessions (zeros), so new users see structure rather than a blank page.
-      data: (sessions) => _AnalyticsBody(sessions: sessions, filter: filter),
+      data: (sessions) => _AnalyticsBody(
+        sessions: sessions,
+        filter: filter,
+        homeCurrency: ref.watch(profileProvider).valueOrNull?.displayCurrency,
+      ),
     );
   }
 }
@@ -31,7 +36,14 @@ class _AnalyticsBody extends StatefulWidget {
   final List<SessionModel> sessions;
   final StatsFilter filter;
 
-  const _AnalyticsBody({required this.sessions, required this.filter});
+  /// The user's home/display currency (profile preference); null = Auto.
+  final String? homeCurrency;
+
+  const _AnalyticsBody({
+    required this.sessions,
+    required this.filter,
+    required this.homeCurrency,
+  });
 
   @override
   State<_AnalyticsBody> createState() => _AnalyticsBodyState();
@@ -55,7 +67,8 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     ];
   }
 
-  String get _effectiveCurrency => widget.filter.effectiveCurrency(widget.sessions);
+  String get _effectiveCurrency => widget.filter
+      .effectiveCurrency(widget.sessions, homeCurrency: widget.homeCurrency);
 
   List<SessionModel> get _filtered =>
       filterByGameTypes(widget.filter.apply(widget.sessions), _effectiveTypes);
@@ -114,6 +127,9 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     final rateSign = hourlyRate >= 0 ? '+' : '-';
     final cashSessions = filtered.where((s) => s.gameType == 'cash').toList();
     final bb100 = calcBB100(cashSessions);
+    // Converted money totals over a mixed-currency set are approximate ("≈").
+    final approx = isMultiCurrency(filtered);
+    final a = approx ? '≈ ' : '';
 
     final summaryItems = <_SummaryItem>[
       _SummaryItem('Sessions', '${filtered.length}', null, StatMetric.sessions),
@@ -126,20 +142,20 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
       ),
       _SummaryItem(
         'Total Profit',
-        formatPLWithCurrency(totalPL, displayCurrency),
+        '$a${formatPLWithCurrency(totalPL, displayCurrency)}',
         plColor,
         StatMetric.profit,
       ),
       _SummaryItem(
-          'Buy-In', formatAmount(totalBuyIn, displayCurrency), null,
+          'Buy-In', '$a${formatAmount(totalBuyIn, displayCurrency)}', null,
           StatMetric.buyIn),
       if (hasExpenses)
-        _SummaryItem('Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}',
+        _SummaryItem('Expenses', '$a-$sym${totalExpenses.toStringAsFixed(0)}',
             null, StatMetric.expenses),
       if (hasExpenses)
         _SummaryItem(
           'Net Profit',
-          formatPLWithCurrency(netAfterExpenses, displayCurrency),
+          '$a${formatPLWithCurrency(netAfterExpenses, displayCurrency)}',
           netAfterExpenses >= 0 ? Colors.green : Colors.red,
           StatMetric.netAfterExpenses,
         ),
