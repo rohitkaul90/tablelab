@@ -152,8 +152,8 @@
     "isTournament": false
   },
   "equityFacts": [
-    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~77%, flop ~47%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain MrBlue (HJ) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~6% of hands); Flop: bet → polarized: top 30% value + bottom 15% bluffs.]"
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~77%, flop ~53%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrBlue (HJ) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~6% of hands); Flop: small bet (~39% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -174,7 +174,7 @@
           "9h"
         ],
         "heroCategory": "ONE_PAIR",
-        "heroEquity": 0.4683,
+        "heroEquity": 0.53325,
         "boatOrQuadsPossible": false,
         "flushPossible": false,
         "flushSuit": null,

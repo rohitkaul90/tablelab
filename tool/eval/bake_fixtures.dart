@@ -58,9 +58,9 @@ Future<void> main(List<String> args) async {
     final bucket = spot['bucket'] as String? ?? 'card-logic';
     final reads = _parseReads(spot['reads']);
 
-    final phhFile = File(file);
-    if (!phhFile.existsSync()) {
-      stderr.writeln('SKIP $id: phh file missing ($file)');
+    final srcFile = File(file);
+    if (!srcFile.existsSync()) {
+      stderr.writeln('SKIP $id: source file missing ($file)');
       skipped++;
       continue;
     }
@@ -71,29 +71,36 @@ Future<void> main(List<String> args) async {
     // corpus file must skip the spot, not abort the whole batch.
     final PokerHand hand;
     try {
-      final phh = parsePhhText(phhFile.readAsStringSync());
-      if (!phh.knownHolePlayers.contains(hero)) {
-        stderr.writeln('SKIP $id: hero p$hero has no known hole cards');
-        skipped++;
-        continue;
+      if (file.endsWith('.json')) {
+        // User-flagged spots arrive already as a PokerHand JSON (de-identified
+        // by scripts/export-flagged-hands.mjs) — no PHH parse. Everything
+        // downstream (equity, labels, scorers) is identical to the PHH path.
+        hand = _loadPokerHandJson(srcFile.readAsStringSync());
+      } else {
+        final phh = parsePhhText(srcFile.readAsStringSync());
+        if (!phh.knownHolePlayers.contains(hero)) {
+          stderr.writeln('SKIP $id: hero p$hero has no known hole cards');
+          skipped++;
+          continue;
+        }
+        final boardDeals =
+            phh.actionTokens.where((t) => t.trim().startsWith('d db ')).length;
+        if (boardDeals > 3) {
+          stderr.writeln('SKIP $id: $boardDeals board deals '
+              '(run-it-twice / multi-board not supported)');
+          skipped++;
+          continue;
+        }
+        hand = phhToPokerHand(
+          phh,
+          heroPlayer: hero,
+          id: id,
+          playedAt: _bakedAt,
+          isTournament: spot['isTournament'] as bool? ?? false,
+          tournamentStage: spot['tournamentStage'] as String?,
+          notes: spot['notes'] as String?,
+        );
       }
-      final boardDeals =
-          phh.actionTokens.where((t) => t.trim().startsWith('d db ')).length;
-      if (boardDeals > 3) {
-        stderr.writeln('SKIP $id: $boardDeals board deals '
-            '(run-it-twice / multi-board not supported)');
-        skipped++;
-        continue;
-      }
-      hand = phhToPokerHand(
-        phh,
-        heroPlayer: hero,
-        id: id,
-        playedAt: _bakedAt,
-        isTournament: spot['isTournament'] as bool? ?? false,
-        tournamentStage: spot['tournamentStage'] as String?,
-        notes: spot['notes'] as String?,
-      );
     } on FormatException catch (e) {
       stderr.writeln('SKIP $id: malformed hand ($e)');
       skipped++;
@@ -144,6 +151,14 @@ Future<void> main(List<String> args) async {
         'hand': hand.toJson(),
         'equityFacts': facts,
         'labels': labels,
+        // User satisfaction signal carried through for user-flagged spots (the
+        // thumbs up/down + when). Null for Pluribus spots. The scorer cross-tabs
+        // it against the objective dimensions ("disliked × objectively-clean").
+        if (spot['userRating'] != null)
+          'userSignal': {
+            'rating': spot['userRating'],
+            'ratedAt': spot['ratedAt'],
+          },
       };
 
       File('$outDir/$id.json')
@@ -158,6 +173,18 @@ Future<void> main(List<String> args) async {
   }
 
   stdout.writeln('\nDone: $baked baked, $skipped skipped -> $outDir');
+}
+
+/// Load a de-identified user-flagged spot's PokerHand JSON. Defence-in-depth:
+/// re-strip every non-hero player's hole cards (the export already does, but a
+/// fixture must NEVER carry villain cards — the equity check models villains by
+/// range, result-independent, and the prompt omits them).
+PokerHand _loadPokerHandJson(String text) {
+  final raw = jsonDecode(text) as Map<String, dynamic>;
+  for (final p in (raw['players'] as List).cast<Map<String, dynamic>>()) {
+    if (p['isHero'] != true) p.remove('holeCards');
+  }
+  return PokerHand.fromJson(raw);
 }
 
 List<PlayerRead> _parseReads(dynamic raw) {

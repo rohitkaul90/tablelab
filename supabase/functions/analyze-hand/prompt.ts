@@ -374,6 +374,103 @@ function positionName(seat: number, setup: TableSetup): string {
   return off < n.length ? n[off] : `P${seat + 1}`;
 }
 
+// Postflop action runs clockwise from the SB (first seat left of the button),
+// so the player closest to the button on its RIGHT acts last = is in position.
+// Index 0 = first to act postflop, numSeats-1 = the button (last). Higher index
+// = acts later = more in position. (Heads-up: BB acts first, button last — the
+// same formula, since SB == button there.)
+function postflopOrderIndex(seat: number, ts: TableSetup): number {
+  const N = ts.numSeats;
+  return (seat - (ts.buttonSeat + 1) + N) % N;
+}
+
+// FIX 1 — deterministic relative-position FACT. The model has stated hero's
+// in/out-of-position relationship BACKWARDS (called a CO "out of position" vs
+// the BB). Pin it from the seats so it can't. Only the opponents who saw the
+// flop (didn't fold preflop) are relevant; emitted only when hero reached a
+// postflop street.
+function relativePositionFact(
+  hand: PokerHand,
+  ts: TableSetup,
+  hero: HandPlayer | undefined,
+): string | null {
+  if (!hero || hand.streets.length < 2) return null;
+  const pre = hand.streets[0];
+  const foldedPre = new Set<number>();
+  if (pre) for (const a of pre.actions) if (a.type === "fold") foldedPre.add(a.seat);
+  if (foldedPre.has(hero.seat)) return null; // hero out preflop — no postflop position
+  const heroIdx = postflopOrderIndex(hero.seat, ts);
+  const heroPos = positionName(hero.seat, ts);
+  const ipOver: string[] = []; // hero acts AFTER these (in position on them)
+  const oopTo: string[] = []; // hero acts BEFORE these (out of position to them)
+  for (const o of hand.players) {
+    if (o.isHero || foldedPre.has(o.seat)) continue;
+    (heroIdx > postflopOrderIndex(o.seat, ts) ? ipOver : oopTo).push(
+      positionName(o.seat, ts),
+    );
+  }
+  if (ipOver.length === 0 && oopTo.length === 0) return null;
+  const parts: string[] = [];
+  if (ipOver.length) {
+    parts.push(`acts AFTER ${ipOver.join(", ")} → Hero is IN POSITION on ${ipOver.length > 1 ? "them" : "that opponent"}`);
+  }
+  if (oopTo.length) {
+    parts.push(`acts BEFORE ${oopTo.join(", ")} → Hero is OUT OF POSITION to ${oopTo.length > 1 ? "them" : "that opponent"}`);
+  }
+  return `[FACT — Postflop position: Hero(${heroPos}) ${parts.join("; ")}. This is fixed by the seats; do NOT state hero's position the other way round (the player who acts last postflop is in position).]`;
+}
+
+// FIX 2 — deterministic preflop-roles FACT. The model has mislabeled the
+// 3-bettor's range as a "calling range" (it swapped who raised vs who called).
+// Pin the last preflop aggressor and hero's role from the action. Emitted only
+// when there was at least one preflop raise (limped pots have no aggressor to
+// confuse) and hero did not fold preflop.
+function preflopRolesFact(
+  hand: PokerHand,
+  ts: TableSetup,
+  hero: HandPlayer | undefined,
+): string | null {
+  if (!hero) return null;
+  const pre = hand.streets[0];
+  if (!pre) return null;
+  // Each preflop raise escalates the bet level: 1st raise = open (2-bet),
+  // 2nd = 3-bet, 3rd = 4-bet, … (an all-in raise counts as a raise).
+  const raises: { seat: number; level: number }[] = [];
+  let heroFinal: string | null = null;
+  // The level of hero's OWN highest raise, if hero ever raised preflop — so a
+  // hero who 3-bet and then called a 4-bet isn't mislabeled a capped caller.
+  let heroRaiseLevel: number | null = null;
+  for (const a of pre.actions) {
+    if (a.type === "raise" || a.type === "allIn") {
+      const level = raises.length + 2;
+      raises.push({ seat: a.seat, level });
+      if (a.seat === hero.seat) heroRaiseLevel = level;
+    }
+    if (a.seat === hero.seat && a.type !== "post" && a.type !== "postStraddle") {
+      heroFinal = a.type;
+    }
+  }
+  if (raises.length === 0 || heroFinal === "fold") return null;
+  const last = raises[raises.length - 1];
+  const levelLabel = (lvl: number) => lvl === 2 ? "open (2-bet)" : `${lvl}-bet`;
+  const lvl = levelLabel(last.level);
+  const aggrPos = positionName(last.seat, ts);
+  const heroPos = positionName(hero.seat, ts);
+  let heroClause: string;
+  if (last.seat === hero.seat) {
+    heroClause = `Hero(${heroPos}) made that ${lvl} and IS the preflop aggressor`;
+  } else if (heroRaiseLevel != null) {
+    // Hero raised earlier (e.g. 3-bet) then called a bigger raise — a strong
+    // raise-and-call range, NOT a capped flat-calling range.
+    heroClause =
+      `Hero(${heroPos}) ${levelLabel(heroRaiseLevel)} then called the ${lvl} — a strong raise-and-call range, NOT a capped flat-calling range`;
+  } else {
+    heroClause =
+      `Hero(${heroPos}) only called the ${lvl} and is the CALLER, holding a capped calling range`;
+  }
+  return `[FACT — Preflop roles: the last preflop raise was a ${lvl} by ${aggrPos}; ${heroClause}. The ${lvl} player is the aggressor; describe each player's range by the strongest action they took (raise = raising range, call-only = calling range). Do NOT describe a player who raised as having a 'calling range', and do not swap who raised vs who called.]`;
+}
+
 // Shared pot-odds math + FACT wording for any spot where hero faces a wager.
 // Both the call site (hero continued) and the fold site (hero gave up, but we
 // still want the break-even he was offered) resolve their inputs and call this,
@@ -506,6 +603,21 @@ export function buildPrompt(
   let heroPaid = 0;
   // Collected so the client can show "what the AI was told" verbatim.
   const facts: string[] = [];
+
+  // Deterministic position + preflop-role FACTs (computed from seats + action),
+  // placed before the street log so they ground the whole read. Fixes the
+  // "CO is out of position vs BB" and "BB's 3-bet calling range" errors.
+  for (
+    const f of [
+      relativePositionFact(hand, ts, hero),
+      preflopRolesFact(hand, ts, hero),
+    ]
+  ) {
+    if (f) {
+      lines.push(f);
+      facts.push(f);
+    }
+  }
 
   for (const street of streets) {
     boardSoFar.push(...street.communityCards);
@@ -772,7 +884,9 @@ ACCURACY RULES:
 6. RESULT-INDEPENDENCE & GROUNDED NUMBERS:
    • You are NOT told who won the hand. Unless a villain's hole cards are explicitly listed in the input, you do not know them — reason only from ranges and the provided equity FACTs. Never assume hero won or lost, and never let an imagined outcome shade the verdict. Evaluate the decision on the information available when it was made.
    • The "Hero equity vs the modeled villain range" FACT already accounts for a GTO-balanced share of villain bluffs. Treat it as the true bluff-catch equity. Do not silently override it with a gut feeling that "villain always has it."
-   • When a pot-odds price FACT is present — either a "Price for hero to call" FACT (hero continued) or a "Price hero was getting when he folded" FACT (hero gave up) — use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Both kinds are computed the same way and carry the same DECISIVE/FLOOR framing; the only difference is the verb. Follow the FACT's own framing: if it says the price is DECISIVE (no further betting can follow — a river spot that ends the hand, or a spot where calling leaves hero all-in and the board just runs out), then hero's equity at or above the threshold means CALLING is correct and equity below means FOLDING is correct — full stop. For a "folded" FACT that resolves to "calling was correct", hero's actual fold was the over-fold error: say so and recommend the call. This applies on ANY street: a flop or turn spot where calling is all-in is decided purely by whether hero's equity meets the price, never by implied odds. If it says the price is a FLOOR (a non-closing spot with betting still to come), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so continuing can be right slightly under the price or folding right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.`;
+   • When a pot-odds price FACT is present — either a "Price for hero to call" FACT (hero continued) or a "Price hero was getting when he folded" FACT (hero gave up) — use its stated threshold exactly as given — do NOT compute your own pot-odds percentage (your arithmetic has been unreliable). Both kinds are computed the same way and carry the same DECISIVE/FLOOR framing; the only difference is the verb. Follow the FACT's own framing: if it says the price is DECISIVE (no further betting can follow — a river spot that ends the hand, or a spot where calling leaves hero all-in and the board just runs out), then hero's equity at or above the threshold means CALLING is correct and equity below means FOLDING is correct — full stop. For a "folded" FACT that resolves to "calling was correct", hero's actual fold was the over-fold error: say so and recommend the call. This applies on ANY street: a flop or turn spot where calling is all-in is decided purely by whether hero's equity meets the price, never by implied odds. If it says the price is a FLOOR (a non-closing spot with betting still to come), meeting the threshold is necessary but NOT automatically sufficient — implied and reverse-implied odds still apply, so continuing can be right slightly under the price or folding right slightly over it; in that case justify the deviation with a specific implied/reverse-implied-odds reason, not a vague "feels value-heavy". Never bless a preflop limp, complete, or cold-call purely because it clears the FLOOR price. State the comparison in one short clause, not a derivation.
+
+7. POSITION & PREFLOP ROLES: Honor the "Postflop position" and "Preflop roles" FACTs exactly — they are computed from the seats and the action, and your unaided read of them has been unreliable. Never state hero's in/out-of-position relationship backwards: the player who acts LAST postflop is IN position (a CO is in position vs the blinds; the BB is out of position postflop versus everyone, despite acting last preflop). Never swap who raised and who called: the last preflop raiser is the AGGRESSOR and holds the raising / 3-bet / 4-bet range, while a player who merely called holds the calling range. Do NOT describe the aggressor's range as a "calling range", and do not place hero out of position when the FACT puts him in position.`;
 
 // A stable signature of the reads that drive the analysis (and the modeled
 // equity). The cache is keyed on (user_id, hand_id), but reads also shape the

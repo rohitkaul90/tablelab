@@ -167,8 +167,8 @@
     "isTournament": false
   },
   "equityFacts": [
-    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~38%, flop ~22%, turn ~70%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain MrOrange (BTN) range behind the equity above: Pre-flop: 3-bet vs a middle-position open → 3-bet range (~5% of hands); Flop: bet → polarized: top 30% value + bottom 16% bluffs.]"
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~38%, flop ~21%, turn ~76%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrOrange (BTN) range behind the equity above: Pre-flop: 3-bet vs a middle-position open → 3-bet range (~5% of hands); Flop: small bet (~36% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 16% weak/bluffs.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -190,7 +190,7 @@
           "Qs"
         ],
         "heroCategory": "HIGH_CARD",
-        "heroEquity": 0.2194,
+        "heroEquity": 0.21145,
         "boatOrQuadsPossible": false,
         "flushPossible": true,
         "flushSuit": "spades",
@@ -205,7 +205,7 @@
           "4h"
         ],
         "heroCategory": "STRAIGHT",
-        "heroEquity": 0.6963,
+        "heroEquity": 0.7574,
         "boatOrQuadsPossible": false,
         "flushPossible": true,
         "flushSuit": "spades",

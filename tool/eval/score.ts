@@ -99,6 +99,9 @@ interface Fixture {
     perStreet: StreetLabel[];
     forcedDecision?: ForcedDecisionLabel | null;
   };
+  // User satisfaction signal for user-flagged spots (absent on Pluribus spots).
+  // rating: -1 thumbs-down (dissatisfied), +1 thumbs-up (satisfied control).
+  userSignal?: { rating: number; ratedAt?: string | null } | null;
 }
 
 // ── A claim the judge extracted from the model's prose ───────────────────────
@@ -468,11 +471,15 @@ async function main() {
     // published number; reported separately.
     errored: boolean;
     errorDetail?: string;
+    // User rating carried from the fixture (-1/+1) or null for Pluribus spots —
+    // cross-tabbed against the objective dimensions below.
+    userRating: number | null;
   }
 
   const errResult = (fx: Fixture, detail: string): SpotResult => ({
     id: fx.id, bucket: fx.bucket, claims: [], violations: [],
     scoredEquity: 0, unscoredEquity: 0, verdictIssues: [], forcedVerdict: null, errored: true, errorDetail: detail,
+    userRating: fx.userSignal?.rating ?? null,
   });
 
   let done = 0;
@@ -492,7 +499,7 @@ async function main() {
         for (const v of violations) console.log(`      - card-logic [${v.street}/${v.category}] ${v.detail}`);
         for (const v of verdictIssues) console.log(`      - verdict [${v.rule}] ${v.detail}`);
         if (forcedVerdict && forcedVerdict.scored && !forcedVerdict.agreed) console.log(`      - forced-verdict DISAGREE: ${forcedVerdict.detail}`);
-        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, verdictIssues, forcedVerdict, errored: false };
+        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, verdictIssues, forcedVerdict, errored: false, userRating: fx.userSignal?.rating ?? null };
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
         console.error(`[${++done}/${fixtures.length}] ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
@@ -541,6 +548,32 @@ async function main() {
     ? Number((100 * fvAgreed / fvScored.length).toFixed(1))
     : 0;
 
+  // ── User-flagged cross-tab ──────────────────────────────────────────────
+  // The instrument the user asked for: of the hands a user was DISSATISFIED
+  // with, which ones did an objective dimension explain, and which were
+  // objectively clean but still disliked (the subjective gap the 3 scorers
+  // can't see — the manual-review queue). Thumbs-up is the satisfied control:
+  // an objective issue on a LIKED hand is a trust risk the user didn't catch.
+  const objFlagged = (r: SpotResult): boolean =>
+    r.violations.length > 0 ||
+    r.verdictIssues.length > 0 ||
+    (r.forcedVerdict?.scored === true && r.forcedVerdict.agreed === false);
+
+  const disliked = scored.filter((r) => r.userRating === -1);
+  const liked = scored.filter((r) => r.userRating === 1);
+  const dislikedExplained = disliked.filter(objFlagged);
+  const dislikedCleanIds = disliked.filter((r) => !objFlagged(r)).map((r) => r.id);
+  const likedFlaggedIds = liked.filter(objFlagged).map((r) => r.id);
+  const userFlagged = {
+    disliked: disliked.length,
+    dislikedExplained: dislikedExplained.length,
+    dislikedCleanButDisliked: dislikedCleanIds.length,
+    dislikedCleanIds, // ← the subjective-gap review queue
+    liked: liked.length,
+    likedWithObjectiveIssue: likedFlaggedIds.length,
+    likedFlaggedIds,
+  };
+
   const report = {
     generatedFor: COACH_MODEL,
     total: results.length,
@@ -559,6 +592,7 @@ async function main() {
     forcedVerdictAgreementPct,
     byCategory,
     byVerdictRule,
+    userFlagged,
     results,
   };
   await Deno.writeTextFile(`${outDir}/report.json`, JSON.stringify(report, null, 2));
@@ -568,6 +602,17 @@ async function main() {
   console.log(`Verdict consistency:  ${verdictConsistencyPct}%  (${verdictConsistent}/${scored.length} spots with self-consistent verdicts)`);
   console.log(`Forced-verdict agree: ${forcedVerdictAgreementPct}%  (${fvAgreed}/${fvScored.length} decisive spots${fvUnscored ? `; ${fvUnscored} unscored` : ""})`);
   console.log(`Equity check coverage: ${equityCoveragePct}%  (${scoredEquityTotal} scored / ${equityClaimsTotal} hero-equity claims)`);
+  if (disliked.length || liked.length) {
+    console.log(`\nUser-flagged spots:`);
+    if (disliked.length) {
+      console.log(`  👎 disliked: ${disliked.length}  →  ${dislikedExplained.length} explained by an objective issue, ${dislikedCleanIds.length} clean-but-disliked (subjective gap)`);
+      if (dislikedCleanIds.length) console.log(`     review queue: ${dislikedCleanIds.join(", ")}`);
+    }
+    if (liked.length) {
+      console.log(`  👍 liked (control): ${liked.length}  →  ${likedFlaggedIds.length} with an objective issue the user didn't catch`);
+      if (likedFlaggedIds.length) console.log(`     ${likedFlaggedIds.join(", ")}`);
+    }
+  }
   console.log(`Report: ${outDir}/report.md`);
 }
 
@@ -595,14 +640,42 @@ function renderMarkdown(r: any): string {
       ? Object.entries(r.byVerdictRule).map(([k, v]) => `- ${k}: ${v}`).join("\n")
       : `_None._`,
     ``,
+    ...userFlaggedSection(r.userFlagged),
     `## Per-spot`,
     ``,
-    `| Spot | Bucket | Claims | Card-logic | Verdict | Status |`,
-    `|---|---|---|---|---|---|`,
+    `| Spot | Bucket | User | Claims | Card-logic | Verdict | Status |`,
+    `|---|---|---|---|---|---|---|`,
     // deno-lint-ignore no-explicit-any
-    ...r.results.map((s: any) => `| ${s.id} | ${s.bucket} | ${s.claims.length} | ${s.violations.length} | ${s.verdictIssues.length} | ${s.errored ? "errored" : "scored"} |`),
+    ...r.results.map((s: any) => `| ${s.id} | ${s.bucket} | ${s.userRating === -1 ? "👎" : s.userRating === 1 ? "👍" : ""} | ${s.claims.length} | ${s.violations.length} | ${s.verdictIssues.length} | ${s.errored ? "errored" : "scored"} |`),
   ];
   return lines.join("\n") + "\n";
+}
+
+// deno-lint-ignore no-explicit-any
+function userFlaggedSection(u: any): string[] {
+  if (!u || (u.disliked === 0 && u.liked === 0)) return [];
+  const lines = [`## User-flagged spots`, ``];
+  if (u.disliked) {
+    lines.push(
+      `**👎 Disliked: ${u.disliked}** — ${u.dislikedExplained} explained by an objective issue, ` +
+        `**${u.dislikedCleanButDisliked} clean-but-disliked** (the subjective gap the 3 scorers can't see).`,
+      ``,
+    );
+    if (u.dislikedCleanIds.length) {
+      lines.push(`Review queue (objectively clean, still disliked):`, ``);
+      lines.push(...u.dislikedCleanIds.map((id: string) => `- ${id}`), ``);
+    }
+  }
+  if (u.liked) {
+    lines.push(
+      `**👍 Liked (satisfied control): ${u.liked}** — ${u.likedWithObjectiveIssue} carried an objective issue the user didn't catch.`,
+      ``,
+    );
+    if (u.likedFlaggedIds.length) {
+      lines.push(...u.likedFlaggedIds.map((id: string) => `- ${id}`), ``);
+    }
+  }
+  return lines;
 }
 
 if (import.meta.main) await main();
