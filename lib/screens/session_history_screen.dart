@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/session_model.dart';
 import '../providers/providers.dart';
+import '../utils/helpers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/session_tile.dart';
 import 'live_session_screen.dart';
@@ -67,7 +68,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      hasFilter ? Icons.filter_list_off : Icons.casino_outlined,
+                      hasFilter ? Icons.filter_list_off : Icons.style_outlined,
                       size: 64,
                       color: Theme.of(context)
                           .colorScheme
@@ -445,14 +446,26 @@ class _SessionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final groups = _groupByMonth();
+    // One display currency for the month subtotals (sessions can be mixed-
+    // currency); mirror StatsFilter's choice — the most recent session's.
+    final displayCurrency = mostRecentSession(sessions)?.currency ?? 'USD';
     final slivers = <Widget>[
       const SliverPadding(padding: EdgeInsets.only(top: 8))
     ];
 
     for (final entry in groups.entries) {
+      final net = entry.value.fold<double>(
+          0,
+          (a, s) =>
+              a + convertCurrency(s.profitLoss, s.currency, displayCurrency));
       slivers.add(SliverPersistentHeader(
         pinned: true,
-        delegate: _MonthHeaderDelegate(entry.key),
+        delegate: _MonthHeaderDelegate(
+          month: entry.key,
+          net: net,
+          count: entry.value.length,
+          currency: displayCurrency,
+        ),
       ));
       slivers.add(SliverList(
         delegate: SliverChildBuilderDelegate(
@@ -478,8 +491,16 @@ class _SessionList extends StatelessWidget {
 
 class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String month;
+  final double net;
+  final int count;
+  final String currency;
 
-  _MonthHeaderDelegate(this.month);
+  _MonthHeaderDelegate({
+    required this.month,
+    required this.net,
+    required this.count,
+    required this.currency,
+  });
 
   @override
   double get maxExtent => 40;
@@ -489,20 +510,43 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final theme = Theme.of(context);
     return Container(
-      color: Theme.of(context).colorScheme.surface,
-      alignment: Alignment.centerLeft,
+      color: theme.colorScheme.surface,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Text(
-        month,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            month,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.primary,
               fontWeight: FontWeight.bold,
             ),
+          ),
+          Row(
+            children: [
+              Text(
+                formatPLWithCurrency(net, currency),
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: net >= 0 ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '· $count',
+                style: theme.textTheme.labelMedium
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   @override
-  bool shouldRebuild(_MonthHeaderDelegate old) => old.month != month;
+  bool shouldRebuild(_MonthHeaderDelegate old) =>
+      old.month != month || old.net != net || old.count != count;
 }
