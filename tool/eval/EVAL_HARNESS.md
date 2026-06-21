@@ -143,6 +143,56 @@ changed, run `score.ts`, and block on a card-logic regression vs the previous
 2. Add an entry to `spots.json` (pick a hero with known cards; choose the bucket).
 3. `dart run tool/eval/bake_fixtures.dart` and commit the new fixture.
 
+### User-flagged spots (real hands the AI got wrong)
+
+Beyond the synthetic Pluribus corpus, the harness can score the **real hands a
+user rated** on their AI coaching (`ai_hand_analyses.rating`: `-1` thumbs-down,
+`+1` thumbs-up). This pulls the benchmark toward the **live distribution where
+the model actually fails** — not just curated textures.
+
+**The rating is a SELECTION FILTER, not a label.** The harness ground truth
+stays independent (Dart evaluator). Thumbs-down just picks high-yield hands;
+thumbs-up is a **satisfied control set**. The user's opinion is *carried* (not
+graded) so the report can cross-tab it against the three objective dimensions.
+
+```bash
+# 1. Export (operator-only; local; service-role key — mirrors ai-cost-report.mjs)
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
+  node scripts/export-flagged-hands.mjs            # --rating=both|-1|1, --include-quick
+#   → de-identifies each hand (NULLs villain cards, strips names/ids),
+#     writes tool/eval/samples/user/*.json + tool/eval/spots-user.json
+
+# 2. Bake the user manifest into the same fixtures/ dir
+dart run tool/eval/bake_fixtures.dart tool/eval/spots-user.json
+
+# 3. Score (scores Pluribus + user spots together; score.ts globs fixtures/)
+deno run --allow-read --allow-write --allow-env --allow-net tool/eval/score.ts
+```
+
+The baker detects a `.json` spot `file` and loads the `PokerHand` directly
+(bypassing the PHH parser); everything downstream — equity, labels, all three
+scorers — is identical to the Pluribus path. It defensively re-strips any villain
+hole cards (a fixture must never carry them — villains are modeled by range).
+
+**The report's `## User-flagged spots` section is the instrument:** of the
+**disliked** hands, how many an objective dimension **explained** (a card-logic /
+verdict / forced-decision failure) vs how many were **clean-but-disliked** — the
+subjective gap the three scorers can't see (strategic-advice quality / tone),
+listed as a **review queue**. For the **liked** control set, it flags any hand
+that carried an objective issue the user didn't catch (a latent trust risk). Use
+the clean-but-disliked queue to drive prompt/UX improvements the scorers miss.
+
+**Scope + privacy:** operator's own hands only (single beta; operator is the data
+controller). Wider harvesting needs a consent/anonymization stance first. Quick
+Hand entries are excluded by default (synthesized villain line → weaker spot;
+`--include-quick` to keep). **Reads caveat:** user spots bake with *empty* reads
+(equity computed fresh, like Pluribus) — so a reproduced analysis can differ
+slightly from the exact one the user rated if they had opponent reads. The
+objective scorers don't care; exporting active reads is a possible enhancement.
+
+`spots-user.json` + `tool/eval/samples/user/` are de-identified but are still your
+own poker hands — decide per your repo's visibility whether to commit them.
+
 ### Bulk curation (`curate.dart`)
 
 To generate a balanced set at scale instead of hand-picking, point the curator
