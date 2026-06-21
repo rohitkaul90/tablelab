@@ -7,6 +7,7 @@ import '../models/stats_filter.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/approx_currency_chip.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/ai_usage_pill.dart';
 import '../widgets/game_type_filter.dart';
@@ -292,12 +293,17 @@ class _OverviewBody extends ConsumerWidget {
                               .colorScheme
                               .onSurfaceVariant
                               .withValues(alpha: 0.6)),
+                      // Mixed-currency totals are FX-converted — one tappable
+                      // marker for the whole card (not per number).
+                      if (isMultiCurrency(filtered)) ...[
+                        const SizedBox(width: 6),
+                        ApproxCurrencyChip(currency: currency),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${isMultiCurrency(filtered) ? '≈ ' : ''}'
-                    '${formatPLWithCurrency(stats.totalPL, currency)}',
+                    formatPLWithCurrency(stats.totalPL, currency),
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           color: stats.totalPL >= 0 ? Colors.green : Colors.red,
                           fontWeight: FontWeight.bold,
@@ -312,9 +318,6 @@ class _OverviewBody extends ConsumerWidget {
                       profile: profile,
                       totalPL: stats.totalPL,
                       currency: currency,
-                      approx: isMultiCurrency(sessions) ||
-                          (profile?.startingBankrollCurrency ?? currency) !=
-                              currency,
                     ),
                 ],
               ),
@@ -445,15 +448,10 @@ class _InlineBankroll extends StatelessWidget {
   final double totalPL;
   final String currency;
 
-  /// True when the figure involved FX conversion (multi-currency sessions, or a
-  /// starting bankroll in a different currency) — shown with a "≈" prefix.
-  final bool approx;
-
   const _InlineBankroll({
     required this.profile,
     required this.totalPL,
     required this.currency,
-    this.approx = false,
   });
 
   @override
@@ -494,7 +492,7 @@ class _InlineBankroll extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Text(
-        'Bankroll ${approx ? '≈ ' : ''}${formatAmount(current, currency)}$growthStr',
+        'Bankroll ${formatAmount(current, currency)}$growthStr',
         style: theme.textTheme.bodySmall?.copyWith(color: subtle),
       ),
     );

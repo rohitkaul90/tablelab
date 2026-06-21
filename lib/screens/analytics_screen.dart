@@ -7,6 +7,7 @@ import '../models/stats_filter.dart';
 import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
+import '../widgets/approx_currency_chip.dart';
 import '../widgets/game_type_filter.dart';
 import 'metric_chart_screen.dart';
 
@@ -127,9 +128,6 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     final rateSign = hourlyRate >= 0 ? '+' : '-';
     final cashSessions = filtered.where((s) => s.gameType == 'cash').toList();
     final bb100 = calcBB100(cashSessions);
-    // Converted money totals over a mixed-currency set are approximate ("≈").
-    final approx = isMultiCurrency(filtered);
-    final a = approx ? '≈ ' : '';
 
     final summaryItems = <_SummaryItem>[
       _SummaryItem('Sessions', '${filtered.length}', null, StatMetric.sessions),
@@ -142,20 +140,20 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
       ),
       _SummaryItem(
         'Total Profit',
-        '$a${formatPLWithCurrency(totalPL, displayCurrency)}',
+        formatPLWithCurrency(totalPL, displayCurrency),
         plColor,
         StatMetric.profit,
       ),
       _SummaryItem(
-          'Buy-In', '$a${formatAmount(totalBuyIn, displayCurrency)}', null,
+          'Buy-In', formatAmount(totalBuyIn, displayCurrency), null,
           StatMetric.buyIn),
       if (hasExpenses)
-        _SummaryItem('Expenses', '$a-$sym${totalExpenses.toStringAsFixed(0)}',
+        _SummaryItem('Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}',
             null, StatMetric.expenses),
       if (hasExpenses)
         _SummaryItem(
           'Net Profit',
-          '$a${formatPLWithCurrency(netAfterExpenses, displayCurrency)}',
+          formatPLWithCurrency(netAfterExpenses, displayCurrency),
           netAfterExpenses >= 0 ? Colors.green : Colors.red,
           StatMetric.netAfterExpenses,
         ),
@@ -195,6 +193,13 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
           padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 88),
           sliver: SliverList.list(
             children: [
+              // One tappable marker for the whole summary when totals span
+              // multiple currencies (they're FX-converted to displayCurrency).
+              if (isMultiCurrency(filtered))
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ApproxCurrencyChip(currency: displayCurrency),
+                ),
               _MetricSummaryList(
                 items: summaryItems,
                 sessions: filtered,
