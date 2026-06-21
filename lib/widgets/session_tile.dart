@@ -12,6 +12,11 @@ class SessionTile extends StatelessWidget {
 
   const SessionTile({super.key, required this.session, this.onTap});
 
+  /// Minimum session length for a meaningful hourly rate — under this the
+  /// per-hour extrapolation from a tiny sample is noise (a 1-min session would
+  /// read "+$12.0k/hr"), so Win rate shows "—" instead.
+  static const int _kMinMinutesForRate = 15;
+
   /// Compact, signed hourly rate (e.g. "+CA$163/hr", "+CA$1.1k/hr").
   static String _fmtPerHr(double rate, String currency) {
     final sym = currencySymbol(currency);
@@ -31,32 +36,43 @@ class SessionTile extends StatelessWidget {
     final isTournament = isTournamentType(session.gameType);
     final location = session.location ?? gameTypeLabel(session.gameType);
 
-    // Metric strip — value, label, optional sign colour.
-    final cells = <(String, String, Color?)>[('Duration', dur, null)];
-    final hours = session.durationMinutes / 60.0;
-    if (hours > 0) {
-      final rate = session.profitLoss / hours;
-      cells.add((
-        'Win rate',
-        _fmtPerHr(rate, session.currency),
-        rate >= 0 ? Colors.green : Colors.red,
-      ));
+    // Metric strip — ALWAYS three columns (Duration · Win rate · BB/100 or ROI)
+    // so the values stay column-aligned tile-to-tile; a metric that doesn't
+    // apply shows "—" rather than collapsing the row to fewer (wider) cells.
+    const dash = '—';
+
+    var winRate = dash;
+    Color? winColor;
+    if (session.durationMinutes >= _kMinMinutesForRate) {
+      final rate = session.profitLoss / (session.durationMinutes / 60.0);
+      winRate = _fmtPerHr(rate, session.currency);
+      winColor = rate >= 0 ? Colors.green : Colors.red;
     }
+
+    final String thirdLabel;
+    var thirdValue = dash;
+    Color? thirdColor;
     if (isTournament) {
+      thirdLabel = 'ROI';
       if (session.buyIn > 0) {
         final roi = calcROI(session.profitLoss, session.buyIn);
-        cells.add(('ROI', formatROI(roi), roi >= 0 ? Colors.green : Colors.red));
+        thirdValue = formatROI(roi);
+        thirdColor = roi >= 0 ? Colors.green : Colors.red;
       }
     } else {
+      thirdLabel = 'BB/100';
       final bb = calcBB100([session]);
       if (bb != null) {
-        cells.add((
-          'BB/100',
-          formatBB100(bb),
-          bb >= 0 ? Colors.green : Colors.red,
-        ));
+        thirdValue = formatBB100(bb);
+        thirdColor = bb >= 0 ? Colors.green : Colors.red;
       }
     }
+
+    final cells = <(String, String, Color?)>[
+      ('Duration', dur, null),
+      ('Win rate', winRate, winColor),
+      (thirdLabel, thirdValue, thirdColor),
+    ];
 
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 5, 12, 5),

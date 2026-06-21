@@ -548,5 +548,8 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_MonthHeaderDelegate old) =>
-      old.month != month || old.net != net || old.count != count;
+      old.month != month ||
+      old.net != net ||
+      old.count != count ||
+      old.currency != currency;
 }
