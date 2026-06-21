@@ -187,7 +187,7 @@ CI generates `lib/config/supabase_config.dart` at build time from secrets — it
 
 `build-android.yml` requires `permissions: contents: write` for the "Create GitHub Release" step (otherwise it fails with "Resource not accessible by integration"; the AAB still builds + uploads as an artifact). Actions are pinned to Node-24 majors (`checkout@v5`, `upload-artifact@v6`, `gh-release@v3`) — Node 20 runtimes are deprecated (forced switch 2026-06-16).
 
-**Releasing to Play:** `bash scripts/bump-version.sh X.Y.Z` → push `main` + the `vX.Y.Z` tag → CI builds the signed AAB and attaches it to a GitHub Release. The AAB is then **manually uploaded** to the Play Console internal track. Google requires the *first* upload of an app to be manual; subsequent uploads can be automated via the Play Developer API + a service-account secret (not yet wired up).
+**Releasing to Play:** `bash scripts/bump-version.sh X.Y.Z` → push `main` + the `vX.Y.Z` tag → CI builds the signed AAB and attaches it to a GitHub Release. The AAB is then **manually uploaded** to a Play Console track (closed testing for the soak, then **Promote** the same AAB to **production** at a staged %). Production access was granted 2026-06-21 (see Launch status). Every upload + promotion is a manual Console click; the Play Developer API for automation is **not yet wired up**.
 
 ### Firebase Crashlytics
 
@@ -324,10 +324,14 @@ All analytics calls go through `lib/services/analytics_service.dart` — static 
 
 `lib/screens/onboarding_screen.dart` — 3-page `PageView` with `PopScope(canPop: false)`. Completion calls `ProfileService.markOnboardingComplete()` which upserts `has_seen_onboarding = true` on `profiles`. `_OnboardingGate` in `auth_gate.dart` gates on `profile.hasSeenOnboarding`. Existing users are grandfathered (`DEFAULT true` on column add, reset to `false` for new inserts via second migration).
 
-### Pre-launch status (as of 2026-06-01)
+### Launch status (as of 2026-06-21)
 
-**Done:** Play Store screenshots (8 phone + 8×7" + 8×10" tablet), Play Console internal track live, data safety form, onboarding flow, PostHog analytics, delete-account, GDPR polish, all Supabase migrations applied, Edge Functions hardened and deployed, RLS hardened, UptimeRobot monitors, Anthropic spend alerts ($80 alert / $100 hard limit). **v1.1.2 (build +4)** AAB uploaded to internal testing — first submission, in Google's one-time initial review (subsequent internal releases publish in minutes).
+**🚀 Google Play PRODUCTION ACCESS GRANTED (2026-06-21).** The closed-test gate (≥12 testers opted-in for 14 continuous days) cleared ~Jun 19; production access was applied 2026-06-19 and granted 2026-06-21. The app can now publish to the **production** track. The closed track stays open as the permanent pre-prod canary.
 
-**Remaining:** Get testers onto the internal track → collect beta feedback → promote to production. Note: internal testing has **no minimum tester count**; the binding gate for production (if the developer account is personal, created after 2023-11-13) is a **closed test with ≥12 testers opted-in for ≥14 days** — verify account type + requirement in Play Console. Supabase Pro upgrade at ~400 MAU.
+**Release pipeline (standard going forward):** bump → CI signed AAB → upload to **closed testing** → **soak ~1 day** (Crashlytics clean for the new version code + smoke green + on-device check of the *signed* track build) → one-time **Production → Select countries and regions** (first prod release only) → **Promote the same AAB to production at a staged 10–20%** rollout (halt if Crashlytics spikes) → ramp. First production release goes through a Google review (hours–days). Every AAB upload + promotion is still a **manual Play Console click** (Play Developer API not wired up).
+
+**In flight:** **v1.6.0 (build +11)** built 2026-06-21 (CI run 27915509423; AAB on the v1.6.0 GitHub Release) — the first release headed for production via the closed→soak→staged-prod path above. Ships the Stats overhaul, sessions redesign, AI-coaching accuracy fixes, multi-currency, in-app feedback, and crash fixes accumulated since v1.5.0. Release notes + tester email archived in `launch/release-notes-v1.6.0.md` / `launch/tester-email-v1.6.0.md`.
+
+**Remaining/known:** Data Safety form unchanged since v1.5.0 (no new deps/permissions). Store screenshots + `web/about.html` long-description are stale for the Stats charts / Sessions cards / multi-currency features (`/ux-designer` + `/growth`). Supabase Pro upgrade at ~400 MAU.
 
 **Deferred:** Separate staging environment / local Supabase migration validation — not worth it until real users + Supabase Pro (preview branches). The 3 dashboard-created tables (`sessions`, `hands`, `rake_presets`) should be baseline-dumped into a migration before there is real prod data, so migration history can rebuild the schema.
