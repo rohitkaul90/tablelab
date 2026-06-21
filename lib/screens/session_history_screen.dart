@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/session_model.dart';
 import '../providers/providers.dart';
+import '../utils/helpers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/session_tile.dart';
 import 'live_session_screen.dart';
@@ -67,7 +69,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      hasFilter ? Icons.filter_list_off : Icons.casino_outlined,
+                      hasFilter ? Icons.filter_list_off : Icons.style_outlined,
                       size: 64,
                       color: Theme.of(context)
                           .colorScheme
@@ -445,14 +447,30 @@ class _SessionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final groups = _groupByMonth();
+    // One display currency for the month subtotals (sessions can be mixed-
+    // currency); mirror StatsFilter's choice — the most recent session's.
+    final displayCurrency = mostRecentSession(sessions)?.currency ?? 'USD';
     final slivers = <Widget>[
       const SliverPadding(padding: EdgeInsets.only(top: 8))
     ];
 
     for (final entry in groups.entries) {
+      // Native subtotal per currency — the header renders these honestly
+      // (exact when the month is single-currency, both when two, converted
+      // ≈ with a tap-to-break-down when 3+). See _MonthHeaderDelegate.
+      final byCurrency = <String, double>{};
+      for (final s in entry.value) {
+        byCurrency.update(s.currency, (v) => v + s.profitLoss,
+            ifAbsent: () => s.profitLoss);
+      }
       slivers.add(SliverPersistentHeader(
         pinned: true,
-        delegate: _MonthHeaderDelegate(entry.key),
+        delegate: _MonthHeaderDelegate(
+          month: entry.key,
+          byCurrency: byCurrency,
+          count: entry.value.length,
+          displayCurrency: displayCurrency,
+        ),
       ));
       slivers.add(SliverList(
         delegate: SliverChildBuilderDelegate(
@@ -479,7 +497,19 @@ class _SessionList extends StatelessWidget {
 class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String month;
 
-  _MonthHeaderDelegate(this.month);
+  /// Native profit subtotal per currency for the month.
+  final Map<String, double> byCurrency;
+  final int count;
+
+  /// Currency the 3+-currency case converts to (the app-wide display currency).
+  final String displayCurrency;
+
+  _MonthHeaderDelegate({
+    required this.month,
+    required this.byCurrency,
+    required this.count,
+    required this.displayCurrency,
+  });
 
   @override
   double get maxExtent => 40;
@@ -489,20 +519,164 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Text(
-        month,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
+    final theme = Theme.of(context);
+    // Largest (by magnitude) currency first, for a stable, sensible order.
+    final entries = byCurrency.entries.toList()
+      ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));
+
+    Widget netText(double net, String cur) => Text(
+          formatPLWithCurrency(net, cur),
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: net >= 0 ? Colors.green : Colors.red,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+
+    // Tiered: 1 currency → exact native; 2 → both native subtotals; 3+ →
+    // converted ≈ total, tappable for the per-currency breakdown.
+    Widget summary;
+    VoidCallback? onTap;
+    if (entries.length <= 1) {
+      final e = entries.isEmpty ? null : entries.first;
+      summary = netText(e?.value ?? 0, e?.key ?? displayCurrency);
+    } else if (entries.length == 2) {
+      summary = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          netText(entries[0].value, entries[0].key),
+          Text('  ·  ',
+              style: theme.textTheme.labelMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          netText(entries[1].value, entries[1].key),
+        ],
+      );
+    } else {
+      final converted = entries.fold<double>(
+          0, (a, e) => a + convertCurrency(e.value, e.key, displayCurrency));
+      onTap = () => _showBreakdown(context, entries, converted);
+      summary = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('≈ ',
+              style: theme.textTheme.labelLarge
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          netText(converted, displayCurrency),
+          const SizedBox(width: 3),
+          Icon(Icons.info_outline,
+              size: 14, color: theme.colorScheme.onSurfaceVariant),
+        ],
+      );
+    }
+
+    final content = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Flexible + ellipsis so a long month label can't overflow the row
+        // (the FittedBox only scales the summary side, not the month).
+        Flexible(
+          child: Text(
+            month,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.primary,
               fontWeight: FontWeight.bold,
             ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Scale the (possibly two-currency) summary down rather than overflow.
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                summary,
+                const SizedBox(width: 6),
+                Text('· $count',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+
+    return Material(
+      color: theme.colorScheme.surface,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Center(child: content),
+        ),
       ),
     );
   }
 
+  void _showBreakdown(BuildContext context,
+      List<MapEntry<String, double>> entries, double converted) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        Color c(double v) => v >= 0 ? Colors.green : Colors.red;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$month · $count sessions',
+                    style: theme.textTheme.titleMedium),
+                const SizedBox(height: 12),
+                for (final e in entries)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(e.key, style: theme.textTheme.bodyLarge),
+                        Text(formatPLWithCurrency(e.value, e.key),
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                                color: c(e.value),
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                const Divider(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('≈ Total ($displayCurrency)',
+                        style: theme.textTheme.bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(formatPLWithCurrency(converted, displayCurrency),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                            color: c(converted),
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Converted at approximate static rates.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
-  bool shouldRebuild(_MonthHeaderDelegate old) => old.month != month;
+  bool shouldRebuild(_MonthHeaderDelegate old) =>
+      old.month != month ||
+      old.count != count ||
+      old.displayCurrency != displayCurrency ||
+      !mapEquals(old.byCurrency, byCurrency);
 }

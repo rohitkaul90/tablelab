@@ -56,7 +56,10 @@ class _SplashIcon extends StatelessWidget {
       width: 112,
       height: 112,
       decoration: BoxDecoration(
-        color: const Color(0xFF1B5E20),
+        // Dark to match the adaptive icon + native splash — the logo art is
+        // blue-on-black, so a dark square reads seamlessly and avoids the green
+        // flash at launch (the green was the only off-brand colour in the chain).
+        color: const Color(0xFF111811),
         borderRadius: BorderRadius.circular(26),
       ),
       padding: const EdgeInsets.all(18),
