@@ -244,7 +244,8 @@ void main() {
       final trail = check!.villains.first.rangeTrail;
       expect(
           trail.any((n) =>
-              n.startsWith('Flop: all-in → polarized: top 18% value')),
+              n.startsWith('Flop: all-in') &&
+              n.contains('polarized: top 18% value')),
           isTrue,
           reason: 'trail was: $trail');
     });
@@ -265,8 +266,9 @@ void main() {
       expect(check, isNotNull);
       final trail = check!.villains.first.rangeTrail;
       expect(
-          trail.any(
-              (n) => n.startsWith('Flop: bet → polarized: top 30% value')),
+          trail.any((n) =>
+              n.startsWith('Flop: bet') &&
+              n.contains('polarized: top 30% value')),
           isTrue,
           reason: 'trail was: $trail');
     });
@@ -293,10 +295,67 @@ void main() {
       );
       final trail = check!.villains.first.rangeTrail;
       expect(
-          trail.any(
-              (n) => n.startsWith('Flop: raise → polarized: top 22% value')),
+          trail.any((n) =>
+              n.startsWith('Flop: raise') &&
+              n.contains('polarized: top 22% value')),
           isTrue,
           reason: 'trail was: $trail');
+    });
+
+    test('a small (blocker) bet is modeled as merged, not polarized', () async {
+      // River bet of 6 into a 70 pot (~9%) — a small/blocker sizing. The trail
+      // must read "merged, NOT polarized", never "polarized" (the reported bug:
+      // a tiny ~11%-pot river bet was labeled polarized).
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          _btnOpenBbCall(), // pot 10
+          const StreetData(
+            street: Street.flop,
+            communityCards: ['Kh', '7d', '2c'],
+            actions: [
+              HandAction(seat: 2, type: ActionType.check),
+              HandAction(
+                  seat: 0,
+                  type: ActionType.raise,
+                  amount: 30,
+                  isOpeningBet: true),
+              HandAction(seat: 2, type: ActionType.call, amount: 30),
+            ], // +60 → pot 70
+          ),
+          const StreetData(
+            street: Street.turn,
+            communityCards: ['3s'],
+            actions: [
+              HandAction(seat: 2, type: ActionType.check),
+              HandAction(seat: 0, type: ActionType.check),
+            ],
+          ),
+          const StreetData(
+            street: Street.river,
+            communityCards: ['9h'],
+            actions: [
+              HandAction(seat: 2, type: ActionType.check),
+              HandAction(
+                  seat: 0,
+                  type: ActionType.raise,
+                  amount: 6,
+                  isOpeningBet: true), // 6 into 70 ≈ 9% pot
+              HandAction(seat: 2, type: ActionType.call, amount: 6),
+            ],
+          ),
+        ]),
+        iterations: 2000,
+      );
+      final trail = check!.villains.first.rangeTrail;
+      expect(
+          trail.any((n) =>
+              n.startsWith('River:') && n.contains('merged, NOT polarized')),
+          isTrue,
+          reason: 'trail was: $trail');
+      expect(
+          trail.any((n) => n.startsWith('River:') && n.contains('→ polarized:')),
+          isFalse,
+          reason: 'small bet must not be labeled polarized; trail was: $trail');
     });
 
     test('a check leaves the range unchanged', () async {

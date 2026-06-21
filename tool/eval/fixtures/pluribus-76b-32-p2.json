@@ -187,8 +187,8 @@
     "isTournament": false
   },
   "equityFacts": [
-    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~38%, flop ~65%, turn ~53%, river ~50%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain MrOrange (SB) range behind the equity above: Pre-flop: open-raised → SB opening range (~31% of hands); Flop: bet → polarized: top 30% value + bottom 15% bluffs; Turn: call → kept top 65% of range; River: check → range unchanged.]"
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~38%, flop ~71%, turn ~67%, river ~65%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrOrange (SB) range behind the equity above: Pre-flop: open-raised → SB opening range (~31% of hands); Flop: small bet (~30% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs; Turn: call → kept top 65% of range; River: check → range unchanged.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -211,7 +211,7 @@
           "4d"
         ],
         "heroCategory": "ONE_PAIR",
-        "heroEquity": 0.65255,
+        "heroEquity": 0.7077,
         "boatOrQuadsPossible": false,
         "flushPossible": false,
         "flushSuit": null,
@@ -226,7 +226,7 @@
           "4s"
         ],
         "heroCategory": "TWO_PAIR",
-        "heroEquity": 0.53205,
+        "heroEquity": 0.66765,
         "boatOrQuadsPossible": true,
         "flushPossible": false,
         "flushSuit": null,
@@ -242,7 +242,7 @@
           "6h"
         ],
         "heroCategory": "TWO_PAIR",
-        "heroEquity": 0.5,
+        "heroEquity": 0.6519,
         "boatOrQuadsPossible": true,
         "flushPossible": false,
         "flushSuit": null,

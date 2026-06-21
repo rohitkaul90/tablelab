@@ -446,13 +446,67 @@ _StreetAct _strongestNonFold(StreetData street, int seat) {
 /// slice. Calls keep the contiguous, capped top (a merged/condensed range).
 /// Default bluff sizing is GTO-balanced (~2:1 value:bluff); reads move it via
 /// [_bluffTagFactor].
-({double value, double bluff}) _keepFractions(_StreetAct act) => switch (act) {
-      _StreetAct.allIn => (value: 0.18, bluff: 0.07),
-      _StreetAct.raise => (value: 0.22, bluff: 0.09),
-      _StreetAct.bet => (value: 0.30, bluff: 0.15),
+// A small/blocker sizing (as a fraction of the pot before the action) is MERGED,
+// not polarized — a WIDE value-leaning range that still retains some bluffs, not
+// a tight nuts-or-air barbell. Bigger sizings keep the tighter, more polar base
+// split. Without this, a min/blocker bet was modeled (and labeled) identically
+// to a pot bet — the bug: a tiny ~11%-pot river bet read as "polarized".
+const double _kSmallBetFrac = 0.4; // ≤ ~⅓-pot → merged
+
+({double value, double bluff}) _keepFractions(_StreetAct act,
+        [double? sizeFrac]) =>
+    switch (act) {
+      _StreetAct.allIn ||
+      _StreetAct.raise ||
+      _StreetAct.bet =>
+        _aggressiveFractions(act, sizeFrac),
       _StreetAct.call => (value: 0.65, bluff: 0.0),
       _ => (value: 1.0, bluff: 0.0),
     };
+
+/// Value/bluff split for a bet/raise/all-in, modulated by bet size. [sizeFrac]
+/// is the wager as a fraction of the pot before it (null = unknown → base).
+({double value, double bluff}) _aggressiveFractions(
+    _StreetAct act, double? sizeFrac) {
+  final base = switch (act) {
+    _StreetAct.allIn => (value: 0.18, bluff: 0.07),
+    _StreetAct.raise => (value: 0.22, bluff: 0.09),
+    _ => (value: 0.30, bluff: 0.15), // bet
+  };
+  // Small/blocker sizing → merged: WIDEN the value top (less polar) while
+  // RETAINING a bluff tail. The wider top must still drop SOME of the range or
+  // the action is a no-op, and the kept bluffs keep a bluff-catcher's equity
+  // realistic (dropping them re-creates the value-only-slice collapse).
+  if (sizeFrac != null && sizeFrac < _kSmallBetFrac) {
+    return (value: max(base.value, 0.55), bluff: max(base.bluff, 0.12));
+  }
+  return base;
+}
+
+/// One villain's largest cumulative wager on [street] as a fraction of
+/// [potBefore] (the pot at the start of the street). Null when unknowable.
+double? _betSizeFrac(StreetData street, int seat, int potBefore) {
+  if (potBefore <= 0) return null;
+  var contrib = 0;
+  for (final a in street.actions) {
+    if (a.seat == seat) {
+      final amt = a.amount ?? 0;
+      if (amt > contrib) contrib = amt;
+    }
+  }
+  return contrib > 0 ? contrib / potBefore : null;
+}
+
+/// Chips added to the pot on [street] — sum of each seat's largest cumulative
+/// contribution (mirrors PokerHand.finalPot's per-street math).
+int _streetPot(StreetData street) {
+  final maxBySeat = <int, int>{};
+  for (final a in street.actions) {
+    final amt = a.amount ?? 0;
+    if (amt > (maxBySeat[a.seat] ?? 0)) maxBySeat[a.seat] = amt;
+  }
+  return maxBySeat.values.fold(0, (s, v) => s + v);
+}
 
 /// How far a villain's bluff frequency deviates from the GTO-balanced default.
 /// Value-heavy players and nits barely bluff; maniacs/over-bluffers fire air far
@@ -668,6 +722,9 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
   final boardSoFar = <int>[];
   final boardNames = <String>[];
   final foldedSeats = <int>{};
+  // Pot at the start of the current street, so a villain's bet/raise can be
+  // sized as a fraction of it (small → merged, big → polarized).
+  var potBefore = 0;
 
   for (final street in hand.streets) {
     for (final c in street.communityCards) {
@@ -697,7 +754,15 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
         final aggressive = act == _StreetAct.bet ||
             act == _StreetAct.raise ||
             act == _StreetAct.allIn;
-        final fr = _keepFractions(act);
+        // Bet size relative to the pot drives polar-vs-merged (small → merged).
+        final sizeFrac = aggressive
+            ? _betSizeFrac(street, v.player.seatIndex, potBefore)
+            : null;
+        final isSmallBet =
+            sizeFrac != null && sizeFrac < _kSmallBetFrac;
+        final sizeNote =
+            sizeFrac != null ? ' (~${(sizeFrac * 100).round()}% pot)' : '';
+        final fr = _keepFractions(act, sizeFrac);
         // Value width scales with the aggressive/passive tag factor (a maniac
         // value-bets wider, a nit tighter). Bluff width scales independently —
         // nits/value-heavy players almost never bluff, maniacs over-bluff.
@@ -729,8 +794,8 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           // Merged / capped range (a call, or a tag-suppressed bluff-free
           // aggressor): keep the contiguous top by strength.
           v.combos = scored.take(valueCount).map((e) => e.$1).toList();
-          v.trail.add('${street.street.label}: ${_actLabel(act)} → kept top '
-              '${(valueFrac * 100).round()}% of range');
+          v.trail.add('${street.street.label}: ${_actLabel(act)}$sizeNote → '
+              'kept top ${(valueFrac * 100).round()}% of range');
         } else {
           // Polarized range: top value combos PLUS a tail of the weakest combos
           // (busted draws / air) as bluffs. The medium middle — hands that would
@@ -753,12 +818,19 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           // value already takes the whole range (valueFrac clamped to 1.0) or
           // the range is tiny, bluffCount can clamp to 0 or below the requested
           // %, and the trail must not claim a bluff tail that isn't there.
+          final valPct = (valueFrac * 100).round();
+          final blPct = (bluffCount / n * 100).round();
           v.trail.add(bluffCount > 0
-              ? '${street.street.label}: ${_actLabel(act)} → polarized: '
-                  'top ${(valueFrac * 100).round()}% value + bottom '
-                  '${(bluffCount / n * 100).round()}% bluffs'
-              : '${street.street.label}: ${_actLabel(act)} → kept top '
-                  '${(valueFrac * 100).round()}% value (no bluffs added)');
+              ? (isSmallBet
+                  // A small/blocker bet is MERGED, not polarized: a wide
+                  // value-leaning range that still carries some bluffs.
+                  ? '${street.street.label}: small ${_actLabel(act)}$sizeNote → '
+                      'merged, NOT polarized (wide value-leaning range with some '
+                      'bluffs): top $valPct% strong + bottom $blPct% weak/bluffs'
+                  : '${street.street.label}: ${_actLabel(act)}$sizeNote → '
+                      'polarized: top $valPct% value + bottom $blPct% bluffs')
+              : '${street.street.label}: ${_actLabel(act)}$sizeNote → kept top '
+                  '$valPct% value (no bluffs added)');
         }
       }
 
@@ -792,6 +864,9 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
     for (final a in street.actions) {
       if (a.type == ActionType.fold) foldedSeats.add(a.seat);
     }
+
+    // Advance the pot so the next street's bet-sizing is measured against it.
+    potBefore += _streetPot(street);
   }
 
   if (streetResults.isEmpty) return null;

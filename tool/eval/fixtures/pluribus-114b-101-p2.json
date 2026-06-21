@@ -177,8 +177,8 @@
     "isTournament": false
   },
   "equityFacts": [
-    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~28%, flop ~34%, turn ~22%, river ~19%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain MrPink (UTG) range behind the equity above: Pre-flop: open-raised → UTG opening range (~6% of hands); Flop: bet → polarized: top 30% value + bottom 15% bluffs; Turn: check → range unchanged; River: check → range unchanged.]"
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~28%, flop ~35%, turn ~25%, river ~25%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrPink (UTG) range behind the equity above: Pre-flop: open-raised → UTG opening range (~6% of hands); Flop: small bet (~24% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs; Turn: check → range unchanged; River: check → range unchanged.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -201,7 +201,7 @@
           "4s"
         ],
         "heroCategory": "ONE_PAIR",
-        "heroEquity": 0.3371,
+        "heroEquity": 0.35215,
         "boatOrQuadsPossible": false,
         "flushPossible": true,
         "flushSuit": "spades",
@@ -219,7 +219,7 @@
           "Kd"
         ],
         "heroCategory": "ONE_PAIR",
-        "heroEquity": 0.2219,
+        "heroEquity": 0.2491,
         "boatOrQuadsPossible": false,
         "flushPossible": true,
         "flushSuit": "spades",
@@ -238,7 +238,7 @@
           "3c"
         ],
         "heroCategory": "ONE_PAIR",
-        "heroEquity": 0.188,
+        "heroEquity": 0.2464,
         "boatOrQuadsPossible": false,
         "flushPossible": true,
         "flushSuit": "spades",

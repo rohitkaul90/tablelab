@@ -199,8 +199,8 @@
     "isTournament": false
   },
   "equityFacts": [
-    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~82%, flop ~64%, turn ~43%, river ~14%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain MrBlue (HJ) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~5% of hands); Flop: bet → polarized: top 30% value + bottom 15% bluffs; Turn: bet → polarized: top 30% value + bottom 17% bluffs; River: all-in → polarized: top 18% value + bottom 9% bluffs.]"
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~82%, flop ~71%, turn ~57%, river ~14%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrBlue (HJ) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~5% of hands); Flop: small bet (~39% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs; Turn: bet (~51% pot) → polarized: top 30% value + bottom 16% bluffs; River: all-in (~85% pot) → polarized: top 18% value + bottom 6% bluffs.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -223,7 +223,7 @@
           "Qd"
         ],
         "heroCategory": "ONE_PAIR",
-        "heroEquity": 0.6364,
+        "heroEquity": 0.7105,
         "boatOrQuadsPossible": false,
         "flushPossible": false,
         "flushSuit": null,
@@ -238,7 +238,7 @@
           "4c"
         ],
         "heroCategory": "ONE_PAIR",
-        "heroEquity": 0.4272,
+        "heroEquity": 0.5697,
         "boatOrQuadsPossible": false,
         "flushPossible": false,
         "flushSuit": null,
