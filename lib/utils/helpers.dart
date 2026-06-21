@@ -298,3 +298,14 @@ double convertCurrency(double amount, String from, String to) {
 /// All currencies supported for display conversion.
 final List<String> supportedDisplayCurrencies =
     (_ratesPerUsd.keys.toList()..sort());
+
+/// Whether a session set spans more than one currency — i.e. any total over it
+/// involves FX conversion and should be marked approximate ("≈").
+bool isMultiCurrency(Iterable<SessionModel> sessions) {
+  String? seen;
+  for (final s in sessions) {
+    seen ??= s.currency;
+    if (s.currency != seen) return true;
+  }
+  return false;
+}

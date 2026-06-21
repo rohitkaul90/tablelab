@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
 import '../models/session_model.dart';
 import '../models/stats_filter.dart';
+import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
+import '../widgets/approx_currency_chip.dart';
 import '../widgets/game_type_filter.dart';
 import 'metric_chart_screen.dart';
 
@@ -22,7 +24,11 @@ class AnalyticsScreen extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       // The body shows the game-type pills + summary metrics even with no
       // sessions (zeros), so new users see structure rather than a blank page.
-      data: (sessions) => _AnalyticsBody(sessions: sessions, filter: filter),
+      data: (sessions) => _AnalyticsBody(
+        sessions: sessions,
+        filter: filter,
+        homeCurrency: ref.watch(profileProvider).valueOrNull?.displayCurrency,
+      ),
     );
   }
 }
@@ -31,7 +37,14 @@ class _AnalyticsBody extends StatefulWidget {
   final List<SessionModel> sessions;
   final StatsFilter filter;
 
-  const _AnalyticsBody({required this.sessions, required this.filter});
+  /// The user's home/display currency (profile preference); null = Auto.
+  final String? homeCurrency;
+
+  const _AnalyticsBody({
+    required this.sessions,
+    required this.filter,
+    required this.homeCurrency,
+  });
 
   @override
   State<_AnalyticsBody> createState() => _AnalyticsBodyState();
@@ -55,7 +68,8 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     ];
   }
 
-  String get _effectiveCurrency => widget.filter.effectiveCurrency(widget.sessions);
+  String get _effectiveCurrency => widget.filter
+      .effectiveCurrency(widget.sessions, homeCurrency: widget.homeCurrency);
 
   List<SessionModel> get _filtered =>
       filterByGameTypes(widget.filter.apply(widget.sessions), _effectiveTypes);
@@ -179,6 +193,13 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
           padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 88),
           sliver: SliverList.list(
             children: [
+              // One tappable marker for the whole summary when totals span
+              // multiple currencies (they're FX-converted to displayCurrency).
+              if (isMultiCurrency(filtered))
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ApproxCurrencyChip(currency: displayCurrency),
+                ),
               _MetricSummaryList(
                 items: summaryItems,
                 sessions: filtered,

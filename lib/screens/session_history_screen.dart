@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/session_model.dart';
+import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
 import '../widgets/app_drawer.dart';
@@ -20,6 +21,8 @@ class SessionHistoryScreen extends ConsumerWidget {
     final sessionsAsync = ref.watch(filteredSessionsProvider);
     final filter = ref.watch(filterProvider);
     final hasFilter = !filter.isEmpty;
+    final homeCurrency =
+        ref.watch(profileProvider).valueOrNull?.displayCurrency;
 
     return Scaffold(
       appBar: AppBar(
@@ -127,7 +130,7 @@ class SessionHistoryScreen extends ConsumerWidget {
               ),
             );
           }
-          return _SessionList(sessions: sessions);
+          return _SessionList(sessions: sessions, homeCurrency: homeCurrency);
         },
             ),
           ),
@@ -433,7 +436,11 @@ class _DateButton extends StatelessWidget {
 class _SessionList extends StatelessWidget {
   final List<SessionModel> sessions;
 
-  const _SessionList({required this.sessions});
+  /// Home/display currency for the 3+-currency month subtotal conversion;
+  /// null = Auto (fall back to the most-recent session's currency).
+  final String? homeCurrency;
+
+  const _SessionList({required this.sessions, this.homeCurrency});
 
   Map<String, List<SessionModel>> _groupByMonth() {
     final map = <String, List<SessionModel>>{};
@@ -447,9 +454,11 @@ class _SessionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final groups = _groupByMonth();
-    // One display currency for the month subtotals (sessions can be mixed-
-    // currency); mirror StatsFilter's choice — the most recent session's.
-    final displayCurrency = mostRecentSession(sessions)?.currency ?? 'USD';
+    // Display currency for the 3+-currency month subtotal conversion: the
+    // user's home currency, else the most-recent session's, else CAD.
+    final displayCurrency = homeCurrency ??
+        mostRecentSession(sessions)?.currency ??
+        'CAD';
     final slivers = <Widget>[
       const SliverPadding(padding: EdgeInsets.only(top: 8))
     ];

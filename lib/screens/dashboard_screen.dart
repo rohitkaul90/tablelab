@@ -7,6 +7,7 @@ import '../models/stats_filter.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/approx_currency_chip.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/ai_usage_pill.dart';
 import '../widgets/game_type_filter.dart';
@@ -83,7 +84,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => StatsFilterSheet(
         filter: current,
-        effectiveCurrency: current.effectiveCurrency(sessions),
+        effectiveCurrency: current.effectiveCurrency(sessions,
+            homeCurrency:
+                ref.read(profileProvider).valueOrNull?.displayCurrency),
         allCountries: allCountries,
         hasMultipleCountries: allCountries.length > 1,
         hasOnline: sessions.any((s) => isOnlineSession(s.location)),
@@ -226,13 +229,14 @@ class _OverviewBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filtered = _filtered;
-    final currency = filter.effectiveCurrency(sessions);
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final currency = filter.effectiveCurrency(sessions,
+        homeCurrency: profile?.displayCurrency);
     final stats = _Stats.from(filtered, currency);
     final types = _effectiveTypes;
     // "All" = nothing selected (both pills off).
     final isAllTypes = types.isEmpty;
     final tournamentOnly = types.length == 1 && types.contains('tournament');
-    final profile = ref.watch(profileProvider).valueOrNull;
 
     final gtLabel = gameTypeChipLabel(types);
     final activeFilters = <String>[
@@ -289,6 +293,12 @@ class _OverviewBody extends ConsumerWidget {
                               .colorScheme
                               .onSurfaceVariant
                               .withValues(alpha: 0.6)),
+                      // Mixed-currency totals are FX-converted — one tappable
+                      // marker for the whole card (not per number).
+                      if (isMultiCurrency(filtered)) ...[
+                        const SizedBox(width: 6),
+                        ApproxCurrencyChip(currency: currency),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 8),

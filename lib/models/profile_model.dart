@@ -9,6 +9,11 @@ class ProfileModel {
   final double? hourlyRateGoal;
   final double? startingBankroll;
   final String startingBankrollCurrency;
+
+  /// Preferred currency for Stats aggregation (the "home" currency). Null =
+  /// "Auto" — fall back to the most-recent session's currency. Single source of
+  /// truth for every converted total; the per-view Stats filter still overrides.
+  final String? displayCurrency;
   final bool hasSeenOnboarding;
 
   const ProfileModel({
@@ -22,6 +27,7 @@ class ProfileModel {
     this.hourlyRateGoal,
     this.startingBankroll,
     this.startingBankrollCurrency = 'CAD',
+    this.displayCurrency,
     this.hasSeenOnboarding = false,
   });
 
@@ -37,6 +43,7 @@ class ProfileModel {
         startingBankroll: (json['starting_bankroll'] as num?)?.toDouble(),
         startingBankrollCurrency:
             (json['starting_bankroll_currency'] as String?) ?? 'CAD',
+        displayCurrency: json['display_currency'] as String?,
         hasSeenOnboarding:
             (json['has_seen_onboarding'] as bool?) ?? false,
       );
@@ -52,6 +59,7 @@ class ProfileModel {
         'hourly_rate_goal': hourlyRateGoal,
         'starting_bankroll': startingBankroll,
         'starting_bankroll_currency': startingBankrollCurrency,
+        'display_currency': displayCurrency,
         'has_seen_onboarding': hasSeenOnboarding,
         'updated_at': DateTime.now().toIso8601String(),
       };
@@ -68,6 +76,8 @@ class ProfileModel {
     double? startingBankroll,
     bool clearStartingBankroll = false,
     String? startingBankrollCurrency,
+    String? displayCurrency,
+    bool clearDisplayCurrency = false,
   }) =>
       ProfileModel(
         id: id,
@@ -80,6 +90,8 @@ class ProfileModel {
         hourlyRateGoal: hourlyRateGoal ?? this.hourlyRateGoal,
         startingBankroll: clearStartingBankroll ? null : (startingBankroll ?? this.startingBankroll),
         startingBankrollCurrency: startingBankrollCurrency ?? this.startingBankrollCurrency,
+        displayCurrency:
+            clearDisplayCurrency ? null : (displayCurrency ?? this.displayCurrency),
         hasSeenOnboarding: hasSeenOnboarding,
       );
 }

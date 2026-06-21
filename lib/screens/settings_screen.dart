@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'import_export_screen.dart';
+import '../models/profile_model.dart';
 import '../services/ai_service.dart';
+import '../utils/helpers.dart' show supportedDisplayCurrencies;
 import '../providers/providers.dart';
 import '../providers/reads_provider.dart';
 import '../providers/profile_provider.dart';
@@ -149,9 +151,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _pickDisplayCurrency(ProfileModel profile) async {
+    // null = Auto (follow the most-recent session). Plain ListTiles (not
+    // RadioListTile) to dodge the Radio groupValue deprecation that would trip
+    // `flutter analyze --fatal-infos`.
+    final options = <String?>[null, ...supportedDisplayCurrencies];
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text('Display currency',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            for (final c in options)
+              ListTile(
+                title: Text(c ?? 'Auto (most recent session)'),
+                trailing: c == profile.displayCurrency
+                    ? Icon(Icons.check,
+                        color: Theme.of(ctx).colorScheme.primary)
+                    : null,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _setDisplayCurrency(profile, c);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setDisplayCurrency(
+      ProfileModel profile, String? currency) async {
+    if (currency == profile.displayCurrency) return;
+    final updated = currency == null
+        ? profile.copyWith(clearDisplayCurrency: true)
+        : profile.copyWith(displayCurrency: currency);
+    await ref.read(profileServiceProvider).upsertProfile(updated);
+    if (!mounted) return;
+    ref.invalidate(profileProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final profile = ref.watch(profileProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: _deleting
@@ -220,6 +268,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ref.read(themeModeProvider.notifier).set(s.first),
                     ),
                   ),
+                ),
+                const Divider(),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    'STATS',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.2,
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.payments_outlined),
+                  title: const Text('Display currency'),
+                  subtitle: const Text(
+                      'Currency stats totals are shown in. "Auto" follows your most recent session.'),
+                  trailing: Text(
+                    profile?.displayCurrency ?? 'Auto',
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: theme.colorScheme.outline),
+                  ),
+                  onTap: profile == null
+                      ? null
+                      : () => _pickDisplayCurrency(profile),
                 ),
                 const Divider(),
                 const SizedBox(height: 8),
