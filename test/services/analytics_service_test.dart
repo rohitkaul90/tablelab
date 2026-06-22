@@ -134,6 +134,17 @@ void main() {
     });
   });
 
+  group('feedbackOpenedProps', () {
+    test('includes category when given', () {
+      expect(AnalyticsService.feedbackOpenedProps(category: 'bug'),
+          {'category': 'bug'});
+    });
+
+    test('omits category when null', () {
+      expect(AnalyticsService.feedbackOpenedProps(), <String, Object>{});
+    });
+  });
+
   group('import funnel props', () {
     test('importStartedProps carries source', () {
       expect(AnalyticsService.importStartedProps(source: 'pokertracker4'),

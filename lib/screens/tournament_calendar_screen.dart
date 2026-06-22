@@ -18,6 +18,12 @@ class _TournamentCalendarScreenState
 
   bool get _hasFilter => _country != null;
 
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.tournamentCalendarViewed();
+  }
+
   void _openFilterSheet(List<String> countries) {
     showModalBottomSheet(
       context: context,
@@ -177,7 +183,6 @@ class _TournamentFilterSheetState extends State<_TournamentFilterSheet> {
   void initState() {
     super.initState();
     _country = widget.selectedCountry;
-    AnalyticsService.tournamentCalendarViewed();
   }
 
   @override

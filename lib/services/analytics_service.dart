@@ -287,13 +287,18 @@ class AnalyticsService {
 
   // ── Feedback ────────────────────────────────────────────────────────────────
 
+  @visibleForTesting
+  static Map<String, Object> feedbackOpenedProps({String? category}) =>
+      {if (category != null) 'category': category};
+
   /// The feedback sheet was opened (pairs with feedback_submitted for a
   /// open→submit conversion rate).
   static void feedbackOpened({String? category}) {
     if (!_analyticsSupported) return;
-    Posthog().capture(eventName: 'feedback_opened', properties: {
-      if (category != null) 'category': category,
-    });
+    Posthog().capture(
+      eventName: 'feedback_opened',
+      properties: feedbackOpenedProps(category: category),
+    );
   }
 
   static void feedbackSubmitted({required String category}) {
