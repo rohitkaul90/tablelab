@@ -121,6 +121,9 @@ class AiService {
     List<PlayerRead> reads = const [],
     bool forceRefresh = false,
   }) async {
+    // Fire `requested` *before* invoke() so request→completed is a real funnel
+    // (a 429/503 throws before `completed`, surfacing the drop-off).
+    AnalyticsService.aiSessionAnalysisRequested();
     try {
       final res = await _client.functions.invoke(
         'analyze-session',
@@ -133,7 +136,6 @@ class AiService {
           'forceRefresh': forceRefresh,
         },
       );
-      AnalyticsService.aiSessionAnalysisRequested();
       AnalyticsService.aiAnalysisCompleted(featureType: 'session');
       return SessionAnalysis.fromJson(res.data as Map<String, dynamic>);
     } on FunctionException catch (e) {
@@ -152,6 +154,9 @@ class AiService {
     bool forceRefresh = false,
     List<String> equityFacts = const [],
   }) async {
+    // Fire `requested` *before* invoke() so request→completed is a real funnel
+    // (a 429/503 throws before `completed`, surfacing the drop-off).
+    AnalyticsService.aiHandAnalysisRequested();
     try {
       final res = await _client.functions.invoke(
         'analyze-hand',
@@ -166,7 +171,6 @@ class AiService {
           if (equityFacts.isNotEmpty) 'equityFacts': equityFacts,
         },
       );
-      AnalyticsService.aiHandAnalysisRequested();
       AnalyticsService.aiAnalysisCompleted(featureType: 'hand');
       return HandCoachingAnalysis.fromJson(res.data as Map<String, dynamic>);
     } on FunctionException catch (e) {
