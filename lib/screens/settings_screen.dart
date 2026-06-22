@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'import_export_screen.dart';
 import '../models/profile_model.dart';
+import '../services/analytics_service.dart';
 import '../services/ai_service.dart';
 import '../utils/helpers.dart' show supportedDisplayCurrencies;
 import '../providers/providers.dart';
@@ -264,8 +265,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ],
                       selected: {ref.watch(themeModeProvider)},
                       showSelectedIcon: false,
-                      onSelectionChanged: (s) =>
-                          ref.read(themeModeProvider.notifier).set(s.first),
+                      onSelectionChanged: (s) {
+                        ref.read(themeModeProvider.notifier).set(s.first);
+                        AnalyticsService.themeChanged(mode: s.first.name);
+                      },
                     ),
                   ),
                 ),

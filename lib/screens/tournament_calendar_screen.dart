@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/tournament_listing.dart';
+import '../services/analytics_service.dart';
 import '../providers/providers.dart';
 class TournamentCalendarScreen extends ConsumerStatefulWidget {
   const TournamentCalendarScreen({super.key});
@@ -16,6 +17,12 @@ class _TournamentCalendarScreenState
   String? _country;
 
   bool get _hasFilter => _country != null;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.tournamentCalendarViewed();
+  }
 
   void _openFilterSheet(List<String> countries) {
     showModalBottomSheet(

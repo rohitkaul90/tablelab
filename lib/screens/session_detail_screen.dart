@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/session_model.dart';
+import '../services/analytics_service.dart';
 import '../models/hand_model.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
@@ -304,6 +305,7 @@ class SessionDetailScreen extends ConsumerWidget {
     if (confirmed == true && context.mounted) {
       try {
         await ref.read(supabaseServiceProvider).deleteSession(session.id);
+        AnalyticsService.sessionDeleted();
         if (context.mounted) {
           ref.invalidate(sessionsProvider);
           Navigator.pop(context);

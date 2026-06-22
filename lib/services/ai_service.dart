@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/session_model.dart';
 import '../models/ai_analysis_model.dart';
@@ -121,6 +123,9 @@ class AiService {
     List<PlayerRead> reads = const [],
     bool forceRefresh = false,
   }) async {
+    // Fire `requested` *before* invoke() so request→completed is a real funnel
+    // (a 429/503 throws before `completed`, surfacing the drop-off).
+    AnalyticsService.aiSessionAnalysisRequested();
     try {
       final res = await _client.functions.invoke(
         'analyze-session',
@@ -133,15 +138,29 @@ class AiService {
           'forceRefresh': forceRefresh,
         },
       );
-      AnalyticsService.aiSessionAnalysisRequested();
-      return SessionAnalysis.fromJson(res.data as Map<String, dynamic>);
+      final analysis = SessionAnalysis.fromJson(res.data as Map<String, dynamic>);
+      AnalyticsService.aiAnalysisCompleted(featureType: 'session');
+      return analysis;
     } on FunctionException catch (e) {
       // invoke() throws on any non-2xx; the server's message is in
       // details['error'] (daily limit 429, at-capacity 503, else generic).
       if (e.status == 429) {
         AnalyticsService.aiRateLimitHit(featureType: 'session');
+      } else {
+        AnalyticsService.aiAnalysisFailed(
+          featureType: 'session',
+          reason: e.status == 503 ? 'at_capacity' : 'server_error',
+        );
       }
       throw AiException.fromResponse(e.status, e.details);
+    } catch (e) {
+      // Timeout / offline / malformed response — not an HTTP status. Rethrow
+      // unchanged so the caller's error handling is untouched.
+      AnalyticsService.aiAnalysisFailed(
+        featureType: 'session',
+        reason: aiFailureReason(e),
+      );
+      rethrow;
     }
   }
 
@@ -151,6 +170,9 @@ class AiService {
     bool forceRefresh = false,
     List<String> equityFacts = const [],
   }) async {
+    // Fire `requested` *before* invoke() so request→completed is a real funnel
+    // (a 429/503 throws before `completed`, surfacing the drop-off).
+    AnalyticsService.aiHandAnalysisRequested();
     try {
       final res = await _client.functions.invoke(
         'analyze-hand',
@@ -165,15 +187,30 @@ class AiService {
           if (equityFacts.isNotEmpty) 'equityFacts': equityFacts,
         },
       );
-      AnalyticsService.aiHandAnalysisRequested();
-      return HandCoachingAnalysis.fromJson(res.data as Map<String, dynamic>);
+      final analysis =
+          HandCoachingAnalysis.fromJson(res.data as Map<String, dynamic>);
+      AnalyticsService.aiAnalysisCompleted(featureType: 'hand');
+      return analysis;
     } on FunctionException catch (e) {
       // invoke() throws on any non-2xx; the server's message is in
       // details['error'] (daily limit 429, at-capacity 503, else generic).
       if (e.status == 429) {
         AnalyticsService.aiRateLimitHit(featureType: 'hand');
+      } else {
+        AnalyticsService.aiAnalysisFailed(
+          featureType: 'hand',
+          reason: e.status == 503 ? 'at_capacity' : 'server_error',
+        );
       }
       throw AiException.fromResponse(e.status, e.details);
+    } catch (e) {
+      // Timeout / offline / malformed response — not an HTTP status. Rethrow
+      // unchanged so the caller's error handling is untouched.
+      AnalyticsService.aiAnalysisFailed(
+        featureType: 'hand',
+        reason: aiFailureReason(e),
+      );
+      rethrow;
     }
   }
 
@@ -193,6 +230,7 @@ class AiService {
           .eq('user_id', user.id)
           .eq('hand_id', handId),
     );
+    AnalyticsService.aiAnalysisRated(featureType: 'hand', rating: rating);
   }
 
   /// Thumbs up/down on a cached session analysis ([rating]: 1 or -1).
@@ -209,6 +247,7 @@ class AiService {
           .eq('user_id', user.id)
           .eq('session_id', sessionId),
     );
+    AnalyticsService.aiAnalysisRated(featureType: 'session', rating: rating);
   }
 
   Map<String, dynamic> _sessionJson(SessionModel s) => {
@@ -233,4 +272,25 @@ class AiService {
         if (s.prizeWon != null) 'prizeWon': s.prizeWon,
         'currency': s.currency,
       };
+}
+
+/// Classifies a non-HTTP analyze failure (the generic `catch` in
+/// analyzeSession/analyzeHand) into a coarse `ai_analysis_failed` reason.
+/// Heuristic + string-based because the underlying type differs by platform
+/// (dart:io SocketException on mobile, XHR errors on web, TimeoutException
+/// from the function timeout). Returns 'timeout' | 'network' | 'unknown'.
+@visibleForTesting
+String aiFailureReason(Object e) {
+  if (e is TimeoutException) return 'timeout';
+  final s = e.toString().toLowerCase();
+  if (s.contains('timeout') || s.contains('timed out')) return 'timeout';
+  if (s.contains('socket') ||
+      s.contains('network') ||
+      s.contains('connection') ||
+      s.contains('failed host lookup') ||
+      s.contains('xmlhttprequest') ||
+      s.contains('clientexception')) {
+    return 'network';
+  }
+  return 'unknown';
 }

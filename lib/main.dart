@@ -74,7 +74,11 @@ void main() async {
   if (posthogApiKey != 'phc_REPLACE_WITH_YOUR_KEY' &&
       defaultTargetPlatform != TargetPlatform.windows) {
     try {
-      final phConfig = PostHogConfig(posthogApiKey)..host = posthogHost;
+      final phConfig = PostHogConfig(posthogApiKey)
+        ..host = posthogHost
+        // App-open/lifecycle events give us DAU + retention without depending
+        // on the user performing a tracked action each visit.
+        ..captureApplicationLifecycleEvents = true;
       await Posthog().setup(phConfig);
     } catch (_) {
       // Non-fatal — analytics failure must never crash the app.
@@ -90,7 +94,13 @@ void main() async {
     if ((event == AuthChangeEvent.initialSession ||
             event == AuthChangeEvent.signedIn) &&
         user != null) {
-      AnalyticsService.identify(user.id, email: user.email);
+      AnalyticsService.identify(
+        user.id,
+        email: user.email,
+        // GoTrue records the primary provider here ('email' | 'google');
+        // mirrors auth.identities.provider, set once as a person property.
+        signupMethod: user.appMetadata['provider'] as String?,
+      );
     } else if (event == AuthChangeEvent.signedOut) {
       AnalyticsService.reset();
     }

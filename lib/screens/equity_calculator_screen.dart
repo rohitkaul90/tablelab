@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../equity/card.dart';
+import '../services/analytics_service.dart';
 import '../equity/simulator.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/equity/card_picker.dart';
@@ -203,6 +204,7 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
         ranges.add(combos);
       }
       final result = await runSimulation(ranges: ranges, boardCards: boardCards);
+      AnalyticsService.equityCalculatorUsed();
       setState(() { _result = result; _resultBoard = List<int?>.from(_board); _running = false; });
     } catch (e) {
       setState(() { _errorMsg = 'Simulation error: $e'; _running = false; });
