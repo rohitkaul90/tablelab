@@ -13,6 +13,7 @@ Future<bool?> showFeedbackSheet(
   String? initialCategory,
   String? prefillMessage,
 }) {
+  AnalyticsService.feedbackOpened(category: initialCategory);
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,

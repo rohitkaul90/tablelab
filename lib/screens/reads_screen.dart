@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/player_read.dart';
+import '../services/analytics_service.dart';
 import '../providers/reads_provider.dart';
 import '../reads/tag_definitions.dart';
 import '../widgets/app_drawer.dart';
@@ -37,6 +38,7 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
         onSaved: (label, tags, note) async {
           try {
             final read = await svc.createRead(playerLabel: label, tags: tags);
+            AnalyticsService.readCreated(tagCount: tags.length);
             if (note != null &&
                 (note.noteText?.isNotEmpty == true ||
                     note.position != null ||

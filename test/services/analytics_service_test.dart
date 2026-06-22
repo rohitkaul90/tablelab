@@ -95,4 +95,57 @@ void main() {
       expect(p['feature_type'], 'session');
     });
   });
+
+  group('aiAnalysisFailedProps', () {
+    test('carries feature type and reason', () {
+      expect(
+        AnalyticsService.aiAnalysisFailedProps(
+            featureType: 'hand', reason: 'at_capacity'),
+        {'feature_type': 'hand', 'reason': 'at_capacity'},
+      );
+    });
+  });
+
+  group('readCreatedProps', () {
+    test('carries tag count', () {
+      expect(AnalyticsService.readCreatedProps(tagCount: 3), {'tag_count': 3});
+    });
+  });
+
+  group('liveRebuyAddedProps', () {
+    test('distinguishes rebuy from addon', () {
+      expect(AnalyticsService.liveRebuyAddedProps(kind: 'rebuy'),
+          {'kind': 'rebuy'});
+      expect(AnalyticsService.liveRebuyAddedProps(kind: 'addon'),
+          {'kind': 'addon'});
+    });
+  });
+
+  group('handReplayerOpenedProps', () {
+    test('carries tournament flag', () {
+      expect(AnalyticsService.handReplayerOpenedProps(isTournament: true),
+          {'is_tournament': true});
+    });
+  });
+
+  group('themeChangedProps', () {
+    test('carries mode', () {
+      expect(AnalyticsService.themeChangedProps(mode: 'dark'), {'mode': 'dark'});
+    });
+  });
+
+  group('import funnel props', () {
+    test('importStartedProps carries source', () {
+      expect(AnalyticsService.importStartedProps(source: 'pokertracker4'),
+          {'source': 'pokertracker4'});
+    });
+
+    test('importCompletedProps carries source, row count, mode', () {
+      expect(
+        AnalyticsService.importCompletedProps(
+            source: 'custom', rowCount: 42, mode: 'dedup'),
+        {'source': 'custom', 'row_count': 42, 'mode': 'dedup'},
+      );
+    });
+  });
 }

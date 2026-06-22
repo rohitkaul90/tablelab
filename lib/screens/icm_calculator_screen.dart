@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/app_drawer.dart';
+import '../services/analytics_service.dart';
 
 class _ThousandsFormatter extends TextInputFormatter {
   static final _fmt = NumberFormat('#,###', 'en_US');
@@ -178,6 +179,7 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
     // Sort by ICM equity descending
     results.sort((a, b) => b.icm.compareTo(a.icm));
 
+    AnalyticsService.icmCalculatorUsed();
     setState(() => _results = results);
   }
 

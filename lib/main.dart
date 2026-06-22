@@ -94,7 +94,13 @@ void main() async {
     if ((event == AuthChangeEvent.initialSession ||
             event == AuthChangeEvent.signedIn) &&
         user != null) {
-      AnalyticsService.identify(user.id, email: user.email);
+      AnalyticsService.identify(
+        user.id,
+        email: user.email,
+        // GoTrue records the primary provider here ('email' | 'google');
+        // mirrors auth.identities.provider, set once as a person property.
+        signupMethod: user.appMetadata['provider'] as String?,
+      );
     } else if (event == AuthChangeEvent.signedOut) {
       AnalyticsService.reset();
     }

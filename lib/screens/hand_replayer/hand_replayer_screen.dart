@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/hand_model.dart';
+import '../../services/analytics_service.dart';
 import '../../models/session_model.dart';
 import '../../providers/providers.dart';
 import '../../widgets/playing_card_widget.dart';
@@ -100,6 +101,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
     super.initState();
     _frames = _buildFrames();
     _sessionId = widget.hand.sessionId;
+    AnalyticsService.handReplayerOpened(isTournament: widget.hand.isTournament);
   }
 
   @override

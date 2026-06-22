@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/tournament_listing.dart';
+import '../services/analytics_service.dart';
 import '../providers/providers.dart';
 class TournamentCalendarScreen extends ConsumerStatefulWidget {
   const TournamentCalendarScreen({super.key});
@@ -176,6 +177,7 @@ class _TournamentFilterSheetState extends State<_TournamentFilterSheet> {
   void initState() {
     super.initState();
     _country = widget.selectedCountry;
+    AnalyticsService.tournamentCalendarViewed();
   }
 
   @override

@@ -143,6 +143,11 @@ class AiService {
       // details['error'] (daily limit 429, at-capacity 503, else generic).
       if (e.status == 429) {
         AnalyticsService.aiRateLimitHit(featureType: 'session');
+      } else {
+        AnalyticsService.aiAnalysisFailed(
+          featureType: 'session',
+          reason: e.status == 503 ? 'at_capacity' : 'server_error',
+        );
       }
       throw AiException.fromResponse(e.status, e.details);
     }
@@ -178,6 +183,11 @@ class AiService {
       // details['error'] (daily limit 429, at-capacity 503, else generic).
       if (e.status == 429) {
         AnalyticsService.aiRateLimitHit(featureType: 'hand');
+      } else {
+        AnalyticsService.aiAnalysisFailed(
+          featureType: 'hand',
+          reason: e.status == 503 ? 'at_capacity' : 'server_error',
+        );
       }
       throw AiException.fromResponse(e.status, e.details);
     }

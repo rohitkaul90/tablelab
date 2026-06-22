@@ -460,6 +460,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
       'buyin_events': events,
       'buy_in': s.totalBuyIn + amount,
     });
+    AnalyticsService.liveRebuyAdded(kind: kind);
   }
 
   Future<void> _addExpense(SessionModel s) async {
@@ -684,6 +685,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
     });
     try {
       await _service.deleteSession(s.id);
+      AnalyticsService.liveSessionAbandoned();
       ref.invalidate(sessionsProvider);
       if (!mounted) return;
       Navigator.pop(context);

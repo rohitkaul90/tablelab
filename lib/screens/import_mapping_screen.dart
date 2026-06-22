@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../data/poker_rooms.dart';
+import '../services/analytics_service.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
 
@@ -399,6 +400,9 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
     _selectedPreset = widget.initialPresetId ?? _autoDetectPreset();
     _mapping = _buildMapping(_selectedPreset);
     _preview = _computePreview();
+    // Reaching the mapping step means the file parsed; pairs with
+    // import_completed for a mapping→done funnel.
+    AnalyticsService.importStarted(source: _selectedPreset ?? 'custom');
   }
 
   // ─── Preset detection & application ──────────────────────────────────────
@@ -949,6 +953,11 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
 
       if (_overwrite) await service.clearAllSessions();
       await service.bulkInsertSessions(sessions);
+      AnalyticsService.importCompleted(
+        source: _selectedPreset ?? 'custom',
+        rowCount: sessions.length,
+        mode: _overwrite ? 'overwrite' : 'dedup',
+      );
       ref.invalidate(sessionsProvider);
 
       if (mounted) {

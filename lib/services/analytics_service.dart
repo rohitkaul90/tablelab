@@ -7,13 +7,23 @@ bool get _analyticsSupported =>
     kIsWeb || defaultTargetPlatform != TargetPlatform.windows;
 
 class AnalyticsService {
-  static Future<void> identify(String userId, {String? email}) async {
+  static Future<void> identify(
+    String userId, {
+    String? email,
+    String? signupMethod, // 'email' | 'google' — from user.appMetadata['provider']
+  }) async {
     if (!_analyticsSupported) return;
     await Posthog().identify(
       userId: userId,
       // PostHog's People page uses the `email` person property as the display
       // name — without it testers are unmatchable anonymous device IDs.
-      userProperties: {if (email != null) 'email': email},
+      // `signup_method` is a person property (not an event) so Google-vs-email
+      // signups can be cohorted against retention / AI-adoption; the
+      // server-of-record stays auth.identities.provider.
+      userProperties: {
+        if (email != null) 'email': email,
+        if (signupMethod != null) 'signup_method': signupMethod,
+      },
     );
   }
 
@@ -152,6 +162,28 @@ class AnalyticsService {
     );
   }
 
+  @visibleForTesting
+  static Map<String, Object> aiAnalysisFailedProps({
+    required String featureType,
+    required String reason,
+  }) =>
+      {'feature_type': featureType, 'reason': reason};
+
+  /// Fired when an analysis call fails for a non-rate-limit reason (503
+  /// at-capacity, 500, timeout, parse error). Completes request → {completed |
+  /// rate_limited | failed}; `ai_rate_limit_hit` still covers the 429 case.
+  static void aiAnalysisFailed({
+    required String featureType,
+    required String reason, // 'at_capacity' | 'server_error' | 'timeout' | 'unknown'
+  }) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'ai_analysis_failed',
+      properties:
+          aiAnalysisFailedProps(featureType: featureType, reason: reason),
+    );
+  }
+
   // ── Hands ───────────────────────────────────────────────────────────────────
 
   @visibleForTesting
@@ -181,7 +213,88 @@ class AnalyticsService {
     Posthog().capture(eventName: 'equity_calculator_used');
   }
 
+  static void icmCalculatorUsed() {
+    if (!_analyticsSupported) return;
+    Posthog().capture(eventName: 'icm_calculator_used');
+  }
+
+  // ── Reads ───────────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  static Map<String, Object> readCreatedProps({required int tagCount}) =>
+      {'tag_count': tagCount};
+
+  static void readCreated({required int tagCount}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'read_created',
+      properties: readCreatedProps(tagCount: tagCount),
+    );
+  }
+
+  // ── Live session ────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  static Map<String, Object> liveRebuyAddedProps({required String kind}) =>
+      {'kind': kind};
+
+  /// A rebuy or add-on logged during a live session.
+  static void liveRebuyAdded({required String kind}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'live_rebuy_added',
+      properties: liveRebuyAddedProps(kind: kind), // 'rebuy' | 'addon'
+    );
+  }
+
+  /// A live session discarded before finalizing (deleted, not completed).
+  static void liveSessionAbandoned() {
+    if (!_analyticsSupported) return;
+    Posthog().capture(eventName: 'live_session_abandoned');
+  }
+
+  // ── Engagement ──────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  static Map<String, Object> handReplayerOpenedProps(
+          {required bool isTournament}) =>
+      {'is_tournament': isTournament};
+
+  static void handReplayerOpened({required bool isTournament}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'hand_replayer_opened',
+      properties: handReplayerOpenedProps(isTournament: isTournament),
+    );
+  }
+
+  static void tournamentCalendarViewed() {
+    if (!_analyticsSupported) return;
+    Posthog().capture(eventName: 'tournament_calendar_viewed');
+  }
+
+  @visibleForTesting
+  static Map<String, Object> themeChangedProps({required String mode}) =>
+      {'mode': mode};
+
+  static void themeChanged({required String mode}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'theme_changed',
+      properties: themeChangedProps(mode: mode), // 'system' | 'light' | 'dark'
+    );
+  }
+
   // ── Feedback ────────────────────────────────────────────────────────────────
+
+  /// The feedback sheet was opened (pairs with feedback_submitted for a
+  /// open→submit conversion rate).
+  static void feedbackOpened({String? category}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(eventName: 'feedback_opened', properties: {
+      if (category != null) 'category': category,
+    });
+  }
 
   static void feedbackSubmitted({required String category}) {
     if (!_analyticsSupported) return;
@@ -197,5 +310,42 @@ class AnalyticsService {
     Posthog().capture(eventName: 'export_triggered', properties: {
       'format': format, // 'csv' or 'excel'
     });
+  }
+
+  @visibleForTesting
+  static Map<String, Object> importStartedProps({required String source}) =>
+      {'source': source};
+
+  /// Fired when the user reaches the column-mapping step (file parsed OK).
+  static void importStarted({required String source}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'import_started',
+      properties: importStartedProps(source: source),
+    );
+  }
+
+  @visibleForTesting
+  static Map<String, Object> importCompletedProps({
+    required String source,
+    required int rowCount,
+    required String mode,
+  }) =>
+      {'source': source, 'row_count': rowCount, 'mode': mode};
+
+  static void importCompleted({
+    required String source,
+    required int rowCount,
+    required String mode, // 'dedup' | 'overwrite'
+  }) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'import_completed',
+      properties: importCompletedProps(
+        source: source,
+        rowCount: rowCount,
+        mode: mode,
+      ),
+    );
   }
 }
