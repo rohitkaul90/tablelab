@@ -134,6 +134,7 @@ class AiService {
         },
       );
       AnalyticsService.aiSessionAnalysisRequested();
+      AnalyticsService.aiAnalysisCompleted(featureType: 'session');
       return SessionAnalysis.fromJson(res.data as Map<String, dynamic>);
     } on FunctionException catch (e) {
       // invoke() throws on any non-2xx; the server's message is in
@@ -166,6 +167,7 @@ class AiService {
         },
       );
       AnalyticsService.aiHandAnalysisRequested();
+      AnalyticsService.aiAnalysisCompleted(featureType: 'hand');
       return HandCoachingAnalysis.fromJson(res.data as Map<String, dynamic>);
     } on FunctionException catch (e) {
       // invoke() throws on any non-2xx; the server's message is in
@@ -193,6 +195,7 @@ class AiService {
           .eq('user_id', user.id)
           .eq('hand_id', handId),
     );
+    AnalyticsService.aiAnalysisRated(featureType: 'hand', rating: rating);
   }
 
   /// Thumbs up/down on a cached session analysis ([rating]: 1 or -1).
@@ -209,6 +212,7 @@ class AiService {
           .eq('user_id', user.id)
           .eq('session_id', sessionId),
     );
+    AnalyticsService.aiAnalysisRated(featureType: 'session', rating: rating);
   }
 
   Map<String, dynamic> _sessionJson(SessionModel s) => {

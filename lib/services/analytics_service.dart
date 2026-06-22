@@ -36,17 +36,60 @@ class AnalyticsService {
 
   // ── Sessions ────────────────────────────────────────────────────────────────
 
+  @visibleForTesting
+  static Map<String, Object> sessionLoggedProps({
+    required String gameType,
+    required String currency,
+    required bool hasNotes,
+    required String source,
+  }) =>
+      {
+        'game_type': gameType,
+        'currency': currency,
+        'has_notes': hasNotes,
+        'source': source,
+      };
+
   static void sessionLogged({
     required String gameType,
     required String currency,
     required bool hasNotes,
+    required String source, // 'past' (manual form) or 'live' (finalized recorder)
   }) {
     if (!_analyticsSupported) return;
-    Posthog().capture(eventName: 'session_logged', properties: {
-      'game_type': gameType,
-      'currency': currency,
-      'has_notes': hasNotes,
-    });
+    Posthog().capture(
+      eventName: 'session_logged',
+      properties: sessionLoggedProps(
+        gameType: gameType,
+        currency: currency,
+        hasNotes: hasNotes,
+        source: source,
+      ),
+    );
+  }
+
+  @visibleForTesting
+  static Map<String, Object> liveSessionStartedProps({
+    required String gameType,
+    required String currency,
+  }) =>
+      {'game_type': gameType, 'currency': currency};
+
+  /// Fired when a live recording session is *started* (not finalized). Pair
+  /// with the `session_logged{source:'live'}` finalize event to build a
+  /// live-session completion funnel (started → finalized vs abandoned).
+  static void liveSessionStarted({
+    required String gameType,
+    required String currency,
+  }) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'live_session_started',
+      properties: liveSessionStartedProps(
+        gameType: gameType,
+        currency: currency,
+      ),
+    );
   }
 
   static void sessionDeleted() {
@@ -73,15 +116,62 @@ class AnalyticsService {
     });
   }
 
+  @visibleForTesting
+  static Map<String, Object> aiAnalysisCompletedProps(
+          {required String featureType}) =>
+      {'feature_type': featureType};
+
+  /// Fired when an analysis call returns successfully (the `_requested` events
+  /// fire on attempt; this one closes the funnel so we can see request→result
+  /// drop-off and at-capacity failures separately from rate limits).
+  static void aiAnalysisCompleted({required String featureType}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'ai_analysis_completed',
+      properties: aiAnalysisCompletedProps(featureType: featureType),
+    );
+  }
+
+  @visibleForTesting
+  static Map<String, Object> aiAnalysisRatedProps({
+    required String featureType,
+    required int rating,
+  }) =>
+      {'feature_type': featureType, 'rating': rating};
+
+  /// Thumbs up/down on an analysis. Mirrors the DB rating write so the quality
+  /// signal reaches PostHog and can be cohorted against retention.
+  static void aiAnalysisRated({
+    required String featureType,
+    required int rating, // 1 (up) or -1 (down)
+  }) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'ai_analysis_rated',
+      properties: aiAnalysisRatedProps(featureType: featureType, rating: rating),
+    );
+  }
+
   // ── Hands ───────────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  static Map<String, Object> handRecordedProps({
+    required bool isTournament,
+    String entryMode = 'full',
+  }) =>
+      {
+        'is_tournament': isTournament,
+        'entry_mode': entryMode, // 'full' or 'quick'
+      };
 
   static void handRecorded(
       {required bool isTournament, String entryMode = 'full'}) {
     if (!_analyticsSupported) return;
-    Posthog().capture(eventName: 'hand_recorded', properties: {
-      'is_tournament': isTournament,
-      'entry_mode': entryMode, // 'full' or 'quick'
-    });
+    Posthog().capture(
+      eventName: 'hand_recorded',
+      properties:
+          handRecordedProps(isTournament: isTournament, entryMode: entryMode),
+    );
   }
 
   // ── Tools ───────────────────────────────────────────────────────────────────

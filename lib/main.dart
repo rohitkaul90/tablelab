@@ -74,7 +74,11 @@ void main() async {
   if (posthogApiKey != 'phc_REPLACE_WITH_YOUR_KEY' &&
       defaultTargetPlatform != TargetPlatform.windows) {
     try {
-      final phConfig = PostHogConfig(posthogApiKey)..host = posthogHost;
+      final phConfig = PostHogConfig(posthogApiKey)
+        ..host = posthogHost
+        // App-open/lifecycle events give us DAU + retention without depending
+        // on the user performing a tracked action each visit.
+        ..captureApplicationLifecycleEvents = true;
       await Posthog().setup(phConfig);
     } catch (_) {
       // Non-fatal — analytics failure must never crash the app.

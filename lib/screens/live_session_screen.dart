@@ -216,10 +216,9 @@ class _LiveSessionStartScreenState
 
     try {
       await ref.read(supabaseServiceProvider).insertSessionReturningId(data);
-      AnalyticsService.sessionLogged(
+      AnalyticsService.liveSessionStarted(
         gameType: _gameType,
         currency: _currency,
-        hasNotes: false,
       );
       ref.invalidate(sessionsProvider);
       if (!mounted) return;
@@ -628,6 +627,12 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
         'break_started_at': null,
         'current_stack': null,
       });
+      AnalyticsService.sessionLogged(
+        gameType: s.gameType,
+        currency: s.currency,
+        hasNotes: (s.notes ?? '').trim().isNotEmpty,
+        source: 'live',
+      );
       ref.invalidate(sessionsProvider);
       final fresh = await ref.read(sessionsProvider.future);
       final finalized = fresh.where((x) => x.id == s.id).firstOrNull;

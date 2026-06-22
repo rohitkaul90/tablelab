@@ -343,6 +343,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
           gameType: _gameType,
           currency: _currency,
           hasNotes: _notesCtrl.text.trim().isNotEmpty,
+          source: 'past',
         );
       } else {
         await service.updateSession(widget.session!.id, data);
