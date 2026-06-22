@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/session_model.dart';
 import '../models/ai_analysis_model.dart';
@@ -136,8 +138,9 @@ class AiService {
           'forceRefresh': forceRefresh,
         },
       );
+      final analysis = SessionAnalysis.fromJson(res.data as Map<String, dynamic>);
       AnalyticsService.aiAnalysisCompleted(featureType: 'session');
-      return SessionAnalysis.fromJson(res.data as Map<String, dynamic>);
+      return analysis;
     } on FunctionException catch (e) {
       // invoke() throws on any non-2xx; the server's message is in
       // details['error'] (daily limit 429, at-capacity 503, else generic).
@@ -150,6 +153,14 @@ class AiService {
         );
       }
       throw AiException.fromResponse(e.status, e.details);
+    } catch (e) {
+      // Timeout / offline / malformed response — not an HTTP status. Rethrow
+      // unchanged so the caller's error handling is untouched.
+      AnalyticsService.aiAnalysisFailed(
+        featureType: 'session',
+        reason: aiFailureReason(e),
+      );
+      rethrow;
     }
   }
 
@@ -176,8 +187,10 @@ class AiService {
           if (equityFacts.isNotEmpty) 'equityFacts': equityFacts,
         },
       );
+      final analysis =
+          HandCoachingAnalysis.fromJson(res.data as Map<String, dynamic>);
       AnalyticsService.aiAnalysisCompleted(featureType: 'hand');
-      return HandCoachingAnalysis.fromJson(res.data as Map<String, dynamic>);
+      return analysis;
     } on FunctionException catch (e) {
       // invoke() throws on any non-2xx; the server's message is in
       // details['error'] (daily limit 429, at-capacity 503, else generic).
@@ -190,6 +203,14 @@ class AiService {
         );
       }
       throw AiException.fromResponse(e.status, e.details);
+    } catch (e) {
+      // Timeout / offline / malformed response — not an HTTP status. Rethrow
+      // unchanged so the caller's error handling is untouched.
+      AnalyticsService.aiAnalysisFailed(
+        featureType: 'hand',
+        reason: aiFailureReason(e),
+      );
+      rethrow;
     }
   }
 
@@ -251,4 +272,25 @@ class AiService {
         if (s.prizeWon != null) 'prizeWon': s.prizeWon,
         'currency': s.currency,
       };
+}
+
+/// Classifies a non-HTTP analyze failure (the generic `catch` in
+/// analyzeSession/analyzeHand) into a coarse `ai_analysis_failed` reason.
+/// Heuristic + string-based because the underlying type differs by platform
+/// (dart:io SocketException on mobile, XHR errors on web, TimeoutException
+/// from the function timeout). Returns 'timeout' | 'network' | 'unknown'.
+@visibleForTesting
+String aiFailureReason(Object e) {
+  if (e is TimeoutException) return 'timeout';
+  final s = e.toString().toLowerCase();
+  if (s.contains('timeout') || s.contains('timed out')) return 'timeout';
+  if (s.contains('socket') ||
+      s.contains('network') ||
+      s.contains('connection') ||
+      s.contains('failed host lookup') ||
+      s.contains('xmlhttprequest') ||
+      s.contains('clientexception')) {
+    return 'network';
+  }
+  return 'unknown';
 }

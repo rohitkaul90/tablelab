@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/services/ai_service.dart';
 
@@ -85,6 +86,34 @@ void main() {
       expect(e.isRateLimited, isFalse);
       expect(e.isAtCapacity, isFalse);
       expect(e.message, 'Analysis failed. Please try again.');
+    });
+  });
+
+  group('aiFailureReason', () {
+    test('TimeoutException → timeout', () {
+      expect(aiFailureReason(TimeoutException('Future not completed')),
+          'timeout');
+    });
+
+    test('message mentioning "timed out" → timeout', () {
+      expect(aiFailureReason(Exception('Request timed out after 50s')),
+          'timeout');
+    });
+
+    test('SocketException-style offline error → network', () {
+      expect(
+        aiFailureReason(Exception(
+            'SocketException: Failed host lookup: tablelab.supabase.co')),
+        'network',
+      );
+    });
+
+    test('web XMLHttpRequest error → network', () {
+      expect(aiFailureReason(Exception('XMLHttpRequest error')), 'network');
+    });
+
+    test('unrecognized error → unknown', () {
+      expect(aiFailureReason(Exception('type cast failed')), 'unknown');
     });
   });
 }
