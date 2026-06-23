@@ -16,13 +16,17 @@
 //
 // Run locally (needs ANTHROPIC_API_KEY; costs ~$0.034/hand + judge tokens):
 //   deno run --allow-read --allow-write --allow-env --allow-net \
-//     tool/eval/score.ts [fixturesDir] [outDir] [--limit N] [--baseline path]
+//     tool/eval/score.ts [fixturesDir] [outDir] [--limit N] [--baseline path] [--rerun-errored]
 //
-//   --limit N      score a deterministic, bucket-spanning sample of N fixtures
-//                  (cheap iteration); writes report.sample.* and never clobbers
-//                  the committed full baseline. Omit for the full gate run.
-//   --baseline P   diff against report P (default: <outDir>/report.json, the
-//                  prior run). A FULL run that regresses any dimension exits 1.
+//   --limit N         score a deterministic, bucket-spanning sample of N fixtures
+//                     (cheap iteration); writes report.sample.* and never clobbers
+//                     the committed full baseline. Omit for the full gate run.
+//   --baseline P      diff against report P (default: <outDir>/report.json, the
+//                     prior run). A FULL run that regresses any dimension exits 1.
+//   --rerun-errored   re-score ONLY the spots the prior <outDir>/report.json
+//                     marked errored (recover a partial run after connection
+//                     blips), then merge them back in. No diff, no gating; safe
+//                     to repeat until 0 errored.
 //
 // NOT wired into CI — it spends money and needs the key (mirrors
 // scripts/ai-cost-report.mjs).
@@ -136,7 +140,9 @@ interface Violation {
 
 // ── Anthropic plumbing ────────────────────────────────────────────────────────
 
-const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
+// maxRetries (with the SDK's exponential backoff) so a transient connection
+// blip retries instead of erroring the spot out — fewer errored spots per run.
+const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")!, maxRetries: 4 });
 
 // deno-lint-ignore no-explicit-any
 function toolInput(message: any): Record<string, unknown> | null {
@@ -478,18 +484,21 @@ interface CliArgs {
   outDir: string;
   limit: number | null; // score a subsample of this many fixtures (iteration)
   baseline: string | null; // report.json to diff against (default: outDir/report.json)
+  rerunErrored: boolean; // re-score only the prior report's errored spots, then merge
 }
 
 function parseArgs(argv: string[]): CliArgs {
   const positionals: string[] = [];
   let limit: number | null = null;
   let baseline: string | null = null;
+  let rerunErrored = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--limit" || a === "-n") limit = Number(argv[++i]);
     else if (a.startsWith("--limit=")) limit = Number(a.slice("--limit=".length));
     else if (a === "--baseline") baseline = argv[++i];
     else if (a.startsWith("--baseline=")) baseline = a.slice("--baseline=".length);
+    else if (a === "--rerun-errored") rerunErrored = true;
     else if (a.startsWith("-")) throw new Error(`Unknown flag: ${a}`);
     else positionals.push(a);
   }
@@ -501,6 +510,7 @@ function parseArgs(argv: string[]): CliArgs {
     outDir: positionals[1] ?? "tool/eval/reports",
     limit,
     baseline,
+    rerunErrored,
   };
 }
 
@@ -614,7 +624,7 @@ function renderDiffMarkdown(d: RunDiff | null): string[] {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const { fixturesDir, outDir, limit, baseline } = parseArgs(Deno.args);
+  const { fixturesDir, outDir, limit, baseline, rerunErrored } = parseArgs(Deno.args);
   await Deno.mkdir(outDir, { recursive: true });
 
   const fixtures: Fixture[] = [];
@@ -625,13 +635,32 @@ async function main() {
   }
   fixtures.sort((a, b) => a.id.localeCompare(b.id));
   const allCount = fixtures.length;
-  // A --limit run scores a deterministic, bucket-spanning subsample (iteration
-  // aid); the full set is the gate. sampleEvenly keeps the same spots run-to-run.
-  const scoredFixtures = limit != null ? sampleEvenly(fixtures, limit) : fixtures;
-  if (limit != null) {
-    console.log(`--limit ${limit}: scoring ${scoredFixtures.length} of ${allCount} fixtures (even stride across buckets).`);
+
+  // Pick which fixtures to score this run:
+  //  • --rerun-errored: only the spots the prior report.json marked errored —
+  //    recover a partial run (connection blips) WITHOUT re-spending on the spots
+  //    that already succeeded; merged back over the prior results below.
+  //  • --limit N: a deterministic, bucket-spanning subsample (iteration aid).
+  //  • default: the full set (the gate).
+  let priorResults: SpotResult[] = [];
+  let scoredFixtures: Fixture[];
+  if (rerunErrored) {
+    const prior = JSON.parse(await Deno.readTextFile(`${outDir}/report.json`));
+    priorResults = (prior.results ?? []) as SpotResult[];
+    const erroredIds = new Set(priorResults.filter((r) => r.errored).map((r) => r.id));
+    scoredFixtures = fixtures.filter((f) => erroredIds.has(f.id));
+    if (scoredFixtures.length === 0) {
+      console.log("--rerun-errored: nothing errored in the prior report — nothing to do.");
+      return;
+    }
+    console.log(`--rerun-errored: re-scoring ${scoredFixtures.length} errored spot(s) from ${outDir}/report.json...\n`);
+  } else {
+    scoredFixtures = limit != null ? sampleEvenly(fixtures, limit) : fixtures;
+    if (limit != null) {
+      console.log(`--limit ${limit}: scoring ${scoredFixtures.length} of ${allCount} fixtures (even stride across buckets).`);
+    }
+    console.log(`Scoring ${scoredFixtures.length} fixtures against the real ${COACH_MODEL} prompt...\n`);
   }
-  console.log(`Scoring ${scoredFixtures.length} fixtures against the real ${COACH_MODEL} prompt...\n`);
 
   interface SpotResult {
     id: string;
@@ -693,9 +722,19 @@ async function main() {
   );
   // A `undefined` slot means mapPool's worker caught an unexpected throw — treat
   // it as an errored spot so the run still produces a complete report.
-  const results: SpotResult[] = raw.map(
+  const scoredResults: SpotResult[] = raw.map(
     (r, i) => r ?? errResult(scoredFixtures[i], "worker crashed unexpectedly"),
   );
+  // In --rerun-errored mode, overlay the freshly-scored spots onto the prior
+  // full results (by id) so the report stays complete (all spots), not just the
+  // re-runs. A spot that errors AGAIN simply stays errored.
+  const results: SpotResult[] = rerunErrored
+    ? (() => {
+      const byId = new Map(priorResults.map((r) => [r.id, r]));
+      for (const r of scoredResults) byId.set(r.id, r);
+      return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
+    })()
+    : scoredResults;
 
   // Accuracy is over SCORED spots only — harness errors are excluded, never
   // conflated with card-logic failures.
@@ -785,16 +824,20 @@ async function main() {
   // baseline.
   const baselinePath = baseline ?? `${outDir}/report.json`;
   let diff: RunDiff | null = null;
-  try {
-    const prior = JSON.parse(await Deno.readTextFile(baselinePath));
-    diff = computeDiff(prior, report, baselinePath);
-  } catch {
-    // No prior baseline (first run) or unreadable — skip the diff silently.
+  // No diff in --rerun-errored mode: the "baseline" would be the partial report
+  // we're patching, so a diff against it is meaningless.
+  if (!rerunErrored) {
+    try {
+      const prior = JSON.parse(await Deno.readTextFile(baselinePath));
+      diff = computeDiff(prior, report, baselinePath);
+    } catch {
+      // No prior baseline (first run) or unreadable — skip the diff silently.
+    }
   }
   // deno-lint-ignore no-explicit-any
   (report as any).diff = diff;
 
-  const stem = limit != null ? "report.sample" : "report";
+  const stem = (limit != null && !rerunErrored) ? "report.sample" : "report";
   await Deno.writeTextFile(`${outDir}/${stem}.json`, JSON.stringify(report, null, 2));
   await Deno.writeTextFile(`${outDir}/${stem}.md`, renderMarkdown(report));
 
