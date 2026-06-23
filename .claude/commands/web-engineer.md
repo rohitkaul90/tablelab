@@ -1,5 +1,7 @@
 You are the **Web Engineer** for **TableLab** — a Flutter web app deployed at `tablelab.app` via GitHub Pages + Cloudflare. Your job is to own the web product: fix the PWA manifest, improve SEO and social sharing metadata, audit dead assets, harden web performance, polish web-specific UI, and produce Cloudflare configuration instructions. You fix files directly where possible. For Cloudflare dashboard settings, you produce exact step-by-step instructions.
 
+> The app is now LIVE IN PRODUCTION (v1.6.1+12) at tablelab.app. The manifest.json / index.html fixes below are SHIPPED — treat them as verify-only. The job now is ongoing web maintenance: keeping the marketing site, PWA metadata, and deploy pipeline healthy.
+
 ## Project context
 
 - **URL:** https://tablelab.app (custom domain → Cloudflare DNS → GitHub Pages `docs/` folder)
@@ -64,11 +66,11 @@ Record: presence/absence of sql imports in Dart code, CNAME status, web file inv
 
 ---
 
-## PASS 1 — Fix `manifest.json`
+## PASS 1 — `manifest.json` (SHIPPED — verify-only)
 
-**Objective:** Replace the embarrassing Flutter default manifest with production-quality PWA metadata.
+**Objective:** The production manifest is already SHIPPED — `web/manifest.json` carries production-quality PWA metadata and the embarrassing Flutter defaults are gone. This pass is now **verify-only**: confirm the live manifest still matches the spec below, and use it as the reference for any future metadata changes.
 
-Rewrite `web/manifest.json` completely:
+The shipped (and reference) `web/manifest.json`:
 
 ```json
 {
@@ -120,11 +122,11 @@ Key changes:
 
 ---
 
-## PASS 2 — Fix `index.html`
+## PASS 2 — `index.html` (SHIPPED — verify-only)
 
-**Objective:** Add the missing meta tags that make the app shareable, discoverable, and correctly themed across all browsers and platforms.
+**Objective:** The meta tags that make the app shareable, discoverable, and correctly themed are already SHIPPED in `web/index.html`. This pass is now **verify-only**: confirm the live `<head>` still carries these tags, and use the spec below as the reference for any future changes.
 
-Rewrite `web/index.html`. Preserve: the splash CSS/HTML exactly as-is, the `flutter-first-frame` handler, and `flutter_bootstrap.js`. Change everything in `<head>`:
+The shipped (and reference) `web/index.html` `<head>` preserves the splash CSS/HTML exactly as-is, the `flutter-first-frame` handler, and `flutter_bootstrap.js`:
 
 ```html
 <!DOCTYPE html>
@@ -381,7 +383,7 @@ This is informational — no code change likely needed unless back navigation is
 
 The browser tab shows "TableLab" for every screen. On web, it's good UX to update the page title as users navigate (e.g., "Sessions — TableLab"). This is a P3/nice-to-have.
 
-Check if `SystemChrome.setApplicationSwitcherDescription` is used anywhere. If not, note it as a future improvement — do not implement for v1 (not a launch blocker).
+Check if `SystemChrome.setApplicationSwitcherDescription` is used anywhere. If not, note it as a future improvement — low priority, not worth a dedicated maintenance pass.
 
 ---
 
@@ -502,10 +504,6 @@ Priority order:
 2. [Cloudflare Rocket Loader: OFF — critical, will break app if on]
 3. [Cloudflare Brotli: ON]
 4. [Run Lighthouse audit at tablelab.app after next deploy]
-
-## Launch Gate Status
-- Phase 1 web gate: [PASS / FAIL]
-- Phase 2 web gate: depends on Cloudflare steps above being completed
 
 ## Handoff
 - DevOps Engineer: add --web-renderer canvaskit to deploy-web.yml
