@@ -178,7 +178,8 @@
   },
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~47%, flop ~46%, turn ~39%, river ~32%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain MrPink (CO) range behind the equity above: Pre-flop: open-raised → CO opening range (~21% of hands); Flop: bet (~117% pot) → polarized: top 30% value + bottom 15% bluffs; Turn: check → range unchanged; River: check → range unchanged.]"
+    "[FACT — Villain MrPink (CO) range behind the equity above: Pre-flop: open-raised → CO opening range (~21% of hands); Flop: bet (~117% pot) → polarized: top 30% value + bottom 15% bluffs; Turn: check → range unchanged; River: check → range unchanged.]",
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~46% → realized ~36% (OOP, a marginal made hand); turn ~39% → realized ~31% (OOP, a marginal made hand); river ~32% → realized ~25% (OOP, a marginal made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -243,6 +244,11 @@
         ]
       }
     ],
-    "forcedDecision": null
+    "forcedDecision": null,
+    "realizedEquityByStreet": {
+      "flop": 0.359687,
+      "turn": 0.305967,
+      "river": 0.254854
+    }
   }
 }

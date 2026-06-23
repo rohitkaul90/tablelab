@@ -229,6 +229,7 @@
       "heroEquityPct": 37,
       "forcedAction": "fold",
       "heroActionCorrect": false
-    }
+    },
+    "realizedEquityByStreet": {}
   }
 }

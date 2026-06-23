@@ -104,6 +104,9 @@ interface Fixture {
     finalBoard: string[];
     perStreet: StreetLabel[];
     forcedDecision?: ForcedDecisionLabel | null;
+    // EQR (DCE Tier A): hero's realized equity per street name. A hero-equity
+    // claim is accepted if it matches the RAW equity OR this realized figure.
+    realizedEquityByStreet?: Record<string, number>;
   };
   // User satisfaction signal for user-flagged spots (absent on Pluribus spots).
   // rating: -1 thumbs-down (dissatisfied), +1 thumbs-up (satisfied control).
@@ -328,9 +331,17 @@ function adjudicate(fx: Fixture, claims: Claim[]): AdjudResult {
       const exact = fx.labels.perStreet.find((s) => s.street === c.street);
       if (exact?.heroEquity != null) {
         scoredEquity++;
-        const factPct = Math.round(exact.heroEquity * 100);
-        if (Math.abs(c.percent - factPct) > 12) {
-          add(c, `states hero equity ${c.percent}% but the ${c.street} equity FACT is ~${factPct}% (>12pt)`);
+        const rawPct = Math.round(exact.heroEquity * 100);
+        // EQR: the prompt now injects BOTH raw equity and a realized-equity
+        // HEURISTIC, so a hero-equity claim is correct if it matches EITHER
+        // (within 12pt). Only flag when it matches neither.
+        const realized = fx.labels.realizedEquityByStreet?.[c.street];
+        const realizedPct = realized != null ? Math.round(realized * 100) : null;
+        const offRaw = Math.abs(c.percent - rawPct);
+        const offRealized = realizedPct != null ? Math.abs(c.percent - realizedPct) : Infinity;
+        if (offRaw > 12 && offRealized > 12) {
+          const realizedNote = realizedPct != null ? ` (realized ~${realizedPct}%)` : "";
+          add(c, `states hero equity ${c.percent}% but the ${c.street} equity FACT is ~${rawPct}%${realizedNote} — >12pt from both`);
           continue;
         }
       } else {

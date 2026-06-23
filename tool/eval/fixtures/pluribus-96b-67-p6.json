@@ -187,7 +187,8 @@
   },
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~77%, flop ~78%, turn ~75%, river ~51%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain Eddie (HJ) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~6% of hands); Flop: check → range unchanged; Turn: small bet (~29% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs; River: small bet (~29% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs.]"
+    "[FACT — Villain Eddie (HJ) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~6% of hands); Flop: check → range unchanged; Turn: small bet (~29% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs; River: small bet (~29% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs.]",
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~78% → realized ~100% (IP, a strong made hand); turn ~75% → realized ~98% (IP, a strong made hand); river ~51% → realized ~67% (IP, a strong made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -248,6 +249,11 @@
         "allowedStraightWindows": []
       }
     ],
-    "forcedDecision": null
+    "forcedDecision": null,
+    "realizedEquityByStreet": {
+      "flop": 1.0,
+      "turn": 0.98059,
+      "river": 0.66755
+    }
   }
 }

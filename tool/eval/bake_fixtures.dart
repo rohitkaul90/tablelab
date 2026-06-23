@@ -226,11 +226,19 @@ Map<String, dynamic> _buildLabels(PokerHand hand, HandEquityCheck equity) {
   // no pot-odds-decisive spot — most do not).
   final forced = computeForcedDecision(hand, equity);
 
+  // EQR (DCE Tier A): hero's realized equity per street, for the score.ts
+  // adjudicator to accept a model equity claim that matches raw OR realized.
+  final realizedByStreet = <String, double>{
+    for (final s in equity.streets)
+      if (s.realizedEquity != null) s.street.name: s.realizedEquity!,
+  };
+
   return {
     'heroHoleCards': heroCards,
     'finalBoard': hand.allCommunityCards,
     'perStreet': perStreet,
     'forcedDecision': forced?.toJson(),
+    'realizedEquityByStreet': realizedByStreet,
   };
 }
 

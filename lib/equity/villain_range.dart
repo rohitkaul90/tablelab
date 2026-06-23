@@ -22,6 +22,7 @@ import '../models/hand_model.dart';
 import '../models/player_read.dart';
 import 'card.dart';
 import 'chart_keys.dart';
+import 'decision_context.dart';
 import 'evaluator.dart';
 import 'simulator.dart';
 
@@ -36,12 +37,22 @@ class StreetEquityCheck {
   final int villainCount;
   final int iterations;
 
+  /// EQR (Decision-Context Engine, Tier A): hero's equity discounted for
+  /// position + hand class — the figure the continue decision should weigh.
+  /// All three are null pre-flop or when hero's position can't be determined.
+  final double? realizedEquity;
+  final HandClass? realizedHandClass;
+  final bool? heroInPosition;
+
   const StreetEquityCheck({
     required this.street,
     required this.heroEquity,
     required this.boardSoFar,
     required this.villainCount,
     required this.iterations,
+    this.realizedEquity,
+    this.realizedHandClass,
+    this.heroInPosition,
   });
 }
 
@@ -115,7 +126,52 @@ List<String> equityCheckFacts(HandEquityCheck check) {
     facts.add('[FACT — Villain ${v.name} (${v.position}) range behind the '
         'equity above: ${v.rangeTrail.join('; ')}.]');
   }
+  // EQR (DCE Tier A): a single HEURISTIC line giving per-street realized equity.
+  final realized = check.streets
+      .where((s) =>
+          s.realizedEquity != null &&
+          s.realizedHandClass != null &&
+          s.heroInPosition != null)
+      .toList();
+  if (realized.isNotEmpty) {
+    final parts = realized
+        .map((s) =>
+            '${s.street.label.toLowerCase()} ~${(s.heroEquity * 100).round()}% → '
+            'realized ~${(s.realizedEquity! * 100).round()}% '
+            '(${s.heroInPosition! ? 'IP' : 'OOP'}, ${handClassLabel(s.realizedHandClass!)})')
+        .join('; ');
+    facts.add('[HEURISTIC — Equity REALIZATION (raw equity discounted for hero\'s '
+        'position + hand class; ESTIMATED, not exact): $parts. A marginal hand out '
+        'of position rarely realizes its raw equity; a strong made hand '
+        'over-realizes. Weigh the continue / bluff-catch read against the REALIZED '
+        'figure, not the raw one — but this is heuristic context: a decisive '
+        'pot-odds price FACT and the hard equity FACT above still take precedence.]');
+  }
   return facts;
+}
+
+/// Hero's postflop position vs the contesting field: true = in position (acts
+/// last). Read from the first-appearance order of seats on the FLOP (postflop
+/// position is constant). Null when undeterminable (no flop, or hero/villains
+/// absent from the flop action order) — callers then skip the EQR FACT rather
+/// than guess a position.
+bool? _heroInPosition(PokerHand hand, int heroSeat, Set<int> villainSeats) {
+  for (final s in hand.streets) {
+    if (s.street != Street.flop) continue;
+    final order = <int>[];
+    for (final a in s.actions) {
+      if (!order.contains(a.seat)) order.add(a.seat);
+    }
+    final hi = order.indexOf(heroSeat);
+    if (hi < 0) return null;
+    var maxV = -1;
+    for (final vs in villainSeats) {
+      final i = order.indexOf(vs);
+      if (i > maxV) maxV = i;
+    }
+    return maxV < 0 ? null : hi > maxV;
+  }
+  return null;
 }
 
 // ── Chen-formula hand ranking ─────────────────────────────────────────────────
@@ -610,6 +666,11 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
   final opponents = hand.players.where((p) => !p.isHero).toList();
   if (opponents.isEmpty) return null;
 
+  // Hero's postflop position vs the field (IP = acts last), from the flop action
+  // order. Constant across postflop streets; feeds the EQR realized-equity FACT.
+  final heroIp =
+      _heroInPosition(hand, hero.seatIndex, opponents.map((o) => o.seatIndex).toSet());
+
   final preflop = hand.streets
       .where((s) => s.street == Street.preflop)
       .firstOrNull;
@@ -866,12 +927,23 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           // Offset per street so each gets a distinct but reproducible stream.
           seed: seed != null ? seed + streetResults.length : null,
         );
+        // EQR: discount raw equity for hero's hand class + position (null when
+        // pre-flop / unclassifiable / position unknown → no realized FACT).
+        final hc = classifyHandClass([h1, h2], boardSoFar);
+        final realizedEq = (hc != null && heroIp != null)
+            ? realizedEquity(result.equity[0],
+                handClass: hc,
+                position: heroIp ? HeroPosition.ip : HeroPosition.oop)
+            : null;
         streetResults.add(StreetEquityCheck(
           street: street.street,
           heroEquity: result.equity[0],
           boardSoFar: [...boardNames],
           villainCount: simVillains.length,
           iterations: result.iterations,
+          realizedEquity: realizedEq,
+          realizedHandClass: realizedEq != null ? hc : null,
+          heroInPosition: realizedEq != null ? heroIp : null,
         ));
       }
     }

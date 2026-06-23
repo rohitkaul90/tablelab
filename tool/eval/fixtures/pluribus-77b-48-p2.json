@@ -170,7 +170,8 @@
   },
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~34%, flop ~48%, turn ~34%, river ~13%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain MrOrange (UTG) range behind the equity above: Pre-flop: open-raised → UTG opening range (~5% of hands); Flop: check → range unchanged; Turn: check → range unchanged; River: check → range unchanged.]"
+    "[FACT — Villain MrOrange (UTG) range behind the equity above: Pre-flop: open-raised → UTG opening range (~5% of hands); Flop: check → range unchanged; Turn: check → range unchanged; River: check → range unchanged.]",
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~48% → realized ~38% (OOP, a marginal made hand); turn ~34% → realized ~26% (OOP, a marginal made hand); river ~13% → realized ~10% (OOP, a marginal made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -233,6 +234,11 @@
         ]
       }
     ],
-    "forcedDecision": null
+    "forcedDecision": null,
+    "realizedEquityByStreet": {
+      "flop": 0.378489,
+      "turn": 0.264887,
+      "river": 0.09890800000000001
+    }
   }
 }

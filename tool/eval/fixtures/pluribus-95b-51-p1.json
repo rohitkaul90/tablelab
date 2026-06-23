@@ -185,7 +185,8 @@
   },
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~41%, flop ~87%, turn ~91%, river ~87%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain Pluribus (UTG) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~5% of hands); Flop: call → kept top 65% of range; Turn: call → kept top 65% of range; River: all-in (~41% pot) → polarized: top 18% value + bottom 9% bluffs.]"
+    "[FACT — Villain Pluribus (UTG) range behind the equity above: Pre-flop: called a 3-bet → 3-bet-defense range (~5% of hands); Flop: call → kept top 65% of range; Turn: call → kept top 65% of range; River: all-in (~41% pot) → polarized: top 18% value + bottom 9% bluffs.]",
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~87% → realized ~98% (OOP, a strong made hand); turn ~91% → realized ~100% (OOP, a strong made hand); river ~87% → realized ~98% (OOP, a strong made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -248,6 +249,11 @@
         ]
       }
     ],
-    "forcedDecision": null
+    "forcedDecision": null,
+    "realizedEquityByStreet": {
+      "flop": 0.9750160000000001,
+      "turn": 1.0,
+      "river": 0.975632
+    }
   }
 }

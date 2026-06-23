@@ -180,7 +180,8 @@
   },
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~34%, flop ~32%, turn ~54%, river ~55%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
-    "[FACT — Villain MrOrange (HJ) range behind the equity above: Pre-flop: open-raised → HJ opening range (~16% of hands); Flop: small bet (~33% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs; Turn: check → range unchanged.]"
+    "[FACT — Villain MrOrange (HJ) range behind the equity above: Pre-flop: open-raised → HJ opening range (~16% of hands); Flop: small bet (~33% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs; Turn: check → range unchanged.]",
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~32% → realized ~25% (OOP, a weak draw); turn ~54% → realized ~60% (OOP, a strong made hand); river ~55% → realized ~62% (OOP, a strong made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -249,6 +250,11 @@
         ]
       }
     ],
-    "forcedDecision": null
+    "forcedDecision": null,
+    "realizedEquityByStreet": {
+      "flop": 0.25127700000000003,
+      "turn": 0.602224,
+      "river": 0.6163360000000001
+    }
   }
 }
