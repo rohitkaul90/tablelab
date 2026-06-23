@@ -44,7 +44,7 @@ Each spot in `spots.json`:
   "file": "tool/eval/samples/pluribus-100-1.phh",
   "source": "pluribus/100/1",          // human label
   "hero": 3,                            // 1-based PHH player index; must have known hole cards
-  "bucket": "card-logic",               // "card-logic" | "solver-checkable"
+  "bucket": "card-logic",               // "card-logic" | "solver-checkable" | "reads"
   "notes": "…",                         // optional; becomes hand.notes (AI ground-truth hint)
   "reads": [ { "playerLabel": "MrWhite", "tags": ["calling_station"] } ]  // optional
 }
@@ -62,7 +62,8 @@ deno run --allow-read --allow-write --allow-env --allow-net \
   tool/eval/score.ts                          # fixtures/ -> tool/eval/reports/report.{md,json}
 ```
 
-A ~300-spot run ≈ $10. Keep it manual (like `scripts/ai-cost-report.mjs`).
+A full ~315-spot run ≈ $16. Keep it manual (like `scripts/ai-cost-report.mjs`).
+Use `--limit N` for cheap iteration (writes `report.sample.*`, no gating).
 
 ## Scoring (the MVP: card-logic)
 
@@ -85,18 +86,23 @@ Hybrid, so the score's authority never rests on a model:
 ## Verdict consistency (a second dimension)
 
 Separate from card-logic, the scorer checks the coach output's **self-
-consistency** — directly from the structured fields, no judge, no extra API
-call. The `SYSTEM_PROMPT` requires `verdict=leakDetected ⟺ keyMistake present ⟺
-at least one street marked wasGto:false`; the three leak signals must agree (all
-"clean" or all "leak"). A disagreement (e.g. `leakDetected` + a keyMistake
-naming a river error, but every street `wasGto:true`) is the self-contradiction
-class the trust pack exists to catch. A benign null-stand-in keyMistake ("none",
-"null", "well-played") is treated as no mistake, not a contradiction.
+consistency** — directly from the structured fields, no judge, no extra API call.
+The verdict scale is **3-level** (`highEV` / `neutral` / `leakDetected`), and
+`neutral` MAY legitimately carry a *minor* note, so the check is **graded**, not
+binary. It flags only genuine self-contradictions:
+- `leakDetected` with no real keyMistake (a leak must name its mistake);
+- `leakDetected` but every street `wasGto:true` (a leak must flag a street);
+- a real keyMistake but every street `wasGto:true` (the named mistake has no street);
+- `highEV` ("great") with a real keyMistake (a great hand names no mistake).
+
+A benign null-stand-in keyMistake ("none", "null", "well-played") counts as no
+mistake. A `neutral` hand with one `wasGto:false` street + a minor keyMistake is
+**consistent**, not a contradiction — this is the key difference from the original
+*binary* rule (which demanded all three signals agree and mis-flagged ~77
+legitimate "neutral + minor note" hands; see the gate baseline below).
 
 **Metric:** **verdict consistency %** = scored spots with zero verdict issues.
-This is intermittent (temperature-0 isn't bitwise deterministic, so a model
-contradiction may appear on one run and not the next) — read it over the whole
-set, not per spot.
+Intermittent (temperature-0 isn't bitwise deterministic) — read over the whole set.
 
 ## Forced-decision agreement (the spec's verdict-agreement, tightly scoped)
 
@@ -116,6 +122,11 @@ decisive spot where the model gave no `wasGto` for the street is reported
 `unscored`, never guessed). This is the spec's math-forced verdict agreement —
 the equity/pot-odds consistency the card-logic MVP deliberately scoped out.
 
+**Tolerance band:** a spot is scored only when `|hero equity − required %| ≥ 2`
+pts. A sub-2pt edge (e.g. 29% vs 30%) is within Monte-Carlo noise — a coin-flip-
+close call, not "forced" — so such near-ties are dropped from the denominator (not
+failed). Without this, 1-point near-ties hard-fail and understate agreement.
+
 ## Read the report
 
 `tool/eval/reports/report.md`: headline accuracy %, violations by category, and
@@ -132,9 +143,34 @@ card. Spot-audit a few `report.json` claims each run to keep the judge honest.
 
 ## Regression gate
 
-Before shipping a prompt/`SYSTEM_PROMPT`/model change: re-bake if the benchmark
-changed, run `score.ts`, and block on a card-logic regression vs the previous
-`report.json`.
+Before shipping a prompt/`SYSTEM_PROMPT`/model change (incl. the planned
+`analyze-hand` → Haiku move): re-bake if the benchmark changed, run `score.ts`,
+and block on a regression vs the previous run. `score.ts` reads the prior report
+at `tool/eval/reports/report.json` (override with `--baseline <path>`), prints a
+per-dimension regressed/improved diff, and **exits non-zero** on any regression so
+it can gate. Cheap iteration: `--limit N` scores a deterministic, bucket-spanning
+sample of N spots → `report.sample.*` (never clobbers the committed baseline, and
+a sample never gates). Commit each full `report.json` as the new baseline.
+
+### Gate thresholds — "AI is good enough to headline (e.g. to creators)"
+
+All three must clear on a **full run** before AI-led marketing or a model swap:
+
+| Dimension | Threshold | Why |
+|---|---|---|
+| Card-logic accuracy | **≥ 98%** | the public credibility number; a fabricated board fact is a screenshot risk |
+| Verdict self-consistency | **≥ 90%** | the coach must not contradict its own fields |
+| Forced-verdict agreement | **≥ 95%** | objective, on math-forced spots |
+
+**Baseline (2026-06, 315 spots, `claude-sonnet-4-6`):** card-logic **99.7%** ✅.
+The first raw run read verdict **73.7%** / forced **86.4%** — but the triage showed
+those were *measurement* artifacts (the binary verdict rule + a no-tolerance forced
+check), not coaching errors. After recalibrating to the graded verdict rule + a 2pt
+forced tolerance, the same run projects **verdict 97.8%** / **forced 100%** ✅ — all
+three clear. (Re-confirm on the next full run, which becomes the committed
+baseline.) ~7 genuine `leakDetected`-but-all-GTO contradictions remained and were
+addressed by the SYSTEM_PROMPT FIELD-CONSISTENCY rule — expect verdict to climb
+further once that prompt change is scored + deployed.
 
 ## Add a benchmark spot
 
@@ -213,17 +249,21 @@ solver-checkable set (preflop all-ins). Hero = a known-cards player who never
 folded, so every spot has postflop streets to score. Re-running overwrites
 `spots.json`; commit the chosen `.phh` files + baked fixtures.
 
-Curate toward the two buckets: **card-logic stress** (paired/tripled boards,
+Curate toward the buckets: **card-logic stress** (paired/tripled boards,
 straight-completing boards, monotone/two-tone flush boards, thin bluff-catches —
-the patched-bug triggers) and **solver-checkable** (preflop all-ins, pot-odds-
-decisive rivers; for the future verdict-agreement scorer).
+the patched-bug triggers); **solver-checkable** (preflop all-ins, pot-odds-
+decisive rivers — feeds the forced-verdict scorer); and **reads** (villain-range
+sensitivity — pair a bluff-tightener (`nit`/`value_heavy`) vs a widener
+(`over_bluffs`/`maniac`) on a *polarized-betting* villain, tagging the modeled
+villain BY NAME, so the reads-adjusted equity actually moves between the pair).
 
 ## Limits (read honestly)
 
 - The LLM judge adds its own noise; mitigated by deterministic adjudication.
   Spot-audit a few `report.json` claim lists each run to keep the judge honest.
   Read the number as "≥ this accurate," not gospel.
-- Verdict-agreement scoring (vs card-logic) is **not yet built** — it lands on
-  the solver-checkable subset only (preflop all-ins, pot-odds-decisive rivers).
+- Verdict scoring has two parts, both built: **verdict self-consistency** (graded,
+  every spot) and **forced-verdict agreement** (the math-forced subset only). Neither
+  grades fine strategic quality — that's the user-flagged clean-but-disliked queue.
 - Made-hand grading is coarse (the 9 categories). It catches the board-constraint
   failure class, not fine errors like "top pair" vs "middle pair."
