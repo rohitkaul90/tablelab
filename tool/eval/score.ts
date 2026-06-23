@@ -16,7 +16,13 @@
 //
 // Run locally (needs ANTHROPIC_API_KEY; costs ~$0.034/hand + judge tokens):
 //   deno run --allow-read --allow-write --allow-env --allow-net \
-//     tool/eval/score.ts [fixturesDir] [outDir]
+//     tool/eval/score.ts [fixturesDir] [outDir] [--limit N] [--baseline path]
+//
+//   --limit N      score a deterministic, bucket-spanning sample of N fixtures
+//                  (cheap iteration); writes report.sample.* and never clobbers
+//                  the committed full baseline. Omit for the full gate run.
+//   --baseline P   diff against report P (default: <outDir>/report.json, the
+//                  prior run). A FULL run that regresses any dimension exits 1.
 //
 // NOT wired into CI — it spends money and needs the key (mirrors
 // scripts/ai-cost-report.mjs).
@@ -433,11 +439,150 @@ function checkForcedVerdict(
   return { scored: true, agreed, detail: `${base}; model wasGto=${st.wasGto} → ${agreed ? "AGREE" : "DISAGREE"}` };
 }
 
+// ── CLI args ────────────────────────────────────────────────────────────────
+
+interface CliArgs {
+  fixturesDir: string;
+  outDir: string;
+  limit: number | null; // score a subsample of this many fixtures (iteration)
+  baseline: string | null; // report.json to diff against (default: outDir/report.json)
+}
+
+function parseArgs(argv: string[]): CliArgs {
+  const positionals: string[] = [];
+  let limit: number | null = null;
+  let baseline: string | null = null;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--limit" || a === "-n") limit = Number(argv[++i]);
+    else if (a.startsWith("--limit=")) limit = Number(a.slice("--limit=".length));
+    else if (a === "--baseline") baseline = argv[++i];
+    else if (a.startsWith("--baseline=")) baseline = a.slice("--baseline=".length);
+    else if (a.startsWith("-")) throw new Error(`Unknown flag: ${a}`);
+    else positionals.push(a);
+  }
+  if (limit != null && (!Number.isInteger(limit) || limit <= 0)) {
+    throw new Error(`--limit must be a positive integer`);
+  }
+  return {
+    fixturesDir: positionals[0] ?? "tool/eval/fixtures",
+    outDir: positionals[1] ?? "tool/eval/reports",
+    limit,
+    baseline,
+  };
+}
+
+/// Deterministic, bucket-spanning subsample: even stride across the (id-sorted)
+/// list so `--limit 30` touches every texture bucket, not the first 30 ids (one
+/// bucket). Same input + N → same sample, so iteration diffs are stable.
+function sampleEvenly<T>(arr: T[], n: number): T[] {
+  if (n >= arr.length) return arr;
+  const out: T[] = [];
+  for (let i = 0; i < n; i++) out.push(arr[Math.floor((i * arr.length) / n)]);
+  return out;
+}
+
+// ── Regression diff vs a previous run ────────────────────────────────────────
+// Compare this run to a prior report.json per spot id present in BOTH. A spot
+// that PASSED a dimension before and is FLAGGED now is a regression (vice versa
+// = improvement). Lets a prompt/model change be gated. NB temperature-0 is not
+// bitwise-deterministic (esp. verdict consistency) — a lone single-spot flip
+// can be noise, a cluster is real. Only a FULL run gates (exits non-zero).
+
+type Dim = "card" | "verdict" | "forced";
+const _dimLabel: Record<Dim, string> = {
+  card: "card-logic",
+  verdict: "verdict-consistency",
+  forced: "forced-verdict",
+};
+
+// true = passed the dimension, false = flagged, null = N/A (errored / unscored).
+// Reads the fields shared by a live SpotResult and a parsed prior report row.
+// deno-lint-ignore no-explicit-any
+function spotDims(r: any): Record<Dim, boolean | null> {
+  if (!r || r.errored) return { card: null, verdict: null, forced: null };
+  return {
+    card: (r.violations?.length ?? 0) === 0,
+    verdict: (r.verdictIssues?.length ?? 0) === 0,
+    forced: r.forcedVerdict?.scored ? !!r.forcedVerdict.agreed : null,
+  };
+}
+
+interface RunDiff {
+  baselinePath: string;
+  comparedSpots: number;
+  headline: Record<Dim, { prev: number | null; curr: number | null }>;
+  regressions: Record<Dim, string[]>;
+  improvements: Record<Dim, string[]>;
+  hasRegression: boolean;
+}
+
+// deno-lint-ignore no-explicit-any
+function computeDiff(prior: any, curr: any, baselinePath: string): RunDiff {
+  // deno-lint-ignore no-explicit-any
+  const priorById = new Map<string, any>();
+  // deno-lint-ignore no-explicit-any
+  for (const r of ((prior.results ?? []) as any[])) priorById.set(r.id, r);
+  const dims: Dim[] = ["card", "verdict", "forced"];
+  const regressions: Record<Dim, string[]> = { card: [], verdict: [], forced: [] };
+  const improvements: Record<Dim, string[]> = { card: [], verdict: [], forced: [] };
+  let comparedSpots = 0;
+  for (const r of (curr.results ?? [])) {
+    const p = priorById.get(r.id);
+    if (!p) continue;
+    comparedSpots++;
+    const pd = spotDims(p);
+    const cd = spotDims(r);
+    for (const d of dims) {
+      if (pd[d] === true && cd[d] === false) regressions[d].push(r.id);
+      else if (pd[d] === false && cd[d] === true) improvements[d].push(r.id);
+    }
+  }
+  return {
+    baselinePath,
+    comparedSpots,
+    headline: {
+      card: { prev: prior.cardLogicAccuracyPct ?? null, curr: curr.cardLogicAccuracyPct ?? null },
+      verdict: { prev: prior.verdictConsistencyPct ?? null, curr: curr.verdictConsistencyPct ?? null },
+      forced: { prev: prior.forcedVerdictAgreementPct ?? null, curr: curr.forcedVerdictAgreementPct ?? null },
+    },
+    regressions,
+    improvements,
+    hasRegression: dims.some((d) => regressions[d].length > 0),
+  };
+}
+
+function renderDiffMarkdown(d: RunDiff | null): string[] {
+  if (!d) return [];
+  const dims: Dim[] = ["card", "verdict", "forced"];
+  const lines = [
+    `## Diff vs previous run`,
+    ``,
+    `Baseline: \`${d.baselinePath}\` · compared ${d.comparedSpots} shared spots.`,
+    ``,
+    `| Dimension | Prev | Curr | Regressed | Improved |`,
+    `|---|---|---|---|---|`,
+    ...dims.map((dim) => {
+      const h = d.headline[dim];
+      return `| ${_dimLabel[dim]} | ${h.prev ?? "—"}% | ${h.curr ?? "—"}% | ${d.regressions[dim].length} | ${d.improvements[dim].length} |`;
+    }),
+    ``,
+  ];
+  let any = false;
+  for (const dim of dims) {
+    if (d.regressions[dim].length) {
+      any = true;
+      lines.push(`**Regressed (${_dimLabel[dim]}):** ${d.regressions[dim].join(", ")}`, ``);
+    }
+  }
+  if (!any) lines.push(`_No regressions vs baseline._`, ``);
+  return lines;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const fixturesDir = Deno.args[0] ?? "tool/eval/fixtures";
-  const outDir = Deno.args[1] ?? "tool/eval/reports";
+  const { fixturesDir, outDir, limit, baseline } = parseArgs(Deno.args);
   await Deno.mkdir(outDir, { recursive: true });
 
   const fixtures: Fixture[] = [];
@@ -447,7 +592,14 @@ async function main() {
     }
   }
   fixtures.sort((a, b) => a.id.localeCompare(b.id));
-  console.log(`Scoring ${fixtures.length} fixtures against the real ${COACH_MODEL} prompt...\n`);
+  const allCount = fixtures.length;
+  // A --limit run scores a deterministic, bucket-spanning subsample (iteration
+  // aid); the full set is the gate. sampleEvenly keeps the same spots run-to-run.
+  const scoredFixtures = limit != null ? sampleEvenly(fixtures, limit) : fixtures;
+  if (limit != null) {
+    console.log(`--limit ${limit}: scoring ${scoredFixtures.length} of ${allCount} fixtures (even stride across buckets).`);
+  }
+  console.log(`Scoring ${scoredFixtures.length} fixtures against the real ${COACH_MODEL} prompt...\n`);
 
   interface SpotResult {
     id: string;
@@ -484,7 +636,7 @@ async function main() {
 
   let done = 0;
   const raw = await mapPool(
-    fixtures,
+    scoredFixtures,
     CONCURRENCY,
     async (fx): Promise<SpotResult> => {
       try {
@@ -495,14 +647,14 @@ async function main() {
         const forcedVerdict = checkForcedVerdict(fx, analysis);
         const mark = violations.length === 0 && verdictIssues.length === 0 ? "OK " : "ERR";
         const fv = forcedVerdict ? `, forced:${forcedVerdict.scored ? (forcedVerdict.agreed ? "agree" : "DISAGREE") : "unscored"}` : "";
-        console.log(`[${++done}/${fixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} card-logic, ${verdictIssues.length} verdict${fv})`);
+        console.log(`[${++done}/${scoredFixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} card-logic, ${verdictIssues.length} verdict${fv})`);
         for (const v of violations) console.log(`      - card-logic [${v.street}/${v.category}] ${v.detail}`);
         for (const v of verdictIssues) console.log(`      - verdict [${v.rule}] ${v.detail}`);
         if (forcedVerdict && forcedVerdict.scored && !forcedVerdict.agreed) console.log(`      - forced-verdict DISAGREE: ${forcedVerdict.detail}`);
         return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, verdictIssues, forcedVerdict, errored: false, userRating: fx.userSignal?.rating ?? null };
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
-        console.error(`[${++done}/${fixtures.length}] ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
+        console.error(`[${++done}/${scoredFixtures.length}] ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
         return errResult(fx, detail);
       }
     },
@@ -510,7 +662,7 @@ async function main() {
   // A `undefined` slot means mapPool's worker caught an unexpected throw — treat
   // it as an errored spot so the run still produces a complete report.
   const results: SpotResult[] = raw.map(
-    (r, i) => r ?? errResult(fixtures[i], "worker crashed unexpectedly"),
+    (r, i) => r ?? errResult(scoredFixtures[i], "worker crashed unexpectedly"),
   );
 
   // Accuracy is over SCORED spots only — harness errors are excluded, never
@@ -595,8 +747,24 @@ async function main() {
     userFlagged,
     results,
   };
-  await Deno.writeTextFile(`${outDir}/report.json`, JSON.stringify(report, null, 2));
-  await Deno.writeTextFile(`${outDir}/report.md`, renderMarkdown(report));
+  // Diff vs a prior run. Default baseline = the existing report.json at outDir,
+  // read BEFORE we overwrite it. A --limit run compares only the spots it
+  // sampled and writes report.sample.* so it never clobbers a committed full
+  // baseline.
+  const baselinePath = baseline ?? `${outDir}/report.json`;
+  let diff: RunDiff | null = null;
+  try {
+    const prior = JSON.parse(await Deno.readTextFile(baselinePath));
+    diff = computeDiff(prior, report, baselinePath);
+  } catch {
+    // No prior baseline (first run) or unreadable — skip the diff silently.
+  }
+  // deno-lint-ignore no-explicit-any
+  (report as any).diff = diff;
+
+  const stem = limit != null ? "report.sample" : "report";
+  await Deno.writeTextFile(`${outDir}/${stem}.json`, JSON.stringify(report, null, 2));
+  await Deno.writeTextFile(`${outDir}/${stem}.md`, renderMarkdown(report));
 
   console.log(`\nCard-logic accuracy:  ${accuracy.toFixed(1)}%  (${clean}/${scored.length} scored spots clean${erroredCount ? `; ${erroredCount} errored, excluded` : ""})`);
   console.log(`Verdict consistency:  ${verdictConsistencyPct}%  (${verdictConsistent}/${scored.length} spots with self-consistent verdicts)`);
@@ -613,7 +781,25 @@ async function main() {
       if (likedFlaggedIds.length) console.log(`     ${likedFlaggedIds.join(", ")}`);
     }
   }
-  console.log(`Report: ${outDir}/report.md`);
+  if (diff) {
+    console.log(`\nDiff vs ${diff.baselinePath}  (${diff.comparedSpots} shared spots):`);
+    for (const d of (["card", "verdict", "forced"] as const)) {
+      const h = diff.headline[d];
+      const reg = diff.regressions[d], imp = diff.improvements[d];
+      console.log(`  ${_dimLabel[d]}: ${h.prev ?? "—"}% → ${h.curr ?? "—"}%  (${reg.length} regressed, ${imp.length} improved)`);
+      if (reg.length) console.log(`     regressed: ${reg.join(", ")}`);
+    }
+  }
+  console.log(`Report: ${outDir}/${stem}.md`);
+
+  // Gate: a FULL run that regressed any dimension exits non-zero so it can block
+  // a prompt/model change. A --limit sample is an iteration aid, not the gate
+  // (temperature-0 isn't bitwise-deterministic — judge a lone flip as noise, a
+  // cluster as real).
+  if (diff?.hasRegression && limit == null) {
+    console.error(`\n❌ Regression vs baseline (${diff.baselinePath}) — exit 1. See the "Diff vs previous run" section in ${stem}.md.`);
+    Deno.exit(1);
+  }
 }
 
 // deno-lint-ignore no-explicit-any
@@ -641,6 +827,7 @@ function renderMarkdown(r: any): string {
       : `_None._`,
     ``,
     ...userFlaggedSection(r.userFlagged),
+    ...renderDiffMarkdown(r.diff),
     `## Per-spot`,
     ``,
     `| Spot | Bucket | User | Claims | Card-logic | Verdict | Status |`,
