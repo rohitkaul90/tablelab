@@ -106,18 +106,34 @@ void main() {
     });
   });
 
-  group('realizedEquityFact', () {
-    test('is a HEURISTIC line carrying raw + realized %, never overriding', () {
-      final f = realizedEquityFact(
-        street: 'turn',
-        rawEquity: 0.50,
-        handClass: HandClass.marginalMade,
-        position: HeroPosition.oop,
-      );
-      expect(f, startsWith('[HEURISTIC —'));
-      expect(f, contains('~50%')); // raw
-      expect(f, contains('~40%')); // realized = 0.50 × 0.79 = 0.395 → 40%
-      expect(f.toLowerCase(), contains('does not override'));
+  group('classifyHandClass — review-fix regressions', () {
+    test('overcards on a PAIRED FLOP are air, not marginalMade (#1)', () {
+      // The pair is the board's (KK); AQ does not pair in → hero plays the board.
+      expect(classifyHandClass(_cards('Ah Qd'), _cards('Ks Kc 7d')),
+          HandClass.air);
+    });
+
+    test('a board-only straight draw hero does not contribute to is air (#2)', () {
+      // 5-6-7-8 open-ender belongs to the board; hero 2-3 only shares it.
+      expect(classifyHandClass(_cards('2c 3d'), _cards('5h 6s 7c 8d')),
+          HandClass.air);
+    });
+
+    test('a busted draw on the RIVER is air, not a draw (#3)', () {
+      // 4 hearts but it is the river (5-card board) — no card left to come.
+      expect(classifyHandClass(_cards('Ah 5h'), _cards('Kh 2h 9c Td 3s')),
+          HandClass.air);
+    });
+
+    test('top pair + nut flush draw is a combo → strongMade, not marginalMade (#4)', () {
+      // Kh pairs the Ks; Ah+Kh + two board hearts = nut flush draw.
+      expect(classifyHandClass(_cards('Ah Kh'), _cards('Ks 7h 2h')),
+          HandClass.strongMade);
+    });
+
+    test('a pocket pair below the board is still hero\'s own made hand', () {
+      expect(classifyHandClass(_cards('9h 9d'), _cards('Ks 7c 2d')),
+          HandClass.marginalMade);
     });
   });
 

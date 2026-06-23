@@ -65,28 +65,55 @@ HandClass? classifyHandClass(List<int> hole, List<int> board) {
   final all = [...hole, ...board];
   if (all.length < 5 || all.length > 7) return null;
 
-  final heroVal = evaluateBest(all);
-  final heroCat = handCategory(heroVal);
+  // Hero's made hand, but ONLY if hero's hole cards actually contribute (a hero
+  // who merely "plays the board" — e.g. overcards on a paired flop — has no made
+  // hand). Returns strongMade / marginalMade / null.
+  final made = _madeClass(hole, board);
 
-  // "Plays the board": on turn/river (board ≥ 5) a hero whose best 5 doesn't beat
-  // the board alone has no real made hand (e.g. high card on a paired board) —
-  // fall through to the draw/air check rather than mislabel it marginalMade.
-  var playsBoard = false;
-  if (board.length >= 5) {
-    final boardVal = evaluateBest(board);
-    if (heroVal <= boardVal) playsBoard = true;
+  // Draws only matter while a card is still to come (flop/turn, board < 5). On
+  // the river a busted flush/straight is just high-card air, not a draw.
+  final fd = board.length < 5 ? _flushDraw(hole, board) : _FDraw.none;
+  final sd = board.length < 5 ? _straightDraw(hole, board) : _SDraw.none;
+  final strongDraw = fd == _FDraw.nut || sd == _SDraw.oesd;
+  final weakDraw = fd == _FDraw.weak || sd == _SDraw.gutshot;
+
+  // Combine. A one-pair hand that ALSO holds a strong draw is a combo that
+  // OVER-realizes → strongMade, not the marginalMade discount.
+  if (made == HandClass.strongMade) return HandClass.strongMade;
+  if (made == HandClass.marginalMade) {
+    return strongDraw ? HandClass.strongMade : HandClass.marginalMade;
   }
-
-  if (!playsBoard) {
-    if (heroCat >= 2) return HandClass.strongMade; // two pair → straight flush
-    if (heroCat == 1) return HandClass.marginalMade; // one pair using hole cards
-  }
-
-  final fd = _flushDraw(hole, board);
-  final sd = _straightDraw(hole, board);
-  if (fd == _FDraw.nut || sd == _SDraw.oesd) return HandClass.strongDraw;
-  if (fd == _FDraw.weak || sd == _SDraw.gutshot) return HandClass.weakDraw;
+  // No real made hand → it's a draw or air.
+  if (strongDraw) return HandClass.strongDraw;
+  if (weakDraw) return HandClass.weakDraw;
   return HandClass.air;
+}
+
+/// Hero's made-hand class, or null when hero has no made hand of his own
+/// (high card, or merely playing the board). strongMade = two pair+;
+/// marginalMade = one pair using hero's cards.
+HandClass? _madeClass(List<int> hole, List<int> board) {
+  final heroVal = evaluateBest([...hole, ...board]);
+  final heroCat = handCategory(heroVal);
+  if (heroCat == 0) return null; // high card — no made hand
+  if (!_heroContributesToMade(hole, board, heroVal, heroCat)) return null;
+  return heroCat >= 2 ? HandClass.strongMade : HandClass.marginalMade;
+}
+
+/// Does hero's hole actually participate in the made hand (vs "playing the
+/// board")? On a 5+ board we can compare against the board's own best 5; on the
+/// flop/turn (board < 5, not evaluable alone) a rank-based made hand (pair / two
+/// pair / trips) is the board's unless a hole card pairs in, while a
+/// straight/flush/boat (cat ≥ 4) necessarily uses hole cards on so few board
+/// cards.
+bool _heroContributesToMade(
+    List<int> hole, List<int> board, int heroVal, int heroCat) {
+  if (board.length >= 5) return heroVal > evaluateBest(board);
+  if (heroCat >= 4) return true;
+  final hr = [for (final c in hole) cardRank(c)];
+  final br = {for (final c in board) cardRank(c)};
+  final pocketPair = hr.length == 2 && hr[0] == hr[1];
+  return pocketPair || hr.any(br.contains);
 }
 
 /// A 4-to-a-flush that hero contributes to (≥1 hole card of the suit). A made
@@ -109,16 +136,27 @@ _FDraw _flushDraw(List<int> hole, List<int> board) {
 /// (open-ender or double-gutshot, ~8 outs) → oesd; exactly 1 (gutshot, ~4) →
 /// gutshot. A draw shared via the board counts (hero realizes it too).
 _SDraw _straightDraw(List<int> hole, List<int> board) {
-  final ranks = {for (final c in [...hole, ...board]) cardRank(c)};
-  if (_hasStraight(ranks)) return _SDraw.none; // already made — not a draw
+  final boardRanks = {for (final c in board) cardRank(c)};
+  final allRanks = {...boardRanks, for (final c in hole) cardRank(c)};
+  if (_hasStraight(allRanks)) return _SDraw.none; // already made — not a draw
+  final outs = _straightOuts(allRanks);
+  // Hero must CONTRIBUTE: the draw must improve once hero's cards are included.
+  // A board-only open-ender (e.g. 5-6-7-8) that hero merely shares with air
+  // (2-3) is not hero's draw — same hole-contribution guard _flushDraw enforces.
+  if (outs <= _straightOuts(boardRanks)) return _SDraw.none;
+  if (outs >= 2) return _SDraw.oesd;
+  if (outs == 1) return _SDraw.gutshot;
+  return _SDraw.none;
+}
+
+/// Count of distinct ranks that would complete a 5-straight from [ranks].
+int _straightOuts(Set<int> ranks) {
   var outs = 0;
   for (var r = 0; r < 13; r++) {
     if (ranks.contains(r)) continue;
     if (_hasStraight({...ranks, r})) outs++;
   }
-  if (outs >= 2) return _SDraw.oesd;
-  if (outs == 1) return _SDraw.gutshot;
-  return _SDraw.none;
+  return outs;
 }
 
 /// Any 5 consecutive ranks present, including the wheel (A-2-3-4-5).
@@ -187,28 +225,6 @@ String handClassLabel(HandClass hc) {
     case HandClass.strongMade:
       return 'a strong made hand';
   }
-}
-
-/// The `[HEURISTIC —]` FACT line for one street. Deliberately a HEURISTIC (not a
-/// `[FACT —]`) — the multiplier is mostly estimated, so the model must treat it
-/// as advisory context that never overrides a hard equity / pot-odds FACT.
-String realizedEquityFact({
-  required String street,
-  required double rawEquity,
-  required HandClass handClass,
-  required HeroPosition position,
-}) {
-  final realized =
-      realizedEquity(rawEquity, handClass: handClass, position: position);
-  final raw = (rawEquity * 100).round();
-  final rel = (realized * 100).round();
-  final posLabel = position == HeroPosition.ip ? 'in position' : 'out of position';
-  return '[HEURISTIC — On the $street, hero\'s raw all-in equity is ~$raw%, but '
-      '$posLabel with ${handClassLabel(handClass)}, hero typically REALIZES closer '
-      'to ~$rel% (estimated equity-realization multiplier, not exact). Weigh the '
-      'continue decision against the realized figure, not the raw number. This is '
-      'heuristic context — it does NOT override a decisive pot-odds price FACT or '
-      'a hard equity FACT.]';
 }
 
 /// Helper used by both the FACT path and the eval baker so they classify

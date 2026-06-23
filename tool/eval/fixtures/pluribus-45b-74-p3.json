@@ -213,7 +213,7 @@
     "[FACT — Villain MrBlue (SB) range behind the equity above: Pre-flop: called a early-position open → SB defending range (~4% of hands); Flop: call → kept top 65% of range; Turn: call → kept top 65% of range; River: check → range unchanged.]",
     "[FACT — Villain Bill (BB) range behind the equity above: Pre-flop: called a early-position open → BB defending range (~12% of hands); Flop: check → range unchanged.]",
     "[FACT — Villain Hattori (BTN) range behind the equity above: Pre-flop: called a early-position open → BTN defending range (~7% of hands).]",
-    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~25% → realized ~22% (OOP, a strong draw); turn ~22% → realized ~18% (OOP, a marginal made hand); river ~5% → realized ~4% (OOP, a strong draw). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): turn ~22% → realized ~20% (OOP, a strong draw); river ~5% → realized ~0% (OOP, air (no real equity)). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -276,9 +276,8 @@
     ],
     "forcedDecision": null,
     "realizedEquityByStreet": {
-      "flop": 0.216084,
-      "turn": 0.1762885,
-      "river": 0.041756
+      "turn": 0.196372,
+      "river": 0.004745
     }
   }
 }

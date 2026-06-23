@@ -204,8 +204,7 @@
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~23%, flop ~16%, turn ~17%, river ~2%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
     "[FACT — Villain MrPink (BB) range behind the equity above: Pre-flop: called a middle-position open → BB defending range (~18% of hands); Flop: check → range unchanged; Turn: check → range unchanged; River: check → range unchanged.]",
     "[FACT — Villain MrBrown (HJ) range behind the equity above: Pre-flop: open-raised → HJ opening range (~18% of hands); Flop: check → range unchanged; Turn: check → range unchanged; River: check → range unchanged.]",
-    "[FACT — Villain Pluribus (BTN) range behind the equity above: Pre-flop: called a middle-position open → BTN defending range (~11% of hands); Flop: check → range unchanged; Turn: check → range unchanged; River: check → range unchanged.]",
-    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~16% → realized ~13% (OOP, a marginal made hand); turn ~17% → realized ~13% (OOP, a marginal made hand); river ~2% → realized ~2% (OOP, a marginal made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
+    "[FACT — Villain Pluribus (BTN) range behind the equity above: Pre-flop: called a middle-position open → BTN defending range (~11% of hands); Flop: check → range unchanged; Turn: check → range unchanged; River: check → range unchanged.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -269,10 +268,6 @@
       }
     ],
     "forcedDecision": null,
-    "realizedEquityByStreet": {
-      "flop": 0.12683450000000002,
-      "turn": 0.1305475,
-      "river": 0.018644
-    }
+    "realizedEquityByStreet": {}
   }
 }

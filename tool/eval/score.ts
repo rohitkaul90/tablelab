@@ -332,9 +332,14 @@ function adjudicate(fx: Fixture, claims: Claim[]): AdjudResult {
       if (exact?.heroEquity != null) {
         scoredEquity++;
         const rawPct = Math.round(exact.heroEquity * 100);
-        // EQR: the prompt now injects BOTH raw equity and a realized-equity
+        // EQR: the prompt injects BOTH raw equity and a realized-equity
         // HEURISTIC, so a hero-equity claim is correct if it matches EITHER
         // (within 12pt). Only flag when it matches neither.
+        // NOTE: realized equity has NO independent oracle — it comes from the
+        // same decision_context.dart heuristic used in prod, so this only
+        // confirms the model is CONSISTENT with the grounded number; it does NOT
+        // validate the heuristic itself. Raw equity (Monte-Carlo sim) is the real
+        // card-logic oracle; realized is accepted as consistent context.
         const realized = fx.labels.realizedEquityByStreet?.[c.street];
         const realizedPct = realized != null ? Math.round(realized * 100) : null;
         const offRaw = Math.abs(c.percent - rawPct);
