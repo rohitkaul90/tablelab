@@ -1,0 +1,264 @@
+{
+  "id": "pluribus-113b-74-p2-value_heavy",
+  "source": "pluribus/113b/74",
+  "heroPlayer": 2,
+  "bucket": "reads",
+  "reads": [
+    {
+      "playerLabel": "MrBlue",
+      "tags": [
+        "value_heavy"
+      ]
+    }
+  ],
+  "hand": {
+    "id": "pluribus-113b-74-p2-value_heavy",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 1,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "MrBrown",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "9h",
+          "Jd"
+        ]
+      },
+      {
+        "seat": 2,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "Eddie",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "MrPink",
+        "stack": 10000,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 225,
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 225,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "2h",
+          "7h",
+          "8s"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 375,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 1,
+            "type": "raise",
+            "amount": 1312,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 1312,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "Jc"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "6s"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "villain MrBlue opens (UTG) + flop 75% bet (polarized); reads: tagged value_heavy — bluffs collapse, equity should drop",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~28%, flop ~25%, turn ~34%, river ~27%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrBlue (UTG) range behind the equity above: Pre-flop: open-raised → UTG opening range (~6% of hands); Flop: bet (~75% pot) → polarized: top 18% value + bottom 4% bluffs; Turn: check → range unchanged; River: check → range unchanged.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "9h",
+      "Jd"
+    ],
+    "finalBoard": [
+      "2h",
+      "7h",
+      "8s",
+      "Jc",
+      "6s"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "2h",
+          "7h",
+          "8s"
+        ],
+        "heroCategory": "HIGH_CARD",
+        "heroEquity": 0.24535,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "turn",
+        "board": [
+          "2h",
+          "7h",
+          "8s",
+          "Jc"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.3411,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "7-8-9-T-J"
+        ]
+      },
+      {
+        "street": "river",
+        "board": [
+          "2h",
+          "7h",
+          "8s",
+          "Jc",
+          "6s"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.2698,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "4-5-6-7-8",
+          "5-6-7-8-9",
+          "6-7-8-9-T",
+          "7-8-9-T-J"
+        ]
+      }
+    ],
+    "forcedDecision": null
+  }
+}

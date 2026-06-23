@@ -2653,5 +2653,225 @@
     "bucket": "card-logic",
     "notes": "paired board 6h Ks Kc",
     "reads": []
+  },
+  {
+    "id": "pluribus-100b-81-p4-nit",
+    "file": "tool/eval/samples/pluribus/pluribus-100b-81.phh",
+    "source": "pluribus/100b/81",
+    "hero": 4,
+    "bucket": "reads",
+    "notes": "villain MrWhite bets flop+turn (polarized); reads: tagged nit — fewer bluffs, hero bluff-catch equity should drop",
+    "reads": [
+      { "playerLabel": "MrWhite", "tags": ["nit"] }
+    ]
+  },
+  {
+    "id": "pluribus-100b-81-p4-over_bluffs",
+    "file": "tool/eval/samples/pluribus/pluribus-100b-81.phh",
+    "source": "pluribus/100b/81",
+    "hero": 4,
+    "bucket": "reads",
+    "notes": "villain MrWhite bets flop+turn (polarized); reads: tagged over_bluffs — more bluffs, hero bluff-catch equity should rise",
+    "reads": [
+      { "playerLabel": "MrWhite", "tags": ["over_bluffs"] }
+    ]
+  },
+  {
+    "id": "pluribus-102b-100-p5-value_heavy",
+    "file": "tool/eval/samples/pluribus/pluribus-102b-100.phh",
+    "source": "pluribus/102b/100",
+    "hero": 5,
+    "bucket": "reads",
+    "notes": "villain MrOrange 3-bets pre + flop bet (polarized); reads: tagged value_heavy — bluffs collapse, equity should drop",
+    "reads": [
+      { "playerLabel": "MrOrange", "tags": ["value_heavy"] }
+    ]
+  },
+  {
+    "id": "pluribus-102b-100-p5-maniac",
+    "file": "tool/eval/samples/pluribus/pluribus-102b-100.phh",
+    "source": "pluribus/102b/100",
+    "hero": 5,
+    "bucket": "reads",
+    "notes": "villain MrOrange 3-bets pre + flop bet (polarized); reads: tagged maniac — wider value+bluffs, equity should rise",
+    "reads": [
+      { "playerLabel": "MrOrange", "tags": ["maniac"] }
+    ]
+  },
+  {
+    "id": "pluribus-102b-95-p2-nit",
+    "file": "tool/eval/samples/pluribus/pluribus-102b-95.phh",
+    "source": "pluribus/102b/95",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrPink opens + flop overbet (polarized); reads: tagged nit — fewer bluffs, equity should drop",
+    "reads": [
+      { "playerLabel": "MrPink", "tags": ["nit"] }
+    ]
+  },
+  {
+    "id": "pluribus-102b-95-p2-over_bluffs",
+    "file": "tool/eval/samples/pluribus/pluribus-102b-95.phh",
+    "source": "pluribus/102b/95",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrPink opens + flop overbet (polarized); reads: tagged over_bluffs — more bluffs, equity should rise",
+    "reads": [
+      { "playerLabel": "MrPink", "tags": ["over_bluffs"] }
+    ]
+  },
+  {
+    "id": "pluribus-103b-103-p2-value_heavy",
+    "file": "tool/eval/samples/pluribus/pluribus-103b-103.phh",
+    "source": "pluribus/103b/103",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrOrange opens + turn bet (polarized); reads: tagged value_heavy — bluffs collapse, equity should drop",
+    "reads": [
+      { "playerLabel": "MrOrange", "tags": ["value_heavy"] }
+    ]
+  },
+  {
+    "id": "pluribus-103b-103-p2-maniac",
+    "file": "tool/eval/samples/pluribus/pluribus-103b-103.phh",
+    "source": "pluribus/103b/103",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrOrange opens + turn bet (polarized); reads: tagged maniac — wider value+bluffs, equity should rise",
+    "reads": [
+      { "playerLabel": "MrOrange", "tags": ["maniac"] }
+    ]
+  },
+  {
+    "id": "pluribus-103b-68-p2-nit",
+    "file": "tool/eval/samples/pluribus/pluribus-103b-68.phh",
+    "source": "pluribus/103b/68",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrWhite opens (SB) + flop bet (polarized); reads: tagged nit — fewer bluffs, equity should drop",
+    "reads": [
+      { "playerLabel": "MrWhite", "tags": ["nit"] }
+    ]
+  },
+  {
+    "id": "pluribus-103b-68-p2-calling_station",
+    "file": "tool/eval/samples/pluribus/pluribus-103b-68.phh",
+    "source": "pluribus/103b/68",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrWhite opens (SB) + flop bet (polarized); reads: tagged calling_station — wider value, equity shifts",
+    "reads": [
+      { "playerLabel": "MrWhite", "tags": ["calling_station"] }
+    ]
+  },
+  {
+    "id": "pluribus-111b-81-p2-value_heavy",
+    "file": "tool/eval/samples/pluribus/pluribus-111b-81.phh",
+    "source": "pluribus/111b/81",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain Pluribus opens (UTG) + turn bet (polarized); reads: tagged value_heavy — bluffs collapse, equity should drop",
+    "reads": [
+      { "playerLabel": "Pluribus", "tags": ["value_heavy"] }
+    ]
+  },
+  {
+    "id": "pluribus-111b-81-p2-over_bluffs",
+    "file": "tool/eval/samples/pluribus/pluribus-111b-81.phh",
+    "source": "pluribus/111b/81",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain Pluribus opens (UTG) + turn bet (polarized); reads: tagged over_bluffs — more bluffs, equity should rise",
+    "reads": [
+      { "playerLabel": "Pluribus", "tags": ["over_bluffs"] }
+    ]
+  },
+  {
+    "id": "pluribus-111b-89-p2-nit",
+    "file": "tool/eval/samples/pluribus/pluribus-111b-89.phh",
+    "source": "pluribus/111b/89",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrBlue opens (BTN) + turn 75% bet (polarized); reads: tagged nit — fewer bluffs, equity should drop",
+    "reads": [
+      { "playerLabel": "MrBlue", "tags": ["nit"] }
+    ]
+  },
+  {
+    "id": "pluribus-111b-89-p2-maniac",
+    "file": "tool/eval/samples/pluribus/pluribus-111b-89.phh",
+    "source": "pluribus/111b/89",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrBlue opens (BTN) + turn 75% bet (polarized); reads: tagged maniac — wider value+bluffs, equity should rise",
+    "reads": [
+      { "playerLabel": "MrBlue", "tags": ["maniac"] }
+    ]
+  },
+  {
+    "id": "pluribus-113b-74-p2-value_heavy",
+    "file": "tool/eval/samples/pluribus/pluribus-113b-74.phh",
+    "source": "pluribus/113b/74",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrBlue opens (UTG) + flop 75% bet (polarized); reads: tagged value_heavy — bluffs collapse, equity should drop",
+    "reads": [
+      { "playerLabel": "MrBlue", "tags": ["value_heavy"] }
+    ]
+  },
+  {
+    "id": "pluribus-113b-74-p2-lag_player",
+    "file": "tool/eval/samples/pluribus/pluribus-113b-74.phh",
+    "source": "pluribus/113b/74",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrBlue opens (UTG) + flop 75% bet (polarized); reads: tagged lag_player — wider/aggressive, equity should rise",
+    "reads": [
+      { "playerLabel": "MrBlue", "tags": ["lag_player"] }
+    ]
+  },
+  {
+    "id": "pluribus-113b-83-p2-nit",
+    "file": "tool/eval/samples/pluribus/pluribus-113b-83.phh",
+    "source": "pluribus/113b/83",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrPink opens (UTG) + river bet (polarized); reads: tagged nit — fewer bluffs, equity should drop",
+    "reads": [
+      { "playerLabel": "MrPink", "tags": ["nit"] }
+    ]
+  },
+  {
+    "id": "pluribus-113b-83-p2-over_bluffs",
+    "file": "tool/eval/samples/pluribus/pluribus-113b-83.phh",
+    "source": "pluribus/113b/83",
+    "hero": 2,
+    "bucket": "reads",
+    "notes": "villain MrPink opens (UTG) + river bet (polarized); reads: tagged over_bluffs — more bluffs, equity should rise",
+    "reads": [
+      { "playerLabel": "MrPink", "tags": ["over_bluffs"] }
+    ]
+  },
+  {
+    "id": "pluribus-114b-173-p3-value_heavy",
+    "file": "tool/eval/samples/pluribus/pluribus-114b-173.phh",
+    "source": "pluribus/114b/173",
+    "hero": 3,
+    "bucket": "reads",
+    "notes": "villain MrBrown defends + river raise (polarized); reads: tagged value_heavy — bluffs collapse, equity should drop",
+    "reads": [
+      { "playerLabel": "MrBrown", "tags": ["value_heavy"] }
+    ]
+  },
+  {
+    "id": "pluribus-114b-173-p3-maniac",
+    "file": "tool/eval/samples/pluribus/pluribus-114b-173.phh",
+    "source": "pluribus/114b/173",
+    "hero": 3,
+    "bucket": "reads",
+    "notes": "villain MrBrown defends + river raise (polarized); reads: tagged maniac — wider value+bluffs, equity should rise",
+    "reads": [
+      { "playerLabel": "MrBrown", "tags": ["maniac"] }
+    ]
   }
 ]

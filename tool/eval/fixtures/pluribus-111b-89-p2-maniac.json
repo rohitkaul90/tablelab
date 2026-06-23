@@ -1,0 +1,258 @@
+{
+  "id": "pluribus-111b-89-p2-maniac",
+  "source": "pluribus/111b/89",
+  "heroPlayer": 2,
+  "bucket": "reads",
+  "reads": [
+    {
+      "playerLabel": "MrBlue",
+      "tags": [
+        "maniac"
+      ]
+    }
+  ],
+  "hand": {
+    "id": "pluribus-111b-89-p2-maniac",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 1,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "Eddie",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "Kd",
+          "8s"
+        ]
+      },
+      {
+        "seat": 2,
+        "name": "MrPink",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "MrBrown",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 225,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 225,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "8h",
+          "Jc",
+          "Qc"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "Jh"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "raise",
+            "amount": 375,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 375,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "Ad"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "villain MrBlue opens (BTN) + turn 75% bet (polarized); reads: tagged maniac — wider value+bluffs, equity should rise",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~54%, flop ~61%, turn ~55%, river ~50%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain MrBlue (BTN) range behind the equity above: Pre-flop: open-raised → BTN opening range (~79% of hands) · widened ×2.0 for reads; Flop: check → range unchanged; Turn: bet (~75% pot) → polarized: top 48% value + bottom 23% bluffs; River: check → range unchanged.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "Kd",
+      "8s"
+    ],
+    "finalBoard": [
+      "8h",
+      "Jc",
+      "Qc",
+      "Jh",
+      "Ad"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "8h",
+          "Jc",
+          "Qc"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.60855,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "8-9-T-J-Q"
+        ]
+      },
+      {
+        "street": "turn",
+        "board": [
+          "8h",
+          "Jc",
+          "Qc",
+          "Jh"
+        ],
+        "heroCategory": "TWO_PAIR",
+        "heroEquity": 0.54955,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "8-9-T-J-Q"
+        ]
+      },
+      {
+        "street": "river",
+        "board": [
+          "8h",
+          "Jc",
+          "Qc",
+          "Jh",
+          "Ad"
+        ],
+        "heroCategory": "TWO_PAIR",
+        "heroEquity": 0.5045,
+        "boatOrQuadsPossible": true,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "8-9-T-J-Q",
+          "T-J-Q-K-A"
+        ]
+      }
+    ],
+    "forcedDecision": null
+  }
+}

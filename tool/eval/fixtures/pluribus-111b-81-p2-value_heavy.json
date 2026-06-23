@@ -1,0 +1,255 @@
+{
+  "id": "pluribus-111b-81-p2-value_heavy",
+  "source": "pluribus/111b/81",
+  "heroPlayer": 2,
+  "bucket": "reads",
+  "reads": [
+    {
+      "playerLabel": "Pluribus",
+      "tags": [
+        "value_heavy"
+      ]
+    }
+  ],
+  "hand": {
+    "id": "pluribus-111b-81-p2-value_heavy",
+    "userId": "eval",
+    "playedAt": "2026-01-01T00:00:00.000Z",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 5,
+      "heroSeat": 1,
+      "smallBlind": 50,
+      "bigBlind": 100
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "MrBrown",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 1,
+        "name": "MrBlue",
+        "stack": 10000,
+        "isHero": true,
+        "holeCards": [
+          "Qs",
+          "8h"
+        ]
+      },
+      {
+        "seat": 2,
+        "name": "Pluribus",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 3,
+        "name": "Eddie",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 4,
+        "name": "MrPink",
+        "stack": 10000,
+        "isHero": false
+      },
+      {
+        "seat": 5,
+        "name": "MrOrange",
+        "stack": 10000,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 0,
+            "type": "post",
+            "amount": 50,
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "post",
+            "amount": 100,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 250,
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 4,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 5,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "fold",
+            "allIn": false
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 250,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "4h",
+          "5h",
+          "Qc"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "9h"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 275,
+            "allIn": false,
+            "openingBet": true
+          },
+          {
+            "seat": 1,
+            "type": "call",
+            "amount": 275,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "3s"
+        ],
+        "actions": [
+          {
+            "seat": 1,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "notes": "villain Pluribus opens (UTG) + turn bet (polarized); reads: tagged value_heavy — bluffs collapse, equity should drop",
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~26%, flop ~57%, turn ~23%, river ~23%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain Pluribus (UTG) range behind the equity above: Pre-flop: open-raised → UTG opening range (~5% of hands); Flop: check → range unchanged; Turn: bet (~50% pot) → polarized: top 18% value + bottom 5% bluffs; River: check → range unchanged.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "Qs",
+      "8h"
+    ],
+    "finalBoard": [
+      "4h",
+      "5h",
+      "Qc",
+      "9h",
+      "3s"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "4h",
+          "5h",
+          "Qc"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.5655,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "turn",
+        "board": [
+          "4h",
+          "5h",
+          "Qc",
+          "9h"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.2327,
+        "boatOrQuadsPossible": false,
+        "flushPossible": true,
+        "flushSuit": "hearts",
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "river",
+        "board": [
+          "4h",
+          "5h",
+          "Qc",
+          "9h",
+          "3s"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.2265,
+        "boatOrQuadsPossible": false,
+        "flushPossible": true,
+        "flushSuit": "hearts",
+        "allowedStraightWindows": [
+          "A-2-3-4-5",
+          "2-3-4-5-6",
+          "3-4-5-6-7"
+        ]
+      }
+    ],
+    "forcedDecision": null
+  }
+}
