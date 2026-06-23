@@ -381,6 +381,7 @@ function checkVerdictConsistency(
   const kmText = typeof km === "string" ? km.trim() : "";
   const hasMistake = kmText.length > 0 && !_benignMistake.test(kmText);
   const isLeak = verdict === "leakDetected";
+  const isHighEv = verdict === "highEV";
 
   let nonGto = 0;
   for (const s of _STREETS) {
@@ -388,26 +389,36 @@ function checkVerdictConsistency(
     if (st && st.wasGto === false) nonGto++;
   }
   const N = nonGto > 0;
-
-  // The three leak signals must agree: a hand is either consistently CLEAN
-  // (no leak verdict, no real keyMistake, all streets GTO) or consistently a
-  // LEAK (leakDetected + keyMistake + a non-GTO street). Any disagreement is
-  // the self-contradiction class the trust pack exists to catch.
-  // Scope note: this checks the AGGREGATE signals only — it does NOT verify that
-  // keyMistake names the SAME street marked non-GTO (the prompt's finer rule).
-  // That needs parsing which street the prose names (judge/NLP) and risks false
-  // positives, so it's deliberately out of this tightly-scoped MVP.
-  if (isLeak === hasMistake && hasMistake === N) return [];
-
   const kmSnip = kmText
     ? `"${kmText.slice(0, 90)}${kmText.length > 90 ? "…" : ""}"`
     : "null";
-  return [{
-    rule: "verdict-signals-disagree",
-    detail:
-      `verdict=${verdict ?? "?"}, keyMistake=${kmSnip}, non-GTO streets=${nonGto} — ` +
-      `leak signals must agree (all-clean or all-leak)`,
-  }];
+
+  // GRADED consistency. The verdict scale is 3-level (highEV / neutral /
+  // leakDetected) by deliberate product choice, so a `neutral` hand MAY carry a
+  // minor keyMistake and/or one non-GTO street — that is coherent coaching, not
+  // a contradiction. Only these are genuine self-contradictions:
+  //   (1) leakDetected with no real keyMistake — a leak must name its mistake;
+  //   (2) leakDetected but every street marked GTO — a leak must flag a street;
+  //   (3) a real keyMistake but every street GTO — the named mistake has no street;
+  //   (4) highEV ("great") with a real keyMistake — a great hand names no mistake.
+  // Previously this demanded ALL THREE signals agree, which mis-flagged ~77
+  // legitimate "neutral + minor note" hands (73.7% -> 97.8% after this fix; see
+  // the 2026-06 eval-gate triage). keyMistake⇒street stays aggregate-only — it
+  // does NOT verify the SAME street is named (avoids NLP false positives).
+  const issues: VerdictIssue[] = [];
+  if (isLeak && !hasMistake) {
+    issues.push({ rule: "leak-without-mistake", detail: `verdict=leakDetected but keyMistake is empty/benign (${kmSnip})` });
+  }
+  if (isLeak && !N) {
+    issues.push({ rule: "leak-without-nongto-street", detail: `verdict=leakDetected but every street is marked GTO — the leak flags no street (keyMistake=${kmSnip})` });
+  }
+  if (hasMistake && !N) {
+    issues.push({ rule: "mistake-without-nongto-street", detail: `keyMistake names an error but every street is marked GTO: ${kmSnip}` });
+  }
+  if (isHighEv && hasMistake) {
+    issues.push({ rule: "highev-with-mistake", detail: `verdict=highEV (great hand) but a keyMistake is named: ${kmSnip}` });
+  }
+  return issues;
 }
 
 // ── Forced-decision agreement (PR 3, part 2) ─────────────────────────────────
@@ -428,6 +439,11 @@ function checkForcedVerdict(
 ): ForcedVerdictResult | null {
   const fd = fx.labels.forcedDecision;
   if (!fd) return null;
+  // Tolerance band: within ~Monte-Carlo noise of the price it isn't "forced".
+  // A <2pt edge (e.g. eq 29% vs req 30%) is a coin-flip-close decision, not a
+  // mathematically-forced one — don't score it. Drops 3 near-tie spots; the
+  // remaining decisive spots agree 100% (eval-gate triage 2026-06).
+  if (Math.abs(fd.heroEquityPct - fd.requiredPct) < 2) return null;
   const st = analysis[fd.street] as Record<string, unknown> | null | undefined;
   const base =
     `${fd.street}: hero ${fd.heroCalled ? "called" : "folded"}, forced=${fd.forcedAction} ` +
