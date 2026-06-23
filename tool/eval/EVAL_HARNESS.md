@@ -265,5 +265,12 @@ villain BY NAME, so the reads-adjusted equity actually moves between the pair).
 - Verdict scoring has two parts, both built: **verdict self-consistency** (graded,
   every spot) and **forced-verdict agreement** (the math-forced subset only). Neither
   grades fine strategic quality — that's the user-flagged clean-but-disliked queue.
+- **Realized equity (DCE EQR) has NO independent oracle.** The baked
+  `realizedEquityByStreet` comes from the same `decision_context.dart` heuristic the
+  prompt uses, so the equity adjudicator accepting "raw OR realized" only checks the
+  model is *consistent* with the grounded number — it cannot validate the heuristic.
+  Raw equity (the Monte-Carlo sim) is the real card-logic oracle; realized is
+  advisory context. Correctness of the EQR classifier is guarded by its Dart unit
+  tests (`test/equity/decision_context_test.dart`), not the scorer.
 - Made-hand grading is coarse (the 9 categories). It catches the board-constraint
   failure class, not fine errors like "top pair" vs "middle pair."

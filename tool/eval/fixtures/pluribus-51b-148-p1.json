@@ -173,7 +173,7 @@
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~44%, flop ~25%, turn ~20%, river ~8%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
     "[FACT — Villain Pluribus (BB) range behind the equity above: Pre-flop: called a late-position open → BB defending range (~24% of hands); Flop: check → range unchanged; Turn: check → range unchanged.]",
-    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~25% → realized ~2% (OOP, air (no real equity)); turn ~20% → realized ~15% (OOP, a weak draw); river ~8% → realized ~6% (OOP, a weak draw). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~25% → realized ~2% (OOP, air (no real equity)); turn ~20% → realized ~2% (OOP, air (no real equity)); river ~8% → realized ~1% (OOP, air (no real equity)). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -245,8 +245,8 @@
     "forcedDecision": null,
     "realizedEquityByStreet": {
       "flop": 0.024755,
-      "turn": 0.15327000000000002,
-      "river": 0.059163
+      "turn": 0.01965,
+      "river": 0.007585000000000001
     }
   }
 }

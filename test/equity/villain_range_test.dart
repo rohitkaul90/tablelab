@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/equity/decision_context.dart';
 import 'package:tablelab/equity/villain_range.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/models/player_read.dart';
@@ -664,6 +665,33 @@ void main() {
       expect(facts.first, contains('pre-flop ~'));
       expect(facts.first, contains('MUST be consistent'));
       expect(facts.any((f) => f.contains('range behind the equity')), isTrue);
+    });
+
+    test('emits the realized-equity HEURISTIC line when EQR fields are set', () {
+      // Exercises the LIVE wording (the prod copy), not a dead helper.
+      final check = HandEquityCheck(
+        streets: const [
+          StreetEquityCheck(
+            street: Street.flop,
+            heroEquity: 0.50,
+            boardSoFar: ['Ks', '7c', '2d'],
+            villainCount: 1,
+            iterations: 1000,
+            realizedEquity: 0.395, // 0.50 × 0.79 (marginal made, OOP)
+            realizedHandClass: HandClass.marginalMade,
+            heroInPosition: false,
+          ),
+        ],
+        villains: [],
+        basedOnSynthesizedAction: false,
+      );
+      final realized = equityCheckFacts(check)
+          .firstWhere((f) => f.contains('Equity REALIZATION'));
+      expect(realized, startsWith('[HEURISTIC —'));
+      expect(realized, contains('~50%')); // raw
+      expect(realized, contains('realized ~40%')); // 0.395 → 40
+      expect(realized, contains('OOP'));
+      expect(realized.toLowerCase(), contains('take precedence'));
     });
 
     test('flags synthesized (Quick Hand) action in the caveat', () async {

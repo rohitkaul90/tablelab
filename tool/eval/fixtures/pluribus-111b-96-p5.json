@@ -148,8 +148,7 @@
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~30%, flop ~17%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
     "[FACT — Villain Eddie (SB) range behind the equity above: Pre-flop: called a middle-position open → SB defending range (~7% of hands); Flop: check → range unchanged.]",
-    "[FACT — Villain Pluribus (BTN) range behind the equity above: Pre-flop: called a middle-position open → BTN defending range (~11% of hands).]",
-    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~17% → realized ~13% (OOP, a marginal made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
+    "[FACT — Villain Pluribus (BTN) range behind the equity above: Pre-flop: called a middle-position open → BTN defending range (~11% of hands).]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -178,8 +177,6 @@
       }
     ],
     "forcedDecision": null,
-    "realizedEquityByStreet": {
-      "flop": 0.13048166666666658
-    }
+    "realizedEquityByStreet": {}
   }
 }

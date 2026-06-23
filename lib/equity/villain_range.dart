@@ -927,14 +927,18 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           // Offset per street so each gets a distinct but reproducible stream.
           seed: seed != null ? seed + streetResults.length : null,
         );
-        // EQR: discount raw equity for hero's hand class + position (null when
-        // pre-flop / unclassifiable / position unknown → no realized FACT).
+        // EQR: discount raw equity for hero's hand class + position. Null (→ no
+        // realized FACT) when pre-flop / unclassifiable / position unknown, OR
+        // when the pot is MULTIWAY — IP/OOP is ill-defined when hero is in
+        // position on one villain and out of position on another, so we only
+        // assert realized equity in a heads-up pot.
         final hc = classifyHandClass([h1, h2], boardSoFar);
-        final realizedEq = (hc != null && heroIp != null)
-            ? realizedEquity(result.equity[0],
-                handClass: hc,
-                position: heroIp ? HeroPosition.ip : HeroPosition.oop)
-            : null;
+        final realizedEq =
+            (hc != null && heroIp != null && simVillains.length == 1)
+                ? realizedEquity(result.equity[0],
+                    handClass: hc,
+                    position: heroIp ? HeroPosition.ip : HeroPosition.oop)
+                : null;
         streetResults.add(StreetEquityCheck(
           street: street.street,
           heroEquity: result.equity[0],
