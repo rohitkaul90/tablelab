@@ -770,6 +770,133 @@ void main() {
     });
   });
 
+  group('SPR & commitment (DCE Tier A)', () {
+    // _btnOpenBbCall: hero(BB) & villain(BTN) each commit 5 preflop → pot 10,
+    // 195 behind each. A checked flop → heads-up SPR = 195/10 = 19.5.
+    StreetData checkedFlop() => const StreetData(
+          street: Street.flop,
+          communityCards: ['Kh', '7d', '2c'],
+          actions: [
+            HandAction(seat: 2, type: ActionType.check),
+            HandAction(seat: 0, type: ActionType.check),
+          ],
+        );
+
+    test('SPR is null pre-flop', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], streets: [_btnOpenBbCall()]),
+        iterations: 2000,
+      );
+      expect(check!.streets.first.street, Street.preflop);
+      expect(check.streets.first.spr, isNull);
+    });
+
+    test('heads-up: SPR + heads-up stack-off % are set', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], streets: [
+          _btnOpenBbCall(),
+          checkedFlop(),
+        ]),
+        iterations: 2000,
+      );
+      final flop = check!.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.spr, closeTo(19.5, 0.1)); // 195 behind ÷ 10 pot
+      expect(flop.sprIsHeadsUp, isTrue);
+      expect(flop.reqStackOffEquity, closeTo(0.4875, 0.01)); // 19.5/(1+39)
+    });
+
+    test('heads-up FACT names the SPR and a stack-off %', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], streets: [
+          _btnOpenBbCall(),
+          checkedFlop(),
+        ]),
+        iterations: 2000,
+      );
+      final fact = equityCheckFacts(check!)
+          .firstWhere((f) => f.contains('SPR & COMMITMENT'));
+      expect(fact, startsWith('[HEURISTIC —'));
+      expect(fact, contains('flop SPR ~19.5'));
+      expect(fact, contains('needs ~49% equity'));
+      expect(fact.toLowerCase(), contains('take precedence'));
+    });
+
+    test('multiway: stack-off % is suppressed, FACT says multiway', () async {
+      // Hero(BB) + two callers reach a checked flop → active.length == 2.
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 2,
+          heroCards: ['As', 'Ah'],
+          extraPlayers: const [
+            HandPlayer(seatIndex: 5, name: 'Caller', startingStack: 200),
+          ],
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 0, type: ActionType.raise, amount: 5),
+              HandAction(seat: 5, type: ActionType.call, amount: 5),
+              HandAction(seat: 2, type: ActionType.call, amount: 5),
+            ]),
+            const StreetData(
+              street: Street.flop,
+              communityCards: ['Kh', '7d', '2c'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(seat: 0, type: ActionType.check),
+                HandAction(seat: 5, type: ActionType.check),
+              ],
+            ),
+          ],
+        ),
+        iterations: 2000,
+      );
+      final flop = check!.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.spr, isNotNull);
+      expect(flop.sprIsHeadsUp, isFalse);
+      expect(flop.reqStackOffEquity, isNull);
+      final fact = equityCheckFacts(check)
+          .firstWhere((f) => f.contains('SPR & COMMITMENT'));
+      expect(fact, contains('multiway'));
+      expect(fact, isNot(contains('needs ~')));
+    });
+
+    test('SPR shrinks as the pot grows across streets', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          _btnOpenBbCall(), // pot 10
+          const StreetData(
+            street: Street.flop,
+            communityCards: ['Kh', '7d', '2c'],
+            actions: [
+              HandAction(seat: 2, type: ActionType.check),
+              HandAction(
+                  seat: 0,
+                  type: ActionType.raise,
+                  amount: 30,
+                  isOpeningBet: true),
+              HandAction(seat: 2, type: ActionType.call, amount: 30),
+            ], // +60 → pot 70
+          ),
+          const StreetData(
+            street: Street.turn,
+            communityCards: ['3s'],
+            actions: [
+              HandAction(seat: 2, type: ActionType.check),
+              HandAction(seat: 0, type: ActionType.check),
+            ],
+          ),
+        ]),
+        iterations: 2000,
+      );
+      final flop = check!.streets.firstWhere((s) => s.street == Street.flop);
+      final turn = check.streets.firstWhere((s) => s.street == Street.turn);
+      expect(flop.spr! > turn.spr!, isTrue,
+          reason: 'flop SPR ${flop.spr} should exceed turn SPR ${turn.spr}');
+      // Turn: 165 behind ÷ 70 pot ≈ 2.36.
+      expect(turn.spr, closeTo(2.36, 0.1));
+    });
+  });
+
   group('edge cases', () {
     test('returns null without hero hole cards', () async {
       final hand = PokerHand(
