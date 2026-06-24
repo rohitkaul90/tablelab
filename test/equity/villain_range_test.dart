@@ -791,7 +791,10 @@ void main() {
       expect(check.streets.first.spr, isNull);
     });
 
-    test('heads-up: SPR + heads-up stack-off % are set', () async {
+    test('heads-up: SPR fields are set and the FACT names SPR + stack-off %',
+        () async {
+      // One computeHandEquityCheck call (the MC sim is the heavy cost) backs
+      // both the struct-field and the FACT-string assertions.
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 2, heroCards: ['As', 'Ah'], streets: [
           _btnOpenBbCall(),
@@ -803,22 +806,50 @@ void main() {
       expect(flop.spr, closeTo(19.5, 0.1)); // 195 behind ÷ 10 pot
       expect(flop.sprIsHeadsUp, isTrue);
       expect(flop.reqStackOffEquity, closeTo(0.4875, 0.01)); // 19.5/(1+39)
-    });
 
-    test('heads-up FACT names the SPR and a stack-off %', () async {
-      final check = await computeHandEquityCheck(
-        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], streets: [
-          _btnOpenBbCall(),
-          checkedFlop(),
-        ]),
-        iterations: 2000,
-      );
-      final fact = equityCheckFacts(check!)
+      final fact = equityCheckFacts(check)
           .firstWhere((f) => f.contains('SPR & COMMITMENT'));
       expect(fact, startsWith('[HEURISTIC —'));
       expect(fact, contains('flop SPR ~19.5'));
       expect(fact, contains('needs ~49% equity'));
       expect(fact.toLowerCase(), contains('take precedence'));
+    });
+
+    test('multiway effective stack uses the SHORTEST villain, not the deepest',
+        () async {
+      // Hero(BB,195 behind) + deep villain(BTN,195) + short villain(CO,35) to a
+      // checked flop, pot 15. Effective stack must be min(hero, shortest=35) →
+      // SPR ~2.3, NOT min(hero, deepest=195) → SPR ~13. Guards the review fix.
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 2,
+          heroCards: ['As', 'Ah'],
+          extraPlayers: const [
+            HandPlayer(seatIndex: 5, name: 'Shorty', startingStack: 40),
+          ],
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 0, type: ActionType.raise, amount: 5),
+              HandAction(seat: 5, type: ActionType.call, amount: 5),
+              HandAction(seat: 2, type: ActionType.call, amount: 5),
+            ]),
+            const StreetData(
+              street: Street.flop,
+              communityCards: ['Kh', '7d', '2c'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(seat: 0, type: ActionType.check),
+                HandAction(seat: 5, type: ActionType.check),
+              ],
+            ),
+          ],
+        ),
+        iterations: 2000,
+      );
+      final flop = check!.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.spr, closeTo(2.33, 0.2)); // 35 (shortest) ÷ 15, not 195 ÷ 15
+      expect(flop.sprIsHeadsUp, isFalse);
     });
 
     test('multiway: stack-off % is suppressed, FACT says multiway', () async {

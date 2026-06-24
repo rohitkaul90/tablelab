@@ -162,17 +162,22 @@ List<String> equityCheckFacts(HandEquityCheck check) {
   }
   // SPR & COMMITMENT (DCE Tier A): one HEURISTIC line, per postflop street. The
   // stack-off % is heads-up-only; multiway emits SPR + a "beat the field" note.
-  final sprStreets =
-      check.streets.where((s) => s.spr != null && s.sprIsHeadsUp != null).toList();
+  final sprStreets = check.streets.where((s) => s.spr != null).toList();
   if (sprStreets.isNotEmpty) {
     final parts = sprStreets.map((s) {
       final spr = s.spr!;
       final bucket = sprBucketLabel(sprBucket(spr));
-      final price = (s.sprIsHeadsUp! && s.reqStackOffEquity != null)
+      final price = s.reqStackOffEquity != null
           ? 'to get all-in profitably needs ~${(s.reqStackOffEquity! * 100).round()}% equity'
           : 'multiway, so the stack-off price exceeds that heads-up figure (hero must beat the field)';
       return '${s.street.label.toLowerCase()} SPR ~${spr.toStringAsFixed(1)} — $price ($bucket)';
     }).join('; ');
+    // Quick Hand entries synthesize stacks, so the SPR + stack-off % are only
+    // as reliable as those — caveat them as the equity FACT already does.
+    final synthCaveat = check.basedOnSynthesizedAction
+        ? ' The stacks behind this come from a synthesized (Quick Hand) entry, '
+            'so treat the SPR and stack-off % as rough.'
+        : '';
     facts.add('[HEURISTIC — SPR & COMMITMENT (effective stack ÷ pot, hero-centric; '
         'ESTIMATED, not exact): $parts. Use this for the call-vs-raise / stack-off '
         'decision, NOT the bluff-catch call (pot odds govern that): at low SPR a '
@@ -181,7 +186,7 @@ List<String> equityCheckFacts(HandEquityCheck check) {
         'sets/two-pair, so require more than the raw %. The stack-off % is the equity '
         'to get all-in profitably versus a willing range, NOT hero\'s pot-odds price. '
         'This is heuristic context — a decisive pot-odds price FACT and the hard '
-        'equity FACT still take precedence.]');
+        'equity FACT still take precedence.$synthCaveat]');
   }
   return facts;
 }
@@ -968,27 +973,40 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
                     position: heroIp ? HeroPosition.ip : HeroPosition.oop)
                 : null;
         // SPR (DCE Tier A): effective stack ÷ pot at street start. Effective
-        // stack is hero-centric — min(hero remaining, the DEEPEST active
-        // villain remaining): how deep hero can actually stack off, capped by
-        // the largest single opponent. Skipped pre-flop (no SPR concept there),
-        // with no pot, or when hero/the field is already all-in (no live
-        // stack-off decision). The required-equity % is heads-up-only — see the
-        // FACT path; multiway it is null and the pot is flagged as such.
+        // stack = min(hero remaining, the SHORTEST simulated villain remaining)
+        // — the standard effective-stack convention (the shortest stack caps the
+        // all-in everyone can match). Using the DEEPEST villain would overstate
+        // SPR when the deepest opponent isn't the one driving the action (e.g. a
+        // short aggressor beside a deep passive player). Scope to simVillains
+        // (the opponents actually simulated this street), NOT `active`: a villain
+        // whose range fully collides with the board narrows to zero combos and
+        // drops from simVillains but stays in `active`, so keying off `active`
+        // would read "multiway" while EQR (simVillains.length) reads heads-up on
+        // the SAME street — contradicting FACTs. (A villain who folds ON this
+        // street still counts here, mirroring the equity sim + EQR, which also
+        // include the flop-folder in the flop number — a shared, pre-existing
+        // convention, not specific to SPR.) Skipped pre-flop, with no pot, or
+        // when the field is already all-in from a PRIOR street (committed then
+        // covers the stack → effStack 0). The required-equity % is heads-up-only;
+        // multiway it is null and the pot is flagged as such in the FACT.
         double? spr;
         double? reqStackOff;
         bool? sprHeadsUp;
         if (street.street != Street.preflop && potBefore > 0) {
           final heroRem = hero.startingStack - (committed[hero.seatIndex] ?? 0);
-          var deepestVillainRem = 0;
-          for (final v in active) {
+          int? shortestVillainRem;
+          for (final v in simVillains) {
             final rem =
                 v.player.startingStack - (committed[v.player.seatIndex] ?? 0);
-            if (rem > deepestVillainRem) deepestVillainRem = rem;
+            if (shortestVillainRem == null || rem < shortestVillainRem) {
+              shortestVillainRem = rem;
+            }
           }
-          final effStack = min(heroRem, deepestVillainRem);
+          final effStack =
+              shortestVillainRem == null ? 0 : min(heroRem, shortestVillainRem);
           if (effStack > 0) {
             spr = effStack / potBefore;
-            sprHeadsUp = active.length == 1;
+            sprHeadsUp = simVillains.length == 1;
             reqStackOff = sprHeadsUp ? requiredEquityToStackOff(spr) : null;
           }
         }
@@ -1003,7 +1021,7 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           heroInPosition: realizedEq != null ? heroIp : null,
           spr: spr,
           reqStackOffEquity: reqStackOff,
-          sprIsHeadsUp: spr != null ? sprHeadsUp : null,
+          sprIsHeadsUp: sprHeadsUp,
         ));
       }
     }
