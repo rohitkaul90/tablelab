@@ -167,7 +167,9 @@ List<String> equityCheckFacts(HandEquityCheck check) {
     final parts = sprStreets.map((s) {
       final spr = s.spr!;
       final bucket = sprBucketLabel(sprBucket(spr));
-      final price = s.reqStackOffEquity != null
+      // Branch on the heads-up flag (reqStackOffEquity is non-null exactly when
+      // heads-up); this is the field's one production consumer.
+      final price = s.sprIsHeadsUp!
           ? 'to get all-in profitably needs ~${(s.reqStackOffEquity! * 100).round()}% equity'
           : 'multiway, so the stack-off price exceeds that heads-up figure (hero must beat the field)';
       return '${s.street.label.toLowerCase()} SPR ~${spr.toStringAsFixed(1)} — $price ($bucket)';
