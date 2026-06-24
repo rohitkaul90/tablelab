@@ -179,7 +179,8 @@
   "equityFacts": [
     "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~53%, flop ~64%, turn ~69%, river ~46%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
     "[FACT — Villain MrBlue (BB) range behind the equity above: Pre-flop: called a middle-position open → BB defending range (~17% of hands); Flop: check → range unchanged; Turn: check → range unchanged; River: small bet (~39% pot) → merged, NOT polarized (wide value-leaning range with some bluffs): top 55% strong + bottom 15% weak/bluffs.]",
-    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~64% → realized ~59% (IP, a marginal made hand); turn ~69% → realized ~89% (IP, a strong made hand); river ~46% → realized ~60% (IP, a strong made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]"
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~64% → realized ~59% (IP, a marginal made hand); turn ~69% → realized ~89% (IP, a strong made hand); river ~46% → realized ~60% (IP, a strong made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]",
+    "[HEURISTIC — SPR & COMMITMENT (effective stack ÷ pot, hero-centric; ESTIMATED, not exact): flop SPR ~21.8 — to get all-in profitably needs ~49% equity (high SPR — favours pot control with one-pair hands); turn SPR ~21.8 — to get all-in profitably needs ~49% equity (high SPR — favours pot control with one-pair hands); river SPR ~21.8 — to get all-in profitably needs ~49% equity (high SPR — favours pot control with one-pair hands). Use this for the call-vs-raise / stack-off decision, NOT the bluff-catch call (pot odds govern that): at low SPR a strong-enough made hand should commit, at high SPR a one-pair hand favours pot control. With a marginal made hand villain's stack-off range skews to sets/two-pair, so require more than the raw %. The stack-off % is the equity to get all-in profitably versus a willing range, NOT hero's pot-odds price. This is heuristic context — a decisive pot-odds price FACT and the hard equity FACT still take precedence.]"
   ],
   "labels": {
     "heroHoleCards": [
@@ -257,6 +258,11 @@
       "flop": 0.58581,
       "turn": 0.89141,
       "river": 0.601055
+    },
+    "sprByStreet": {
+      "flop": 21.77777777777778,
+      "turn": 21.77777777777778,
+      "river": 21.77777777777778
     }
   }
 }

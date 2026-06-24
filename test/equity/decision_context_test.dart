@@ -146,4 +146,49 @@ void main() {
       expect(classifyFromStrings(['Ah'], ['As', '7c', '2d']), isNull);
     });
   });
+
+  group('requiredEquityToStackOff — sourced anchors', () {
+    test('SPR 1 → ~33%', () {
+      expect(requiredEquityToStackOff(1), closeTo(0.333, 0.005));
+    });
+    test('SPR 2 → ~40%', () {
+      expect(requiredEquityToStackOff(2), closeTo(0.40, 0.005));
+    });
+    test('SPR 3 → ~43%', () {
+      expect(requiredEquityToStackOff(3), closeTo(0.4286, 0.005));
+    });
+    test('asymptotes to (and never exceeds) 50%', () {
+      expect(requiredEquityToStackOff(100), closeTo(0.4975, 0.005));
+      expect(requiredEquityToStackOff(1e9), lessThanOrEqualTo(0.5));
+    });
+    test('monotonically increasing in SPR', () {
+      double prev = -1;
+      for (final spr in [0.5, 1.0, 2.0, 4.0, 8.0, 20.0]) {
+        final r = requiredEquityToStackOff(spr);
+        expect(r, greaterThan(prev), reason: 'SPR $spr');
+        prev = r;
+      }
+    });
+    test('non-positive SPR is 0', () {
+      expect(requiredEquityToStackOff(0), 0.0);
+      expect(requiredEquityToStackOff(-1), 0.0);
+    });
+  });
+
+  group('sprBucket', () {
+    test('boundaries map to the expected commitment bucket', () {
+      expect(sprBucket(0.5), SprBucket.committed);
+      expect(sprBucket(1.0), SprBucket.committed);
+      expect(sprBucket(2.0), SprBucket.shallow);
+      expect(sprBucket(3.0), SprBucket.shallow);
+      expect(sprBucket(5.0), SprBucket.medium);
+      expect(sprBucket(6.0), SprBucket.medium);
+      expect(sprBucket(10.0), SprBucket.deep);
+    });
+    test('every bucket has a non-empty label', () {
+      for (final b in SprBucket.values) {
+        expect(sprBucketLabel(b), isNotEmpty);
+      }
+    });
+  });
 }

@@ -44,6 +44,16 @@ class StreetEquityCheck {
   final HandClass? realizedHandClass;
   final bool? heroInPosition;
 
+  /// SPR (DCE Tier A): effective stack ÷ pot at the START of this street, the
+  /// heads-up required equity to stack off, and whether the pot was heads-up
+  /// entering the street. All null pre-flop / when undeterminable (no pot, or
+  /// hero/villains already all-in). [reqStackOffEquity] is null in a multiway
+  /// pot — the all-in price there exceeds the heads-up figure, so the FACT
+  /// reasons qualitatively from [spr] instead of asserting a precise %.
+  final double? spr;
+  final double? reqStackOffEquity;
+  final bool? sprIsHeadsUp;
+
   const StreetEquityCheck({
     required this.street,
     required this.heroEquity,
@@ -53,6 +63,9 @@ class StreetEquityCheck {
     this.realizedEquity,
     this.realizedHandClass,
     this.heroInPosition,
+    this.spr,
+    this.reqStackOffEquity,
+    this.sprIsHeadsUp,
   });
 }
 
@@ -146,6 +159,36 @@ List<String> equityCheckFacts(HandEquityCheck check) {
         'over-realizes. Weigh the continue / bluff-catch read against the REALIZED '
         'figure, not the raw one — but this is heuristic context: a decisive '
         'pot-odds price FACT and the hard equity FACT above still take precedence.]');
+  }
+  // SPR & COMMITMENT (DCE Tier A): one HEURISTIC line, per postflop street. The
+  // stack-off % is heads-up-only; multiway emits SPR + a "beat the field" note.
+  final sprStreets = check.streets.where((s) => s.spr != null).toList();
+  if (sprStreets.isNotEmpty) {
+    final parts = sprStreets.map((s) {
+      final spr = s.spr!;
+      final bucket = sprBucketLabel(sprBucket(spr));
+      // Branch on the heads-up flag (reqStackOffEquity is non-null exactly when
+      // heads-up); this is the field's one production consumer.
+      final price = s.sprIsHeadsUp!
+          ? 'to get all-in profitably needs ~${(s.reqStackOffEquity! * 100).round()}% equity'
+          : 'multiway, so the stack-off price exceeds that heads-up figure (hero must beat the field)';
+      return '${s.street.label.toLowerCase()} SPR ~${spr.toStringAsFixed(1)} — $price ($bucket)';
+    }).join('; ');
+    // Quick Hand entries synthesize stacks, so the SPR + stack-off % are only
+    // as reliable as those — caveat them as the equity FACT already does.
+    final synthCaveat = check.basedOnSynthesizedAction
+        ? ' The stacks behind this come from a synthesized (Quick Hand) entry, '
+            'so treat the SPR and stack-off % as rough.'
+        : '';
+    facts.add('[HEURISTIC — SPR & COMMITMENT (effective stack ÷ pot, hero-centric; '
+        'ESTIMATED, not exact): $parts. Use this for the call-vs-raise / stack-off '
+        'decision, NOT the bluff-catch call (pot odds govern that): at low SPR a '
+        'strong-enough made hand should commit, at high SPR a one-pair hand favours '
+        'pot control. With a marginal made hand villain\'s stack-off range skews to '
+        'sets/two-pair, so require more than the raw %. The stack-off % is the equity '
+        'to get all-in profitably versus a willing range, NOT hero\'s pot-odds price. '
+        'This is heuristic context — a decisive pot-odds price FACT and the hard '
+        'equity FACT still take precedence.$synthCaveat]');
   }
   return facts;
 }
@@ -569,17 +612,6 @@ double? _betSizeFrac(StreetData street, int seat, int potAtStreetStart) {
   return sizeFrac;
 }
 
-/// Chips added to the pot on [street] — sum of each seat's largest cumulative
-/// contribution (mirrors PokerHand.finalPot's per-street math).
-int _streetPot(StreetData street) {
-  final maxBySeat = <int, int>{};
-  for (final a in street.actions) {
-    final amt = a.amount ?? 0;
-    if (amt > (maxBySeat[a.seat] ?? 0)) maxBySeat[a.seat] = amt;
-  }
-  return maxBySeat.values.fold(0, (s, v) => s + v);
-}
-
 /// How far a villain's bluff frequency deviates from the GTO-balanced default.
 /// Value-heavy players and nits barely bluff; maniacs/over-bluffers fire air far
 /// more often. Independent of the value-width factor (a nit value-bets a normal
@@ -802,6 +834,9 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
   // Pot at the start of the current street, so a villain's bet/raise can be
   // sized as a fraction of it (small → merged, big → polarized).
   var potBefore = 0;
+  // Chips each seat has committed BEFORE the current street, so the per-street
+  // effective stack (starting stack − committed) feeds the SPR computation.
+  final committed = <int, int>{};
 
   for (final street in hand.streets) {
     for (final c in street.communityCards) {
@@ -939,6 +974,44 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
                     handClass: hc,
                     position: heroIp ? HeroPosition.ip : HeroPosition.oop)
                 : null;
+        // SPR (DCE Tier A): effective stack ÷ pot at street start. Effective
+        // stack = min(hero remaining, the SHORTEST simulated villain remaining)
+        // — the standard effective-stack convention (the shortest stack caps the
+        // all-in everyone can match). Using the DEEPEST villain would overstate
+        // SPR when the deepest opponent isn't the one driving the action (e.g. a
+        // short aggressor beside a deep passive player). Scope to simVillains
+        // (the opponents actually simulated this street), NOT `active`: a villain
+        // whose range fully collides with the board narrows to zero combos and
+        // drops from simVillains but stays in `active`, so keying off `active`
+        // would read "multiway" while EQR (simVillains.length) reads heads-up on
+        // the SAME street — contradicting FACTs. (A villain who folds ON this
+        // street still counts here, mirroring the equity sim + EQR, which also
+        // include the flop-folder in the flop number — a shared, pre-existing
+        // convention, not specific to SPR.) Skipped pre-flop, with no pot, or
+        // when the field is already all-in from a PRIOR street (committed then
+        // covers the stack → effStack 0). The required-equity % is heads-up-only;
+        // multiway it is null and the pot is flagged as such in the FACT.
+        double? spr;
+        double? reqStackOff;
+        bool? sprHeadsUp;
+        if (street.street != Street.preflop && potBefore > 0) {
+          final heroRem = hero.startingStack - (committed[hero.seatIndex] ?? 0);
+          int? shortestVillainRem;
+          for (final v in simVillains) {
+            final rem =
+                v.player.startingStack - (committed[v.player.seatIndex] ?? 0);
+            if (shortestVillainRem == null || rem < shortestVillainRem) {
+              shortestVillainRem = rem;
+            }
+          }
+          final effStack =
+              shortestVillainRem == null ? 0 : min(heroRem, shortestVillainRem);
+          if (effStack > 0) {
+            spr = effStack / potBefore;
+            sprHeadsUp = simVillains.length == 1;
+            reqStackOff = sprHeadsUp ? requiredEquityToStackOff(spr) : null;
+          }
+        }
         streetResults.add(StreetEquityCheck(
           street: street.street,
           heroEquity: result.equity[0],
@@ -948,6 +1021,9 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           realizedEquity: realizedEq,
           realizedHandClass: realizedEq != null ? hc : null,
           heroInPosition: realizedEq != null ? heroIp : null,
+          spr: spr,
+          reqStackOffEquity: reqStackOff,
+          sprIsHeadsUp: sprHeadsUp,
         ));
       }
     }
@@ -957,8 +1033,16 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
       if (a.type == ActionType.fold) foldedSeats.add(a.seat);
     }
 
-    // Advance the pot so the next street's bet-sizing is measured against it.
-    potBefore += _streetPot(street);
+    // Advance the pot + per-seat committed totals so the next street's
+    // bet-sizing and SPR are measured against this street's action.
+    final streetMax = <int, int>{};
+    for (final a in street.actions) {
+      final amt = a.amount ?? 0;
+      if (amt > (streetMax[a.seat] ?? 0)) streetMax[a.seat] = amt;
+    }
+    streetMax.forEach(
+        (seat, amt) => committed[seat] = (committed[seat] ?? 0) + amt);
+    potBefore += streetMax.values.fold(0, (s, v) => s + v);
   }
 
   if (streetResults.isEmpty) return null;

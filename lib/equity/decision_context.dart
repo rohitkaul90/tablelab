@@ -235,3 +235,50 @@ HandClass? classifyFromStrings(List<String> holeCards, List<String> boardCards) 
   if (hole.length < 2) return null;
   return classifyHandClass(hole, board);
 }
+
+// ── SPR & commitment (DCE Tier A, the SPR factor) ────────────────────────────
+//
+// SPR (stack-to-pot ratio) = effective stack ÷ pot, measured at the START of a
+// street. It drives COMMITMENT: at low SPR a strong-enough made hand should get
+// all-in; at high SPR a one-pair hand favours pot control.
+//
+// The HEADS-UP equity required to profitably stack off derives in closed form:
+// hero risks the effective stack E to win the pot P plus villain's matching E,
+// so reqStackOff = E / (P + 2E) = SPR / (1 + 2·SPR). This matches the sourced
+// anchors (launch/DECISION_CONTEXT_ENGINE.md §"Key sourced constants"):
+//   SPR 1 → 33%, SPR 2 → 40%, SPR 3 → 43%, SPR → ∞ → 50% (asymptote).
+// MULTIWAY the all-in price is HIGHER (hero must beat the whole field) and
+// depends on caller count + coverage, so the precise % is heads-up-only — the
+// FACT path suppresses it multiway and reasons qualitatively from SPR instead.
+
+/// Heads-up required equity (0–1) to profitably get all-in at this [spr].
+/// reqStackOff = spr / (1 + 2·spr); asymptotes to (and is clamped at) 0.5.
+double requiredEquityToStackOff(double spr) {
+  if (spr <= 0) return 0.0;
+  return (spr / (1 + 2 * spr)).clamp(0.0, 0.5);
+}
+
+/// Commitment buckets by SPR. The boundaries are heuristic (estimated, not
+/// hard-sourced) — used only for the prose framing in the SPR FACT.
+enum SprBucket { committed, shallow, medium, deep }
+
+SprBucket sprBucket(double spr) {
+  if (spr <= 1.0) return SprBucket.committed;
+  if (spr <= 3.0) return SprBucket.shallow;
+  if (spr <= 6.0) return SprBucket.medium;
+  return SprBucket.deep;
+}
+
+/// Human label for an SPR commitment bucket (used in the FACT prose).
+String sprBucketLabel(SprBucket b) {
+  switch (b) {
+    case SprBucket.committed:
+      return 'very low SPR — hero is near-committed';
+    case SprBucket.shallow:
+      return 'low SPR — favours stacking off strong made hands';
+    case SprBucket.medium:
+      return 'medium SPR — strength-dependent';
+    case SprBucket.deep:
+      return 'high SPR — favours pot control with one-pair hands';
+  }
+}

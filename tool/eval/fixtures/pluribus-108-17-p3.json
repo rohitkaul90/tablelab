@@ -226,6 +226,7 @@
       "forcedAction": "call",
       "heroActionCorrect": true
     },
-    "realizedEquityByStreet": {}
+    "realizedEquityByStreet": {},
+    "sprByStreet": {}
   }
 }

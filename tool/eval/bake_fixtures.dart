@@ -233,12 +233,21 @@ Map<String, dynamic> _buildLabels(PokerHand hand, HandEquityCheck equity) {
       if (s.realizedEquity != null) s.street.name: s.realizedEquity!,
   };
 
+  // SPR (DCE Tier A): effective-stack ÷ pot per street. Result-independent
+  // (derived from stacks + pot), so it bakes like the other labels. Recorded
+  // for the report / future scorer use — SPR is heuristic context, not graded.
+  final sprByStreet = <String, double>{
+    for (final s in equity.streets)
+      if (s.spr != null) s.street.name: s.spr!,
+  };
+
   return {
     'heroHoleCards': heroCards,
     'finalBoard': hand.allCommunityCards,
     'perStreet': perStreet,
     'forcedDecision': forced?.toJson(),
     'realizedEquityByStreet': realizedByStreet,
+    'sprByStreet': sprByStreet,
   };
 }
 

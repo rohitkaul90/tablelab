@@ -234,6 +234,7 @@
       "forcedAction": "fold",
       "heroActionCorrect": false
     },
-    "realizedEquityByStreet": {}
+    "realizedEquityByStreet": {},
+    "sprByStreet": {}
   }
 }

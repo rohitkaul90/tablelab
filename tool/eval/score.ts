@@ -111,6 +111,11 @@ interface Fixture {
     // EQR (DCE Tier A): hero's realized equity per street name. A hero-equity
     // claim is accepted if it matches the RAW equity OR this realized figure.
     realizedEquityByStreet?: Record<string, number>;
+    // SPR (DCE Tier A): effective stack ÷ pot per street name. Heuristic
+    // context, not card-logic graded — baked for the report + future use. The
+    // SPR stack-off % is phrased like a pot-odds price, which the card-logic
+    // adjudicator already leaves unchecked (it only grades hero-equity claims).
+    sprByStreet?: Record<string, number>;
   };
   // User satisfaction signal for user-flagged spots (absent on Pluribus spots).
   // rating: -1 thumbs-down (dissatisfied), +1 thumbs-up (satisfied control).
