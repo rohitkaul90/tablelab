@@ -1,0 +1,71 @@
+# tool/solver — TexasSolver calibration bridge (operator-only)
+
+A local harness that maps recorded TableLab hands into [TexasSolver] postflop solves
+and compares the solver's GTO output against the Decision-Context Engine heuristics
+(EQR realized-equity multipliers, SPR commitment). **Not shipped, not user-facing** —
+it runs locally against the licensed solver binary to *calibrate* `lib/equity/`.
+
+## External dependency (not in this repo)
+
+This requires the **commercially-licensed TexasSolver CPU source**, built locally — it
+is intentionally NOT committed (republishing that source would breach the license).
+Point the harness at it via `TEXASSOLVER_DIR` env var or a gitignored
+`tool/solver/solver_config.json`:
+
+```json
+{ "sourceDir": "C:\\path\\to\\TexasSolver\\...\\source" }
+```
+
+(the dir containing `vsbuild/console_solver.exe` and `resources/`).
+
+### Required solver-source patches
+
+The stock `console_solver` dump emits **strategy frequencies only — no EV**. Two local
+patches to the licensed source add per-combo, per-action EV to the flop nodes of the
+dump (see `memory/solver-engine-landscape` for the full rationale):
+
+1. **`BestResponse::computeEvs`** (+ `ev_mode`) — average-strategy value walk that
+   records each flop action node's per-combo, per-action **GTO EV in chips** → emitted
+   as the `"ev"` field. Must null-guard `getTrainable(deal)` (pruned deals return null).
+2. **`BestResponse::computePassiveEvs`** (+ `passive_mode`) — same, but hero is
+   restricted to CHECK/CALL/FOLD (never bet/raise) vs the GTO opponent → **showdown
+   realization with fold equity stripped** → emitted as `"ev_passive"`.
+3. **`PCfrSolver::dumps`** calls both and `reConvertJson` attaches `"ev"`/`"ev_passive"`
+   to flop (`deal==0`) action nodes.
+
+## Files
+
+| File | Role |
+|---|---|
+| `solver_input.dart` | `PokerHand` → `SolverSpot` (board, IP/OOP GTO ranges via `chart_keys`/`gto_ranges`, pot, eff stack, hero contribution). Single-raised, heads-up-to-flop, flop decision only. |
+| `run_solver.dart` | Writes solver input, runs `console_solver`, parses hero combo's strategy + `ev` + `ev_passive`. |
+| `poc.dart` | Proof-of-concept: one fixture + one real hand, prints solver action/EV vs DCE FACTs. |
+| `batch.dart` | Calibration batch: balanced spots per {hand-class × position} bucket → `batch_report.md`. Resumable. |
+| `export_one_hand.dart` | Pulls one real recorded hand → `real_hand.json` (needs `SUPABASE_*`). |
+
+## Run
+
+```bash
+dart run tool/solver/poc.dart                       # 2-spot proof of concept
+dart run tool/solver/batch.dart 3 30                # batch: maxPerBucket=3, totalCap=30 (~1h)
+dart run tool/solver/export_one_hand.dart           # export one real hand (env creds)
+```
+
+## Realized-equity definitions (calibration target)
+
+Net-chip EV frame (verified by regression `EV/pot ≈ 1.45·rawEq − 0.62`):
+
+- **EQR_emp (total)** `= (EV_GTO + C_hero) / pot / rawEq` — includes fold equity.
+- **EQR_show (no fold equity)** `= (passiveEv + C_hero) / pot / rawEq` — showdown
+  realization only; the right target for the bluff-catch EQR multiplier.
+
+`C_hero` = hero's actual committed chips (not pot/2 — dead money makes pot > 2·C_hero).
+
+## Caveats
+
+~100–150s per deep solve; current settings use loose convergence (3–4.5% exploitability,
+one bet size) → **directional, not final**. Flop decisions only. `solver_config.json`,
+`real_hand.json`, `batch_results.json`, and `*.log` are gitignored. Findings:
+`batch_report.md`, `POC_FINDINGS.md`, and `memory/solver-engine-landscape`.
+
+[TexasSolver]: https://github.com/bupticybee/TexasSolver

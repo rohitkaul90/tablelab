@@ -1,0 +1,8 @@
+# Machine-specific solver location (path to the licensed TexasSolver source dir)
+solver_config.json
+# Exported real recorded hand (may contain user data) — never commit
+real_hand.json
+# Resumable batch solve state (large, regenerable)
+batch_results.json
+# Local run logs
+*.log
