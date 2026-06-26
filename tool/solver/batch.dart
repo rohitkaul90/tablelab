@@ -79,10 +79,7 @@ Future<void> main(List<String> args) async {
   final byBucket = <String, List<_Scored>>{};
   for (final c in candidates) {
     final check = await computeHandEquityCheck(c.hand, reads: c.reads, seed: 1234);
-    final flop = check?.streets
-        .where((s) => s.street == Street.flop)
-        .cast<StreetEquityCheck?>()
-        .firstWhere((s) => true, orElse: () => null);
+    final flop = _flopStreet(check);
     if (flop == null || flop.realizedHandClass == null || flop.heroInPosition == null) {
       continue; // need a classified flop spot to bucket/calibrate
     }
@@ -90,64 +87,109 @@ Future<void> main(List<String> args) async {
     byBucket.putIfAbsent(bucket, () => []).add(_Scored(c, flop));
   }
 
-  // ── 3. Select up to maxPerBucket per bucket (deterministic by id), capped. ──
-  final selected = <_Scored>[];
-  for (final entry in byBucket.entries) {
-    entry.value.sort((a, b) => a.c.id.compareTo(b.c.id));
-    selected.addAll(entry.value.take(maxPerBucket));
+  // ── 3. Select up to maxPerBucket per bucket, then balance ACROSS buckets up to
+  //       totalCap via round-robin (1st of each bucket, then 2nd, …) so the global
+  //       cap never drops a whole bucket. ──
+  final perBucket = <String, List<_Scored>>{
+    for (final e in byBucket.entries)
+      e.key: ([...e.value]..sort((a, b) => a.c.id.compareTo(b.c.id)))
+          .take(maxPerBucket)
+          .toList(),
+  };
+  final keys = perBucket.keys.toList()..sort();
+  final totalSelectable = perBucket.values.fold(0, (s, v) => s + v.length);
+  final capped = <_Scored>[];
+  for (var depth = 0; capped.length < totalCap; depth++) {
+    var added = false;
+    for (final k in keys) {
+      if (depth < perBucket[k]!.length) {
+        capped.add(perBucket[k]![depth]);
+        added = true;
+        if (capped.length >= totalCap) break;
+      }
+    }
+    if (!added) break; // every bucket exhausted
   }
-  selected.sort((a, b) => a.c.id.compareTo(b.c.id));
-  final capped = selected.take(totalCap).toList();
-  stdout.writeln('Buckets: ${byBucket.keys.length}. Selected ${capped.length} '
-      'spots (maxPerBucket=$maxPerBucket, totalCap=$totalCap).');
-  if (selected.length > capped.length) {
-    stdout.writeln('NOTE: dropped ${selected.length - capped.length} selected '
-        'spots to the total cap — raise totalCap to include them.');
-  }
+  capped.sort((a, b) => a.c.id.compareTo(b.c.id));
+  stdout.writeln('Buckets: ${byBucket.keys.length}. Selected ${capped.length}/'
+      '$totalSelectable spots (maxPerBucket=$maxPerBucket, totalCap=$totalCap, '
+      'round-robin balanced).');
 
-  // ── 4. Solve (resumable). ──
+  // ── 4. Solve. Resumable, but the cache is keyed on spot id + an inputs
+  //       SIGNATURE so a fixture or mapping change re-solves instead of serving
+  //       stale numbers (mirrors analyze-hand's _inputsSignature invariant). ──
   final results = <String, dynamic>{};
   final resultsFile = File(_resultsPath);
   if (resultsFile.existsSync()) {
     results.addAll(jsonDecode(resultsFile.readAsStringSync()) as Map<String, dynamic>);
-    stdout.writeln('Resuming: ${results.length} spots already solved.');
+    stdout.writeln('Resuming: ${results.length} spots in cache.');
   }
 
+  final errored = <String>[];
   var n = 0;
   for (final s in capped) {
     n++;
-    if (results.containsKey(s.c.id)) {
+    final spot = SolverSpot.fromHand(s.c.hand);
+    final sig = _sig(spot);
+    final cached = results[s.c.id];
+    if (cached is Map && cached['sig'] == sig) {
       stdout.writeln('[$n/${capped.length}] ${s.c.id} — cached, skip.');
       continue;
     }
-    final spot = SolverSpot.fromHand(s.c.hand);
     stdout.writeln('[$n/${capped.length}] ${s.c.id} (${s.bucket}) solving…');
     SolveResult res;
     try {
       res = await solve(spot);
     } catch (e) {
       stdout.writeln('   ERROR: $e');
+      errored.add(s.c.id);
       continue;
     }
-    results[s.c.id] = _spotResult(s, spot, res);
+    if (res.evs == null) {
+      stdout.writeln('   WARNING: no "ev" in the dump — solver not EV-patched? '
+          'Realized-equity columns will be empty for this spot.');
+    }
+    results[s.c.id] = _spotResult(s, spot, sig, res);
     resultsFile.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(results));
     final r = results[s.c.id] as Map<String, dynamic>;
     stdout.writeln('   top=${r["gtoTopAction"]}  nodeEV=${r["gtoNodeEv"]}  '
         'EV/pot=${r["evPerPot"]}  gap=${r["evGap"]}  (${res.wallMs ~/ 1000}s)');
   }
 
-  // ── 5. Aggregate → report. ──
-  // Re-derive each spot's SolverSpot (cheap, no solve) so the realized-equity
-  // formula has C_hero even for spots solved in an earlier run.
+  // ── 5. Aggregate → report (scoped to THIS run's selected spots). ──
   final spotsById = <String, SolverSpot>{};
   for (final s in capped) {
     try {
       spotsById[s.c.id] = SolverSpot.fromHand(s.c.hand);
     } catch (_) {}
   }
-  _writeReport(results, byBucket, spotsById, maxPerBucket, totalCap);
-  stdout.writeln('\nWrote $_reportPath ($_resultsPath has ${results.length} spots).');
+  final selectedIds = capped.map((s) => s.c.id).toSet();
+  _writeReport(results, selectedIds, errored, byBucket, spotsById, maxPerBucket, totalCap);
+  stdout.writeln('\nWrote $_reportPath (${selectedIds.length} selected, '
+      '${errored.length} errored; cache has ${results.length}).');
 }
+
+/// First flop StreetEquityCheck, or null.
+StreetEquityCheck? _flopStreet(HandEquityCheck? check) {
+  for (final s in check?.streets ?? const <StreetEquityCheck>[]) {
+    if (s.street == Street.flop) return s;
+  }
+  return null;
+}
+
+/// Inputs signature over everything that determines the solve — so an edited
+/// fixture or a changed solver_input mapping invalidates the cached result.
+String _sig(SolverSpot s) => [
+      s.board.join(),
+      s.rangeIp,
+      s.rangeOop,
+      s.pot,
+      s.effStack,
+      s.heroContribution,
+      s.heroCombo,
+      s.heroIsIp,
+      s.heroPath.join(','),
+    ].join('|');
 
 class _Scored {
   final Candidate c;
@@ -157,7 +199,7 @@ class _Scored {
       '${flop.realizedHandClass!.name}/${flop.heroInPosition! ? "IP" : "OOP"}';
 }
 
-Map<String, dynamic> _spotResult(_Scored s, SolverSpot spot, SolveResult res) {
+Map<String, dynamic> _spotResult(_Scored s, SolverSpot spot, String sig, SolveResult res) {
   final raw = s.flop.heroEquity;
   final realized = s.flop.realizedEquity;
   double? nodeEv;
@@ -172,6 +214,7 @@ Map<String, dynamic> _spotResult(_Scored s, SolverSpot spot, SolveResult res) {
   }
   return {
     'id': s.c.id,
+    'sig': sig,
     'bucket': s.bucket,
     'handClass': s.flop.realizedHandClass!.name,
     'position': s.flop.heroInPosition! ? 'IP' : 'OOP',
@@ -203,7 +246,8 @@ double? _realizedR(Map<String, dynamic> row, Map<String, SolverSpot> spotsById) 
   final ev = row['gtoNodeEv'], pot = row['pot'];
   final c = spotsById[row['id']]?.heroContribution ?? row['heroContribution'];
   if (ev is! num || pot is! num || pot == 0 || c is! num) return null;
-  return (ev + c) / pot;
+  final r = (ev + c) / pot;
+  return r < 0 ? 0 : r; // realized equity is a ≥0 share (matches report wording)
 }
 
 double? _eqrEmp(Map<String, dynamic> row, Map<String, SolverSpot> spotsById) {
@@ -218,7 +262,8 @@ double? _realizedRShow(Map<String, dynamic> row, Map<String, SolverSpot> spotsBy
   final ev = row['passiveEv'], pot = row['pot'];
   final c = spotsById[row['id']]?.heroContribution ?? row['heroContribution'];
   if (ev is! num || pot is! num || pot == 0 || c is! num) return null;
-  return (ev + c) / pot;
+  final r = (ev + c) / pot;
+  return r < 0 ? 0 : r; // realized equity is a ≥0 share (matches report wording)
 }
 
 double? _eqrShow(Map<String, dynamic> row, Map<String, SolverSpot> spotsById) {
@@ -228,9 +273,20 @@ double? _eqrShow(Map<String, dynamic> row, Map<String, SolverSpot> spotsById) {
   return r / raw;
 }
 
-void _writeReport(Map<String, dynamic> results, Map<String, List<_Scored>> byBucket,
-    Map<String, SolverSpot> spotsById, int maxPerBucket, int totalCap) {
-  final rows = results.values.cast<Map<String, dynamic>>().toList()
+void _writeReport(
+    Map<String, dynamic> results,
+    Set<String> selectedIds,
+    List<String> errored,
+    Map<String, List<_Scored>> byBucket,
+    Map<String, SolverSpot> spotsById,
+    int maxPerBucket,
+    int totalCap) {
+  // Scope the report to THIS run's selected spots only — never pool rows from
+  // earlier runs with different selection parameters (header would lie).
+  final rows = selectedIds
+      .map((id) => results[id])
+      .whereType<Map<String, dynamic>>()
+      .toList()
     ..sort((a, b) => (a['bucket'] as String).compareTo(b['bucket'] as String));
   for (final r in rows) {
     r['R'] = _r(_realizedR(r, spotsById));
@@ -239,8 +295,12 @@ void _writeReport(Map<String, dynamic> results, Map<String, List<_Scored>> byBuc
   }
   final b = StringBuffer();
   b.writeln('# TexasSolver calibration batch\n');
-  b.writeln('Spots solved: ${rows.length}  ·  maxPerBucket=$maxPerBucket  ·  '
-      'totalCap=$totalCap\n');
+  b.writeln('Spots: ${rows.length} solved  ·  ${errored.length} errored (excluded)  ·  '
+      'maxPerBucket=$maxPerBucket  ·  totalCap=$totalCap\n');
+  if (errored.isNotEmpty) {
+    b.writeln('> **Errored spots (no result, excluded from buckets):** '
+        '${errored.join(", ")}. Bucket counts below are over solved spots only.\n');
+  }
   b.writeln('**Realized equity:** `R = (EV_GTO + C_hero) / pot`, `EQR_emp = R / rawEq` '
       '(net-chip EV frame, verified by regression; uses each spot\'s actual committed '
       'chips). Compare **EQR_emp** to the DCE multiplier — that is the calibration '

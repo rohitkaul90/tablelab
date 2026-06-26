@@ -153,6 +153,7 @@ Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
     throw StateError('console_solver.exe not found at $bin — build it first.');
   }
   final tmp = Directory.systemTemp.createTempSync('tlsolve_');
+  try {
   final inputPath = '${tmp.path}/input.txt';
   final dumpPath = '${tmp.path}/out.json';
   File(inputPath).writeAsStringSync(_buildInput(spot, dumpPath));
@@ -202,6 +203,14 @@ Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
     wallMs: sw.elapsedMilliseconds,
     nodePlayer: node['player'] as int?,
   );
+  } finally {
+    // Reclaim the per-solve temp dir (input.txt + a multi-MB JSON dump) on every
+    // path, including the StateError early-exits — a long batch would otherwise
+    // accumulate them in %TEMP%.
+    try {
+      tmp.deleteSync(recursive: true);
+    } catch (_) {}
+  }
 }
 
 extension<T> on Iterable<T> {

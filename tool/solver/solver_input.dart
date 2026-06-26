@@ -125,17 +125,22 @@ class SolverSpot {
     final keyOf = {openerSeat: openerKey, callerSeat: callerKey};
 
     // Pot entering the flop = sum of each seat's max preflop contribution
-    // (includes folded blinds). Effective stack = min remaining of the two
-    // active players (shortest-stack convention, mirrors villain_range).
+    // (includes folded blinds) PLUS antes. Antes (TableSetup.ante, per-player) are
+    // posted by every seat and never appear as actions, so they must be added in
+    // explicitly or tournament pots/SPR are understated. Effective stack = min
+    // remaining of the two active players (shortest-stack convention).
+    final ante = ts.ante ?? 0;
     final contrib = <int, int>{};
     for (final a in preflop.actions) {
       final amt = a.amount;
       if (amt != null && amt > (contrib[a.seat] ?? 0)) contrib[a.seat] = amt;
     }
-    final pot = contrib.values.fold(0, (s, v) => s + v);
+    // Hero's committed chips include the ante; the ante also leaves the stack.
+    int committed(int seat) => (contrib[seat] ?? 0) + ante;
+    final pot = contrib.values.fold(0, (s, v) => s + v) + ante * ts.numSeats;
     final stackOf = {for (final p in hand.players) p.seatIndex: p.startingStack};
     final effStack = active
-        .map((s) => stackOf[s]! - (contrib[s] ?? 0))
+        .map((s) => stackOf[s]! - committed(s))
         .reduce((a, b) => a < b ? a : b);
 
     // Path from root to hero's first flop decision.
@@ -162,8 +167,10 @@ class SolverSpot {
 
     // Force-include hero's ACTUAL hand in hero's range — Pluribus / real players
     // hold hands outside the textbook chart, and the solver has no strategy for a
-    // combo absent from the range. Adding the one notation (standard practice) keeps
-    // every recorded spot solvable; it perturbs the range by a single combo.
+    // combo absent from the range. We add the hand's NOTATION class (e.g. "AKs" =
+    // up to 4 suited combos, "AA" = 6), not a single combo, so an off-chart hero
+    // hand widens the range by its whole class — keep that in mind when reading the
+    // per-spot EQR for off-chart spots.
     final ipSet = {...rangeOf[ipSeat]!};
     final oopSet = {...rangeOf[oopSeat]!};
     final heroNote = _handNotation(hero.holeCards!);
@@ -175,7 +182,7 @@ class SolverSpot {
       rangeOop: (oopSet.toList()..sort()).join(','),
       pot: pot,
       effStack: effStack,
-      heroContribution: contrib[ts.heroSeat] ?? 0,
+      heroContribution: committed(ts.heroSeat),
       heroCombo: hero.holeCards!.join(),
       heroIsIp: heroIsIp,
       heroPath: heroPath,
