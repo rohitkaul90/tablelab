@@ -36350,11 +36350,11 @@ if(a.aRe(B.ajQ))return!0
 for(s=12;s>=4;--s)if(a.m(0,s)&&a.m(0,s-1)&&a.m(0,s-2)&&a.m(0,s-3)&&a.m(0,s-4))return!0
 return!1},
 c0Q(a,b){var s=b===B.xL
-switch(a.a){case 0:return s?0.3:0.1
-case 1:return s?0.88:0.78
-case 2:return s?1:0.88
-case 3:return s?0.92:0.79
-case 4:return s?1.3:1.12}},
+switch(a.a){case 0:return s?0.85:0.1
+case 1:return s?1:0.45
+case 2:return s?1.05:0.55
+case 3:return s?1.15:0.75
+case 4:return s?1.18:1.12}},
 c1m(a){switch(a.a){case 0:return"air (no real equity)"
 case 1:return"a weak draw"
 case 2:return"a strong draw"
