@@ -24,6 +24,8 @@
 // an estimate and would add a confidently-wrong surface without an anchor). Add
 // it as a later refinement once the eval shows EQR helps.
 
+import 'dart:math' as math;
+
 import 'card.dart';
 import 'evaluator.dart';
 
@@ -295,4 +297,201 @@ String sprBucketLabel(SprBucket b) {
     case SprBucket.deep:
       return 'high SPR — favours pot control with one-pair hands';
   }
+}
+
+// ── Board volatility (DCE Tier A, the BOARD-VOLATILITY factor) ────────────────
+//
+// How much does the next card change the board? A STATIC board (equities locked
+// in) favours small bets / flatting; a DYNAMIC board (many next cards complete a
+// flush or straight, or pair the board) favours protection raises + larger
+// sizing. It moves the CALL-vs-RAISE / sizing decision, NOT the bluff-catch call.
+//
+// Two layers at different confidence tiers:
+//   1. [boardDynamism] — a HARD, deterministic COUNT of unseen next cards that
+//      change what hands are possible (a flush becomes makeable, a new straight
+//      window opens, or the board pairs → boats). Board-only, hand-independent,
+//      exactly enumerable → ships as a hard `[FACT —]`, not a heuristic.
+//   2. [equitySpread] — summary stats of hero's equity across those next cards,
+//      fed by the equity engine (villain_range). Hero-specific context.
+//
+// Only the static/dynamic THRESHOLD and the sizing PRESCRIPTION are soft — those
+// are solver-calibrated (tool/solver/volatility_batch.dart, DCE Phase 2), never
+// the count. Pure Dart, isolate-safe; unit-tested in decision_context_test.dart.
+
+/// PLACEHOLDER threshold: a board is "dynamic" when at least this fraction of the
+/// unseen next cards change the board's category possibilities. Calibrated in
+/// Phase 2 against the solver's sizing swing — do NOT treat as final; nothing
+/// gates on it yet beyond the [BoardDynamism.isDynamic] label.
+const double kBoardDynamicThreshold = 0.30;
+
+/// Deterministic board-volatility measurement for one street: of the unseen next
+/// cards, how many materially change what is possible on the board. Valid only
+/// on the flop (3) or turn (4) — there is a next card to come; null otherwise
+/// (pre-flop, or the river where nothing is left to come).
+///
+/// A next card counts as DYNAMIC when it does at least one of: pairs the board (a
+/// rank already present → boats/quads change), advances a flush (its suit already
+/// has ≥2 on the board → 3+ makes a flush makeable / shifts the nut flush), or
+/// opens a new straight window (a 5-rank window the board now supplies ≥3 of that
+/// it did not before). The three subset counts can overlap (one card may pair AND
+/// bring a flush), so they sum to ≥ [dynamic]; [dynamic] is the union.
+class BoardDynamism {
+  /// Board length this was computed for (3 = flop→turn, 4 = turn→river).
+  final int street;
+
+  /// Number of unseen next cards considered (52 − board − excluded).
+  final int unseen;
+
+  /// Unseen cards that change the board's category possibilities (the union of
+  /// the three subsets below — a card is counted once even if it does several).
+  final int dynamic;
+
+  /// Subset: cards that advance a flush (suit already ≥2 on board).
+  final int flushCards;
+
+  /// Subset: cards that open a straight window the board did not supply before.
+  final int straightCards;
+
+  /// Subset: cards that pair (or further pair) the board.
+  final int pairCards;
+
+  const BoardDynamism({
+    required this.street,
+    required this.unseen,
+    required this.dynamic,
+    required this.flushCards,
+    required this.straightCards,
+    required this.pairCards,
+  });
+
+  /// Fraction of unseen cards that are dynamic (0 when there are no unseen cards).
+  double get dynamicFraction => unseen == 0 ? 0.0 : dynamic / unseen;
+
+  /// Whether the board reads as dynamic at the (PLACEHOLDER) threshold.
+  bool get isDynamic => dynamicFraction >= kBoardDynamicThreshold;
+}
+
+/// Compute [BoardDynamism] for [board] (parsed card ints), excluding any cards in
+/// [excluded] (e.g. hero's hole cards, so the count is "of 47" rather than "of
+/// 49"). Returns null for boards that are not the flop or turn.
+BoardDynamism? boardDynamism(List<int> board, {Set<int> excluded = const {}}) {
+  if (board.length != 3 && board.length != 4) return null;
+
+  final boardSet = board.toSet();
+  final boardRanks = {for (final c in board) cardRank(c)};
+  final suitCount = <int, int>{};
+  for (final c in board) {
+    final s = cardSuit(c);
+    suitCount[s] = (suitCount[s] ?? 0) + 1;
+  }
+  final baseWindows = _supplyWindows(_presentValues(board));
+
+  var unseen = 0, dynamic = 0, flushCards = 0, straightCards = 0, pairCards = 0;
+  for (var c = 0; c < 52; c++) {
+    if (boardSet.contains(c) || excluded.contains(c)) continue;
+    unseen++;
+
+    final pairs = boardRanks.contains(cardRank(c));
+    final flush = (suitCount[cardSuit(c)] ?? 0) >= 2;
+    final straight = _opensWindow(board, c, baseWindows);
+
+    if (pairs) pairCards++;
+    if (flush) flushCards++;
+    if (straight) straightCards++;
+    if (pairs || flush || straight) dynamic++;
+  }
+
+  return BoardDynamism(
+    street: board.length,
+    unseen: unseen,
+    dynamic: dynamic,
+    flushCards: flushCards,
+    straightCards: straightCards,
+    pairCards: pairCards,
+  );
+}
+
+/// Does adding card [c] open a straight window the [board] did not already
+/// supply (≥3 of a 5-rank window)? [baseWindows] is the board's existing window
+/// set, passed in so we compute it once per board, not once per unseen card.
+bool _opensWindow(List<int> board, int c, Set<int> baseWindows) {
+  final after = _supplyWindows(_presentValues([...board, c]));
+  return after.length > baseWindows.length;
+}
+
+/// Rank VALUES (2..14, ace high) present on the cards, plus 1 for the wheel ace —
+/// mirrors the prompt's computeBoardSummary so straight reasoning lines up.
+Set<int> _presentValues(List<int> cards) {
+  final present = <int>{};
+  for (final c in cards) {
+    final v = cardRank(c) + 2; // rank 0..12 → value 2..14
+    present.add(v);
+    if (v == 14) present.add(1); // ace also plays low
+  }
+  return present;
+}
+
+/// Low ends (1..10) of every 5-rank window the [present] values supply ≥3 of —
+/// i.e. windows a player could complete with at most two hole cards.
+Set<int> _supplyWindows(Set<int> present) {
+  final windows = <int>{};
+  for (var low = 1; low <= 10; low++) {
+    var onBoard = 0;
+    for (var v = low; v < low + 5; v++) {
+      if (present.contains(v)) onBoard++;
+    }
+    if (onBoard >= 3) windows.add(low);
+  }
+  return windows;
+}
+
+/// Summary statistics of hero's equity across a set of next cards — the
+/// hero-specific volatility signal. The equity engine (villain_range) supplies
+/// one equity per enumerated next card; this is the pure stats reduction so it
+/// stays unit-testable without the simulator. Returns null for an empty input.
+class EquitySpread {
+  final int n;
+  final double min;
+  final double max;
+  final double mean;
+
+  /// Population standard deviation of the per-card equities.
+  final double stdev;
+
+  const EquitySpread({
+    required this.n,
+    required this.min,
+    required this.max,
+    required this.mean,
+    required this.stdev,
+  });
+
+  /// max − min, the simplest dispersion read.
+  double get range => max - min;
+}
+
+/// Reduce a list of per-next-card hero equities (each 0–1) to an [EquitySpread].
+/// Null when [perCardEquity] is empty.
+EquitySpread? equitySpread(List<double> perCardEquity) {
+  if (perCardEquity.isEmpty) return null;
+  final n = perCardEquity.length;
+  var min = perCardEquity.first, max = perCardEquity.first, sum = 0.0;
+  for (final e in perCardEquity) {
+    if (e < min) min = e;
+    if (e > max) max = e;
+    sum += e;
+  }
+  final mean = sum / n;
+  var sq = 0.0;
+  for (final e in perCardEquity) {
+    final d = e - mean;
+    sq += d * d;
+  }
+  return EquitySpread(
+    n: n,
+    min: min,
+    max: max,
+    mean: mean,
+    stdev: math.sqrt(sq / n),
+  );
 }
