@@ -1,0 +1,97 @@
+# Board-volatility calibration report
+
+Validates `boardDynamism()` (Phase 1) against the solver's GTO c-bet sizing and turn-to-turn sizing swing. Static vs dynamic split on the PLACEHOLDER `kBoardDynamicThreshold` — use the aggregate below to RE-SET that threshold and the sizing buckets. Heads-up single-raised flop spots; sizes are % of the flop pot.
+
+Spots: 30
+
+## Per spot (sorted by dynamic-fraction)
+
+| spot | board | dyn% | f/s/p | eq range | flop cbet | turn size σ | expl% |
+|---|---|--:|---|--:|---|--:|--:|
+| pluribus-102b-92-p2 | 2s 8h 2c | 10 | 0/0/5 | 41pt | 97% @ 57% | 8.5 | 0.45 |
+| real:5497038a-bc78-48f6-ab83-9726ad69566c | Ah 8d 8c | 10 | 0/0/5 | 24pt | 54% @ 44% | 4.0 | 0.36 |
+| pluribus-95b-85-p3 | Ks 8s Kh | 33* | 11/0/5 | 36pt | 99% @ 46% | 6.8 | 0.41 |
+| pluribus-103b-98-p3 | 3s 2h 5c | 43* | 0/12/9 | 61pt | 66% @ 53% | 2.8 | 0.39 |
+| pluribus-94b-73-p5 | Tc Kh Ks | 43* | 0/16/5 | 84pt | 5% @ 45% | 6.6 | 0.44 |
+| pluribus-76b-84-p2 | Kc Qh 3s | 51* | 0/16/9 | 23pt | 99% @ 51% | 9.5 | 0.40 |
+| pluribus-45b-103-p2 | Ac 6c 2c | 57* | 10/12/9 | 35pt | 100% @ 53% | 6.1 | 0.46 |
+| pluribus-41b-121-p2 | Qh 5d 7s | 59* | 0/20/9 | 53pt | 100% @ 58% | 12.8 | 0.34 |
+| pluribus-95b-44-p1 | 8s 6d Kc | 59* | 0/20/9 | 62pt | 99% @ 55% | 8.4 | 0.46 |
+| pluribus-44b-98-p1 | 6c 3c Kc | 63* | 10/16/9 | 47pt | 98% @ 56% | 3.9 | 0.35 |
+| pluribus-77b-130-p4 | Qs Ks 5s | 63* | 10/16/9 | 34pt | 69% @ 53% | 3.2 | 0.35 |
+| pluribus-96b-158-p1 | Qs 5s Ks | 63* | 10/16/9 | 76pt | 100% @ 60% | 12.3 | 0.41 |
+| pluribus-50b-132-p3 | 9h 2s 5c | 67* | 0/24/9 | 28pt | 96% @ 52% | 3.9 | 0.38 |
+| pluribus-75b-86-p2 | 9s Tc Qh | 67* | 0/24/9 | 34pt | 100% @ 52% | 5.2 | 0.42 |
+| pluribus-97b-49-p2 | 8h 5s Qc | 67* | 0/24/9 | 61pt | 99% @ 53% | 4.8 | 0.47 |
+| pluribus-44b-51-p4 | 7d 6h Ts | 67* | 0/24/9 | 68pt | 99% @ 56% | 7.8 | 0.36 |
+| pluribus-53b-128-p2 | Jh 4s Qh | 69* | 11/20/9 | 47pt | 98% @ 52% | 8.4 | 0.46 |
+| pluribus-75b-55-p2 | 8c Jc Ac | 69* | 10/20/9 | 44pt | 100% @ 60% | 8.5 | 0.35 |
+| pluribus-77b-107-p3 | 6c 4h Qc | 69* | 11/20/9 | 25pt | 43% @ 50% | 3.8 | 0.50 |
+| pluribus-102b-76-p5 | 6h 6s 5s | 69* | 11/24/5 | 59pt | 99% @ 56% | 6.5 | 0.46 |
+| pluribus-77b-100-p2 | 5d As 6d | 76* | 11/24/9 | 27pt | 99% @ 48% | 5.4 | 0.36 |
+| pluribus-45b-60-p6 | 4d Td 5c | 76* | 11/24/9 | 32pt | 98% @ 54% | 6.9 | 0.46 |
+| pluribus-75b-36-p2 | 8d 6h 4h | 76* | 11/24/9 | 81pt | 87% @ 53% | 7.0 | 0.45 |
+| pluribus-94b-49-p3 | Jd 9h 5h | 76* | 11/24/9 | 66pt | 100% @ 57% | 9.2 | 0.45 |
+| pluribus-113b-74-p2 | 2h 7h 8s | 76* | 11/24/9 | 86pt | 98% @ 58% | 6.8 | 0.45 |
+| pluribus-95b-52-p3 | 3c Jc 7h | 76* | 11/24/9 | 64pt | 56% @ 50% | 2.1 | 0.34 |
+| pluribus-94b-168-p2 | 4c 6c Th | 76* | 11/24/9 | 77pt | 99% @ 60% | 5.3 | 0.48 |
+| pluribus-97b-153-p2 | 6h 3h 8h | 76* | 10/24/9 | 56pt | 100% @ 58% | 3.4 | 0.44 |
+| pluribus-103b-164-p2 | 7d Jc 5c | 76* | 11/24/9 | 63pt | 98% @ 53% | 5.6 | 0.46 |
+| pluribus-53b-106-p1 | 6s 7s Ah | 76* | 11/24/9 | 32pt | 60% @ 48% | 3.6 | 0.46 |
+
+`dyn%` = fraction of unseen turns that change the board (`*` = past the placeholder threshold); `f/s/p` = flush / straight / pair subset counts; `eq range` = hero equity max−min across turns; `flop cbet` = GTO range-aggregate bet freq @ avg size; `turn size σ` = stdev of the IP turn c-bet size across the turn chance node's children.
+
+## Aggregate — does dynamism predict GTO sizing?
+
+**Static (below threshold)** (n=2)
+- mean dynamic-fraction: 10%
+- mean hero equity range across turns: 32.4pts
+- mean GTO flop c-bet: 76% freq @ 50% pot
+- mean GTO turn size stdev: 6.2pts
+
+**Dynamic (at/above threshold)** (n=28)
+- mean dynamic-fraction: 66%
+- mean hero equity range across turns: 52.2pts
+- mean GTO flop c-bet: 88% freq @ 54% pot
+- mean GTO turn size stdev: 6.3pts
+
+### GTO flop c-bet by hand class — static vs dynamic (the prescription signal)
+
+**Static boards** (mean over spots)
+
+| hand class | bet freq | avg size % | spots · combos |
+|---|--:|--:|--:|
+| strongMade | 77% | 50% | 2 · 275 |
+| air | 74% | 51% | 2 · 560 |
+
+**Dynamic boards** (mean over spots)
+
+| hand class | bet freq | avg size % | spots · combos |
+|---|--:|--:|--:|
+| strongMade | 81% | 62% | 27 · 642 |
+| marginalMade | 91% | 50% | 25 · 2541 |
+| strongDraw | 92% | 61% | 21 · 307 |
+| weakDraw | 90% | 58% | 26 · 865 |
+| air | 85% | 55% | 27 · 2633 |
+
+### By dynamic-fraction tertile
+**Low third (most static)** (n=10)
+- mean dynamic-fraction: 43%
+- mean hero equity range across turns: 46.4pts
+- mean GTO flop c-bet: 82% freq @ 52% pot
+- mean GTO turn size stdev: 7.0pts
+
+**Middle third** (n=10)
+- mean dynamic-fraction: 67%
+- mean hero equity range across turns: 47.7pts
+- mean GTO flop c-bet: 90% freq @ 54% pot
+- mean GTO turn size stdev: 6.4pts
+
+**High third (most dynamic)** (n=10)
+- mean dynamic-fraction: 76%
+- mean hero equity range across turns: 58.6pts
+- mean GTO flop c-bet: 90% freq @ 54% pot
+- mean GTO turn size stdev: 5.5pts
+
+---
+_Operator-only; regenerated by `dart run tool/solver/volatility_batch.dart`. Solver settings: see run_solver.dart. The numbers feed the Phase-3 refit of `kBoardDynamicThreshold` + the prescriptive sizing buckets in `decision_context.dart` (branch → PR → re-eval, per the EQR/SPR process)._
