@@ -247,7 +247,7 @@
     ],
     "forcedDecision": null,
     "realizedEquityByStreet": {
-      "flop": 0.1547215,
+      "flop": 0.1468875,
       "turn": 0.236096,
       "river": 0.47051200000000004
     },

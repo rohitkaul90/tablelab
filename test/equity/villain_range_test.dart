@@ -677,7 +677,7 @@ void main() {
             boardSoFar: ['Ks', '7c', '2d'],
             villainCount: 1,
             iterations: 1000,
-            realizedEquity: 0.395, // 0.50 × 0.79 (marginal made, OOP)
+            realizedEquity: 0.375, // 0.50 × 0.75 (marginal made, OOP)
             realizedHandClass: HandClass.marginalMade,
             heroInPosition: false,
           ),
@@ -689,7 +689,7 @@ void main() {
           .firstWhere((f) => f.contains('Equity REALIZATION'));
       expect(realized, startsWith('[HEURISTIC —'));
       expect(realized, contains('~50%')); // raw
-      expect(realized, contains('realized ~40%')); // 0.395 → 40
+      expect(realized, contains('realized ~38%')); // 0.375 → 38
       expect(realized, contains('OOP'));
       expect(realized.toLowerCase(), contains('take precedence'));
     });

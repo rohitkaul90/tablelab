@@ -243,7 +243,7 @@
     "realizedEquityByStreet": {
       "flop": 0.01651,
       "turn": 0.005805,
-      "river": 0.030849500000000002
+      "river": 0.0292875
     },
     "sprByStreet": {
       "flop": 19.55,
