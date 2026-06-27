@@ -191,4 +191,84 @@ void main() {
       }
     });
   });
+
+  group('boardDynamism', () {
+    test('pre-flop, turn-card-less river, and bad lengths are null', () {
+      expect(boardDynamism(_cards('Ah Kd')), isNull); // 2 cards
+      expect(boardDynamism(_cards('Ah Kd 7c 2s 9h')), isNull); // river, 5 cards
+      expect(boardDynamism(const []), isNull);
+    });
+
+    test('a dry rainbow flop is static — only the 9 board-pairing cards move it',
+        () {
+      final d = boardDynamism(_cards('Kc 8d 2h'))!;
+      expect(d.unseen, 49);
+      expect(d.flushCards, 0); // rainbow → no suit has 2+
+      expect(d.straightCards, 0); // K-8-2 shares no straight window
+      expect(d.pairCards, 9); // 3 each of K, 8, 2
+      expect(d.dynamic, 9); // = pairCards (no overlap)
+      expect(d.isDynamic, isFalse); // 9/49 ≈ 0.18 < threshold
+    });
+
+    test('a wet two-tone connected flop is dynamic', () {
+      // 9♥7♥2♠: 11 hearts advance the flush; ranks 5,6,8,T,J (×4) open a new
+      // straight window; 9/7/2 pair (3 each). Union of the three = 34 of 49.
+      final d = boardDynamism(_cards('9h 7h 2s'))!;
+      expect(d.unseen, 49);
+      expect(d.flushCards, 11);
+      expect(d.straightCards, 20);
+      expect(d.pairCards, 9);
+      expect(d.dynamic, 34);
+      expect(d.dynamicFraction, closeTo(34 / 49, 1e-9));
+      expect(d.isDynamic, isTrue);
+    });
+
+    test('a paired rainbow flop is static', () {
+      // KsKd5c: only board-pairing cards (2 kings + 3 fives) move it.
+      final d = boardDynamism(_cards('Ks Kd 5c'))!;
+      expect(d.flushCards, 0);
+      expect(d.straightCards, 0);
+      expect(d.pairCards, 5);
+      expect(d.dynamic, 5);
+      expect(d.isDynamic, isFalse);
+    });
+
+    test('a 4-card turn board considers 48 unseen cards', () {
+      final d = boardDynamism(_cards('Kc 8d 2h 4s'))!;
+      expect(d.street, 4);
+      expect(d.unseen, 48);
+    });
+
+    test('the threshold is the solver-calibrated 0.50', () {
+      expect(kBoardDynamicThreshold, 0.50);
+    });
+
+    test('a moderate board below 0.50 reads static (Tc Kh Ks ≈ 0.43)', () {
+      // Paired top board, broadway-gapped: 5 pair cards + 16 straight-opening
+      // (9/J/Q/A ×4) = 21 of 49 ≈ 0.43 → static at the 0.50 threshold (would have
+      // been "dynamic" under the old 0.30 placeholder).
+      final d = boardDynamism(_cards('Tc Kh Ks'))!;
+      expect(d.pairCards, 5);
+      expect(d.straightCards, 16);
+      expect(d.flushCards, 0);
+      expect(d.dynamic, 21);
+      expect(d.dynamicFraction, closeTo(21 / 49, 1e-9));
+      expect(d.isDynamic, isFalse);
+    });
+
+    test('subset counts never undercut the union, union never exceeds their sum',
+        () {
+      for (final b in ['9h 7h 2s', 'Kc 8d 2h', 'Ah Kh 4h', 'Ks Kd 5c']) {
+        final d = boardDynamism(_cards(b))!;
+        expect(d.dynamic, greaterThanOrEqualTo(d.flushCards), reason: b);
+        expect(d.dynamic, greaterThanOrEqualTo(d.pairCards), reason: b);
+        expect(d.dynamic, greaterThanOrEqualTo(d.straightCards), reason: b);
+        expect(d.dynamic,
+            lessThanOrEqualTo(d.flushCards + d.straightCards + d.pairCards),
+            reason: b);
+        expect(d.dynamic, lessThanOrEqualTo(d.unseen), reason: b);
+      }
+    });
+  });
+
 }

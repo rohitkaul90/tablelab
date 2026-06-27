@@ -105,7 +105,7 @@ _SolveConfig _config() {
   // 'single' is the default: multi-bet OOMs on deep (SPR 15-20) spots; single
   // converges to ~0.5% within the tree's action space. Use 'multi' for shallow spots.
   var bets = (e['TLSOLVE_BETS'] ?? 'single').toLowerCase();
-  if (bets != 'single' && bets != 'multi') bets = 'single';
+  if (bets != 'single' && bets != 'multi' && bets != 'vol') bets = 'single';
   final timeoutS = int.tryParse(e['TLSOLVE_TIMEOUT_S'] ?? '') ?? 900;
   return _SolveConfig(accuracy, maxIter, bets, timeoutS);
 }
@@ -118,6 +118,10 @@ String solverConfigTag() => _config().tag;
 /// 'multi': TIERED for realism — flop (the decision we read) gets multiple sizes
 /// + a raise; turn+river get a single size to bound the deep-tree explosion at
 /// high SPR (keeps the deepest spots tractable / out of OOM territory).
+/// 'vol': board-VOLATILITY/sizing calibration — several bet sizes per street so
+/// the GTO size CHOICE (vs texture) is observable, but NO raise/allin so the tree
+/// stays tractable at deep single-raised SPR (~15) where 'multi' OOMs. 'single'
+/// can't be used for sizing calibration (it offers only one size).
 String _betSizes(String profile) {
   final b = StringBuffer();
   for (final pos in ['oop', 'ip']) {
@@ -126,6 +130,10 @@ String _betSizes(String profile) {
         b.writeln('set_bet_sizes $pos,$street,bet,50');
         b.writeln('set_bet_sizes $pos,$street,allin');
       }
+    } else if (profile == 'vol') {
+      b.writeln('set_bet_sizes $pos,flop,bet,33,75');
+      b.writeln('set_bet_sizes $pos,turn,bet,50,100');
+      b.writeln('set_bet_sizes $pos,river,bet,75');
     } else {
       b.writeln('set_bet_sizes $pos,flop,bet,33,75');
       b.writeln('set_bet_sizes $pos,flop,raise,60');
@@ -139,14 +147,16 @@ String _betSizes(String profile) {
   return b.toString();
 }
 
-String _buildInput(SolverSpot spot, String dumpPath, _SolveConfig cfg) {
+String _buildInput(SolverSpot spot, String dumpPath, _SolveConfig cfg,
+    {int dumpRounds = 1, String? betProfile}) {
+  final profile = betProfile ?? cfg.betProfile;
   return '''
 set_pot ${spot.pot}
 set_effective_stack ${spot.effStack}
 set_board ${spot.board.join(',')}
 set_range_ip ${spot.rangeIp}
 set_range_oop ${spot.rangeOop}
-${_betSizes(cfg.betProfile)}set_allin_threshold 0.67
+${_betSizes(profile)}set_allin_threshold 0.67
 build_tree
 set_thread_num 16
 set_accuracy ${cfg.accuracy}
@@ -154,7 +164,7 @@ set_max_iteration ${cfg.maxIter}
 set_print_interval 10
 set_use_isomorphism 1
 start_solve
-set_dump_rounds 1
+set_dump_rounds $dumpRounds
 dump_result $dumpPath
 ''';
 }
@@ -189,7 +199,30 @@ List<double>? _comboVec(Map<String, dynamic>? s, String combo) {
   return null;
 }
 
-Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
+/// The whole solved dump tree + run metadata, returned by [solveRoot]. Lets
+/// callers walk to arbitrary nodes (the volatility batch reads range-aggregate
+/// sizing and the turn chance node), rather than only hero's decision node.
+class TreeSolveResult {
+  final Map<String, dynamic> root;
+  final double? exploitability;
+  final int wallMs;
+  TreeSolveResult(this.root, this.exploitability, this.wallMs);
+}
+
+class _RawSolve {
+  final Map<String, dynamic> root;
+  final double? exploitability;
+  final int wallMs;
+  _RawSolve(this.root, this.exploitability, this.wallMs);
+}
+
+/// Run the binary on [spot] and return the parsed dump root + exploitability +
+/// wall time. Shared by [solve] (hero-node walk, dumpRounds 1) and [solveRoot]
+/// (whole tree, dumpRounds 2). [dumpRounds] = 1 dumps the flop only, 2 adds the
+/// turn nodes (needed to read the turn chance node's per-card children).
+Future<_RawSolve> _invokeSolver(
+    SolverSpot spot, int dumpRounds, bool verbose,
+    {String? betProfile}) async {
   final dir = _sourceDir();
   final bin = '$dir/vsbuild/console_solver.exe';
   if (!File(bin).existsSync()) {
@@ -197,37 +230,52 @@ Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
   }
   final tmp = Directory.systemTemp.createTempSync('tlsolve_');
   try {
-  final inputPath = '${tmp.path}/input.txt';
-  final dumpPath = '${tmp.path}/out.json';
-  final cfg = _config();
-  File(inputPath).writeAsStringSync(_buildInput(spot, dumpPath, cfg));
+    final inputPath = '${tmp.path}/input.txt';
+    final dumpPath = '${tmp.path}/out.json';
+    final cfg = _config();
+    File(inputPath).writeAsStringSync(_buildInput(spot, dumpPath, cfg,
+        dumpRounds: dumpRounds, betProfile: betProfile));
 
-  final sw = Stopwatch()..start();
-  final proc = await Process.start(bin, ['-i', inputPath], workingDirectory: dir);
-  final outF = proc.stdout.transform(utf8.decoder).join();
-  final errF = proc.stderr.transform(utf8.decoder).join();
-  final int exitCode;
-  try {
-    exitCode = await proc.exitCode.timeout(Duration(seconds: cfg.timeoutS));
-  } on TimeoutException {
-    proc.kill();
-    throw StateError('solver timed out after ${cfg.timeoutS}s '
-        '(spot too deep for the "${cfg.betProfile}" bet profile?)');
+    final sw = Stopwatch()..start();
+    final proc = await Process.start(bin, ['-i', inputPath], workingDirectory: dir);
+    final outF = proc.stdout.transform(utf8.decoder).join();
+    final errF = proc.stderr.transform(utf8.decoder).join();
+    final int exitCode;
+    try {
+      exitCode = await proc.exitCode.timeout(Duration(seconds: cfg.timeoutS));
+    } on TimeoutException {
+      proc.kill();
+      throw StateError('solver timed out after ${cfg.timeoutS}s '
+          '(spot too deep for the "${cfg.betProfile}" bet profile?)');
+    }
+    final out = await outF;
+    final err = await errF;
+    sw.stop();
+    if (verbose) {
+      stdout.writeln(out.split('\n').takeLast(4).join('\n'));
+    }
+    if (exitCode != 0) {
+      throw StateError('solver exit $exitCode\n$err\n$out');
+    }
+    final outFile = File(dumpPath);
+    if (!outFile.existsSync()) {
+      throw StateError('solver produced no output_result\n$out');
+    }
+    final root = jsonDecode(outFile.readAsStringSync()) as Map<String, dynamic>;
+    return _RawSolve(root, _parseExploitability(out), sw.elapsedMilliseconds);
+  } finally {
+    // Reclaim the per-solve temp dir (input.txt + a multi-MB JSON dump) on every
+    // path, including the StateError early-exits — a long batch would otherwise
+    // accumulate them in %TEMP%.
+    try {
+      tmp.deleteSync(recursive: true);
+    } catch (_) {}
   }
-  final out = await outF;
-  final err = await errF;
-  sw.stop();
-  if (verbose) {
-    stdout.writeln(out.split('\n').takeLast(4).join('\n'));
-  }
-  if (exitCode != 0) {
-    throw StateError('solver exit $exitCode\n$err\n$out');
-  }
-  final outFile = File(dumpPath);
-  if (!outFile.existsSync()) {
-    throw StateError('solver produced no output_result\n$out');
-  }
-  var node = jsonDecode(outFile.readAsStringSync()) as Map<String, dynamic>;
+}
+
+Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
+  final raw = await _invokeSolver(spot, 1, verbose);
+  var node = raw.root;
   for (final step in spot.heroPath) {
     final children = node['childrens'] as Map<String, dynamic>?;
     final key = children?.keys.firstWhere(
@@ -255,18 +303,63 @@ Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
     probs: probs,
     evs: evs,
     passiveEv: (passiveVec != null && passiveVec.isNotEmpty) ? passiveVec.first : null,
-    exploitability: _parseExploitability(out),
-    wallMs: sw.elapsedMilliseconds,
+    exploitability: raw.exploitability,
+    wallMs: raw.wallMs,
     nodePlayer: node['player'] as int?,
   );
-  } finally {
-    // Reclaim the per-solve temp dir (input.txt + a multi-MB JSON dump) on every
-    // path, including the StateError early-exits — a long batch would otherwise
-    // accumulate them in %TEMP%.
-    try {
-      tmp.deleteSync(recursive: true);
-    } catch (_) {}
+}
+
+/// Solve [spot] and return the whole dump tree (default dumpRounds 2 → flop+turn)
+/// for free-form node walking. Used by the volatility calibration batch.
+Future<TreeSolveResult> solveRoot(SolverSpot spot,
+    {int dumpRounds = 2, bool verbose = false, String? betProfile}) async {
+  final raw = await _invokeSolver(spot, dumpRounds, verbose, betProfile: betProfile);
+  return TreeSolveResult(raw.root, raw.exploitability, raw.wallMs);
+}
+
+/// Follow a sequence of child keys from [node] — case- and "BET x"-prefix-
+/// tolerant exactly like [solve]'s heroPath walk, so action steps ("CHECK") and
+/// turn cards ("2c") both resolve. Returns null if any step is missing (the
+/// caller decides whether that's fatal).
+Map<String, dynamic>? followChildren(
+    Map<String, dynamic> node, List<String> steps) {
+  var cur = node;
+  for (final step in steps) {
+    final children = cur['childrens'] as Map<String, dynamic>?;
+    if (children == null) return null;
+    final key = children.keys.firstWhere(
+      (k) => k == step || k.toUpperCase().startsWith(step.toUpperCase()),
+      orElse: () => '',
+    );
+    if (key.isEmpty) return null;
+    cur = children[key] as Map<String, dynamic>;
   }
+  return cur;
+}
+
+/// Range-aggregate action distribution at an action node: each action's MEAN
+/// strategy frequency across all combos present in the node (uniform combo
+/// weight — the GTO preset ranges are unweighted, so this ≈ range-weighted).
+/// Returns the action labels aligned to the mean frequencies, or null if the
+/// node has no per-combo strategy (chance/terminal node).
+({List<String> actions, List<double> freqs})? nodeAggregateStrategy(
+    Map<String, dynamic> node) {
+  final strat = node['strategy'] as Map<String, dynamic>?;
+  if (strat == null) return null;
+  final actions = (strat['actions'] as List).cast<String>();
+  final byCombo = strat['strategy'] as Map<String, dynamic>?;
+  if (byCombo == null || byCombo.isEmpty) return null;
+  final sums = List<double>.filled(actions.length, 0.0);
+  var n = 0;
+  for (final v in byCombo.values) {
+    if (v is! List) continue;
+    for (var i = 0; i < actions.length && i < v.length; i++) {
+      sums[i] += (v[i] as num).toDouble();
+    }
+    n++;
+  }
+  if (n == 0) return null;
+  return (actions: actions, freqs: [for (final s in sums) s / n]);
 }
 
 extension<T> on Iterable<T> {

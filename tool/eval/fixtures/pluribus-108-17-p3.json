@@ -227,6 +227,16 @@
       "heroActionCorrect": true
     },
     "realizedEquityByStreet": {},
-    "sprByStreet": {}
+    "sprByStreet": {},
+    "boardVolatilityByStreet": {
+      "flop": {
+        "dynamicFraction": 0.5918367346938775,
+        "isDynamic": true
+      },
+      "turn": {
+        "dynamicFraction": 0.6875,
+        "isDynamic": true
+      }
+    }
   }
 }

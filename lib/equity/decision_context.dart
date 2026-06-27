@@ -296,3 +296,153 @@ String sprBucketLabel(SprBucket b) {
       return 'high SPR — favours pot control with one-pair hands';
   }
 }
+
+// ── Board volatility (DCE Tier A, the BOARD-VOLATILITY factor) ────────────────
+//
+// How much does the next card change the board? A STATIC board (equities locked
+// in) favours small bets / flatting; a DYNAMIC board (many next cards complete a
+// flush or straight, or pair the board) favours protection raises + larger
+// sizing. It moves the CALL-vs-RAISE / sizing decision, NOT the bluff-catch call.
+//
+// [boardDynamism] is a deterministic COUNT of unseen next cards that change what
+// hands are possible (a flush becomes makeable, a new straight window opens, or the
+// board pairs → boats). BOARD-ONLY and hand-independent by design — it does not
+// exclude any player's hole cards — so every observer reads the same dynamism and,
+// critically, it matches the Phase-2 calibration, which counted board-only. The
+// COUNT is exact; the static/dynamic THRESHOLD and the sizing PRESCRIPTION are the
+// soft parts (solver-calibrated, tool/solver/VOLATILITY_FINDINGS.md), so the prompt
+// emits the static/dynamic label as a [HEURISTIC —] line, not a hard [FACT —].
+// Pure Dart, isolate-safe; unit-tested in decision_context_test.dart.
+
+/// A board is "dynamic" when at least this fraction of the unseen next cards
+/// change the board's category possibilities. SOLVER-CALIBRATED: a 30-spot
+/// TexasSolver run (`tool/solver/VOLATILITY_FINDINGS.md`) found the GTO c-bet
+/// sizing regime transitions around a dynamic-fraction of ~0.50 — below it strong
+/// hands size small (~49–52%), above it they size up (~60–63%). The count metric
+/// saturates above ~0.65 (most wet boards clip near 0.76), so in practice this
+/// threshold separates truly-dry boards from the rest, which is the distinction
+/// that matters ("don't size up on a dry board").
+const double kBoardDynamicThreshold = 0.50;
+
+/// Deterministic board-volatility measurement for one street: of the unseen next
+/// cards, how many materially change what is possible on the board. Valid only
+/// on the flop (3) or turn (4) — there is a next card to come; null otherwise
+/// (pre-flop, or the river where nothing is left to come).
+///
+/// A next card counts as DYNAMIC when it does at least one of: pairs the board (a
+/// rank already present → boats/quads change), advances a flush (its suit already
+/// has ≥2 on the board → 3+ makes a flush makeable / shifts the nut flush), or
+/// opens a new straight window (a 5-rank window the board now supplies ≥3 of that
+/// it did not before). The three subset counts can overlap (one card may pair AND
+/// bring a flush), so they sum to ≥ [dynamic]; [dynamic] is the union.
+class BoardDynamism {
+  /// Board length this was computed for (3 = flop→turn, 4 = turn→river).
+  final int street;
+
+  /// Number of unseen next cards considered (52 − the board cards).
+  final int unseen;
+
+  /// Unseen cards that change the board's category possibilities (the union of
+  /// the three subsets below — a card is counted once even if it does several).
+  final int dynamic;
+
+  /// Subset: cards that advance a flush (suit already ≥2 on board).
+  final int flushCards;
+
+  /// Subset: cards that open a straight window the board did not supply before.
+  final int straightCards;
+
+  /// Subset: cards that pair (or further pair) the board.
+  final int pairCards;
+
+  const BoardDynamism({
+    required this.street,
+    required this.unseen,
+    required this.dynamic,
+    required this.flushCards,
+    required this.straightCards,
+    required this.pairCards,
+  });
+
+  /// Fraction of unseen cards that are dynamic (0 when there are no unseen cards).
+  double get dynamicFraction => unseen == 0 ? 0.0 : dynamic / unseen;
+
+  /// Whether the board reads as dynamic at the solver-calibrated 0.50 threshold
+  /// ([kBoardDynamicThreshold]).
+  bool get isDynamic => dynamicFraction >= kBoardDynamicThreshold;
+}
+
+/// Compute [BoardDynamism] for [board] (parsed card ints). BOARD-ONLY by design:
+/// it counts every one of the 52 − board cards as a possible next card (it does
+/// NOT exclude hero's hole cards), so the result is hand-independent and matches
+/// the Phase-2 calibration. Returns null for boards that are not the flop or turn.
+BoardDynamism? boardDynamism(List<int> board) {
+  if (board.length != 3 && board.length != 4) return null;
+
+  final boardSet = board.toSet();
+  final boardRanks = {for (final c in board) cardRank(c)};
+  final suitCount = <int, int>{};
+  for (final c in board) {
+    final s = cardSuit(c);
+    suitCount[s] = (suitCount[s] ?? 0) + 1;
+  }
+  final baseWindows = _supplyWindows(_presentValues(board));
+
+  var unseen = 0, dynamic = 0, flushCards = 0, straightCards = 0, pairCards = 0;
+  for (var c = 0; c < 52; c++) {
+    if (boardSet.contains(c)) continue;
+    unseen++;
+
+    final pairs = boardRanks.contains(cardRank(c));
+    final flush = (suitCount[cardSuit(c)] ?? 0) >= 2;
+    final straight = _opensWindow(board, c, baseWindows);
+
+    if (pairs) pairCards++;
+    if (flush) flushCards++;
+    if (straight) straightCards++;
+    if (pairs || flush || straight) dynamic++;
+  }
+
+  return BoardDynamism(
+    street: board.length,
+    unseen: unseen,
+    dynamic: dynamic,
+    flushCards: flushCards,
+    straightCards: straightCards,
+    pairCards: pairCards,
+  );
+}
+
+/// Does adding card [c] open a straight window the [board] did not already
+/// supply (≥3 of a 5-rank window)? [baseWindows] is the board's existing window
+/// set, passed in so we compute it once per board, not once per unseen card.
+bool _opensWindow(List<int> board, int c, Set<int> baseWindows) {
+  final after = _supplyWindows(_presentValues([...board, c]));
+  return after.length > baseWindows.length;
+}
+
+/// Rank VALUES (2..14, ace high) present on the cards, plus 1 for the wheel ace —
+/// mirrors the prompt's computeBoardSummary so straight reasoning lines up.
+Set<int> _presentValues(List<int> cards) {
+  final present = <int>{};
+  for (final c in cards) {
+    final v = cardRank(c) + 2; // rank 0..12 → value 2..14
+    present.add(v);
+    if (v == 14) present.add(1); // ace also plays low
+  }
+  return present;
+}
+
+/// Low ends (1..10) of every 5-rank window the [present] values supply ≥3 of —
+/// i.e. windows a player could complete with at most two hole cards.
+Set<int> _supplyWindows(Set<int> present) {
+  final windows = <int>{};
+  for (var low = 1; low <= 10; low++) {
+    var onBoard = 0;
+    for (var v = low; v < low + 5; v++) {
+      if (present.contains(v)) onBoard++;
+    }
+    if (onBoard >= 3) windows.add(low);
+  }
+  return windows;
+}

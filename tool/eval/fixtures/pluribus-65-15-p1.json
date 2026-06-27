@@ -230,6 +230,16 @@
     ],
     "forcedDecision": null,
     "realizedEquityByStreet": {},
-    "sprByStreet": {}
+    "sprByStreet": {},
+    "boardVolatilityByStreet": {
+      "flop": {
+        "dynamicFraction": 0.6326530612244898,
+        "isDynamic": true
+      },
+      "turn": {
+        "dynamicFraction": 0.9166666666666666,
+        "isDynamic": true
+      }
+    }
   }
 }

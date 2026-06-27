@@ -181,6 +181,12 @@
     "realizedEquityByStreet": {},
     "sprByStreet": {
       "flop": 12.612903225806452
+    },
+    "boardVolatilityByStreet": {
+      "flop": {
+        "dynamicFraction": 0.42857142857142855,
+        "isDynamic": false
+      }
     }
   }
 }

@@ -361,6 +361,76 @@ function computeBoardSummary(boardCards: string[]): string {
   return `[FACT — Board texture (${boardCards.join(" ")}): ${parts.join("; ")}. Do NOT credit any hand — hero's or villain's — with a category the board does not allow.]`;
 }
 
+// Board VOLATILITY (DCE Tier A, board-volatility factor): a deterministic COUNT of
+// how many unseen next cards change the board's category possibilities (advance a
+// flush, open a new straight window, or pair the board) → a STATIC (dry) vs DYNAMIC
+// (wet) label the SIZING rule keys off. The COUNT is deterministic, but the
+// STATIC/DYNAMIC label is a SOFT classification at the calibrated 0.50 threshold, so
+// it ships as a [HEURISTIC —] line (like EQR/SPR), NOT a hard [FACT —] — the model
+// must not be told it can never contradict a borderline label. Board-only +
+// hand-independent (matches the calibration, which counted board-only). Mirrors
+// lib/equity/decision_context.dart's boardDynamism (the Dart oracle) — keep in sync.
+// Empty pre-flop / on the river (no next card). Threshold solver-calibrated; see
+// tool/solver/VOLATILITY_FINDINGS.md.
+const BOARD_DYNAMIC_THRESHOLD = 0.5;
+
+function computeBoardDynamism(boardCards: string[]): string {
+  if (boardCards.length !== 3 && boardCards.length !== 4) return "";
+  const cRank = (c: string) => c.slice(0, -1);
+  const cSuit = (c: string) => c.slice(-1);
+  const RANKS = Object.keys(RANK_VAL); // "2".."A"
+  const SUITS = ["c", "d", "h", "s"];
+
+  const boardSet = new Set(boardCards);
+  const boardRanks = new Set(boardCards.map(cRank));
+  const suitCount: Record<string, number> = {};
+  for (const c of boardCards) {
+    const s = cSuit(c);
+    suitCount[s] = (suitCount[s] ?? 0) + 1;
+  }
+
+  const presentVals = (cards: string[]) => {
+    const p = new Set<number>();
+    for (const c of cards) {
+      const v = RANK_VAL[cRank(c)];
+      if (v) {
+        p.add(v);
+        if (v === 14) p.add(1); // wheel ace plays low
+      }
+    }
+    return p;
+  };
+  const supplyWindows = (present: Set<number>) => {
+    const w = new Set<number>();
+    for (let low = 1; low <= 10; low++) {
+      let n = 0;
+      for (let v = low; v < low + 5; v++) if (present.has(v)) n++;
+      if (n >= 3) w.add(low);
+    }
+    return w;
+  };
+  const baseWindows = supplyWindows(presentVals(boardCards));
+
+  let unseen = 0;
+  let dynamic = 0;
+  for (const r of RANKS) {
+    for (const s of SUITS) {
+      const card = r + s;
+      if (boardSet.has(card)) continue;
+      unseen++;
+      const pairs = boardRanks.has(r);
+      const flush = (suitCount[s] ?? 0) >= 2;
+      const straight =
+        supplyWindows(presentVals([...boardCards, card])).size > baseWindows.size;
+      if (pairs || flush || straight) dynamic++;
+    }
+  }
+  const frac = unseen === 0 ? 0 : dynamic / unseen;
+  const label = frac >= BOARD_DYNAMIC_THRESHOLD ? "DYNAMIC (wet)" : "STATIC (dry)";
+  const nextStreet = boardCards.length === 3 ? "turn" : "river";
+  return `[HEURISTIC — Board dynamism (${boardCards.join(" ")}): ${dynamic} of ${unseen} unseen ${nextStreet} cards change the board (advance a flush, open a new straight, or pair it). This reads as a ${label} board — a calibrated classification, not a hard fact.]`;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function positionName(seat: number, setup: TableSetup): string {
@@ -784,6 +854,13 @@ export function buildPrompt(
         lines.push(boardFact);
         facts.push(boardFact);
       }
+      // Board dynamism (static/dynamic) — drives the sizing rule. Empty on the
+      // river (no next card), so it only fires on the flop/turn.
+      const dynFact = computeBoardDynamism(boardSoFar);
+      if (dynFact) {
+        lines.push(dynFact);
+        facts.push(dynFact);
+      }
     }
     if (hero?.holeCards?.length === 2 && boardSoFar.length > 0) {
       const fact = computeDrawSummary(hero.holeCards, boardSoFar);
@@ -843,6 +920,7 @@ RANGE-VS-EQUITY CONSISTENCY (critical — your recommendation MUST agree with th
 - The CONVERSE is equally important — do NOT over-fold a +EV call. When a pot-odds price FACT marks the price DECISIVE (a "Price for hero to call" FACT on a closing/all-in spot, OR a "Price hero was getting when he folded" FACT), and hero's equity FACT meets or exceeds the required %, continuing is CORRECT by direct pot odds: if hero called, mark the street fine (wasGto-aligned) and never label it a leak; if hero actually FOLDED, that fold was the over-fold error — recommend the call and mark the street non-GTO. Do not recommend folding on vague "feels value-heavy / a GTO-default range skews to value / no reason to deviate" grounds. The equity FACT already counts villain's bluffs — if it clears the price, the bluff-catch is profitable. Recommend a fold over a price-meeting call ONLY when hero's equity is BELOW the required %, or (on a non-closing street) when a specific implied/reverse-implied-odds reason makes the direct price misleading — and then state that reason explicitly.
 - EQUITY REALIZATION (DCE): when a "[HEURISTIC — Equity REALIZATION]" FACT is present, it gives hero's realized equity (raw equity discounted for hero's position + hand class). Use the REALIZED figure as your read of how much equity hero actually captures for the continue / bluff-catch decision — a marginal hand out of position realizes LESS than its raw equity, a strong made hand MORE. It is a HEURISTIC, not ground truth: if it conflicts with a decisive pot-odds price FACT or the hard equity FACT, those WIN. Realization tells you how hard hero can push and how thin to value-bet — it must NOT trigger OVER-FOLDING a continue whose RAW equity already meets the pot-odds price; the over-fold protection in rule (b) still governs folds. Do not state the realized number as if it were hero's raw all-in equity.
 - SPR & COMMITMENT (DCE): when a "[HEURISTIC — SPR & COMMITMENT]" FACT is present, it gives the stack-to-pot ratio per street and (heads-up) the equity needed to profitably get all-in. Use it for the call-vs-RAISE / stack-off decision, NOT the bluff-catch call/fold — pot odds govern bluff-catching. Low SPR favours getting a strong-enough made hand all-in; high SPR favours pot control with one-pair hands (do not stack off one pair at high SPR — villain's stack-off range skews to sets/two-pair, so the real requirement exceeds the raw price). The stated stack-off % is the equity to get all-in profitably versus a WILLING range, NOT hero's raw pot-odds price — never treat it as the price to call a bluff-catch. It is a HEURISTIC: a decisive pot-odds price FACT and the hard equity FACT still WIN. Multiway, the FACT omits a precise stack-off % — reason qualitatively from the SPR and the fact that hero must beat the whole field.
+- BOARD DYNAMISM (DCE): a "[HEURISTIC — Board dynamism]" line flags the board as STATIC (dry) or DYNAMIC (wet) — soft texture context for your prose only. It is NEVER, by itself, a reason to mark a street wasGto:false, write a keyMistake, or set leakDetected.
 - Self-check before writing: (a) if your rationale enumerates hands and then recommends the opposite of what beating-or-losing-to those hands implies, fix it; (b) if you bless a fold (or recommend folding) while hero's equity FACT meets or beats a DECISIVE pot-odds FACT — whether labelled "Price for hero to call" or "Price hero was getting when he folded" — fix it: that is the over-fold error, and the correct play is the call; (c) FIELD CONSISTENCY (mechanical — verify before returning; this is the most common self-contradiction): the verdict, keyMistake, and per-street wasGto MUST bind exactly. • If verdict=leakDetected, AT LEAST ONE street MUST be marked wasGto:false and keyMistake MUST name that street — declaring a leak while every street is wasGto:true is a contradiction. • If you write a non-null keyMistake, the street it names MUST be wasGto:false. • If EVERY street is wasGto:true, then keyMistake MUST be null and verdict MUST be highEV or neutral (never leakDetected). • A minor missed-value note on an otherwise-fine hand is verdict=neutral WITH that one street marked wasGto:false and keyMistake describing it — not leakDetected. Never call a decision a mistake in one field and correct in another.
 
 TOURNAMENT COACHING (applies when tournament stage is provided):
