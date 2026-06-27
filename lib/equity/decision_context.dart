@@ -176,13 +176,14 @@ bool _hasStraight(Set<int> ranks) {
 
 // ── EQR multiplier table ─────────────────────────────────────────────────────
 //
-// realized equity = raw equity × this multiplier. HARD anchors are cited; every
-// other cell is ESTIMATED and must be presented as heuristic (never as a precise
-// FACT). Sourced anchors (launch/DECISION_CONTEXT_ENGINE.md §"Key sourced
-// constants"): NFD IP ≈ 1.00; weak FD ≈ 0.87; BB-defend (one pair OOP) ≈ 0.79;
-// strong made over-realizes (extreme ≈ 1.8 for a nutted hand WITH initiative —
-// intentionally capped lower here as a flat per-class value, see note); air OOP
-// realizes ≈ nothing.
+// realized equity = raw equity × this multiplier (clamped to [0,1]). The values
+// are SOLVER-CALIBRATED (69-spot TexasSolver run, ~0.5% exploitability; see
+// `tool/solver/` + memory/solver-engine-landscape), superseding the original
+// hand-estimated anchors. Still a HEURISTIC (single-bet tree, Pluribus
+// distribution, a few noisy buckets) — present as heuristic context, never a
+// precise FACT. Pattern: in position hands realize ~fully (≈1.0+, so realized can
+// EXCEED raw); out of position they realize below raw, scaled by strength. The
+// per-cell provenance + the rounding/judgement calls are in the function below.
 
 /// EQR multiplier for a hand class at a position. Ignores SPR (separate factor).
 ///
@@ -191,8 +192,10 @@ bool _hasStraight(Set<int> ranks) {
 /// stripped) per {hand class × position}; see `tool/solver/` + memory. The
 /// headline: in position hands realize ~fully (multipliers ~1.0+), out of
 /// position they realize much worse, scaled by strength. Caveats: single-bet
-/// tree abstraction + Pluribus distribution + a few noisy buckets — so a couple
-/// of values are judgment calls (noted), not raw measurements.
+/// tree abstraction + Pluribus distribution + a few noisy buckets. Returned
+/// values are ROUNDED to clean ~0.05 steps from the per-cell measurements cited
+/// inline (slightly conservative); `air` and `strongMade/OOP` are additional
+/// judgment calls (noted inline), not raw measurements.
 double eqrMultiplier(HandClass hc, HeroPosition pos) {
   final ip = pos == HeroPosition.ip;
   switch (hc) {
