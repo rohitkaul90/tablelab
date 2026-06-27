@@ -24,8 +24,6 @@
 // an estimate and would add a confidently-wrong surface without an anchor). Add
 // it as a later refinement once the eval shows EQR helps.
 
-import 'dart:math' as math;
-
 import 'card.dart';
 import 'evaluator.dart';
 
@@ -306,17 +304,15 @@ String sprBucketLabel(SprBucket b) {
 // flush or straight, or pair the board) favours protection raises + larger
 // sizing. It moves the CALL-vs-RAISE / sizing decision, NOT the bluff-catch call.
 //
-// Two layers at different confidence tiers:
-//   1. [boardDynamism] — a HARD, deterministic COUNT of unseen next cards that
-//      change what hands are possible (a flush becomes makeable, a new straight
-//      window opens, or the board pairs → boats). Board-only, hand-independent,
-//      exactly enumerable → ships as a hard `[FACT —]`, not a heuristic.
-//   2. [equitySpread] — summary stats of hero's equity across those next cards,
-//      fed by the equity engine (villain_range). Hero-specific context.
-//
-// Only the static/dynamic THRESHOLD and the sizing PRESCRIPTION are soft — those
-// are solver-calibrated (tool/solver/volatility_batch.dart, DCE Phase 2), never
-// the count. Pure Dart, isolate-safe; unit-tested in decision_context_test.dart.
+// [boardDynamism] is a deterministic COUNT of unseen next cards that change what
+// hands are possible (a flush becomes makeable, a new straight window opens, or the
+// board pairs → boats). BOARD-ONLY and hand-independent by design — it does not
+// exclude any player's hole cards — so every observer reads the same dynamism and,
+// critically, it matches the Phase-2 calibration, which counted board-only. The
+// COUNT is exact; the static/dynamic THRESHOLD and the sizing PRESCRIPTION are the
+// soft parts (solver-calibrated, tool/solver/VOLATILITY_FINDINGS.md), so the prompt
+// emits the static/dynamic label as a [HEURISTIC —] line, not a hard [FACT —].
+// Pure Dart, isolate-safe; unit-tested in decision_context_test.dart.
 
 /// A board is "dynamic" when at least this fraction of the unseen next cards
 /// change the board's category possibilities. SOLVER-CALIBRATED: a 30-spot
@@ -343,7 +339,7 @@ class BoardDynamism {
   /// Board length this was computed for (3 = flop→turn, 4 = turn→river).
   final int street;
 
-  /// Number of unseen next cards considered (52 − board − excluded).
+  /// Number of unseen next cards considered (52 − the board cards).
   final int unseen;
 
   /// Unseen cards that change the board's category possibilities (the union of
@@ -371,14 +367,16 @@ class BoardDynamism {
   /// Fraction of unseen cards that are dynamic (0 when there are no unseen cards).
   double get dynamicFraction => unseen == 0 ? 0.0 : dynamic / unseen;
 
-  /// Whether the board reads as dynamic at the (PLACEHOLDER) threshold.
+  /// Whether the board reads as dynamic at the solver-calibrated 0.50 threshold
+  /// ([kBoardDynamicThreshold]).
   bool get isDynamic => dynamicFraction >= kBoardDynamicThreshold;
 }
 
-/// Compute [BoardDynamism] for [board] (parsed card ints), excluding any cards in
-/// [excluded] (e.g. hero's hole cards, so the count is "of 47" rather than "of
-/// 49"). Returns null for boards that are not the flop or turn.
-BoardDynamism? boardDynamism(List<int> board, {Set<int> excluded = const {}}) {
+/// Compute [BoardDynamism] for [board] (parsed card ints). BOARD-ONLY by design:
+/// it counts every one of the 52 − board cards as a possible next card (it does
+/// NOT exclude hero's hole cards), so the result is hand-independent and matches
+/// the Phase-2 calibration. Returns null for boards that are not the flop or turn.
+BoardDynamism? boardDynamism(List<int> board) {
   if (board.length != 3 && board.length != 4) return null;
 
   final boardSet = board.toSet();
@@ -392,7 +390,7 @@ BoardDynamism? boardDynamism(List<int> board, {Set<int> excluded = const {}}) {
 
   var unseen = 0, dynamic = 0, flushCards = 0, straightCards = 0, pairCards = 0;
   for (var c = 0; c < 52; c++) {
-    if (boardSet.contains(c) || excluded.contains(c)) continue;
+    if (boardSet.contains(c)) continue;
     unseen++;
 
     final pairs = boardRanks.contains(cardRank(c));
@@ -447,55 +445,4 @@ Set<int> _supplyWindows(Set<int> present) {
     if (onBoard >= 3) windows.add(low);
   }
   return windows;
-}
-
-/// Summary statistics of hero's equity across a set of next cards — the
-/// hero-specific volatility signal. The equity engine (villain_range) supplies
-/// one equity per enumerated next card; this is the pure stats reduction so it
-/// stays unit-testable without the simulator. Returns null for an empty input.
-class EquitySpread {
-  final int n;
-  final double min;
-  final double max;
-  final double mean;
-
-  /// Population standard deviation of the per-card equities.
-  final double stdev;
-
-  const EquitySpread({
-    required this.n,
-    required this.min,
-    required this.max,
-    required this.mean,
-    required this.stdev,
-  });
-
-  /// max − min, the simplest dispersion read.
-  double get range => max - min;
-}
-
-/// Reduce a list of per-next-card hero equities (each 0–1) to an [EquitySpread].
-/// Null when [perCardEquity] is empty.
-EquitySpread? equitySpread(List<double> perCardEquity) {
-  if (perCardEquity.isEmpty) return null;
-  final n = perCardEquity.length;
-  var min = perCardEquity.first, max = perCardEquity.first, sum = 0.0;
-  for (final e in perCardEquity) {
-    if (e < min) min = e;
-    if (e > max) max = e;
-    sum += e;
-  }
-  final mean = sum / n;
-  var sq = 0.0;
-  for (final e in perCardEquity) {
-    final d = e - mean;
-    sq += d * d;
-  }
-  return EquitySpread(
-    n: n,
-    min: min,
-    max: max,
-    mean: mean,
-    stdev: math.sqrt(sq / n),
-  );
 }

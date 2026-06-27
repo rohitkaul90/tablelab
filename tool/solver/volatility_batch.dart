@@ -23,6 +23,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:tablelab/equity/card.dart';
 import 'package:tablelab/equity/decision_context.dart';
@@ -191,11 +192,15 @@ EquitySpread? _turnEquitySpread(SolverSpot spot) {
   final villainNotation = spot.heroIsIp ? spot.rangeOop : spot.rangeIp;
   final base = <int>{...hero, ...flop};
 
+  // Parse the villain notation to matrix cells ONCE — the tokens are identical
+  // every turn; only the per-turn dead set changes.
+  final cells = _parseCells(villainNotation);
+
   final equities = <double>[];
   for (var turn = 0; turn < 52; turn++) {
     if (base.contains(turn)) continue;
     final dead = {...base, turn};
-    final villain = _expandRange(villainNotation, dead);
+    final villain = _expandCells(cells, dead);
     if (villain.isEmpty) continue;
     final res = runSimulationSync(
       ranges: [
@@ -211,15 +216,23 @@ EquitySpread? _turnEquitySpread(SolverSpot spot) {
   return equitySpread(equities);
 }
 
-/// Expand a comma-joined notation range ("AA,AKs,65s,…") to concrete combos,
-/// excluding [dead] cards.
-List<List<int>> _expandRange(String notation, Set<int> dead) {
-  final out = <List<int>>[];
+/// Parse a comma-joined notation range ("AA,AKs,65s,…") to matrix cells once,
+/// so the turn loop doesn't re-tokenize the (identical) string 47×.
+List<(int, int)> _parseCells(String notation) {
+  final cells = <(int, int)>[];
   for (final tok in notation.split(',')) {
     final t = tok.trim();
     if (t.isEmpty) continue;
     final (r, c) = handToCell(t);
-    if (r < 0 || c < 0) continue;
+    if (r >= 0 && c >= 0) cells.add((r, c));
+  }
+  return cells;
+}
+
+/// Expand pre-parsed cells to concrete combos, excluding [dead] cards.
+List<List<int>> _expandCells(List<(int, int)> cells, Set<int> dead) {
+  final out = <List<int>>[];
+  for (final (r, c) in cells) {
     for (final pair in expandCell(r, c, exclude: dead)) {
       out.add([pair.$1, pair.$2]);
     }
@@ -374,6 +387,52 @@ Map<String, dynamic>? _classSizing(
         'n': e.value.n,
       },
   };
+}
+
+/// Summary statistics of hero's equity across a set of next cards — the
+/// equity-variance signal. Lives here (not in lib/equity) because the only
+/// consumer is this operator-only calibration batch; the live coaching FACT was
+/// calibrated to use the board-count metric, not equity-variance (see
+/// VOLATILITY_FINDINGS.md). Returns null for an empty input.
+class EquitySpread {
+  final int n;
+  final double min;
+  final double max;
+  final double mean;
+
+  /// Population standard deviation of the per-card equities.
+  final double stdev;
+
+  const EquitySpread({
+    required this.n,
+    required this.min,
+    required this.max,
+    required this.mean,
+    required this.stdev,
+  });
+
+  /// max − min, the simplest dispersion read.
+  double get range => max - min;
+}
+
+/// Reduce a list of per-next-card hero equities (each 0–1) to an [EquitySpread].
+/// Null when [perCardEquity] is empty.
+EquitySpread? equitySpread(List<double> perCardEquity) {
+  if (perCardEquity.isEmpty) return null;
+  final n = perCardEquity.length;
+  var min = perCardEquity.first, max = perCardEquity.first, sum = 0.0;
+  for (final e in perCardEquity) {
+    if (e < min) min = e;
+    if (e > max) max = e;
+    sum += e;
+  }
+  final mean = sum / n;
+  var sq = 0.0;
+  for (final e in perCardEquity) {
+    final d = e - mean;
+    sq += d * d;
+  }
+  return EquitySpread(n: n, min: min, max: max, mean: mean, stdev: math.sqrt(sq / n));
 }
 
 /// Inputs signature — an edited fixture / mapping / solve-setting re-solves.

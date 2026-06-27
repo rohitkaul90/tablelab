@@ -233,13 +233,6 @@ void main() {
       expect(d.isDynamic, isFalse);
     });
 
-    test('excluded cards (hero hole) reduce the unseen count to 47', () {
-      // Hero holds two cards not on the board → 52 − 3 − 2 = 47.
-      final d = boardDynamism(_cards('Kc 8d 2h'),
-          excluded: _cards('As Ad').toSet())!;
-      expect(d.unseen, 47);
-    });
-
     test('a 4-card turn board considers 48 unseen cards', () {
       final d = boardDynamism(_cards('Kc 8d 2h 4s'))!;
       expect(d.street, 4);
@@ -278,36 +271,4 @@ void main() {
     });
   });
 
-  group('equitySpread', () {
-    test('empty input is null', () {
-      expect(equitySpread(const []), isNull);
-    });
-
-    test('a single value has zero spread', () {
-      final s = equitySpread([0.42])!;
-      expect(s.n, 1);
-      expect(s.min, 0.42);
-      expect(s.max, 0.42);
-      expect(s.mean, 0.42);
-      expect(s.stdev, 0.0);
-      expect(s.range, 0.0);
-    });
-
-    test('a constant list has zero standard deviation', () {
-      final s = equitySpread([0.5, 0.5, 0.5])!;
-      expect(s.stdev, closeTo(0.0, 1e-12));
-      expect(s.range, 0.0);
-    });
-
-    test('computes min, max, mean, range and population stdev', () {
-      final s = equitySpread([0.2, 0.4, 0.6])!;
-      expect(s.n, 3);
-      expect(s.min, 0.2);
-      expect(s.max, 0.6);
-      expect(s.mean, closeTo(0.4, 1e-12));
-      expect(s.range, closeTo(0.4, 1e-12));
-      // population stdev = sqrt(((0.2)²+0+(0.2)²)/3) = sqrt(0.08/3)
-      expect(s.stdev, closeTo(0.163299, 1e-5));
-    });
-  });
 }
