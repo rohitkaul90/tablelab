@@ -5,6 +5,9 @@ and compares the solver's GTO output against the Decision-Context Engine heurist
 (EQR realized-equity multipliers, SPR commitment). **Not shipped, not user-facing** —
 it runs locally against the licensed solver binary to *calibrate* `lib/equity/`.
 
+> New to how a CFR solver actually works (game tree, regret matching, the dump JSON
+> structure, range narrowing, how it maps to the DCE)? Read **`SOLVER_PRIMER.md`** first.
+
 ## External dependency (not in this repo)
 
 This requires the **commercially-licensed TexasSolver CPU source**, built locally — it
@@ -38,18 +41,25 @@ dump (see `memory/solver-engine-landscape` for the full rationale):
 | File | Role |
 |---|---|
 | `solver_input.dart` | `PokerHand` → `SolverSpot` (board, IP/OOP GTO ranges via `chart_keys`/`gto_ranges`, pot, eff stack, hero contribution). Single-raised, heads-up-to-flop, flop decision only. |
-| `run_solver.dart` | Writes solver input, runs `console_solver`, parses hero combo's strategy + `ev` + `ev_passive`. |
+| `run_solver.dart` | Writes solver input, runs `console_solver`. `solve()` parses hero combo's strategy + `ev` + `ev_passive` (flop node). `solveRoot(dumpRounds:2)` returns the whole tree + walk helpers (`followChildren`, `nodeAggregateStrategy`) for the volatility batch. |
 | `poc.dart` | Proof-of-concept: one fixture + one real hand, prints solver action/EV vs DCE FACTs. |
-| `batch.dart` | Calibration batch: balanced spots per {hand-class × position} bucket → `batch_report.md`. Resumable. |
+| `batch.dart` | EQR calibration batch: balanced spots per {hand-class × position} bucket → `batch_report.md`. Resumable. |
+| `volatility_batch.dart` | **Board-volatility (DCE Tier A) calibration:** stratified spots across the dynamism range; per spot reads `boardDynamism` (Phase 1) + hero turn-equity spread (`lib/equity/`) + GTO flop c-bet sizing + GTO turn-to-turn sizing dispersion (the `dumpRounds:2` turn-walk) → `volatility_report.md`. Resumable. |
 | `export_one_hand.dart` | Pulls one real recorded hand → `real_hand.json` (needs `SUPABASE_*`). |
 
 ## Run
 
 ```bash
 dart run tool/solver/poc.dart                       # 2-spot proof of concept
-dart run tool/solver/batch.dart 6 72                # batch: maxPerBucket=6, totalCap=72
+dart run tool/solver/batch.dart 6 72                # EQR batch: maxPerBucket=6, totalCap=72
+dart run tool/solver/volatility_batch.dart 24       # board-volatility batch: totalCap=24
 dart run tool/solver/export_one_hand.dart           # export one real hand (env creds)
 ```
+
+> **Turn-node dump:** `volatility_batch.dart` solves with `set_dump_rounds 2` so the dump
+> includes turn action nodes. A chance node stores its per-card children under `dealcards`
+> (keyed by card string, the whole deck enumerated — skip board/hero cards), NOT `childrens`;
+> action nodes use `childrens`. See `SOLVER_PRIMER.md` §6.
 
 Solve settings are env-tunable (defaults shown):
 `TLSOLVE_ACCURACY=0.5` (exploitability % stop), `TLSOLVE_MAXITER=150`,

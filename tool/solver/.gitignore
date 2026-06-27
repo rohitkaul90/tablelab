@@ -4,6 +4,10 @@ solver_config.json
 real_hand.json
 # Resumable batch solve state (large, regenerable)
 batch_results.json
+volatility_results.json
+# Throwaway tree-structure dump + diagnostic (regenerable via vol_diag.dart)
+vol_tree.json
+vol_diag.dart
 # Local run logs
 *.log
 # Throwaway crash/convergence diagnostic (hardcoded fixture)
