@@ -116,7 +116,10 @@ Future<void> main(List<String> args) async {
 
     TreeSolveResult tree;
     try {
-      tree = await solveRoot(c.spot, dumpRounds: 2);
+      // Force the 'vol' bet profile: multiple sizes per street so the GTO size
+      // CHOICE is observable (the calibration signal), no raise/allin so the
+      // deep single-raised tree stays tractable. Not env-dependent.
+      tree = await solveRoot(c.spot, dumpRounds: 2, betProfile: 'vol');
     } catch (e) {
       stdout.writeln('   ERROR: $e');
       errored.add(c.id);
@@ -230,10 +233,17 @@ Map<String, dynamic> _measure(_Cand c, TreeSolveResult tree, EquitySpread? eq) {
 
   // Flop c-bet: IP's node after OOP checks (the preflop raiser's c-bet).
   ({double betFreq, double avgSizePct})? flop;
+  Map<String, dynamic>? flopClassSizing;
   final cbetNode = followChildren(tree.root, ['CHECK']);
+  final flopInts = c.spot.board.map(parseCard).where((x) => x >= 0).toList();
   if (cbetNode != null) {
     final agg = nodeAggregateStrategy(cbetNode);
     if (agg != null) flop = _sizing(agg, pot);
+    // Per-hand-class c-bet sizing — the prescriptive-sizing signal. Range-
+    // aggregate sizing mixes all hands; the prescription is conditioned on
+    // hero's class (a strongMade bets big for protection on a wet board even as
+    // the range checks more), so bucket each combo by HandClass vs the flop.
+    flopClassSizing = _classSizing(cbetNode, flopInts, pot);
   }
 
   // Turn dispersion: walk the check–check line to the turn chance node, then for
@@ -288,9 +298,10 @@ Map<String, dynamic> _measure(_Cand c, TreeSolveResult tree, EquitySpread? eq) {
     'eqMax': eq?.max,
     'eqRange': eq?.range,
     'eqStdev': eq?.stdev,
-    // solver GTO flop c-bet
+    // solver GTO flop c-bet (range-aggregate + per-hand-class)
     'flopBetFreq': flop?.betFreq ?? 0.0,
     'flopAvgSizePct': flop?.avgSizePct ?? 0.0,
+    'flopClassSizing': flopClassSizing,
     // solver GTO turn-to-turn dispersion
     'turnCards': turnCards,
     'turnSizeMean': turnSizeSpread?.mean,
@@ -325,6 +336,46 @@ double? _amountOf(String action) {
   return m == null ? null : double.tryParse(m.group(1)!);
 }
 
+/// Bucket the combos at an action node by [HandClass] (vs [board]) and aggregate
+/// bet frequency + average bet size (% of [pot]) per class — the per-hand-class
+/// GTO sizing that conditions the prescription ("dynamic board + strongMade →
+/// bigger size?"). Returns class-name → {betFreq, avgSizePct, n}, or null if the
+/// node has no per-combo strategy.
+Map<String, dynamic>? _classSizing(
+    Map<String, dynamic> node, List<int> board, num pot) {
+  final strat = node['strategy'] as Map<String, dynamic>?;
+  if (strat == null) return null;
+  final actions = (strat['actions'] as List).cast<String>();
+  final byCombo = strat['strategy'] as Map<String, dynamic>?;
+  if (byCombo == null || byCombo.isEmpty) return null;
+
+  final agg = <HandClass, ({double betFreq, double sizeW, double sizeFreq, int n})>{};
+  byCombo.forEach((combo, v) {
+    if (v is! List || combo.length < 4) return;
+    final hole = [parseCard(combo.substring(0, 2)), parseCard(combo.substring(2, 4))];
+    if (hole.any((x) => x < 0)) return;
+    final hc = classifyHandClass(hole, board);
+    if (hc == null) return;
+    final freqs = v.map((e) => (e as num).toDouble()).toList();
+    final s = _sizing((actions: actions, freqs: freqs), pot);
+    final p = agg[hc] ?? (betFreq: 0.0, sizeW: 0.0, sizeFreq: 0.0, n: 0);
+    agg[hc] = (
+      betFreq: p.betFreq + s.betFreq,
+      sizeW: p.sizeW + s.betFreq * s.avgSizePct,
+      sizeFreq: p.sizeFreq + s.betFreq,
+      n: p.n + 1,
+    );
+  });
+  return {
+    for (final e in agg.entries)
+      e.key.name: {
+        'betFreq': e.value.n > 0 ? e.value.betFreq / e.value.n : 0.0,
+        'avgSizePct': e.value.sizeFreq > 0 ? e.value.sizeW / e.value.sizeFreq : 0.0,
+        'n': e.value.n,
+      },
+  };
+}
+
 /// Inputs signature — an edited fixture / mapping / solve-setting re-solves.
 String _sig(SolverSpot s) => [
       s.board.join(),
@@ -335,7 +386,8 @@ String _sig(SolverSpot s) => [
       s.heroCombo,
       s.heroIsIp,
       'dump2',
-      solverConfigTag(),
+      'vol', // forced bet profile (overrides env), part of what determines the solve
+      solverConfigTag(), // accuracy + maxIter (the env profile portion is moot here)
     ].join('|');
 
 // ── Report ───────────────────────────────────────────────────────────────────
@@ -393,8 +445,20 @@ void _writeReport(
   b
     ..writeln('## Aggregate — does dynamism predict GTO sizing?')
     ..writeln();
-  _aggBlock(b, 'Static (below threshold)', rows.where((r) => !(r['isDynamic'] as bool)).toList());
-  _aggBlock(b, 'Dynamic (at/above threshold)', rows.where((r) => r['isDynamic'] as bool).toList());
+  final staticRows = rows.where((r) => !(r['isDynamic'] as bool)).toList();
+  final dynamicRows = rows.where((r) => r['isDynamic'] as bool).toList();
+  _aggBlock(b, 'Static (below threshold)', staticRows);
+  _aggBlock(b, 'Dynamic (at/above threshold)', dynamicRows);
+
+  // The prescription signal: GTO c-bet sizing per hand class, static vs dynamic.
+  // This is what conditions the dynamic→bigger prescription on hero's class —
+  // the range aggregate above mixes all hands and can read backwards.
+  b
+    ..writeln('### GTO flop c-bet by hand class — static vs dynamic '
+        '(the prescription signal)')
+    ..writeln();
+  _classAggBlock(b, 'Static boards', staticRows);
+  _classAggBlock(b, 'Dynamic boards', dynamicRows);
 
   // Tertiles by dynamic-fraction (threshold-independent).
   if (rows.length >= 3) {
@@ -441,4 +505,42 @@ void _aggBlock(StringBuffer b, String label, List<Map<String, dynamic>> rows) {
         'freq @ ${mean('flopAvgSizePct').toStringAsFixed(0)}% pot')
     ..writeln('- mean GTO turn size stdev: ${mean('turnSizeStdev').toStringAsFixed(1)}pts')
     ..writeln();
+}
+
+/// Per-hand-class GTO c-bet sizing, averaged over the spots in [rows] — the
+/// table that calibrates the prescription. Each spot contributes its own
+/// per-class {betFreq, avgSizePct}; we mean those across spots.
+void _classAggBlock(StringBuffer b, String label, List<Map<String, dynamic>> rows) {
+  const order = ['strongMade', 'marginalMade', 'strongDraw', 'weakDraw', 'air'];
+  final acc = <String, ({double freq, double size, int spots, int combos})>{};
+  for (final r in rows) {
+    final cs = r['flopClassSizing'];
+    if (cs is! Map) continue;
+    cs.forEach((k, v) {
+      if (v is! Map) return;
+      final p = acc[k] ?? (freq: 0.0, size: 0.0, spots: 0, combos: 0);
+      acc[k as String] = (
+        freq: p.freq + (v['betFreq'] as num).toDouble(),
+        size: p.size + (v['avgSizePct'] as num).toDouble(),
+        spots: p.spots + 1,
+        combos: p.combos + (v['n'] as num).toInt(),
+      );
+    });
+  }
+  if (acc.isEmpty) {
+    b.writeln('**$label** — (no class data)\n');
+    return;
+  }
+  b
+    ..writeln('**$label** (mean over spots)')
+    ..writeln()
+    ..writeln('| hand class | bet freq | avg size % | spots · combos |')
+    ..writeln('|---|--:|--:|--:|');
+  for (final k in order) {
+    final v = acc[k];
+    if (v == null) continue;
+    b.writeln('| $k | ${(v.freq / v.spots * 100).toStringAsFixed(0)}% | '
+        '${(v.size / v.spots).toStringAsFixed(0)}% | ${v.spots} · ${v.combos} |');
+  }
+  b.writeln();
 }

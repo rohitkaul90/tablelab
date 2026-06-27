@@ -105,7 +105,7 @@ _SolveConfig _config() {
   // 'single' is the default: multi-bet OOMs on deep (SPR 15-20) spots; single
   // converges to ~0.5% within the tree's action space. Use 'multi' for shallow spots.
   var bets = (e['TLSOLVE_BETS'] ?? 'single').toLowerCase();
-  if (bets != 'single' && bets != 'multi') bets = 'single';
+  if (bets != 'single' && bets != 'multi' && bets != 'vol') bets = 'single';
   final timeoutS = int.tryParse(e['TLSOLVE_TIMEOUT_S'] ?? '') ?? 900;
   return _SolveConfig(accuracy, maxIter, bets, timeoutS);
 }
@@ -118,6 +118,10 @@ String solverConfigTag() => _config().tag;
 /// 'multi': TIERED for realism — flop (the decision we read) gets multiple sizes
 /// + a raise; turn+river get a single size to bound the deep-tree explosion at
 /// high SPR (keeps the deepest spots tractable / out of OOM territory).
+/// 'vol': board-VOLATILITY/sizing calibration — several bet sizes per street so
+/// the GTO size CHOICE (vs texture) is observable, but NO raise/allin so the tree
+/// stays tractable at deep single-raised SPR (~15) where 'multi' OOMs. 'single'
+/// can't be used for sizing calibration (it offers only one size).
 String _betSizes(String profile) {
   final b = StringBuffer();
   for (final pos in ['oop', 'ip']) {
@@ -126,6 +130,10 @@ String _betSizes(String profile) {
         b.writeln('set_bet_sizes $pos,$street,bet,50');
         b.writeln('set_bet_sizes $pos,$street,allin');
       }
+    } else if (profile == 'vol') {
+      b.writeln('set_bet_sizes $pos,flop,bet,33,75');
+      b.writeln('set_bet_sizes $pos,turn,bet,50,100');
+      b.writeln('set_bet_sizes $pos,river,bet,75');
     } else {
       b.writeln('set_bet_sizes $pos,flop,bet,33,75');
       b.writeln('set_bet_sizes $pos,flop,raise,60');
@@ -140,14 +148,15 @@ String _betSizes(String profile) {
 }
 
 String _buildInput(SolverSpot spot, String dumpPath, _SolveConfig cfg,
-    {int dumpRounds = 1}) {
+    {int dumpRounds = 1, String? betProfile}) {
+  final profile = betProfile ?? cfg.betProfile;
   return '''
 set_pot ${spot.pot}
 set_effective_stack ${spot.effStack}
 set_board ${spot.board.join(',')}
 set_range_ip ${spot.rangeIp}
 set_range_oop ${spot.rangeOop}
-${_betSizes(cfg.betProfile)}set_allin_threshold 0.67
+${_betSizes(profile)}set_allin_threshold 0.67
 build_tree
 set_thread_num 16
 set_accuracy ${cfg.accuracy}
@@ -212,7 +221,8 @@ class _RawSolve {
 /// (whole tree, dumpRounds 2). [dumpRounds] = 1 dumps the flop only, 2 adds the
 /// turn nodes (needed to read the turn chance node's per-card children).
 Future<_RawSolve> _invokeSolver(
-    SolverSpot spot, int dumpRounds, bool verbose) async {
+    SolverSpot spot, int dumpRounds, bool verbose,
+    {String? betProfile}) async {
   final dir = _sourceDir();
   final bin = '$dir/vsbuild/console_solver.exe';
   if (!File(bin).existsSync()) {
@@ -223,8 +233,8 @@ Future<_RawSolve> _invokeSolver(
     final inputPath = '${tmp.path}/input.txt';
     final dumpPath = '${tmp.path}/out.json';
     final cfg = _config();
-    File(inputPath)
-        .writeAsStringSync(_buildInput(spot, dumpPath, cfg, dumpRounds: dumpRounds));
+    File(inputPath).writeAsStringSync(_buildInput(spot, dumpPath, cfg,
+        dumpRounds: dumpRounds, betProfile: betProfile));
 
     final sw = Stopwatch()..start();
     final proc = await Process.start(bin, ['-i', inputPath], workingDirectory: dir);
@@ -302,8 +312,8 @@ Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
 /// Solve [spot] and return the whole dump tree (default dumpRounds 2 → flop+turn)
 /// for free-form node walking. Used by the volatility calibration batch.
 Future<TreeSolveResult> solveRoot(SolverSpot spot,
-    {int dumpRounds = 2, bool verbose = false}) async {
-  final raw = await _invokeSolver(spot, dumpRounds, verbose);
+    {int dumpRounds = 2, bool verbose = false, String? betProfile}) async {
+  final raw = await _invokeSolver(spot, dumpRounds, verbose, betProfile: betProfile);
   return TreeSolveResult(raw.root, raw.exploitability, raw.wallMs);
 }
 
