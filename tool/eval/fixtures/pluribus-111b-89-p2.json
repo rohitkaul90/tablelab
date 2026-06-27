@@ -258,6 +258,16 @@
       "flop": 19.55,
       "turn": 19.55,
       "river": 7.52
+    },
+    "boardVolatilityByStreet": {
+      "flop": {
+        "dynamicFraction": 0.6938775510204082,
+        "isDynamic": true
+      },
+      "turn": {
+        "dynamicFraction": 0.7916666666666666,
+        "isDynamic": true
+      }
     }
   }
 }

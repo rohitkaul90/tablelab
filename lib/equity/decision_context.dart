@@ -318,11 +318,15 @@ String sprBucketLabel(SprBucket b) {
 // are solver-calibrated (tool/solver/volatility_batch.dart, DCE Phase 2), never
 // the count. Pure Dart, isolate-safe; unit-tested in decision_context_test.dart.
 
-/// PLACEHOLDER threshold: a board is "dynamic" when at least this fraction of the
-/// unseen next cards change the board's category possibilities. Calibrated in
-/// Phase 2 against the solver's sizing swing — do NOT treat as final; nothing
-/// gates on it yet beyond the [BoardDynamism.isDynamic] label.
-const double kBoardDynamicThreshold = 0.30;
+/// A board is "dynamic" when at least this fraction of the unseen next cards
+/// change the board's category possibilities. SOLVER-CALIBRATED: a 30-spot
+/// TexasSolver run (`tool/solver/VOLATILITY_FINDINGS.md`) found the GTO c-bet
+/// sizing regime transitions around a dynamic-fraction of ~0.50 — below it strong
+/// hands size small (~49–52%), above it they size up (~60–63%). The count metric
+/// saturates above ~0.65 (most wet boards clip near 0.76), so in practice this
+/// threshold separates truly-dry boards from the rest, which is the distinction
+/// that matters ("don't size up on a dry board").
+const double kBoardDynamicThreshold = 0.50;
 
 /// Deterministic board-volatility measurement for one street: of the unseen next
 /// cards, how many materially change what is possible on the board. Valid only

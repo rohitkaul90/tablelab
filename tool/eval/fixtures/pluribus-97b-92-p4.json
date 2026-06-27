@@ -225,6 +225,16 @@
     "sprByStreet": {
       "flop": 6.0,
       "turn": 3.287593984962406
+    },
+    "boardVolatilityByStreet": {
+      "flop": {
+        "dynamicFraction": 0.6326530612244898,
+        "isDynamic": true
+      },
+      "turn": {
+        "dynamicFraction": 0.625,
+        "isDynamic": true
+      }
     }
   }
 }

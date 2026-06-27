@@ -24,6 +24,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:tablelab/equity/card.dart';
+import 'package:tablelab/equity/decision_context.dart';
 import 'package:tablelab/equity/evaluator.dart';
 import 'package:tablelab/equity/villain_range.dart';
 import 'package:tablelab/models/hand_model.dart';
@@ -241,6 +242,23 @@ Map<String, dynamic> _buildLabels(PokerHand hand, HandEquityCheck equity) {
       if (s.spr != null) s.street.name: s.spr!,
   };
 
+  // Board volatility (DCE Tier A): per-street static/dynamic from the board-only
+  // `boardDynamism` count. Result-independent (board-only), so it bakes like the
+  // other labels. Heuristic context, NOT card-logic-graded (like sprByStreet) —
+  // the scorer doesn't gate on it; baked for the report + future use. Null on the
+  // river/preflop (no next card).
+  final boardVolatilityByStreet = <String, dynamic>{};
+  for (final s in equity.streets) {
+    final board = s.boardSoFar.map(parseCard).where((c) => c >= 0).toList();
+    final d = boardDynamism(board);
+    if (d != null) {
+      boardVolatilityByStreet[s.street.name] = {
+        'dynamicFraction': d.dynamicFraction,
+        'isDynamic': d.isDynamic,
+      };
+    }
+  }
+
   return {
     'heroHoleCards': heroCards,
     'finalBoard': hand.allCommunityCards,
@@ -248,6 +266,7 @@ Map<String, dynamic> _buildLabels(PokerHand hand, HandEquityCheck equity) {
     'forcedDecision': forced?.toJson(),
     'realizedEquityByStreet': realizedByStreet,
     'sprByStreet': sprByStreet,
+    'boardVolatilityByStreet': boardVolatilityByStreet,
   };
 }
 

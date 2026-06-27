@@ -246,6 +246,23 @@ void main() {
       expect(d.unseen, 48);
     });
 
+    test('the threshold is the solver-calibrated 0.50', () {
+      expect(kBoardDynamicThreshold, 0.50);
+    });
+
+    test('a moderate board below 0.50 reads static (Tc Kh Ks ≈ 0.43)', () {
+      // Paired top board, broadway-gapped: 5 pair cards + 16 straight-opening
+      // (9/J/Q/A ×4) = 21 of 49 ≈ 0.43 → static at the 0.50 threshold (would have
+      // been "dynamic" under the old 0.30 placeholder).
+      final d = boardDynamism(_cards('Tc Kh Ks'))!;
+      expect(d.pairCards, 5);
+      expect(d.straightCards, 16);
+      expect(d.flushCards, 0);
+      expect(d.dynamic, 21);
+      expect(d.dynamicFraction, closeTo(21 / 49, 1e-9));
+      expect(d.isDynamic, isFalse);
+    });
+
     test('subset counts never undercut the union, union never exceeds their sum',
         () {
       for (final b in ['9h 7h 2s', 'Kc 8d 2h', 'Ah Kh 4h', 'Ks Kd 5c']) {
