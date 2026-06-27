@@ -58,15 +58,15 @@ void main() {
     });
   });
 
-  group('eqrMultiplier — hard anchors', () {
-    test('NFD in position ≈ 1.00', () {
-      expect(eqrMultiplier(HandClass.strongDraw, HeroPosition.ip), 1.00);
+  group('eqrMultiplier — solver-calibrated anchors', () {
+    test('strong draw in position ≈ 1.05 (solver)', () {
+      expect(eqrMultiplier(HandClass.strongDraw, HeroPosition.ip), 1.05);
     });
-    test('weak FD in position ≈ 0.87 (0.88 here)', () {
-      expect(eqrMultiplier(HandClass.weakDraw, HeroPosition.ip), 0.88);
+    test('weak draw in position ≈ 1.00 (solver)', () {
+      expect(eqrMultiplier(HandClass.weakDraw, HeroPosition.ip), 1.00);
     });
-    test('one pair out of position (BB-defend) ≈ 0.79', () {
-      expect(eqrMultiplier(HandClass.marginalMade, HeroPosition.oop), 0.79);
+    test('one pair out of position ≈ 0.75 (solver)', () {
+      expect(eqrMultiplier(HandClass.marginalMade, HeroPosition.oop), 0.75);
     });
     test('strong made over-realizes (> 1) in position', () {
       expect(eqrMultiplier(HandClass.strongMade, HeroPosition.ip),
@@ -83,7 +83,7 @@ void main() {
 
   group('realizedEquity', () {
     test('clamps to [0, 1] when a strong made hand over-realizes', () {
-      // 0.9 × 1.30 = 1.17 → clamped to 1.0
+      // 0.9 × 1.18 = 1.06 → clamped to 1.0
       expect(
           realizedEquity(0.9,
               handClass: HandClass.strongMade, position: HeroPosition.ip),

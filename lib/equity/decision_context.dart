@@ -184,22 +184,33 @@ bool _hasStraight(Set<int> ranks) {
 // intentionally capped lower here as a flat per-class value, see note); air OOP
 // realizes ≈ nothing.
 
-/// EQR multiplier for a hand class at a position. v1 ignores SPR (deferred).
+/// EQR multiplier for a hand class at a position. Ignores SPR (separate factor).
+///
+/// Values are SOLVER-CALIBRATED from a 69-spot TexasSolver run (~0.5%
+/// exploitability) measuring showdown realization (check/call line, fold equity
+/// stripped) per {hand class × position}; see `tool/solver/` + memory. The
+/// headline: in position hands realize ~fully (multipliers ~1.0+), out of
+/// position they realize much worse, scaled by strength. Caveats: single-bet
+/// tree abstraction + Pluribus distribution + a few noisy buckets — so a couple
+/// of values are judgment calls (noted), not raw measurements.
 double eqrMultiplier(HandClass hc, HeroPosition pos) {
   final ip = pos == HeroPosition.ip;
   switch (hc) {
     case HandClass.air:
-      return ip ? 0.30 : 0.10; // ESTIMATED (pure air OOP vs aggression → near 0)
+      // IP measured 0.77 (true air) – 1.08 (overcards); blended to one value
+      // since `air` isn't equity-split. OOP confirmed ≈ 0.10 (realizes ~nothing).
+      return ip ? 0.85 : 0.10;
     case HandClass.weakDraw:
-      return ip ? 0.88 : 0.78; // IP ≈ weak-FD anchor 0.87; OOP estimated
+      return ip ? 1.00 : 0.45; // IP measured 1.05; OOP 0.39 (draws OOP realize poorly)
     case HandClass.strongDraw:
-      return ip ? 1.00 : 0.88; // IP = NFD anchor 1.00; OOP estimated
+      return ip ? 1.05 : 0.55; // IP tight 1.08 (1.03–1.12); OOP 0.49
     case HandClass.marginalMade:
-      return ip ? 0.92 : 0.79; // OOP = BB-defend anchor 0.79; IP estimated
+      return ip ? 1.15 : 0.75; // IP tight 1.18; OOP 0.74
     case HandClass.strongMade:
-      // Over-realizes. Spec's 1.8 is the extreme (nutted + initiative); capped
-      // to a conservative flat value here — ESTIMATED.
-      return ip ? 1.30 : 1.12;
+      // IP measured 1.16 — lowers the old 1.30 cap. OOP keeps 1.12: the measured
+      // 1.53 is outlier-driven (spread 0.98–2.27) and would break IP ≥ OOP, so
+      // it's treated as noise.
+      return ip ? 1.18 : 1.12;
   }
 }
 

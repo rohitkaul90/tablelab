@@ -179,7 +179,7 @@
     ],
     "forcedDecision": null,
     "realizedEquityByStreet": {
-      "flop": 1.0
+      "flop": 0.995271
     },
     "sprByStreet": {
       "flop": 12.0
