@@ -6,3 +6,5 @@ real_hand.json
 batch_results.json
 # Local run logs
 *.log
+# Throwaway crash/convergence diagnostic (hardcoded fixture)
+diag.dart

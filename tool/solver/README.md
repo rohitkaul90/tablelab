@@ -47,9 +47,17 @@ dump (see `memory/solver-engine-landscape` for the full rationale):
 
 ```bash
 dart run tool/solver/poc.dart                       # 2-spot proof of concept
-dart run tool/solver/batch.dart 3 30                # batch: maxPerBucket=3, totalCap=30 (~1h)
+dart run tool/solver/batch.dart 6 72                # batch: maxPerBucket=6, totalCap=72
 dart run tool/solver/export_one_hand.dart           # export one real hand (env creds)
 ```
+
+Solve settings are env-tunable (defaults shown):
+`TLSOLVE_ACCURACY=0.5` (exploitability % stop), `TLSOLVE_MAXITER=150`,
+`TLSOLVE_BETS=multi` (`single` = fast 50%+allin POC profile), `TLSOLVE_TIMEOUT_S=720`
+(per-spot cap; a timed-out spot is recorded as errored, not fatal). The `multi`
+profile is tiered — flop gets `33,75 + raise + allin`, turn/river a single `66 + allin`
+to bound the deep-tree explosion at high SPR. A settings change invalidates the
+resume cache (the config tag is in each spot's signature), so changing knobs re-solves.
 
 ## Realized-equity definitions (calibration target)
 
@@ -63,8 +71,10 @@ Net-chip EV frame (verified by regression `EV/pot ≈ 1.45·rawEq − 0.62`):
 
 ## Caveats
 
-~100–150s per deep solve; current settings use loose convergence (3–4.5% exploitability,
-one bet size) → **directional, not final**. Flop decisions only. `solver_config.json`,
+Deep multi-bet solves can take minutes each (per-spot timeout guards runaways). Flop
+decisions only (turn/river would need tree-walking + bet-size matching). The `single` bet
+profile + loose accuracy is the fast POC mode; `multi` + tight accuracy is the calibration
+default. `solver_config.json`,
 `real_hand.json`, `batch_results.json`, and `*.log` are gitignored. Findings:
 `batch_report.md`, `POC_FINDINGS.md`, and `memory/solver-engine-landscape`.
 

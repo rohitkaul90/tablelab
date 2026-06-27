@@ -5,12 +5,14 @@
 // EQR multiplier) against the solver's GTO action + per-action EV. Output: a
 // resumable per-spot JSON + a markdown calibration report.
 //
-//   dart run tool/solver/batch.dart [maxPerBucket=3] [totalCap=24]
+//   dart run tool/solver/batch.dart [maxPerBucket=6] [totalCap=72]
 //
-// Resumable: re-running skips spots already in batch_results.json. Each deep
-// solve is ~100-150s, so this is an hours-long BACKGROUND run for a full batch.
-// Operator-only (uses the licensed solver locally). See run_solver.dart for the
-// TEXASSOLVER_DIR / solver_config.json setup.
+// Resumable: re-running skips spots whose id + inputs/solve-config signature is
+// unchanged (a fixture, mapping, OR solve-settings change re-solves). Each deep
+// multi-bet solve can take minutes, so a full batch is an hours-long BACKGROUND
+// run. Operator-only (uses the licensed solver locally). Solve settings are
+// env-tunable — see run_solver.dart (TLSOLVE_ACCURACY / TLSOLVE_MAXITER /
+// TLSOLVE_BETS / TLSOLVE_TIMEOUT_S) and the TEXASSOLVER_DIR setup.
 
 import 'dart:convert';
 import 'dart:io';
@@ -35,8 +37,8 @@ class Candidate {
 }
 
 Future<void> main(List<String> args) async {
-  final maxPerBucket = args.isNotEmpty ? int.parse(args[0]) : 3;
-  final totalCap = args.length > 1 ? int.parse(args[1]) : 24;
+  final maxPerBucket = args.isNotEmpty ? int.parse(args[0]) : 6;
+  final totalCap = args.length > 1 ? int.parse(args[1]) : 72;
 
   // ── 1. Gather solver-mappable candidates (no-reads only, so the solver's GTO
   //       ranges and the DCE villain model assume the same baseline). ──
@@ -83,8 +85,7 @@ Future<void> main(List<String> args) async {
     if (flop == null || flop.realizedHandClass == null || flop.heroInPosition == null) {
       continue; // need a classified flop spot to bucket/calibrate
     }
-    final bucket = '${flop.realizedHandClass!.name}/${flop.heroInPosition! ? "IP" : "OOP"}';
-    byBucket.putIfAbsent(bucket, () => []).add(_Scored(c, flop));
+    byBucket.putIfAbsent(_bucketKey(flop), () => []).add(_Scored(c, flop));
   }
 
   // ── 3. Select up to maxPerBucket per bucket, then balance ACROSS buckets up to
@@ -189,14 +190,23 @@ String _sig(SolverSpot s) => [
       s.heroCombo,
       s.heroIsIp,
       s.heroPath.join(','),
+      solverConfigTag(), // solve settings — a settings change re-solves
     ].join('|');
 
 class _Scored {
   final Candidate c;
   final StreetEquityCheck flop;
   _Scored(this.c, this.flop);
-  String get bucket =>
-      '${flop.realizedHandClass!.name}/${flop.heroInPosition! ? "IP" : "OOP"}';
+  String get bucket => _bucketKey(flop);
+}
+
+/// Bucket key = {hand-class × position}, with the coarse `air` class sub-split by
+/// raw equity (`_lo` < 0.30 / `_hi` ≥ 0.30) so true air and overcards don't pool.
+String _bucketKey(StreetEquityCheck flop) {
+  final cls = flop.realizedHandClass!.name;
+  final pos = flop.heroInPosition! ? 'IP' : 'OOP';
+  final band = cls == 'air' ? (flop.heroEquity < 0.30 ? '_lo' : '_hi') : '';
+  return '$cls$band/$pos';
 }
 
 Map<String, dynamic> _spotResult(_Scored s, SolverSpot spot, String sig, SolveResult res) {
@@ -317,8 +327,8 @@ void _writeReport(
       '**EQR_show = showdown realization only (check/call line, NO fold equity) — '
       'the right target for the bluff-catch EQR multiplier.**\n');
   b.writeln('| Bucket (handClass/pos) | n | avg raw eq | **DCE mult** | '
-      'EQR_emp (total) | **EQR_show (no-FE)** | avg EV gap |');
-  b.writeln('|---|---|---|---|---|---|---|');
+      'EQR_emp (total) | **EQR_show (no-FE)** | EQR_show min–max | avg EV gap |');
+  b.writeln('|---|---|---|---|---|---|---|---|');
   for (final entry in buckets.entries) {
     final v = entry.value;
     String avg(String k) {
@@ -326,9 +336,14 @@ void _writeReport(
       if (xs.isEmpty) return '–';
       return (xs.reduce((a, b) => a + b) / xs.length).toStringAsFixed(2);
     }
+    String range(String k) {
+      final xs = v.map((r) => r[k]).whereType<num>().toList()..sort();
+      if (xs.isEmpty) return '–';
+      return '${xs.first.toStringAsFixed(2)}–${xs.last.toStringAsFixed(2)}';
+    }
     b.writeln('| ${entry.key} | ${v.length} | ${avg("rawEquity")} | '
         '${avg("dceMultiplier")} | ${avg("eqrEmp")} | ${avg("eqrShow")} | '
-        '${avg("evGap")} |');
+        '${range("eqrShow")} | ${avg("evGap")} |');
   }
 
   // Per-spot detail.

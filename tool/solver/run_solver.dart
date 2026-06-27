@@ -6,6 +6,7 @@
 // path via the TEXASSOLVER_DIR env var or a gitignored tool/solver/solver_config.json
 // of the form {"sourceDir": "C:\\...\\source"}.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -81,33 +82,75 @@ String _sourceDir() {
       'to the TexasSolver `source` dir (the one containing vsbuild/ and resources/).');
 }
 
-/// POC bet-size block: one bet size + all-in per street per player. Keeping the
-/// branching factor low (2 actions/node, not 4) is what makes a DEEP spot
-/// (high SPR → full flop+turn+river tree) solve in seconds rather than minutes.
-/// The follow-on can widen this once we accept longer solves.
-String _betSizes() {
+/// Solve parameters, env-overridable so a calibration round can tighten without
+/// editing code. Defaults are the "full realism" calibration settings.
+class _SolveConfig {
+  final double accuracy; // exploitability % stop threshold
+  final int maxIter;
+  final String betProfile; // 'multi' (tiered, realistic) | 'single' (fast POC)
+  final int timeoutS; // per-spot wall-clock cap
+
+  _SolveConfig(this.accuracy, this.maxIter, this.betProfile, this.timeoutS);
+
+  /// Compact descriptor — folded into the batch cache signature so a settings
+  /// change invalidates cached solves (they'd otherwise be served stale).
+  String get tag => 'acc$accuracy|it$maxIter|$betProfile';
+}
+
+_SolveConfig _config() {
+  final e = Platform.environment;
+  final accuracy = double.tryParse(e['TLSOLVE_ACCURACY'] ?? '') ?? 0.5;
+  // 200 iters reaches ~0.5% on these deep single-bet spots (60 only reached ~5%).
+  final maxIter = int.tryParse(e['TLSOLVE_MAXITER'] ?? '') ?? 200;
+  // 'single' is the default: multi-bet OOMs on deep (SPR 15-20) spots; single
+  // converges to ~0.5% within the tree's action space. Use 'multi' for shallow spots.
+  var bets = (e['TLSOLVE_BETS'] ?? 'single').toLowerCase();
+  if (bets != 'single' && bets != 'multi') bets = 'single';
+  final timeoutS = int.tryParse(e['TLSOLVE_TIMEOUT_S'] ?? '') ?? 900;
+  return _SolveConfig(accuracy, maxIter, bets, timeoutS);
+}
+
+/// The current solve-config tag (for batch.dart's cache signature).
+String solverConfigTag() => _config().tag;
+
+/// Bet-size block.
+/// 'single': one 50%-pot bet + all-in per street — fast, low branching (POC).
+/// 'multi': TIERED for realism — flop (the decision we read) gets multiple sizes
+/// + a raise; turn+river get a single size to bound the deep-tree explosion at
+/// high SPR (keeps the deepest spots tractable / out of OOM territory).
+String _betSizes(String profile) {
   final b = StringBuffer();
   for (final pos in ['oop', 'ip']) {
-    for (final street in ['flop', 'turn', 'river']) {
-      b.writeln('set_bet_sizes $pos,$street,bet,50');
-      b.writeln('set_bet_sizes $pos,$street,allin');
+    if (profile == 'single') {
+      for (final street in ['flop', 'turn', 'river']) {
+        b.writeln('set_bet_sizes $pos,$street,bet,50');
+        b.writeln('set_bet_sizes $pos,$street,allin');
+      }
+    } else {
+      b.writeln('set_bet_sizes $pos,flop,bet,33,75');
+      b.writeln('set_bet_sizes $pos,flop,raise,60');
+      b.writeln('set_bet_sizes $pos,flop,allin');
+      for (final street in ['turn', 'river']) {
+        b.writeln('set_bet_sizes $pos,$street,bet,66');
+        b.writeln('set_bet_sizes $pos,$street,allin');
+      }
     }
   }
   return b.toString();
 }
 
-String _buildInput(SolverSpot spot, String dumpPath) {
+String _buildInput(SolverSpot spot, String dumpPath, _SolveConfig cfg) {
   return '''
 set_pot ${spot.pot}
 set_effective_stack ${spot.effStack}
 set_board ${spot.board.join(',')}
 set_range_ip ${spot.rangeIp}
 set_range_oop ${spot.rangeOop}
-${_betSizes()}set_allin_threshold 0.67
+${_betSizes(cfg.betProfile)}set_allin_threshold 0.67
 build_tree
 set_thread_num 16
-set_accuracy 2.0
-set_max_iteration 60
+set_accuracy ${cfg.accuracy}
+set_max_iteration ${cfg.maxIter}
 set_print_interval 10
 set_use_isomorphism 1
 start_solve
@@ -156,20 +199,33 @@ Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
   try {
   final inputPath = '${tmp.path}/input.txt';
   final dumpPath = '${tmp.path}/out.json';
-  File(inputPath).writeAsStringSync(_buildInput(spot, dumpPath));
+  final cfg = _config();
+  File(inputPath).writeAsStringSync(_buildInput(spot, dumpPath, cfg));
 
   final sw = Stopwatch()..start();
-  final res = await Process.run(bin, ['-i', inputPath], workingDirectory: dir);
+  final proc = await Process.start(bin, ['-i', inputPath], workingDirectory: dir);
+  final outF = proc.stdout.transform(utf8.decoder).join();
+  final errF = proc.stderr.transform(utf8.decoder).join();
+  final int exitCode;
+  try {
+    exitCode = await proc.exitCode.timeout(Duration(seconds: cfg.timeoutS));
+  } on TimeoutException {
+    proc.kill();
+    throw StateError('solver timed out after ${cfg.timeoutS}s '
+        '(spot too deep for the "${cfg.betProfile}" bet profile?)');
+  }
+  final out = await outF;
+  final err = await errF;
   sw.stop();
   if (verbose) {
-    stdout.writeln(res.stdout.toString().split('\n').takeLast(4).join('\n'));
+    stdout.writeln(out.split('\n').takeLast(4).join('\n'));
   }
-  if (res.exitCode != 0) {
-    throw StateError('solver exit ${res.exitCode}\n${res.stderr}\n${res.stdout}');
+  if (exitCode != 0) {
+    throw StateError('solver exit $exitCode\n$err\n$out');
   }
   final outFile = File(dumpPath);
   if (!outFile.existsSync()) {
-    throw StateError('solver produced no output_result\n${res.stdout}');
+    throw StateError('solver produced no output_result\n$out');
   }
   var node = jsonDecode(outFile.readAsStringSync()) as Map<String, dynamic>;
   for (final step in spot.heroPath) {
@@ -199,7 +255,7 @@ Future<SolveResult> solve(SolverSpot spot, {bool verbose = false}) async {
     probs: probs,
     evs: evs,
     passiveEv: (passiveVec != null && passiveVec.isNotEmpty) ? passiveVec.first : null,
-    exploitability: _parseExploitability(res.stdout.toString()),
+    exploitability: _parseExploitability(out),
     wallMs: sw.elapsedMilliseconds,
     nodePlayer: node['player'] as int?,
   );
