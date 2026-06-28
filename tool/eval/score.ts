@@ -482,6 +482,128 @@ function checkForcedVerdict(
   return { scored: true, agreed, detail: `${base}; model wasGto=${st.wasGto} → ${agreed ? "AGREE" : "DISAGREE"}` };
 }
 
+// ── Frequency agreement (DCE Q1) ─────────────────────────────────────────────
+// For spots where the prompt was grounded with a `[HEURISTIC — GTO frequency]`
+// line, check the coaching doesn't CONTRADICT the injected solver mix; for a
+// multiway-tendency spot (no per-hand frequency exists), flag any specific
+// action % the coaching invents. A SEPARATE judge call (only on spots with such
+// a FACT, ~the synthetic gto-frequency bucket) so it never perturbs the
+// card-logic judge and can't confound the gated dimensions.
+
+// Coarse action buckets — the FACT's small/medium/big bets all map to "bet".
+const _coarseAction: Record<string, string> = {
+  "check": "check", "call": "call", "fold": "fold", "raise": "raise",
+  "all-in": "allin", "bet": "bet", "small bet": "bet", "medium bet": "bet",
+  "big bet": "bet",
+};
+
+interface ParsedFreqFact {
+  gto: Record<string, number> | null; // coarse action → frequency (0–1)
+  multiway: boolean;
+}
+
+// Parse the injected GTO-frequency FACT's mix into coarse action frequencies.
+function parseFreqFact(equityFacts: string[]): ParsedFreqFact {
+  const gtoLine = (equityFacts ?? []).find((f) => f.includes("[HEURISTIC — GTO frequency"));
+  const multiway = (equityFacts ?? []).some((f) => f.includes("[HEURISTIC — multiway tendency"));
+  if (!gtoLine) return { gto: null, multiway };
+  const freqs: Record<string, number> = {};
+  // Longer labels first so "small bet" matches before "bet".
+  const re = /(all-in|small bet|medium bet|big bet|bet|check|call|fold|raise)\s*~(\d+)%/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(gtoLine)) !== null) {
+    const coarse = _coarseAction[m[1]];
+    if (coarse) freqs[coarse] = (freqs[coarse] ?? 0) + Number(m[2]) / 100;
+  }
+  return { gto: Object.keys(freqs).length ? freqs : null, multiway };
+}
+
+interface FreqClaim {
+  action: string; // check | bet | call | fold | raise | allin
+  percent?: number | null; // explicit % the coaching stated, if any
+  qualifier?: string | null; // always | usually | often | sometimes | rarely | never
+}
+
+const FREQ_EXTRACT_TOOL: any = {
+  name: "report_frequency_claims",
+  description: "List every claim the coaching prose makes about HOW OFTEN to take an action.",
+  input_schema: {
+    type: "object",
+    properties: {
+      claims: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            action: { type: "string", enum: ["check", "bet", "call", "fold", "raise", "allin"] },
+            percent: { type: ["number", "null"], description: "An explicit percentage the text states for this action, else null" },
+            qualifier: { type: ["string", "null"], enum: ["always", "usually", "often", "sometimes", "rarely", "never", null], description: "A frequency word the text uses for this action, else null" },
+          },
+          required: ["action"],
+        },
+      },
+    },
+    required: ["claims"],
+  },
+};
+
+const FREQ_JUDGE_SYSTEM =
+  `You extract claims about ACTION FREQUENCY from poker coaching prose, for an automated consistency check. ` +
+  `Surface only statements about how OFTEN to take an action — an explicit percentage ("bet ~60%", "check most of the time") ` +
+  `or a frequency word (always/usually/often/sometimes/rarely/never). Map each to {action, percent, qualifier}. ` +
+  `Do NOT judge whether the advice is good; do not invent claims the text does not make. Empty list if it states no frequencies.`;
+
+async function extractFreqClaims(analysis: Record<string, unknown>): Promise<FreqClaim[]> {
+  const text = JSON.stringify(analysis);
+  const resp = await client.messages.create({
+    model: JUDGE_MODEL,
+    max_tokens: 1024,
+    system: FREQ_JUDGE_SYSTEM,
+    tools: [FREQ_EXTRACT_TOOL],
+    tool_choice: { type: "tool", name: "report_frequency_claims" },
+    messages: [{ role: "user", content: `Coaching output:\n${text}` }],
+  });
+  const input = toolInput(resp);
+  return ((input?.claims as FreqClaim[]) ?? []);
+}
+
+interface FreqAgreement {
+  scored: boolean; // only spots with a GTO/multiway FACT are scored
+  violations: string[];
+}
+
+// ±15pt: the FACT is coarse (hand-class aggregate, texture-class) so only a
+// gross contradiction counts. Qualitative claims map to loose bands.
+function checkFrequencyAgreement(parsed: ParsedFreqFact, claims: FreqClaim[]): FreqAgreement {
+  const violations: string[] = [];
+  if (parsed.gto) {
+    for (const c of claims) {
+      const f = parsed.gto[c.action];
+      if (f == null) continue; // action the FACT doesn't list (e.g. raise) — skip
+      const pct = Math.round(f * 100);
+      if (c.percent != null) {
+        if (Math.abs(c.percent / 100 - f) > 0.15) {
+          violations.push(`coaching states ${c.action} ~${c.percent}% but the GTO FACT is ~${pct}%`);
+        }
+      } else if (c.qualifier === "never" && f >= 0.30) {
+        violations.push(`coaching says ${c.action} is never right, but GTO takes it ~${pct}%`);
+      } else if (c.qualifier === "always" && f <= 0.70) {
+        violations.push(`coaching says ${c.action} is always right, but GTO takes it only ~${pct}%`);
+      }
+    }
+    return { scored: true, violations };
+  }
+  if (parsed.multiway) {
+    for (const c of claims) {
+      if (c.percent != null) {
+        violations.push(`states a specific multiway frequency (${c.action} ~${c.percent}%) — no solver model exists multiway, this is false precision`);
+      }
+    }
+    return { scored: true, violations };
+  }
+  return { scored: false, violations: [] };
+}
+
 // ── CLI args ────────────────────────────────────────────────────────────────
 
 interface CliArgs {
@@ -536,22 +658,25 @@ function sampleEvenly<T>(arr: T[], n: number): T[] {
 // bitwise-deterministic (esp. verdict consistency) — a lone single-spot flip
 // can be noise, a cluster is real. Only a FULL run gates (exits non-zero).
 
-type Dim = "card" | "verdict" | "forced";
+type Dim = "card" | "verdict" | "forced" | "freq";
 const _dimLabel: Record<Dim, string> = {
   card: "card-logic",
   verdict: "verdict-consistency",
   forced: "forced-verdict",
+  freq: "frequency-agreement",
 };
+const _DIMS: Dim[] = ["card", "verdict", "forced", "freq"];
 
 // true = passed the dimension, false = flagged, null = N/A (errored / unscored).
 // Reads the fields shared by a live SpotResult and a parsed prior report row.
 // deno-lint-ignore no-explicit-any
 function spotDims(r: any): Record<Dim, boolean | null> {
-  if (!r || r.errored) return { card: null, verdict: null, forced: null };
+  if (!r || r.errored) return { card: null, verdict: null, forced: null, freq: null };
   return {
     card: (r.violations?.length ?? 0) === 0,
     verdict: (r.verdictIssues?.length ?? 0) === 0,
     forced: r.forcedVerdict?.scored ? !!r.forcedVerdict.agreed : null,
+    freq: r.freqAgreement?.scored ? (r.freqAgreement.violations?.length ?? 0) === 0 : null,
   };
 }
 
@@ -570,9 +695,9 @@ function computeDiff(prior: any, curr: any, baselinePath: string): RunDiff {
   const priorById = new Map<string, any>();
   // deno-lint-ignore no-explicit-any
   for (const r of ((prior.results ?? []) as any[])) priorById.set(r.id, r);
-  const dims: Dim[] = ["card", "verdict", "forced"];
-  const regressions: Record<Dim, string[]> = { card: [], verdict: [], forced: [] };
-  const improvements: Record<Dim, string[]> = { card: [], verdict: [], forced: [] };
+  const dims = _DIMS;
+  const regressions: Record<Dim, string[]> = { card: [], verdict: [], forced: [], freq: [] };
+  const improvements: Record<Dim, string[]> = { card: [], verdict: [], forced: [], freq: [] };
   let comparedSpots = 0;
   for (const r of (curr.results ?? [])) {
     const p = priorById.get(r.id);
@@ -592,6 +717,7 @@ function computeDiff(prior: any, curr: any, baselinePath: string): RunDiff {
       card: { prev: prior.cardLogicAccuracyPct ?? null, curr: curr.cardLogicAccuracyPct ?? null },
       verdict: { prev: prior.verdictConsistencyPct ?? null, curr: curr.verdictConsistencyPct ?? null },
       forced: { prev: prior.forcedVerdictAgreementPct ?? null, curr: curr.forcedVerdictAgreementPct ?? null },
+      freq: { prev: prior.frequencyAgreementPct ?? null, curr: curr.frequencyAgreementPct ?? null },
     },
     regressions,
     improvements,
@@ -601,7 +727,7 @@ function computeDiff(prior: any, curr: any, baselinePath: string): RunDiff {
 
 function renderDiffMarkdown(d: RunDiff | null): string[] {
   if (!d) return [];
-  const dims: Dim[] = ["card", "verdict", "forced"];
+  const dims = _DIMS;
   const lines = [
     `## Diff vs previous run`,
     ``,
@@ -684,6 +810,9 @@ async function main() {
     // Forced-decision agreement (PR 3 part 2) — null unless this spot has a
     // pot-odds-decisive forcedDecision label.
     forcedVerdict: ForcedVerdictResult | null;
+    // Frequency agreement (DCE Q1) — null unless the spot was grounded with a
+    // GTO-frequency or multiway-tendency FACT.
+    freqAgreement: FreqAgreement | null;
     // A harness/API failure (refusal, 5xx, timeout) — NOT a card-logic error.
     // Excluded from the accuracy denominator so an API blip can't move the
     // published number; reported separately.
@@ -696,7 +825,8 @@ async function main() {
 
   const errResult = (fx: Fixture, detail: string): SpotResult => ({
     id: fx.id, bucket: fx.bucket, claims: [], violations: [],
-    scoredEquity: 0, unscoredEquity: 0, verdictIssues: [], forcedVerdict: null, errored: true, errorDetail: detail,
+    scoredEquity: 0, unscoredEquity: 0, verdictIssues: [], forcedVerdict: null, freqAgreement: null,
+    errored: true, errorDetail: detail,
     userRating: fx.userSignal?.rating ?? null,
   });
 
@@ -711,13 +841,22 @@ async function main() {
         const { violations, scoredEquity, unscoredEquity } = adjudicate(fx, claims);
         const verdictIssues = checkVerdictConsistency(analysis);
         const forcedVerdict = checkForcedVerdict(fx, analysis);
+        // Frequency agreement: only spend a judge call on spots whose prompt
+        // carried a GTO-frequency / multiway-tendency FACT (else null/unscored).
+        const parsedFreq = parseFreqFact(fx.equityFacts ?? []);
+        let freqAgreement: FreqAgreement | null = null;
+        if (parsedFreq.gto || parsedFreq.multiway) {
+          freqAgreement = checkFrequencyAgreement(parsedFreq, await extractFreqClaims(analysis));
+        }
         const mark = violations.length === 0 && verdictIssues.length === 0 ? "OK " : "ERR";
         const fv = forcedVerdict ? `, forced:${forcedVerdict.scored ? (forcedVerdict.agreed ? "agree" : "DISAGREE") : "unscored"}` : "";
-        console.log(`[${++done}/${scoredFixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} card-logic, ${verdictIssues.length} verdict${fv})`);
+        const fa = freqAgreement ? `, freq:${freqAgreement.violations.length === 0 ? "agree" : "DISAGREE"}` : "";
+        console.log(`[${++done}/${scoredFixtures.length}] ${mark} ${fx.id}  (${claims.length} claims, ${violations.length} card-logic, ${verdictIssues.length} verdict${fv}${fa})`);
         for (const v of violations) console.log(`      - card-logic [${v.street}/${v.category}] ${v.detail}`);
         for (const v of verdictIssues) console.log(`      - verdict [${v.rule}] ${v.detail}`);
         if (forcedVerdict && forcedVerdict.scored && !forcedVerdict.agreed) console.log(`      - forced-verdict DISAGREE: ${forcedVerdict.detail}`);
-        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, verdictIssues, forcedVerdict, errored: false, userRating: fx.userSignal?.rating ?? null };
+        for (const v of (freqAgreement?.violations ?? [])) console.log(`      - frequency ${v}`);
+        return { id: fx.id, bucket: fx.bucket, claims, violations, scoredEquity, unscoredEquity, verdictIssues, forcedVerdict, freqAgreement, errored: false, userRating: fx.userSignal?.rating ?? null };
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
         console.error(`[${++done}/${scoredFixtures.length}] ERRORED ${fx.id}: ${detail} (excluded from accuracy)`);
@@ -776,6 +915,16 @@ async function main() {
     ? Number((100 * fvAgreed / fvScored.length).toFixed(1))
     : 0;
 
+  // Frequency agreement — only spots grounded with a GTO/multiway FACT. Coverage
+  // (how many spots even carried a FACT) is reported separately as a diagnostic.
+  const faScored = scored.filter((r) => r.freqAgreement?.scored);
+  const faClean = faScored.filter((r) => r.freqAgreement!.violations.length === 0).length;
+  const frequencyAgreementPct = faScored.length
+    ? Number((100 * faClean / faScored.length).toFixed(1))
+    : 0;
+  const gtoFactSpots = scored.filter((r) =>
+    r.freqAgreement?.scored && r.bucket === "gto-frequency").length;
+
   // ── User-flagged cross-tab ──────────────────────────────────────────────
   // The instrument the user asked for: of the hands a user was DISSATISFIED
   // with, which ones did an objective dimension explain, and which were
@@ -818,6 +967,10 @@ async function main() {
     forcedVerdictAgreed: fvAgreed,
     forcedVerdictUnscored: fvUnscored,
     forcedVerdictAgreementPct,
+    frequencyScored: faScored.length,
+    frequencyAgreed: faClean,
+    frequencyAgreementPct,
+    gtoFactSpots,
     byCategory,
     byVerdictRule,
     userFlagged,
@@ -849,6 +1002,7 @@ async function main() {
   console.log(`\nCard-logic accuracy:  ${accuracy.toFixed(1)}%  (${clean}/${scored.length} scored spots clean${erroredCount ? `; ${erroredCount} errored, excluded` : ""})`);
   console.log(`Verdict consistency:  ${verdictConsistencyPct}%  (${verdictConsistent}/${scored.length} spots with self-consistent verdicts)`);
   console.log(`Forced-verdict agree: ${forcedVerdictAgreementPct}%  (${fvAgreed}/${fvScored.length} decisive spots${fvUnscored ? `; ${fvUnscored} unscored` : ""})`);
+  console.log(`Frequency agreement:  ${frequencyAgreementPct}%  (${faClean}/${faScored.length} GTO/multiway-FACT spots; ${gtoFactSpots} carried a GTO-frequency FACT)`);
   console.log(`Equity check coverage: ${equityCoveragePct}%  (${scoredEquityTotal} scored / ${equityClaimsTotal} hero-equity claims)`);
   if (disliked.length || liked.length) {
     console.log(`\nUser-flagged spots:`);
@@ -891,6 +1045,7 @@ function renderMarkdown(r: any): string {
     `- **Card-logic accuracy: ${r.cardLogicAccuracyPct}%** (${r.clean}/${r.scored} scored spots with zero card-logic errors)`,
     `- **Verdict consistency: ${r.verdictConsistencyPct}%** (${r.verdictConsistent}/${r.scored} spots with self-consistent verdicts)`,
     `- **Forced-verdict agreement: ${r.forcedVerdictAgreementPct}%** (${r.forcedVerdictAgreed}/${r.forcedVerdictScored} pot-odds-decisive spots${r.forcedVerdictUnscored ? `; ${r.forcedVerdictUnscored} unscored` : ""})`,
+    `- **Frequency agreement: ${r.frequencyAgreementPct}%** (${r.frequencyAgreed}/${r.frequencyScored} GTO/multiway-FACT spots; ${r.gtoFactSpots} with a GTO-frequency FACT)`,
     `- Errored (harness/API, excluded): ${r.errored}`,
     `- Equity-check coverage: ${r.equityCoveragePct}% (${r.equityClaimsScored} scored / ${r.equityClaimsScored + r.equityClaimsUnscored} hero-equity claims)`,
     ``,

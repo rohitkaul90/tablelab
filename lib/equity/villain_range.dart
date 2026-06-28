@@ -24,6 +24,7 @@ import 'card.dart';
 import 'chart_keys.dart';
 import 'decision_context.dart';
 import 'evaluator.dart';
+import 'gto_frequency_library.dart';
 import 'simulator.dart';
 
 // ── Result types ──────────────────────────────────────────────────────────────
@@ -54,6 +55,21 @@ class StreetEquityCheck {
   final double? reqStackOffEquity;
   final bool? sprIsHeadsUp;
 
+  /// GTO frequency library (DCE Q1): the decision-node type hero faced on this
+  /// street — first_to_act / facing_check / facing_bet_small·mid·big /
+  /// facing_raise — derived from the recorded action order. Null when hero took
+  /// no action on the street (no decision to ground). The bet-size bucket is a
+  /// soft approximation of the solver tree's sizes (live bets are arbitrary).
+  final String? heroFacing;
+
+  /// Multiway-tendency FACT inputs. [betHeroFaced] = the largest bet hero faced
+  /// this street (null if none) — the gate for the line. [multiwayFieldMdf] = the
+  /// FIELD's collective minimum-defense frequency pot/(pot+bet) for a CLEAN
+  /// single-bet multiway spot, or null heads-up / when hero faced no bet / when
+  /// hero faced a RAISE (the street-start pot would then mis-size it, so no %).
+  final int? betHeroFaced;
+  final double? multiwayFieldMdf;
+
   const StreetEquityCheck({
     required this.street,
     required this.heroEquity,
@@ -66,6 +82,9 @@ class StreetEquityCheck {
     this.spr,
     this.reqStackOffEquity,
     this.sprIsHeadsUp,
+    this.heroFacing,
+    this.betHeroFaced,
+    this.multiwayFieldMdf,
   });
 }
 
@@ -102,10 +121,17 @@ class HandEquityCheck {
   /// should say so.
   final bool basedOnSynthesizedAction;
 
+  /// GTO frequency library (DCE Q1): which precomputed scenario this hand maps
+  /// to ('srp_late_v_bb'), or null when it's outside the library's coverage
+  /// (not heads-up, not single-raised, opener not late, or caller not the BB).
+  /// Gates the `[HEURISTIC — GTO frequency]` FACT to spots the library models.
+  final String? scenarioKey;
+
   const HandEquityCheck({
     required this.streets,
     required this.villains,
     required this.basedOnSynthesizedAction,
+    this.scenarioKey,
   });
 }
 
@@ -113,7 +139,8 @@ class HandEquityCheck {
 /// `analyze-hand` prompt — the equity the model must not contradict, plus the
 /// range assumption behind it. Returns an empty list when there is nothing to
 /// assert. These are computed on-device, never by the model.
-List<String> equityCheckFacts(HandEquityCheck check) {
+List<String> equityCheckFacts(HandEquityCheck check,
+    {GtoFrequencyLibrary? library}) {
   if (check.streets.isEmpty) return const [];
   final perStreet = check.streets
       .map((s) => '${s.street.label.toLowerCase()} ~${(s.heroEquity * 100).round()}%')
@@ -190,7 +217,141 @@ List<String> equityCheckFacts(HandEquityCheck check) {
         'This is heuristic context — a decisive pot-odds price FACT and the hard '
         'equity FACT still take precedence.$synthCaveat]');
   }
+  // GTO FREQUENCY (DCE Q1): solver baseline for how often to take each action,
+  // heads-up only, gated to the library's scenario. A soft prior — never a read.
+  facts.addAll(_gtoFrequencyFacts(check, library));
+  // MULTIWAY TENDENCY (DCE Q1): closed-form MDF + directional, NO % — for the
+  // pots the solver can't model.
+  facts.addAll(_multiwayTendencyFacts(check));
   return facts;
+}
+
+/// `[HEURISTIC — GTO frequency]` lines: per heads-up street, look up the offline
+/// solver mix for hero's {texture, SPR, position, facing, hand class} and render
+/// it. Empty unless the hand is in the library's scenario and a cell is found.
+List<String> _gtoFrequencyFacts(
+    HandEquityCheck check, GtoFrequencyLibrary? library) {
+  if (library == null || library.isEmpty || check.scenarioKey == null) {
+    return const [];
+  }
+  final parts = <String>[];
+  var anyInterpolated = false;
+  for (final s in check.streets) {
+    if (s.villainCount != 1) continue; // heads-up only
+    if (s.heroFacing == null ||
+        s.heroInPosition == null ||
+        s.realizedHandClass == null ||
+        s.spr == null) {
+      continue;
+    }
+    final res = library.lookup(
+      scenario: check.scenarioKey!,
+      board: boardInts(s.boardSoFar),
+      sprBucket: sprBucket(s.spr!).name,
+      street: s.street.label.toLowerCase(),
+      position: s.heroInPosition! ? 'ip' : 'oop',
+      facing: s.heroFacing!,
+      handClass: s.realizedHandClass!,
+    );
+    if (res == null) continue;
+    if (res.isInterpolated) anyInterpolated = true;
+    final mix = (res.freqs.entries.where((e) => e.value >= 0.01).toList()
+          ..sort((a, b) => b.value.compareTo(a.value)))
+        .map((e) => '${_freqActionLabel(e.key)} ~${(e.value * 100).round()}%')
+        .join(', ');
+    parts.add('${s.street.label.toLowerCase()} '
+        '(${s.heroInPosition! ? 'IP' : 'OOP'}, '
+        '${handClassLabel(s.realizedHandClass!)}, ${_facingLabel(s.heroFacing!)}): $mix');
+  }
+  if (parts.isEmpty) return const [];
+  final softNote = anyInterpolated
+      ? ' Some values are interpolated from a near texture/SPR — treat as looser.'
+      : '';
+  return [
+    '[HEURISTIC — GTO frequency (a balanced solver baseline for how often to take '
+        'each action with hero\'s hand class on this texture, from offline solves '
+        'of this exact spot type — a soft PRIOR for frequency, NOT a read on this '
+        'specific hand): ${parts.join('; ')}. Use it to sanity-check whether '
+        'hero\'s line is a normal part of a balanced strategy; it is NEVER by '
+        'itself a reason to mark a street wasGto:false or set leakDetected, and a '
+        'hard [FACT —] or a decisive pot-odds price still decides the spot.$softNote]'
+  ];
+}
+
+/// `[HEURISTIC — multiway tendency]` line: for multiway pots (no solver model),
+/// the FIELD's collective MDF (a per-street COLLECTIVE ceiling, not a per-player
+/// target) + directional guidance. The % is the field's, and only shown for a
+/// clean single-bet spot where it is exactly derivable.
+List<String> _multiwayTendencyFacts(HandEquityCheck check) {
+  final parts = <String>[];
+  for (final s in check.streets) {
+    if (s.villainCount <= 1) continue; // multiway only
+    if (s.betHeroFaced == null || s.betHeroFaced! <= 0) continue; // faced a bet
+    final mdf = s.multiwayFieldMdf;
+    final ceiling = mdf != null
+        ? 'the FIELD must collectively defend ~${(mdf * 100).round()}% (MDF) — '
+            'split across the ${s.villainCount + 1} players, so each defends a '
+            'SMALLER share than a heads-up ceiling'
+        : 'the FIELD\'s collective defense (MDF) is split across the '
+            '${s.villainCount + 1} players, so each defends a SMALLER share than '
+            'a heads-up ceiling';
+    parts.add('${s.street.label.toLowerCase()} (${s.villainCount + 1}-way): $ceiling');
+  }
+  if (parts.isEmpty) return const [];
+  return [
+    '[HEURISTIC — multiway tendency (no solver model — solvers are heads-up only): '
+        '${parts.join('; ')}. Multiway, a balanced strategy bluffs less and '
+        'value-bets tighter than heads-up; this is directional context only — it '
+        'is NEVER by itself a reason to mark a street wasGto:false or set '
+        'leakDetected, and a hard [FACT —] or a decisive pot-odds price still '
+        'decides hero\'s call (never an exact per-hand GTO frequency).]'
+  ];
+}
+
+/// Human label for a library action key in the FACT prose.
+String _freqActionLabel(String action) {
+  switch (action) {
+    case 'check':
+      return 'check';
+    case 'call':
+      return 'call';
+    case 'fold':
+      return 'fold';
+    case 'raise':
+      return 'raise';
+    case 'allin':
+      return 'all-in';
+    case 'bet':
+      return 'bet';
+    case 'bet_small':
+      return 'small bet';
+    case 'bet_mid':
+      return 'medium bet';
+    case 'bet_big':
+      return 'big bet';
+    default:
+      return action;
+  }
+}
+
+/// Human label for a facing-node key in the FACT prose.
+String _facingLabel(String facing) {
+  switch (facing) {
+    case 'first_to_act':
+      return 'first to act';
+    case 'facing_check':
+      return 'after a check to hero';
+    case 'facing_bet_small':
+      return 'facing a small bet';
+    case 'facing_bet_mid':
+      return 'facing a medium bet';
+    case 'facing_bet_big':
+      return 'facing a big bet';
+    case 'facing_raise':
+      return 'facing a raise';
+    default:
+      return facing.replaceAll('_', ' ');
+  }
 }
 
 /// Hero's postflop position vs the contesting field: true = in position (acts
@@ -582,6 +743,144 @@ const double _kSmallBetFrac = 0.4; // ≤ ~⅓-pot → merged
   return base;
 }
 
+// ── GTO frequency library (DCE Q1) key derivation ───────────────────────────
+
+/// The decision-node type hero faced on [street] (the library's "facing" key),
+/// or null when hero took no action there. Derived from the recorded order: the
+/// opponent action immediately before hero's LAST action this street — so a
+/// check-then-call line reads as facing_bet (the call), a lead reads as
+/// first_to_act, and a check-to-hero reads as facing_check.
+String? _heroFacing(StreetData street, int heroSeat, int potBeforeStreet) {
+  final acts = street.actions;
+  var heroLast = -1;
+  for (var i = 0; i < acts.length; i++) {
+    if (acts[i].seat == heroSeat) heroLast = i;
+  }
+  if (heroLast < 0) return null; // hero didn't act → no decision to ground
+  var prevIdx = -1;
+  for (var i = heroLast - 1; i >= 0; i--) {
+    if (acts[i].seat != heroSeat) {
+      prevIdx = i;
+      break;
+    }
+  }
+  if (prevIdx < 0) return 'first_to_act'; // hero opened the street
+  final prev = acts[prevIdx];
+  switch (prev.type) {
+    case ActionType.check:
+      return 'facing_check';
+    case ActionType.raise:
+    case ActionType.allIn:
+      // A bet is the first aggression this street; aggression after a prior
+      // bet/raise is a raise.
+      final priorAggression = acts.take(prevIdx).any(
+          (a) => a.type == ActionType.raise || a.type == ActionType.allIn);
+      if (priorAggression) return 'facing_raise';
+      return 'facing_bet_'
+          '${_facingBetBucket(_betSizeFrac(street, prev.seat, potBeforeStreet))}';
+    default:
+      return 'first_to_act'; // post/call/fold before hero → hero effectively leads
+  }
+}
+
+/// Bucket a faced bet's pot-fraction into the library's size labels. SOFT: the
+/// solver tree used ~33/75 sizes; live bets are arbitrary.
+String _facingBetBucket(double? frac) {
+  if (frac == null) return 'mid';
+  if (frac <= 0.45) return 'small';
+  if (frac <= 0.70) return 'mid';
+  return 'big';
+}
+
+/// The largest outstanding bet/raise hero faced on [street] before his decision
+/// (the MDF FACT's bet input), or null when hero faced no aggression. The MAX
+/// (not just the immediately-preceding action) so a multiway pot where a caller
+/// sits between the bettor and hero still sees the bet hero must call.
+int? _betHeroFaced(StreetData street, int heroSeat) {
+  final acts = street.actions;
+  var heroLast = -1;
+  for (var i = 0; i < acts.length; i++) {
+    if (acts[i].seat == heroSeat) heroLast = i;
+  }
+  if (heroLast < 0) return null;
+  int? maxBet;
+  for (var i = 0; i < heroLast; i++) {
+    final a = acts[i];
+    if (a.seat == heroSeat) continue;
+    if ((a.type == ActionType.raise || a.type == ActionType.allIn) &&
+        a.amount != null &&
+        (maxBet == null || a.amount! > maxBet)) {
+      maxBet = a.amount;
+    }
+  }
+  return maxBet;
+}
+
+/// The FIELD's collective minimum-defense frequency on [street] = pot/(pot+bet),
+/// valid only when hero faces a CLEAN single bet (exactly one aggressive action
+/// before hero's decision): only then is [potBeforeStreet] the true pre-bet pot.
+/// Returns null on a bet-then-raise line (where the street-start pot mis-sizes
+/// the MDF) or when hero faced no bet. The per-player share is below this — the
+/// field splits the defense — so the FACT frames it as a collective ceiling.
+double? _multiwayFieldMdf(
+    StreetData street, int heroSeat, int potBeforeStreet) {
+  if (potBeforeStreet <= 0) return null;
+  final acts = street.actions;
+  var heroLast = -1;
+  for (var i = 0; i < acts.length; i++) {
+    if (acts[i].seat == heroSeat) heroLast = i;
+  }
+  if (heroLast < 0) return null;
+  HandAction? bet;
+  for (var i = 0; i < heroLast; i++) {
+    final a = acts[i];
+    if (a.seat == heroSeat) continue;
+    if (a.type == ActionType.raise || a.type == ActionType.allIn) {
+      if (bet != null) return null; // a second aggression (raise) → pot is stale
+      bet = a;
+    }
+  }
+  if (bet?.amount == null || bet!.amount! <= 0) return null;
+  return minDefenseFrequency(potBeforeStreet.toDouble(), bet.amount!.toDouble());
+}
+
+/// The GTO-library scenario this hand maps to, or null when outside v1 coverage.
+/// v1 library = srp_late_v_bb: heads-up to the flop, single-raised, a BTN opener
+/// vs a BB caller. Gates the GTO-frequency FACT.
+String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
+    List<_VillainState> modeled) {
+  final contesting = modeled.where((v) => v.combos.isNotEmpty).toList();
+  if (contesting.length != 1) return null; // not heads-up to the flop
+  final villainSeat = contesting.single.player.seatIndex;
+  final hl = _classifyPreflop(preflop, heroSeat);
+  final vl = _classifyPreflop(preflop, villainSeat);
+  bool tooDeep(_PreflopLine l) =>
+      l.act == _PreAct.threeBet ||
+      l.act == _PreAct.fourBetPlus ||
+      l.calledAtLevel >= 2;
+  if (tooDeep(hl) || tooDeep(vl)) return null; // 3-bet+ pot
+  int openerSeat, callerSeat;
+  if (hl.act == _PreAct.open &&
+      vl.act == _PreAct.called &&
+      vl.calledAtLevel <= 1) {
+    openerSeat = heroSeat;
+    callerSeat = villainSeat;
+  } else if (vl.act == _PreAct.open &&
+      hl.act == _PreAct.called &&
+      hl.calledAtLevel <= 1) {
+    openerSeat = villainSeat;
+    callerSeat = heroSeat;
+  } else {
+    return null;
+  }
+  // The library was solved BTN(IP)-opener vs BB(OOP)-caller. The SB also buckets
+  // as 'late' but opens OUT of position, so its IP/OOP cells would be inverted
+  // (the lookup keys on physical position) — restrict to a BTN opener.
+  if (hand.tableSetup.positionName(openerSeat) != 'BTN') return null;
+  if (hand.tableSetup.positionName(callerSeat) != 'BB') return null;
+  return 'srp_late_v_bb';
+}
+
 /// [seat]'s bet/raise on [street] sized as a fraction of the pot AT THE MOMENT
 /// it was made — the chips that action committed over the pot it faced. Replays
 /// the street from [potAtStreetStart] so a raise is measured against the pot
@@ -826,6 +1125,10 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
       villains.where((v) => !v.excludedFromAllStreets).toList();
   if (modeled.isEmpty || modeled.every((v) => v.combos.isEmpty)) return null;
 
+  // GTO frequency library scenario (DCE Q1): hand-level, computed before the
+  // streets narrow ranges (uses the preflop ranges).
+  final scenarioKey = _deriveScenarioKey(hand, preflop, hero.seatIndex, modeled);
+
   // ── Walk the streets, narrowing and simulating ──────────────────────────
   final streetResults = <StreetEquityCheck>[];
   final boardSoFar = <int>[];
@@ -1024,6 +1327,17 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           spr: spr,
           reqStackOffEquity: reqStackOff,
           sprIsHeadsUp: sprHeadsUp,
+          heroFacing: street.street == Street.preflop
+              ? null
+              : _heroFacing(street, hero.seatIndex, potBefore),
+          betHeroFaced: street.street == Street.preflop
+              ? null
+              : _betHeroFaced(street, hero.seatIndex),
+          // Field MDF only matters multiway (heads-up the pot-odds FACT governs).
+          multiwayFieldMdf: (street.street != Street.preflop &&
+                  simVillains.length > 1)
+              ? _multiwayFieldMdf(street, hero.seatIndex, potBefore)
+              : null,
         ));
       }
     }
@@ -1060,5 +1374,6 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
         ),
     ],
     basedOnSynthesizedAction: hand.isQuickEntry,
+    scenarioKey: scenarioKey,
   );
 }

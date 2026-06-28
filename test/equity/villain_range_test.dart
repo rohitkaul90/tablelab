@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/equity/decision_context.dart';
+import 'package:tablelab/equity/gto_frequency_library.dart';
 import 'package:tablelab/equity/villain_range.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/models/player_read.dart';
@@ -17,6 +20,7 @@ PokerHand _hand({
   bool isTournament = false,
   bool isQuickEntry = false,
   int? straddle,
+  int stack = 200,
 }) {
   return PokerHand(
     id: 'h1',
@@ -34,14 +38,14 @@ PokerHand _hand({
       HandPlayer(
         seatIndex: heroSeat,
         name: 'Hero',
-        startingStack: 200,
+        startingStack: stack,
         isHero: true,
         holeCards: heroCards,
       ),
       HandPlayer(
         seatIndex: villainSeat,
         name: villainName,
-        startingStack: 200,
+        startingStack: stack,
         holeCards: villainCards,
       ),
       ...extraPlayers,
@@ -960,6 +964,274 @@ void main() {
         iterations: 500,
       );
       expect(check!.basedOnSynthesizedAction, isTrue);
+    });
+  });
+
+  group('GTO frequency library key derivation (DCE Q1)', () {
+    StreetData mkFlop(List<HandAction> actions) => StreetData(
+        street: Street.flop, communityCards: const ['Ks', '9h', '4c'], actions: actions);
+
+    test('SRP BTN-open vs BB-call HU → srp_late_v_bb; OOP check-call = facing_bet',
+        () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          _btnOpenBbCall(),
+          mkFlop(const [
+            HandAction(seat: 2, type: ActionType.check),
+            HandAction(seat: 0, type: ActionType.raise, amount: 6),
+            HandAction(seat: 2, type: ActionType.call, amount: 6),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, 'srp_late_v_bb');
+      final flop = check.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.heroFacing, startsWith('facing_bet'));
+      expect(flop.betHeroFaced, 6);
+    });
+
+    test('SB opener (out of position) → scenarioKey null', () async {
+      // SB opens, BB calls — heads-up single-raised, but the SB opens OOP so the
+      // library's BTN-opener cells don't apply.
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 1, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 1, type: ActionType.post, amount: 1), // SB
+            HandAction(seat: 2, type: ActionType.post, amount: 2), // BB
+            HandAction(seat: 1, type: ActionType.raise, amount: 5), // SB opens
+            HandAction(seat: 2, type: ActionType.call, amount: 5),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+
+    test('hero IP c-bet after villain check → facing_check', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
+          _btnOpenBbCall(), // hero (seat 0/BTN) opens, villain (seat 2/BB) calls
+          mkFlop(const [
+            HandAction(seat: 2, type: ActionType.check),
+            HandAction(seat: 0, type: ActionType.raise, amount: 4),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, 'srp_late_v_bb');
+      final flop = check.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.heroFacing, 'facing_check');
+      expect(flop.betHeroFaced, isNull);
+    });
+
+    test('hero OOP lead → first_to_act', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          _btnOpenBbCall(),
+          mkFlop(const [
+            HandAction(seat: 2, type: ActionType.raise, amount: 4),
+            HandAction(seat: 0, type: ActionType.call, amount: 4),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      final flop = check!.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.heroFacing, 'first_to_act');
+    });
+
+    test('3-bet pot → scenarioKey null', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.raise, amount: 18),
+            HandAction(seat: 0, type: ActionType.call, amount: 18),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+
+    test('non-late opener (CO) → scenarioKey null', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 5, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 5, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.call, amount: 5),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+
+    test('multiway (two villains to the flop) → scenarioKey null', () async {
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 2,
+          heroCards: ['As', 'Ah'],
+          villainSeat: 0,
+          extraPlayers: const [
+            HandPlayer(seatIndex: 5, name: 'V2', startingStack: 200),
+          ],
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 5, type: ActionType.raise, amount: 5),
+              HandAction(seat: 0, type: ActionType.call, amount: 5),
+              HandAction(seat: 2, type: ActionType.call, amount: 5),
+            ]),
+          ],
+        ),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+  });
+
+  group('GTO frequency + multiway tendency FACTs (DCE Q1)', () {
+    final lib = GtoFrequencyLibrary.fromJsonString(
+        File('assets/gto_freq_library.json').readAsStringSync());
+
+    test('heads-up scenario hand (shallow SPR) emits a GTO frequency FACT',
+        () async {
+      final check = await computeHandEquityCheck(
+        // 30bb stacks → flop SPR ~2.5 (shallow); Ks9h4c is covered at shallow.
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, stack: 30,
+            streets: [
+              _btnOpenBbCall(), // hero BTN opens, villain BB calls
+              const StreetData(
+                  street: Street.flop,
+                  communityCards: ['Ks', '9h', '4c'],
+                  actions: [
+                    HandAction(seat: 2, type: ActionType.check),
+                    HandAction(seat: 0, type: ActionType.raise, amount: 4),
+                  ]),
+            ]),
+        iterations: 500,
+        seed: 1,
+      );
+      final facts = equityCheckFacts(check!, library: lib);
+      final gto = facts.where((f) => f.contains('GTO frequency (')).toList();
+      expect(gto, hasLength(1));
+      expect(gto.first, contains('after a check to hero')); // IP c-bet node
+      expect(gto.first, contains('%'));
+    });
+
+    test('deep-stacked cash spot (deep SPR) emits NO GTO frequency FACT', () async {
+      final check = await computeHandEquityCheck(
+        // 200bb stacks → flop SPR ~19 (deep), which the library defers.
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, stack: 200,
+            streets: [
+              _btnOpenBbCall(),
+              const StreetData(
+                  street: Street.flop,
+                  communityCards: ['Ks', '9h', '4c'],
+                  actions: [
+                    HandAction(seat: 2, type: ActionType.check),
+                    HandAction(seat: 0, type: ActionType.raise, amount: 4),
+                  ]),
+            ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(equityCheckFacts(check!, library: lib)
+          .any((f) => f.contains('GTO frequency (')), isFalse);
+    });
+
+    test('no library passed → no GTO frequency FACT', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
+          _btnOpenBbCall(),
+          const StreetData(
+              street: Street.flop,
+              communityCards: ['Ks', '9h', '4c'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(seat: 0, type: ActionType.raise, amount: 4),
+              ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(equityCheckFacts(check!).any((f) => f.contains('GTO frequency (')),
+          isFalse);
+    });
+
+    test('out-of-scenario hand → no GTO frequency FACT even with a library',
+        () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 5, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 5, type: ActionType.raise, amount: 5), // CO (not late)
+            HandAction(seat: 2, type: ActionType.call, amount: 5),
+          ]),
+          const StreetData(
+              street: Street.flop,
+              communityCards: ['Ks', '9h', '4c'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(seat: 5, type: ActionType.raise, amount: 4),
+                HandAction(seat: 2, type: ActionType.call, amount: 4),
+              ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(
+          equityCheckFacts(check!, library: lib)
+              .any((f) => f.contains('GTO frequency (')),
+          isFalse);
+    });
+
+    test('multiway pot facing a bet emits a multiway tendency FACT (no %)',
+        () async {
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 2,
+          heroCards: ['As', 'Ah'],
+          villainSeat: 0,
+          extraPlayers: const [
+            HandPlayer(seatIndex: 5, name: 'V2', startingStack: 200),
+          ],
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 5, type: ActionType.raise, amount: 5),
+              HandAction(seat: 0, type: ActionType.call, amount: 5),
+              HandAction(seat: 2, type: ActionType.call, amount: 5),
+            ]),
+            const StreetData(
+                street: Street.flop,
+                communityCards: ['Ks', '9h', '4c'],
+                actions: [
+                  HandAction(seat: 2, type: ActionType.check),
+                  HandAction(seat: 5, type: ActionType.raise, amount: 10),
+                  HandAction(seat: 0, type: ActionType.call, amount: 10),
+                  HandAction(seat: 2, type: ActionType.call, amount: 10),
+                ]),
+          ],
+        ),
+        iterations: 500,
+        seed: 1,
+      );
+      final facts = equityCheckFacts(check!, library: lib);
+      final mw = facts.where((f) => f.contains('multiway tendency')).toList();
+      expect(mw, hasLength(1));
+      expect(mw.first, contains('3-way'));
+      expect(mw.first, contains('MDF'));
+      expect(facts.any((f) => f.contains('GTO frequency (')), isFalse);
     });
   });
 }

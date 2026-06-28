@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../equity/gto_frequency_library.dart';
 import '../../equity/villain_range.dart';
 import '../../models/hand_model.dart';
 import '../../models/ai_analysis_model.dart';
+import '../../providers/gto_frequency_provider.dart';
 import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
 import '../../services/ai_service.dart';
@@ -71,12 +73,23 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
       if (!mounted) return;
       setState(() => _equityCheck = equity);
 
+      // The offline GTO frequency library grounds the [HEURISTIC — GTO frequency]
+      // line; best-effort (a load failure just drops that one FACT).
+      GtoFrequencyLibrary? gtoLib;
+      try {
+        gtoLib = await ref.read(gtoFrequencyLibraryProvider.future);
+      } catch (_) {
+        gtoLib = null;
+      }
+      if (!mounted) return;
+
       final analysis = await ref.read(aiServiceProvider).analyzeHand(
             widget.hand,
             reads: reads,
             forceRefresh: forceRefresh,
-            equityFacts:
-                equity != null ? equityCheckFacts(equity) : const [],
+            equityFacts: equity != null
+                ? equityCheckFacts(equity, library: gtoLib)
+                : const [],
           );
       if (mounted) {
         setState(() { _analysis = analysis; _loading = false; });
