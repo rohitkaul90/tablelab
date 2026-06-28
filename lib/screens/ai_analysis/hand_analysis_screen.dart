@@ -29,6 +29,9 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   String? _error;
   String _errorTitle = 'Analysis failed';
   bool _errorCanRetry = true;
+  // When the error was a MALFORMED cached response, Retry must force a fresh
+  // Claude call (forceRefresh:false would just re-serve the same garbage).
+  bool _errorForceRefresh = false;
 
   // Deterministic seed from the hand id so the equity Monte Carlo (and thus the
   // equity chips) is stable per hand across views, matching the cached coaching's
@@ -92,14 +95,27 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
                 : const [],
           );
       if (mounted) {
-        setState(() { _analysis = analysis; _loading = false; });
-        // Refresh the quota indicators (no Realtime — manual invalidation).
-        ref.invalidate(aiUsageProvider);
+        if (analysis.isEmpty) {
+          // Claude malformed the tool call (e.g. streets as strings) — nothing
+          // usable parsed. Surface a re-analyze prompt rather than a blank view.
+          setState(() {
+            _loading = false;
+            _error = 'The AI returned an unreadable response. Please re-analyze.';
+            _errorTitle = 'Analysis failed';
+            _errorCanRetry = true;
+            _errorForceRefresh = true;
+          });
+        } else {
+          setState(() { _analysis = analysis; _loading = false; });
+          // Refresh the quota indicators (no Realtime — manual invalidation).
+          ref.invalidate(aiUsageProvider);
+        }
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
+        _errorForceRefresh = false;
         if (e is AiException) {
           _error = e.message;
           _errorTitle = e.isRateLimited
@@ -165,7 +181,9 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
               ? _ErrorView(
                   title: _errorTitle,
                   error: _error!,
-                  onRetry: _errorCanRetry ? _runAnalysis : null,
+                  onRetry: _errorCanRetry
+                      ? () => _runAnalysis(forceRefresh: _errorForceRefresh)
+                      : null,
                 )
               : _CoachingView(
                   hand: widget.hand,
