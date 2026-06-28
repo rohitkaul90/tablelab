@@ -37,8 +37,9 @@ function getCorsHeaders(req: Request): Record<string, string> {
 function isMalformedAnalysis(a: Record<string, unknown>): boolean {
   for (const s of ["preflop", "flop", "turn", "river"]) {
     const v = a[s];
-    // A present street MUST be an object; a string/number means a botched call.
-    if (v != null && typeof v !== "object") return true;
+    // A present street MUST be a plain object — a string/number, or an ARRAY
+    // (typeof array === "object" in JS, hence Array.isArray), is a botched call.
+    if (v != null && (typeof v !== "object" || Array.isArray(v))) return true;
   }
   try {
     // The tool-parameter leak signature, wherever it lands.
@@ -190,8 +191,13 @@ serve(async (req: Request) => {
       // Only a cache entry produced under the SAME reads is valid — otherwise
       // the cached coaching/equity would contradict the freshly-computed
       // on-device equity chips. A reads edit (or a pre-signature legacy row)
-      // falls through to a fresh analysis.
-      if (cached && cached.analysis_json?._readsSignature === sig) {
+      // falls through to a fresh analysis. ALSO re-validate the cached payload:
+      // a MALFORMED row written before this fix shipped must self-heal (fall
+      // through to a fresh call) rather than be served as garbage forever.
+      if (
+        cached && cached.analysis_json?._readsSignature === sig &&
+        !isMalformedAnalysis(cached.analysis_json)
+      ) {
         return new Response(JSON.stringify(cached.analysis_json), {
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
@@ -213,17 +219,21 @@ serve(async (req: Request) => {
 
     const built = buildPrompt(hand, relevantReads, equityFacts);
 
-    // Retry once on a malformed tool call (see isMalformedAnalysis). Total time
-    // is budgeted across attempts (bumped 50s → 75s to fit one retry); if it
-    // never validates we return an error rather than cache + serve garbage.
-    const DEADLINE = Date.now() + 75000;
+    // Retry once on a malformed tool call (see isMalformedAnalysis). Each
+    // attempt keeps the original 50s single-call ceiling, within a 90s total
+    // budget so one retry fits; if it never validates we return an error rather
+    // than cache + serve garbage.
+    const DEADLINE = Date.now() + 90000;
+    const PER_ATTEMPT_MS = 50000;
     const MAX_ATTEMPTS = 2;
     let analysis: Record<string, unknown> | null = null;
     // deno-lint-ignore no-explicit-any
     let usage: any = null;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       const remaining = DEADLINE - Date.now();
-      if (remaining < 8000) break; // not enough budget for another attempt
+      // A real analyze-hand call needs ~20-30s; don't start a doomed retry that
+      // would only time out into the timeout path.
+      if (remaining < 20000) break;
 
       const claudeCall = anthropic.messages.create({
         model: "claude-sonnet-4-6",
@@ -236,14 +246,18 @@ serve(async (req: Request) => {
         tool_choice: { type: "tool", name: "provide_hand_coaching" },
         messages: [{ role: "user", content: built.prompt }],
       });
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("CLAUDE_TIMEOUT")), remaining),
-      );
-      const message = await Promise.race([claudeCall, timeoutPromise]);
-      // Every Claude call bills tokens — log EACH, including a discarded
-      // malformed one, so spend tracking stays accurate.
-      await logUsage(db, user.id, message.usage);
-      usage = message.usage;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("CLAUDE_TIMEOUT")),
+          Math.min(remaining, PER_ATTEMPT_MS),
+        );
+      });
+      // clearTimeout on both paths so a won race doesn't leave a dangling timer
+      // (which would keep the instance alive / fire an unhandled rejection).
+      const message = await Promise.race([claudeCall, timeoutPromise])
+        .finally(() => clearTimeout(timer));
+      usage = message.usage; // the delivered attempt's usage (cache row + logUsage)
 
       const toolBlock = message.content.find((c) => c.type === "tool_use");
       if (!toolBlock || toolBlock.type !== "tool_use") {
@@ -261,13 +275,22 @@ serve(async (req: Request) => {
 
     if (!analysis || !usage) {
       // Every attempt was malformed (or out of time): don't cache garbage — the
-      // hardened client shows a "re-analyze" prompt on this error.
+      // hardened client shows a "re-analyze" prompt on this error. Nothing is
+      // logged here, so a malformed-then-failed call does NOT cost the user a
+      // quota slot for the model's own botched output.
       await reportError("analyze-hand", "tool output malformed after retries");
       return new Response(
         JSON.stringify({ error: "Analysis failed. Please try again." }),
         { status: 502, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
       );
     }
+
+    // ── Log usage ────────────────────────────────────────────────────────────
+    // ONCE, for the delivered analysis only — one row = one unit of the 20/day
+    // quota (isRateLimited counts ai_usage_log rows). A discarded malformed
+    // attempt is deliberately NOT logged: the model's botched call must not burn
+    // the user's quota (a retried hand still counts as a single analysis).
+    await logUsage(db, user.id, usage);
 
     // Attach the deterministic [FACT] lines so the client can show "what the
     // AI was told" verbatim — not model output, never trusted to the model.

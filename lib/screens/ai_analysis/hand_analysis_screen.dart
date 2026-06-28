@@ -95,9 +95,10 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
                 : const [],
           );
       if (mounted) {
-        if (analysis.isEmpty) {
-          // Claude malformed the tool call (e.g. streets as strings) — nothing
-          // usable parsed. Surface a re-analyze prompt rather than a blank view.
+        if (analysis.malformed) {
+          // Claude malformed the tool call (a street as a string/array, or a
+          // wrong-typed wasGto). The coaching can't be trusted (it may reference
+          // a dropped street), so prompt re-analyze rather than render it.
           setState(() {
             _loading = false;
             _error = 'The AI returned an unreadable response. Please re-analyze.';

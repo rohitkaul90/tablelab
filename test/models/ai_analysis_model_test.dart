@@ -78,6 +78,9 @@ void main() {
       expect(a.verdict, 'leakDetected');
       expect(a.keyMistake, isNotNull);
       expect(a.facts, hasLength(1));
+      // The streets were PRESENT but malformed → flag it so the screen prompts
+      // re-analyze rather than render a verdict that references dropped streets.
+      expect(a.malformed, isTrue);
     });
 
     test('non-bool wasGto and non-string scalars degrade, not crash', () {
@@ -101,21 +104,45 @@ void main() {
       expect(a.facts, ['[FACT - a]', '[FACT - b]']);
     });
 
-    test('a fully-malformed (empty) response reports isEmpty', () {
+    test('an ARRAY-shaped street is malformed', () {
       final a = HandCoachingAnalysis.fromJson(const {
-        'flop': '<parameter name="decision">x',
-        'turn': '<parameter name="decision">y',
+        'summary': 's',
+        'flop': ['not', 'an', 'object'],
       });
-      expect(a.isEmpty, isTrue);
+      expect(a.flop, isNull);
+      expect(a.malformed, isTrue);
     });
 
-    test('a real analysis is NOT isEmpty', () {
+    test('a street object with a wrong-typed wasGto is malformed', () {
+      final a = HandCoachingAnalysis.fromJson(const {
+        'summary': 's',
+        'flop': {'decision': 'bet', 'wasGto': 'false'}, // wasGto a string
+      });
+      expect(a.malformed, isTrue);
+    });
+
+    test('a real analysis (incl. a legitimately-absent street) is NOT malformed',
+        () {
       final a = HandCoachingAnalysis.fromJson(const {
         'summary': 'good summary',
+        'verdict': 'neutral',
         'flop': {'decision': 'bet', 'optimal': 'bet', 'rationale': 'r', 'wasGto': true},
+        // river absent (folded turn) — null, NOT malformed
       });
-      expect(a.isEmpty, isFalse);
+      expect(a.malformed, isFalse);
       expect(a.flop, isNotNull);
+      expect(a.river, isNull);
+    });
+
+    test('hardened SessionAnalysis: non-string/non-list fields degrade', () {
+      final s = SessionAnalysis.fromJson(const {
+        'narrative': 99, // wrong type
+        'leaksIdentified': ['a', 7, 'b'], // mixed
+        'actionableTip': null,
+      });
+      expect(s.narrative, '');
+      expect(s.leaksIdentified, ['a', 'b']);
+      expect(s.actionableTip, '');
     });
   });
 }

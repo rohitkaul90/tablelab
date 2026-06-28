@@ -9,6 +9,18 @@ String? _asString(dynamic v) => v is String ? v : null;
 StreetFeedback? _asStreet(dynamic v) =>
     v is Map<String, dynamic> ? StreetFeedback.fromJson(v) : null;
 
+/// A street is MALFORMED when the model botched it — present but not a proper
+/// object (a string/array), or an object whose `wasGto` isn't a bool. A street
+/// the hand never reached is simply absent (null) and is NOT malformed. Used to
+/// flag a degraded analysis so the screen prompts re-analyze rather than render
+/// a coaching view that references a street whose card silently vanished.
+bool _streetMalformed(dynamic v) {
+  if (v == null) return false; // legitimately absent (e.g. folded pre-river)
+  if (v is! Map<String, dynamic>) return true; // string / array / scalar
+  final g = v['wasGto'];
+  return g != null && g is! bool; // object, but a wrong-typed wasGto
+}
+
 class StreetFeedback {
   final String decision;
   final String optimal;
@@ -57,6 +69,13 @@ class HandCoachingAnalysis {
   /// cached before the function started returning them.
   final List<String> facts;
 
+  /// True when the model BOTCHED the tool call — any street arrived present but
+  /// malformed (a string/array, or a wrong-typed `wasGto`). We then can't trust
+  /// the coaching: the verdict/keyMistake may reference a street whose card was
+  /// dropped, so the screen prompts a re-analyze rather than render a misleading
+  /// partial view. (A legitimately-absent street does NOT set this.)
+  final bool malformed;
+
   const HandCoachingAnalysis({
     required this.summary,
     required this.verdict,
@@ -66,6 +85,7 @@ class HandCoachingAnalysis {
     this.turn,
     this.river,
     this.facts = const [],
+    this.malformed = false,
   });
 
   factory HandCoachingAnalysis.fromJson(Map<String, dynamic> j) =>
@@ -78,24 +98,16 @@ class HandCoachingAnalysis {
             ? (j['facts'] as List).whereType<String>().toList()
             : const [],
         // A street the model malformed (string / non-object) drops to null
-        // rather than crashing the screen — see _asStreet.
+        // rather than crashing the screen — see _asStreet — and flips `malformed`.
         preflop: _asStreet(j['preflop']),
         flop: _asStreet(j['flop']),
         turn: _asStreet(j['turn']),
         river: _asStreet(j['river']),
+        malformed: _streetMalformed(j['preflop']) ||
+            _streetMalformed(j['flop']) ||
+            _streetMalformed(j['turn']) ||
+            _streetMalformed(j['river']),
       );
-
-  /// True when the response parsed to essentially nothing usable — every street
-  /// dropped AND no summary/keyMistake — i.e. the model returned a malformed
-  /// tool call. Callers can show a "couldn't read the response, re-analyze" hint
-  /// instead of a blank but technically-valid analysis.
-  bool get isEmpty =>
-      preflop == null &&
-      flop == null &&
-      turn == null &&
-      river == null &&
-      summary.trim().isEmpty &&
-      (keyMistake == null || keyMistake!.trim().isEmpty);
 }
 
 class SessionAnalysis {
@@ -110,9 +122,12 @@ class SessionAnalysis {
   });
 
   factory SessionAnalysis.fromJson(Map<String, dynamic> j) => SessionAnalysis(
-        narrative: j['narrative'] as String? ?? '',
-        leaksIdentified:
-            List<String>.from(j['leaksIdentified'] as List? ?? []),
-        actionableTip: j['actionableTip'] as String? ?? '',
+        // Same defensive parse as HandCoachingAnalysis — analyze-session returns
+        // the same kind of model tool output, so a botched call must not crash.
+        narrative: _asString(j['narrative']) ?? '',
+        leaksIdentified: j['leaksIdentified'] is List
+            ? (j['leaksIdentified'] as List).whereType<String>().toList()
+            : const [],
+        actionableTip: _asString(j['actionableTip']) ?? '',
       );
 }
