@@ -230,10 +230,16 @@ void _walk(
 
   // Chance node: deal each child card, drop conflicting combos, recurse. The new
   // street's first actor is OOP → position resets to 'oop', facing first_to_act.
-  if (type == 'chance_node' || (strat == null && children != null && type != 'action_node')) {
-    if (children == null) return;
+  // A chance node enumerates the deck under `dealcards` (keyed by card string),
+  // NOT `childrens` (action nodes use `childrens`); we fall back to `childrens`
+  // so the unit-test synthetic dumps (which use `childrens`) still walk.
+  final dealCards =
+      (node['dealcards'] ?? node['childrens']) as Map<String, dynamic>?;
+  if (type == 'chance_node' ||
+      (strat == null && dealCards != null && type != 'action_node')) {
+    if (dealCards == null) return;
     if (board.length >= maxBoardLen) return;
-    children.forEach((cardStr, child) {
+    dealCards.forEach((cardStr, child) {
       final card = parseCard(cardStr.trim());
       if (card < 0 || board.contains(card)) return;
       final nextBoard = [...board, card];

@@ -33,7 +33,9 @@ Map<String, dynamic> _dump() => {
           'childrens': {
             'CHECK': {
               'node_type': 'chance_node',
-              'childrens': {
+              // Real solver dumps key a chance node's cards under `dealcards`,
+              // NOT `childrens` — the tabulator must read dealcards (regression).
+              'dealcards': {
                 '2s': {
                   'node_type': 'action_node',
                   'player': 0, // OOP, new street (turn)
