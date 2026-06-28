@@ -241,6 +241,11 @@ serve(async (req: Request) => {
         output_tokens: message.usage.output_tokens,
         cache_read_tokens: message.usage.cache_read_input_tokens ?? 0,
         cache_write_tokens: message.usage.cache_creation_input_tokens ?? 0,
+        // Reset any thumbs rating: this writes a NEW analysis (re-analyze
+        // overwrites the cache), so a rating left from the previous coaching must
+        // not carry over onto different coaching (it would pollute the eval set).
+        rating: null,
+        rated_at: null,
       },
       { onConflict: "user_id,hand_id" },
     );

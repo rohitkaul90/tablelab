@@ -23,9 +23,21 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   HandCoachingAnalysis? _analysis;
   HandEquityCheck? _equityCheck;
   bool _loading = true;
+  bool _running = false; // re-entry guard so a double-tap can't fire two paid calls
   String? _error;
   String _errorTitle = 'Analysis failed';
   bool _errorCanRetry = true;
+
+  // Deterministic seed from the hand id so the equity Monte Carlo (and thus the
+  // equity chips) is stable per hand across views, matching the cached coaching's
+  // grounding (the coaching is cached server-side; the chips recompute on-device).
+  int _equitySeed(String id) {
+    var h = 0;
+    for (final c in id.codeUnits) {
+      h = (h * 31 + c) & 0x7fffffff;
+    }
+    return h;
+  }
 
   @override
   void initState() {
@@ -34,6 +46,10 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   }
 
   Future<void> _runAnalysis({bool forceRefresh = false}) async {
+    // Ignore taps while an analysis is already in flight, so a double-tap on
+    // Re-analyze / Retry can't fire two live (paid) Claude calls and race.
+    if (_running) return;
+    _running = true;
     setState(() {
       _loading = true;
       _error = null;
@@ -47,7 +63,8 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
       // can't model just yields no chips and no equity facts.
       HandEquityCheck? equity;
       try {
-        equity = await computeHandEquityCheck(widget.hand, reads: reads);
+        equity = await computeHandEquityCheck(widget.hand, reads: reads,
+            seed: _equitySeed(widget.hand.id));
       } catch (_) {
         equity = null;
       }
@@ -85,6 +102,8 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
           _errorCanRetry = true;
         }
       });
+    } finally {
+      _running = false;
     }
   }
 
@@ -121,7 +140,9 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Re-analyze',
-              onPressed: _confirmReanalyze,
+              // Disabled while a run is in flight (belt-and-suspenders with the
+              // _running guard) so it can't kick off a second paid call.
+              onPressed: _loading ? null : _confirmReanalyze,
             ),
         ],
       ),
