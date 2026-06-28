@@ -27,6 +27,28 @@ function getCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
+// Claude occasionally BOTCHES the tool call: it emits a per-street field as a
+// STRING containing the literal `<parameter name="decision">…` tag instead of an
+// object (and flattens the nested fields). That output is unparseable by the
+// client (it crashes the analysis screen). It is non-deterministic at temp 0, so
+// re-issuing the same call almost always yields clean output — detect it here so
+// the caller can retry rather than cache + return garbage.
+// deno-lint-ignore no-explicit-any
+function isMalformedAnalysis(a: Record<string, unknown>): boolean {
+  for (const s of ["preflop", "flop", "turn", "river"]) {
+    const v = a[s];
+    // A present street MUST be an object; a string/number means a botched call.
+    if (v != null && typeof v !== "object") return true;
+  }
+  try {
+    // The tool-parameter leak signature, wherever it lands.
+    if (JSON.stringify(a).includes("<parameter")) return true;
+  } catch (_) {
+    return true; // unstringifiable (circular) → treat as malformed
+  }
+  return false;
+}
+
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 
 const EXEMPT_EMAILS = new Set(["rhtk.1234@gmail.com"]);
@@ -191,43 +213,68 @@ serve(async (req: Request) => {
 
     const built = buildPrompt(hand, relevantReads, equityFacts);
 
-    const claudeCall = anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
-      temperature: 0,
-      system: [
-        {
-          type: "text",
-          text: SYSTEM_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      tools: [COACHING_TOOL],
-      tool_choice: { type: "tool", name: "provide_hand_coaching" },
-      messages: [{ role: "user", content: built.prompt }],
-    });
-
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("CLAUDE_TIMEOUT")), 50000),
-    );
-
-    const message = await Promise.race([claudeCall, timeoutPromise]);
-
-    const toolBlock = message.content.find((c) => c.type === "tool_use");
-    if (!toolBlock || toolBlock.type !== "tool_use") {
-      throw new Error("Model did not return coaching tool call");
-    }
+    // Retry once on a malformed tool call (see isMalformedAnalysis). Total time
+    // is budgeted across attempts (bumped 50s → 75s to fit one retry); if it
+    // never validates we return an error rather than cache + serve garbage.
+    const DEADLINE = Date.now() + 75000;
+    const MAX_ATTEMPTS = 2;
+    let analysis: Record<string, unknown> | null = null;
     // deno-lint-ignore no-explicit-any
-    const analysis = (toolBlock as any).input as Record<string, unknown>;
+    let usage: any = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const remaining = DEADLINE - Date.now();
+      if (remaining < 8000) break; // not enough budget for another attempt
+
+      const claudeCall = anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2000,
+        temperature: 0,
+        system: [
+          { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+        ],
+        tools: [COACHING_TOOL],
+        tool_choice: { type: "tool", name: "provide_hand_coaching" },
+        messages: [{ role: "user", content: built.prompt }],
+      });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("CLAUDE_TIMEOUT")), remaining),
+      );
+      const message = await Promise.race([claudeCall, timeoutPromise]);
+      // Every Claude call bills tokens — log EACH, including a discarded
+      // malformed one, so spend tracking stays accurate.
+      await logUsage(db, user.id, message.usage);
+      usage = message.usage;
+
+      const toolBlock = message.content.find((c) => c.type === "tool_use");
+      if (!toolBlock || toolBlock.type !== "tool_use") {
+        if (attempt < MAX_ATTEMPTS) continue;
+        throw new Error("Model did not return coaching tool call");
+      }
+      // deno-lint-ignore no-explicit-any
+      const candidate = (toolBlock as any).input as Record<string, unknown>;
+      if (!isMalformedAnalysis(candidate)) {
+        analysis = candidate;
+        break;
+      }
+      console.warn(`analyze-hand: malformed tool output (attempt ${attempt}/${MAX_ATTEMPTS})`);
+    }
+
+    if (!analysis || !usage) {
+      // Every attempt was malformed (or out of time): don't cache garbage — the
+      // hardened client shows a "re-analyze" prompt on this error.
+      await reportError("analyze-hand", "tool output malformed after retries");
+      return new Response(
+        JSON.stringify({ error: "Analysis failed. Please try again." }),
+        { status: 502, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
+      );
+    }
+
     // Attach the deterministic [FACT] lines so the client can show "what the
     // AI was told" verbatim — not model output, never trusted to the model.
     analysis.facts = built.facts;
     // Stamp the reads signature so the cache entry is only reused under the
     // same reads (see readsSignature). Client ignores underscore-prefixed keys.
     analysis._readsSignature = sig;
-
-    // ── Log usage ────────────────────────────────────────────────────────────
-    await logUsage(db, user.id, message.usage);
 
     // ── Cache result ─────────────────────────────────────────────────────────
     const { error: cacheWriteErr } = await db.from("ai_hand_analyses").upsert(
@@ -236,11 +283,11 @@ serve(async (req: Request) => {
         hand_id: hand.id,
         analysis_json: analysis,
         model_used: "claude-sonnet-4-6",
-        tokens_used: message.usage.input_tokens + message.usage.output_tokens,
-        input_tokens: message.usage.input_tokens,
-        output_tokens: message.usage.output_tokens,
-        cache_read_tokens: message.usage.cache_read_input_tokens ?? 0,
-        cache_write_tokens: message.usage.cache_creation_input_tokens ?? 0,
+        tokens_used: usage.input_tokens + usage.output_tokens,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        cache_read_tokens: usage.cache_read_input_tokens ?? 0,
+        cache_write_tokens: usage.cache_creation_input_tokens ?? 0,
         // Reset any thumbs rating: this writes a NEW analysis (re-analyze
         // overwrites the cache), so a rating left from the previous coaching must
         // not carry over onto different coaching (it would pollute the eval set).
