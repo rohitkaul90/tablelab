@@ -962,4 +962,119 @@ void main() {
       expect(check!.basedOnSynthesizedAction, isTrue);
     });
   });
+
+  group('GTO frequency library key derivation (DCE Q1)', () {
+    StreetData _flop(List<HandAction> actions) => StreetData(
+        street: Street.flop, communityCards: const ['Ks', '9h', '4c'], actions: actions);
+
+    test('SRP BTN-open vs BB-call HU → srp_late_v_bb; OOP check-call = facing_bet',
+        () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          _btnOpenBbCall(),
+          _flop(const [
+            HandAction(seat: 2, type: ActionType.check),
+            HandAction(seat: 0, type: ActionType.raise, amount: 6),
+            HandAction(seat: 2, type: ActionType.call, amount: 6),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, 'srp_late_v_bb');
+      final flop = check.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.heroFacing, startsWith('facing_bet'));
+      expect(flop.betHeroFaced, 6);
+      expect(flop.potBeforeStreet, 10);
+    });
+
+    test('hero IP c-bet after villain check → facing_check', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
+          _btnOpenBbCall(), // hero (seat 0/BTN) opens, villain (seat 2/BB) calls
+          _flop(const [
+            HandAction(seat: 2, type: ActionType.check),
+            HandAction(seat: 0, type: ActionType.raise, amount: 4),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, 'srp_late_v_bb');
+      final flop = check.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.heroFacing, 'facing_check');
+      expect(flop.betHeroFaced, isNull);
+    });
+
+    test('hero OOP lead → first_to_act', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          _btnOpenBbCall(),
+          _flop(const [
+            HandAction(seat: 2, type: ActionType.raise, amount: 4),
+            HandAction(seat: 0, type: ActionType.call, amount: 4),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      final flop = check!.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.heroFacing, 'first_to_act');
+    });
+
+    test('3-bet pot → scenarioKey null', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.raise, amount: 18),
+            HandAction(seat: 0, type: ActionType.call, amount: 18),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+
+    test('non-late opener (CO) → scenarioKey null', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 5, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 5, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.call, amount: 5),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+
+    test('multiway (two villains to the flop) → scenarioKey null', () async {
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 2,
+          heroCards: ['As', 'Ah'],
+          villainSeat: 0,
+          extraPlayers: const [
+            HandPlayer(seatIndex: 5, name: 'V2', startingStack: 200),
+          ],
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 5, type: ActionType.raise, amount: 5),
+              HandAction(seat: 0, type: ActionType.call, amount: 5),
+              HandAction(seat: 2, type: ActionType.call, amount: 5),
+            ]),
+          ],
+        ),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+  });
 }

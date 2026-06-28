@@ -54,6 +54,18 @@ class StreetEquityCheck {
   final double? reqStackOffEquity;
   final bool? sprIsHeadsUp;
 
+  /// GTO frequency library (DCE Q1): the decision-node type hero faced on this
+  /// street — first_to_act / facing_check / facing_bet_small·mid·big /
+  /// facing_raise — derived from the recorded action order. Null when hero took
+  /// no action on the street (no decision to ground). The bet-size bucket is a
+  /// soft approximation of the solver tree's sizes (live bets are arbitrary).
+  final String? heroFacing;
+
+  /// Pot entering this street and the chips of the bet hero faced (if any) — the
+  /// inputs to the multiway MDF FACT. [betHeroFaced] is null when hero faced no bet.
+  final int? potBeforeStreet;
+  final int? betHeroFaced;
+
   const StreetEquityCheck({
     required this.street,
     required this.heroEquity,
@@ -66,6 +78,9 @@ class StreetEquityCheck {
     this.spr,
     this.reqStackOffEquity,
     this.sprIsHeadsUp,
+    this.heroFacing,
+    this.potBeforeStreet,
+    this.betHeroFaced,
   });
 }
 
@@ -102,10 +117,17 @@ class HandEquityCheck {
   /// should say so.
   final bool basedOnSynthesizedAction;
 
+  /// GTO frequency library (DCE Q1): which precomputed scenario this hand maps
+  /// to ('srp_late_v_bb'), or null when it's outside the library's coverage
+  /// (not heads-up, not single-raised, opener not late, or caller not the BB).
+  /// Gates the `[HEURISTIC — GTO frequency]` FACT to spots the library models.
+  final String? scenarioKey;
+
   const HandEquityCheck({
     required this.streets,
     required this.villains,
     required this.basedOnSynthesizedAction,
+    this.scenarioKey,
   });
 }
 
@@ -582,6 +604,109 @@ const double _kSmallBetFrac = 0.4; // ≤ ~⅓-pot → merged
   return base;
 }
 
+// ── GTO frequency library (DCE Q1) key derivation ───────────────────────────
+
+/// The decision-node type hero faced on [street] (the library's "facing" key),
+/// or null when hero took no action there. Derived from the recorded order: the
+/// opponent action immediately before hero's LAST action this street — so a
+/// check-then-call line reads as facing_bet (the call), a lead reads as
+/// first_to_act, and a check-to-hero reads as facing_check.
+String? _heroFacing(StreetData street, int heroSeat, int potBeforeStreet) {
+  final acts = street.actions;
+  var heroLast = -1;
+  for (var i = 0; i < acts.length; i++) {
+    if (acts[i].seat == heroSeat) heroLast = i;
+  }
+  if (heroLast < 0) return null; // hero didn't act → no decision to ground
+  var prevIdx = -1;
+  for (var i = heroLast - 1; i >= 0; i--) {
+    if (acts[i].seat != heroSeat) {
+      prevIdx = i;
+      break;
+    }
+  }
+  if (prevIdx < 0) return 'first_to_act'; // hero opened the street
+  final prev = acts[prevIdx];
+  switch (prev.type) {
+    case ActionType.check:
+      return 'facing_check';
+    case ActionType.raise:
+    case ActionType.allIn:
+      // A bet is the first aggression this street; aggression after a prior
+      // bet/raise is a raise.
+      final priorAggression = acts.take(prevIdx).any(
+          (a) => a.type == ActionType.raise || a.type == ActionType.allIn);
+      if (priorAggression) return 'facing_raise';
+      return 'facing_bet_'
+          '${_facingBetBucket(_betSizeFrac(street, prev.seat, potBeforeStreet))}';
+    default:
+      return 'first_to_act'; // post/call/fold before hero → hero effectively leads
+  }
+}
+
+/// Bucket a faced bet's pot-fraction into the library's size labels. SOFT: the
+/// solver tree used ~33/75 sizes; live bets are arbitrary.
+String _facingBetBucket(double? frac) {
+  if (frac == null) return 'mid';
+  if (frac <= 0.45) return 'small';
+  if (frac <= 0.70) return 'mid';
+  return 'big';
+}
+
+/// Chips of the bet/raise hero faced on [street] (the MDF FACT's bet input), or
+/// null when hero faced no aggression. Mirrors [_heroFacing]'s "prev action".
+int? _betHeroFaced(StreetData street, int heroSeat) {
+  final acts = street.actions;
+  var heroLast = -1;
+  for (var i = 0; i < acts.length; i++) {
+    if (acts[i].seat == heroSeat) heroLast = i;
+  }
+  if (heroLast < 0) return null;
+  for (var i = heroLast - 1; i >= 0; i--) {
+    final a = acts[i];
+    if (a.seat == heroSeat) continue;
+    if (a.type == ActionType.raise || a.type == ActionType.allIn) return a.amount;
+    return null; // immediately preceding non-aggression (a check) → no bet faced
+  }
+  return null;
+}
+
+/// The GTO-library scenario this hand maps to, or null when outside v1 coverage.
+/// v1 library = srp_late_v_bb: heads-up to the flop, single-raised, a late
+/// (BTN/SB) opener vs a BB caller. Gates the GTO-frequency FACT.
+String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
+    List<_VillainState> modeled) {
+  final contesting = modeled.where((v) => v.combos.isNotEmpty).toList();
+  if (contesting.length != 1) return null; // not heads-up to the flop
+  final villainSeat = contesting.single.player.seatIndex;
+  final hl = _classifyPreflop(preflop, heroSeat);
+  final vl = _classifyPreflop(preflop, villainSeat);
+  bool tooDeep(_PreflopLine l) =>
+      l.act == _PreAct.threeBet ||
+      l.act == _PreAct.fourBetPlus ||
+      l.calledAtLevel >= 2;
+  if (tooDeep(hl) || tooDeep(vl)) return null; // 3-bet+ pot
+  int openerSeat, callerSeat;
+  if (hl.act == _PreAct.open &&
+      vl.act == _PreAct.called &&
+      vl.calledAtLevel <= 1) {
+    openerSeat = heroSeat;
+    callerSeat = villainSeat;
+  } else if (vl.act == _PreAct.open &&
+      hl.act == _PreAct.called &&
+      hl.calledAtLevel <= 1) {
+    openerSeat = villainSeat;
+    callerSeat = heroSeat;
+  } else {
+    return null;
+  }
+  if (openerBucketForLabel(hand.tableSetup.positionName(openerSeat)) != 'late') {
+    return null;
+  }
+  if (hand.tableSetup.positionName(callerSeat) != 'BB') return null;
+  return 'srp_late_v_bb';
+}
+
 /// [seat]'s bet/raise on [street] sized as a fraction of the pot AT THE MOMENT
 /// it was made — the chips that action committed over the pot it faced. Replays
 /// the street from [potAtStreetStart] so a raise is measured against the pot
@@ -826,6 +951,10 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
       villains.where((v) => !v.excludedFromAllStreets).toList();
   if (modeled.isEmpty || modeled.every((v) => v.combos.isEmpty)) return null;
 
+  // GTO frequency library scenario (DCE Q1): hand-level, computed before the
+  // streets narrow ranges (uses the preflop ranges).
+  final scenarioKey = _deriveScenarioKey(hand, preflop, hero.seatIndex, modeled);
+
   // ── Walk the streets, narrowing and simulating ──────────────────────────
   final streetResults = <StreetEquityCheck>[];
   final boardSoFar = <int>[];
@@ -1024,6 +1153,13 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           spr: spr,
           reqStackOffEquity: reqStackOff,
           sprIsHeadsUp: sprHeadsUp,
+          heroFacing: street.street == Street.preflop
+              ? null
+              : _heroFacing(street, hero.seatIndex, potBefore),
+          potBeforeStreet: street.street == Street.preflop ? null : potBefore,
+          betHeroFaced: street.street == Street.preflop
+              ? null
+              : _betHeroFaced(street, hero.seatIndex),
         ));
       }
     }
@@ -1060,5 +1196,6 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
         ),
     ],
     basedOnSynthesizedAction: hand.isQuickEntry,
+    scenarioKey: scenarioKey,
   );
 }
