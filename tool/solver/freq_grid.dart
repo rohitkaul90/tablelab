@@ -178,12 +178,13 @@ void _writeLibrary(Map<String, dynamic> results) {
   });
   final merged = _mergeCells(all)
     ..sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
+  final streets = (merged.map((c) => c.street).toSet().toList()..sort()).join('+');
   final lib = FreqLibrary(
     meta: {
       'solver': 'TexasSolver',
       'bet_profile': kBetProfile,
       'dump_rounds': kDumpRounds,
-      'streets': 'flop+turn',
+      'streets': streets, // actual streets present (v1 grid was flop-only)
       'spr_reps': kSprReps,
       'note': 'v1: faithful check/bet-size/call/fold/raise/allin freqs (multi '
           'profile, check-raise available). Shallow+medium SPR (tournament/short '
