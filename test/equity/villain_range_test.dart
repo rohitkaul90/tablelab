@@ -967,7 +967,7 @@ void main() {
   });
 
   group('GTO frequency library key derivation (DCE Q1)', () {
-    StreetData _flop(List<HandAction> actions) => StreetData(
+    StreetData mkFlop(List<HandAction> actions) => StreetData(
         street: Street.flop, communityCards: const ['Ks', '9h', '4c'], actions: actions);
 
     test('SRP BTN-open vs BB-call HU → srp_late_v_bb; OOP check-call = facing_bet',
@@ -975,7 +975,7 @@ void main() {
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
           _btnOpenBbCall(),
-          _flop(const [
+          mkFlop(const [
             HandAction(seat: 2, type: ActionType.check),
             HandAction(seat: 0, type: ActionType.raise, amount: 6),
             HandAction(seat: 2, type: ActionType.call, amount: 6),
@@ -995,7 +995,7 @@ void main() {
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
           _btnOpenBbCall(), // hero (seat 0/BTN) opens, villain (seat 2/BB) calls
-          _flop(const [
+          mkFlop(const [
             HandAction(seat: 2, type: ActionType.check),
             HandAction(seat: 0, type: ActionType.raise, amount: 4),
           ]),
@@ -1013,7 +1013,7 @@ void main() {
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
           _btnOpenBbCall(),
-          _flop(const [
+          mkFlop(const [
             HandAction(seat: 2, type: ActionType.raise, amount: 4),
             HandAction(seat: 0, type: ActionType.call, amount: 4),
           ]),
