@@ -10,6 +10,8 @@
 // (app: rootBundle, eval: File) and hands the decoded map to [fromJson]; this
 // file never does I/O. Design: launch/GTO_FREQUENCY_LIBRARY.md §5–6.
 
+import 'dart:convert';
+
 import 'card.dart';
 import 'decision_context.dart' show HandClass;
 import 'texture_cell.dart';
@@ -68,6 +70,11 @@ class GtoFrequencyLibrary {
   final Map<String, List<_IndexedCell>> _groups;
 
   GtoFrequencyLibrary._(this.meta, this.scenarios, this._groups);
+
+  /// Build from the raw JSON string (app: rootBundle asset; eval: file read).
+  /// dart:convert only — no I/O — so this stays isolate/dart-run/web safe.
+  factory GtoFrequencyLibrary.fromJsonString(String s) =>
+      GtoFrequencyLibrary.fromJson(jsonDecode(s) as Map<String, dynamic>);
 
   /// Build from the decoded library JSON (the map `jsonDecode` returns).
   factory GtoFrequencyLibrary.fromJson(Map<String, dynamic> json) {

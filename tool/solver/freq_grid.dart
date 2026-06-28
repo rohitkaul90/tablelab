@@ -41,7 +41,9 @@ const String kScenario = 'srp_late_v_bb';
 const int kDumpRounds = 2; // flop + turn (v1; river deferred)
 const String kBetProfile = 'multi'; // bet+raise+allin → faithful check-raise freqs
 const String kResultsPath = 'tool/solver/freq_grid_results.json';
-const String kLibraryPath = 'tool/solver/gto_freq_library.json';
+// The shipped library lives in assets/ (bundled for app/web, file-readable for
+// the eval baker). The grid writes it there directly.
+const String kLibraryPath = 'assets/gto_freq_library.json';
 
 /// The spot's flop SPR regimes: name → representative SPR. Names match
 /// `decision_context.sprBucket` (3 → shallow, 6 → medium). Deep (SPR>6) deferred:
