@@ -1,25 +1,25 @@
-// GTO frequency library (DCE Q1) — Phase 2: the v1 SOLVE GRID runner.
+// GTO frequency library (DCE Q1) — SOLVE GRID runner (phase 2b: turn cells).
 //
-// Solves the v1 vertical slice — scenario srp_late_v_bb (BTN open vs BB call,
-// heads-up) over ~24 representative-texture flops × {medium, deep} SPR — and
-// tabulates each solve into the checked-in frequency library
-// (tool/solver/gto_freq_library.json). Operator-only; invokes the licensed
-// TexasSolver via run_solver.dart. Design: launch/GTO_FREQUENCY_LIBRARY.md.
+// Solves the scenario srp_late_v_bb (BTN open vs BB call, heads-up) over ~24
+// representative-texture flops × {shallow, medium} SPR and tabulates each solve
+// into the checked-in frequency library (assets/gto_freq_library.json).
+// Operator-only; invokes the licensed TexasSolver via run_solver.dart.
+// Design: launch/GTO_FREQUENCY_LIBRARY.md + launch/GTO_FREQ_PHASE2B_TURN.md.
 //
-// PARAMETERISATION (settled after a validation solve, 2026-06-28):
-//  - A single-raised 100bb pot is DEEP on the flop (pot ~5.5bb, ~95bb behind →
-//    SPR ~17). But the 'vol' bet profile (which alone is tractable that deep) has
-//    NO raise action, so OOP cannot CHECK-RAISE and the solver compensates by
-//    donk-LEADING ~80% — a fatal distortion for a FREQUENCY library (verified:
-//    OOP/BB led 80% first-to-act on As Kd 7h under 'vol'). Faithful frequencies
-//    REQUIRE a tree with raises (check-raise available).
-//  - The 'multi' profile has bet+raise+allin (check-raise exists) but OOMs on
-//    deep (SPR 15-20) spots. So v1 solves the SHALLOWER SRP regime — shallow
-//    (SPR 3 ≈ 25bb) + medium (SPR 6 ≈ 40bb) — FAITHFULLY with 'multi'. This is
-//    the tournament / short-stack SRP band; deep-cash (~100bb) is deferred until
-//    it can be solved faithfully (size-capped tree / bigger machine).
-//  - v1 thus covers check / bet-size / call / fold / raise / allin frequencies.
-//    Flop+turn only (dumpRounds 2) to bound dump size.
+// PARAMETERISATION:
+//  - SPR regime: shallow (SPR 3 ≈ 25bb) + medium (SPR 6 ≈ 40bb) — the tournament
+//    / short-stack SRP band. Deep-cash (~100bb, flop SPR ~17) is deferred: the
+//    raise-bearing tree OOMs there, and the raise-free 'vol' profile distorts OOP
+//    by ~80% donk-leading (no check-raise).
+//  - Bet profile 'turn' (phase 2b): flop tiered (bet 33/75 + raise + allin) AND
+//    the TURN gets a raise + a second size, so turn check-raise exists and turn
+//    frequencies are FAITHFUL. v1's 'multi' lacked a turn raise → turn cells were
+//    donk-lead-distorted (the same flaw 'vol' has on the flop). River stays lean
+//    (single size + allin) — not tabulated this phase.
+//  - Streets: flop + turn (dumpRounds 2). Each cell is bucketed by the SPR at ITS
+//    OWN street (the tabulator reconstructs the pot down the line) — a turn after
+//    a bet-call sits in a shallower bucket than the flop, matching the live path.
+//  - Covers check / bet-size / call / fold / raise / allin frequencies per street.
 //
 // Usage:
 //   dart run tool/solver/freq_grid.dart            # full grid (resumes via cache)
@@ -38,8 +38,12 @@ import 'run_solver.dart';
 import 'solver_input.dart';
 
 const String kScenario = 'srp_late_v_bb';
-const int kDumpRounds = 2; // flop + turn (v1; river deferred)
-const String kBetProfile = 'multi'; // bet+raise+allin → faithful check-raise freqs
+const int kDumpRounds = 2; // flop + turn (river deferred)
+// 'turn' (phase 2b): flop tiered + TURN gets a raise so turn check-raise exists
+// → faithful turn frequencies. 'multi' (v1) lacked a turn raise → turn cells
+// would be donk-lead-distorted. River kept lean (not tabulated). The spot-key
+// embeds the profile, so switching does NOT reuse the stale 'multi' flop cache.
+const String kBetProfile = 'turn';
 const String kResultsPath = 'tool/solver/freq_grid_results.json';
 // The shipped library lives in assets/ (bundled for app/web, file-readable for
 // the eval baker). The grid writes it there directly.
@@ -186,11 +190,13 @@ void _writeLibrary(Map<String, dynamic> results) {
       'solver': 'TexasSolver',
       'bet_profile': kBetProfile,
       'dump_rounds': kDumpRounds,
-      'streets': streets, // actual streets present (v1 grid was flop-only)
+      'streets': streets, // actual streets present (flop+turn in phase 2b)
       'spr_reps': kSprReps,
-      'note': 'v1: faithful check/bet-size/call/fold/raise/allin freqs (multi '
-          'profile, check-raise available). Shallow+medium SPR (tournament/short '
-          'SRP); deep-cash deferred. SPR keyed to the spot flop regime.',
+      'note': 'phase 2b: faithful flop+turn check/bet-size/call/fold/raise/allin '
+          'freqs ("turn" profile — turn check-raise available). Shallow+medium '
+          'SPR (tournament/short SRP); deep-cash deferred. Each cell is keyed by '
+          'the SPR at its OWN street (pot reconstructed down the line), so a turn '
+          'after a bet-call buckets shallower than the flop.',
       'generated_spots': results.length,
     },
     scenarios: {
@@ -239,8 +245,13 @@ Future<void> main(List<String> args) async {
       final spot = _spot(s.flop, s.sprVal, ranges.ip, ranges.oop);
       final tree = await solveRoot(spot,
           dumpRounds: kDumpRounds, betProfile: kBetProfile);
+      // pot is fixed at 10 in _spot; effStack = spr·pot. The tabulator re-derives
+      // the SPR bucket per street (flop vs the shallower turn after chips go in).
       final cells = tabulateSpot(tree.root,
-          board: _ints(s.flop), sprBucket: s.spr, maxBoardLen: 4);
+          board: _ints(s.flop),
+          pot0: spot.pot.toDouble(),
+          effStack: spot.effStack.toDouble(),
+          maxBoardLen: 4);
       results[key] = {
         'flop': s.flop,
         'spr': s.spr,

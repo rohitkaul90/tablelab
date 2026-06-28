@@ -105,7 +105,8 @@ _SolveConfig _config() {
   // 'single' is the default: multi-bet OOMs on deep (SPR 15-20) spots; single
   // converges to ~0.5% within the tree's action space. Use 'multi' for shallow spots.
   var bets = (e['TLSOLVE_BETS'] ?? 'single').toLowerCase();
-  if (bets != 'single' && bets != 'multi' && bets != 'vol') bets = 'single';
+  const known = {'single', 'multi', 'vol', 'turn'};
+  if (!known.contains(bets)) bets = 'single';
   final timeoutS = int.tryParse(e['TLSOLVE_TIMEOUT_S'] ?? '') ?? 900;
   return _SolveConfig(accuracy, maxIter, bets, timeoutS);
 }
@@ -118,6 +119,15 @@ String solverConfigTag() => _config().tag;
 /// 'multi': TIERED for realism — flop (the decision we read) gets multiple sizes
 /// + a raise; turn+river get a single size to bound the deep-tree explosion at
 /// high SPR (keeps the deepest spots tractable / out of OOM territory).
+/// 'turn': the FREQUENCY-LIBRARY turn-cell profile (DCE Q1 phase 2b). Same as
+/// 'multi' on the flop, but the TURN also gets a raise + a second bet size so the
+/// turn's GTO frequencies are FAITHFUL — without a turn raise the solver can't
+/// check-raise and compensates by donk-leading the turn ~80% (the same distortion
+/// 'vol' has on the flop), which would poison a turn frequency library. The RIVER
+/// stays single-size + allin (cheap) — river cells aren't tabulated this phase
+/// (dump_rounds 2), so the deepest/branchiest layer is kept lean to bound the
+/// tree. Costs more than 'multi' (the turn raise widens the tree); OOM risk at
+/// medium SPR is measured by a calibration solve before the full grid.
 /// 'vol': board-VOLATILITY/sizing calibration — several bet sizes per street so
 /// the GTO size CHOICE (vs texture) is observable, but NO raise/allin so the tree
 /// stays tractable at deep single-raised SPR (~15) where 'multi' OOMs. 'single'
@@ -134,6 +144,20 @@ String _betSizes(String profile) {
       b.writeln('set_bet_sizes $pos,flop,bet,33,75');
       b.writeln('set_bet_sizes $pos,turn,bet,50,100');
       b.writeln('set_bet_sizes $pos,river,bet,75');
+    } else if (profile == 'turn') {
+      // Flop: same tiered tree as 'multi'.
+      b.writeln('set_bet_sizes $pos,flop,bet,33,75');
+      b.writeln('set_bet_sizes $pos,flop,raise,60');
+      b.writeln('set_bet_sizes $pos,flop,allin');
+      // Turn: ONE bet size + a raise (→ check-raise exists). The raise is what
+      // makes turn frequencies faithful; a second turn size tripled tree cost and
+      // timed out at medium SPR in calibration, so it's dropped (single size).
+      b.writeln('set_bet_sizes $pos,turn,bet,66');
+      b.writeln('set_bet_sizes $pos,turn,raise,60');
+      b.writeln('set_bet_sizes $pos,turn,allin');
+      // River: kept lean (not tabulated in phase 2b).
+      b.writeln('set_bet_sizes $pos,river,bet,66');
+      b.writeln('set_bet_sizes $pos,river,allin');
     } else {
       b.writeln('set_bet_sizes $pos,flop,bet,33,75');
       b.writeln('set_bet_sizes $pos,flop,raise,60');

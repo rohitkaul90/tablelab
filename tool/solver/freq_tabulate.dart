@@ -179,19 +179,115 @@ class _CellAcc {
   double totalReach = 0.0;
 }
 
+/// Per-street SPR-tracking state, threaded down the walk. SPR is recomputed at
+/// each street boundary (chance node) because the pot grows and stacks shrink as
+/// chips go in — so a cell is bucketed by the SPR **at its own street**, matching
+/// what the live `villain_range` path computes (effStack ÷ pot-at-street-start),
+/// NOT the flop spot's regime. (Storing every cell under the flop regime made
+/// turn cells mismatch the live shallower turn SPR → systematic lookup misses.)
+class _SprState {
+  /// Effective stack behind at the FLOP (constant for the whole spot).
+  final double effStack;
+
+  /// Pot at the start of the CURRENT street (before this street's betting).
+  final double potStreetStart;
+
+  /// Chips EACH player committed over PRIOR streets (equal for both, since any
+  /// line that reaches a later street closed with matched contributions).
+  final double committedPrior;
+
+  /// Chips committed WITHIN the current street so far, per position ('oop'/'ip').
+  final Map<String, double> streetContrib;
+
+  /// Cached SprBucket.name for the current street (computed once at street entry).
+  final String bucket;
+
+  _SprState({
+    required this.effStack,
+    required this.potStreetStart,
+    required this.committedPrior,
+    required this.streetContrib,
+    required this.bucket,
+  });
+
+  /// SPR at the start of a street = remaining effective stack ÷ street-start pot.
+  static String _bucketFor(double effStack, double committedPrior, double pot) =>
+      pot <= 0 ? 'medium' : sprBucket((effStack - committedPrior) / pot).name;
+
+  /// Root state for the flop: nothing committed yet, pot = the flop pot.
+  factory _SprState.flop(double pot0, double effStack) => _SprState(
+        effStack: effStack,
+        potStreetStart: pot0,
+        committedPrior: 0,
+        streetContrib: const {'oop': 0, 'ip': 0},
+        bucket: _bucketFor(effStack, 0, pot0),
+      );
+
+  /// Advance into the next street after a chance node. The just-closed street's
+  /// matched contribution (each player's chips) = min of the two street contribs
+  /// — equal on a properly-closed street (bet→call or check→check). The new pot
+  /// folds in BOTH players' chips; committedPrior advances by the matched amount.
+  _SprState nextStreet() {
+    final oop = streetContrib['oop'] ?? 0;
+    final ip = streetContrib['ip'] ?? 0;
+    final matched = oop < ip ? oop : ip;
+    final newPot = potStreetStart + oop + ip;
+    final newPrior = committedPrior + matched;
+    return _SprState(
+      effStack: effStack,
+      potStreetStart: newPot,
+      committedPrior: newPrior,
+      streetContrib: const {'oop': 0, 'ip': 0},
+      bucket: _bucketFor(effStack, newPrior, newPot),
+    );
+  }
+
+  /// State after [position] takes [rawAction] (updates that player's within-street
+  /// "to"-total; TexasSolver action amounts are street totals, not increments).
+  _SprState afterAction(String position, String rawAction) {
+    final other = position == 'oop' ? 'ip' : 'oop';
+    final mine = streetContrib[position] ?? 0;
+    final theirs = streetContrib[other] ?? 0;
+    final u = rawAction.trim().toUpperCase();
+    double to;
+    if (u.startsWith('CHECK') || u.startsWith('FOLD')) {
+      to = mine; // no chips added
+    } else if (u.startsWith('CALL')) {
+      to = theirs; // match the outstanding wager
+    } else if (u.startsWith('ALLIN') ||
+        u.startsWith('ALL_IN') ||
+        u.startsWith('ALL IN')) {
+      to = effStack - committedPrior; // shove everything remaining
+    } else {
+      // BET x / RAISE x — x is the street "to"-total (verified vs real dumps).
+      final m = RegExp(r'([0-9]+\.?[0-9]*)').firstMatch(rawAction);
+      to = m == null ? mine : (double.tryParse(m.group(1)!) ?? mine);
+    }
+    return _SprState(
+      effStack: effStack,
+      potStreetStart: potStreetStart,
+      committedPrior: committedPrior,
+      streetContrib: {position: to, other: theirs},
+      bucket: bucket,
+    );
+  }
+}
+
 /// Tabulate one solved spot's dump [root] into library cells. [board] is the flop
-/// (parsed ints); [sprBucket] is the spot's flop SPR regime (SprBucket.name).
-/// [maxBoardLen] caps the depth walked (5 = river; pass 4 to stop at the turn for
-/// tractability on huge dumps).
+/// (parsed ints). [pot0]/[effStack] are the spot's flop pot + effective stack —
+/// the SPR bucket is re-derived per street from these as the pot grows (see
+/// [_SprState]). [maxBoardLen] caps the depth walked (5 = river; pass 4 to stop
+/// at the turn for tractability on huge dumps).
 List<FreqCell> tabulateSpot(
   Map<String, dynamic> root, {
   required List<int> board,
-  required String sprBucket,
+  required double pot0,
+  required double effStack,
   int maxBoardLen = 5,
 }) {
   final acc = <String, _CellAcc>{};
   _walk(root, board, <String, Map<String, double>>{}, 'oop', 'first_to_act', acc,
-      sprBucket, maxBoardLen);
+      _SprState.flop(pot0, effStack), maxBoardLen);
 
   final out = <FreqCell>[];
   acc.forEach((key, ca) {
@@ -221,7 +317,7 @@ void _walk(
   String position, // 'oop' | 'ip' — derived STRUCTURALLY, not from node['player']
   String facing,
   Map<String, _CellAcc> acc,
-  String sprBucket,
+  _SprState spr,
   int maxBoardLen,
 ) {
   final type = node['node_type'] as String?;
@@ -239,6 +335,9 @@ void _walk(
       (strat == null && dealCards != null && type != 'action_node')) {
     if (dealCards == null) return;
     if (board.length >= maxBoardLen) return;
+    // The street just closed → fold this street's chips into the pot and
+    // re-derive the SPR bucket for the new street (pot grew, stacks shrank).
+    final nextSpr = spr.nextStreet();
     dealCards.forEach((cardStr, child) {
       final card = parseCard(cardStr.trim());
       if (card < 0 || board.contains(card)) return;
@@ -251,7 +350,7 @@ void _walk(
           },
       };
       _walk(child as Map<String, dynamic>, nextBoard, pruned, 'oop',
-          'first_to_act', acc, sprBucket, maxBoardLen);
+          'first_to_act', acc, nextSpr, maxBoardLen);
     });
     return;
   }
@@ -293,7 +392,7 @@ void _walk(
       final hc = classifyHandClass(cards, board);
       if (hc == null) return;
       final cellKey =
-          '$tex@@$sprBucket@@$street@@$position@@$facing@@${hc.name}';
+          '$tex@@${spr.bucket}@@$street@@$position@@$facing@@${hc.name}';
       final ca = acc.putIfAbsent(cellKey, () => _CellAcc());
       for (var i = 0; i < canon.length && i < vec.length; i++) {
         final f = (vec[i] as num).toDouble();
@@ -334,8 +433,8 @@ void _walk(
       position: childReach,
       if (reachByPos[other] != null) other: reachByPos[other]!,
     };
-    _walk(child, board, nextReach, other, 'facing_${canon[ai]}', acc, sprBucket,
-        maxBoardLen);
+    _walk(child, board, nextReach, other, 'facing_${canon[ai]}', acc,
+        spr.afterAction(position, actions[ai]), maxBoardLen);
   }
 }
 
@@ -348,13 +447,14 @@ bool _keyHasCard(String ckey, int card) {
 
 // ── Debug CLI ────────────────────────────────────────────────────────────────
 //
-// `dart run tool/solver/freq_tabulate.dart <dump.json> <flop e.g. Ks9h4c> <sprBucket>`
+// `dart run tool/solver/freq_tabulate.dart <dump.json> <flop e.g. Ks9h4c> <spr>`
 // prints the tabulated cells for one saved dump — eyeball a real solve in phase 2.
+// <spr> is the flop SPR (e.g. 6); the bucket is re-derived per street internally.
 
 void main(List<String> args) {
   if (args.length < 3) {
     stderr.writeln('usage: freq_tabulate <dump.json> <flop e.g. Ks9h4c> '
-        '<sprBucket: committed|shallow|medium|deep> [maxBoardLen]');
+        '<flopSpr e.g. 6> [maxBoardLen]');
     exit(64);
   }
   final root = jsonDecode(File(args[0]).readAsStringSync()) as Map<String, dynamic>;
@@ -363,8 +463,11 @@ void main(List<String> args) {
     final c = parseCard(args[1].substring(i, i + 2));
     if (c >= 0) flop.add(c);
   }
+  final spr = double.tryParse(args[2]) ?? 6.0;
   final maxLen = args.length > 3 ? int.tryParse(args[3]) ?? 5 : 5;
-  final cells = tabulateSpot(root, board: flop, sprBucket: args[2], maxBoardLen: maxLen);
+  const pot0 = 10.0;
+  final cells = tabulateSpot(root,
+      board: flop, pot0: pot0, effStack: spr * pot0, maxBoardLen: maxLen);
   cells.sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
   stdout.writeln('${cells.length} cells (by reach mass):');
   for (final c in cells) {
@@ -372,7 +475,8 @@ void main(List<String> args) {
           ..sort((x, y) => y.value.compareTo(x.value)))
         .map((e) => '${e.key} ${(e.value * 100).toStringAsFixed(0)}%')
         .join('  ');
-    stdout.writeln('  ${c.street} ${c.position} ${c.facing} ${c.handClass} '
-        '[${c.texture}] (mass ${c.reachWeight.toStringAsFixed(1)}): $mix');
+    stdout.writeln('  ${c.street} ${c.sprBucket} ${c.position} ${c.facing} '
+        '${c.handClass} [${c.texture}] '
+        '(mass ${c.reachWeight.toStringAsFixed(1)}): $mix');
   }
 }
