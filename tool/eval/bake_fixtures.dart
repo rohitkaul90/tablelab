@@ -26,6 +26,7 @@ import 'dart:io';
 import 'package:tablelab/equity/card.dart';
 import 'package:tablelab/equity/decision_context.dart';
 import 'package:tablelab/equity/evaluator.dart';
+import 'package:tablelab/equity/gto_frequency_library.dart';
 import 'package:tablelab/equity/villain_range.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/models/player_read.dart';
@@ -50,6 +51,17 @@ Future<void> main(List<String> args) async {
       .cast<Map<String, dynamic>>();
 
   Directory(outDir).createSync(recursive: true);
+
+  // The GTO frequency library grounds the [HEURISTIC — GTO frequency] FACT —
+  // load it once so baked fixtures carry the SAME equityFacts prod injects.
+  GtoFrequencyLibrary? gtoLib;
+  final libFile = File('assets/gto_freq_library.json');
+  if (libFile.existsSync()) {
+    gtoLib = GtoFrequencyLibrary.fromJsonString(libFile.readAsStringSync());
+  } else {
+    stderr.writeln('WARN: assets/gto_freq_library.json missing — '
+        'GTO frequency FACTs will not be baked.');
+  }
 
   var baked = 0, skipped = 0;
   for (final spot in spots) {
@@ -128,7 +140,7 @@ Future<void> main(List<String> args) async {
         skipped++;
         continue;
       }
-      final facts = equityCheckFacts(equity);
+      final facts = equityCheckFacts(equity, library: gtoLib);
 
       final labels = _buildLabels(hand, equity);
 
