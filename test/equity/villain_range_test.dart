@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/equity/decision_context.dart';
+import 'package:tablelab/equity/gto_frequency_library.dart';
 import 'package:tablelab/equity/villain_range.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/models/player_read.dart';
@@ -1075,6 +1078,118 @@ void main() {
         seed: 1,
       );
       expect(check!.scenarioKey, isNull);
+    });
+  });
+
+  group('GTO frequency + multiway tendency FACTs (DCE Q1)', () {
+    final lib = GtoFrequencyLibrary.fromJsonString(
+        File('assets/gto_freq_library.json').readAsStringSync());
+
+    test('heads-up scenario hand emits a GTO frequency FACT', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
+          _btnOpenBbCall(), // hero BTN opens, villain BB calls
+          const StreetData(
+              street: Street.flop,
+              communityCards: ['Ks', '9h', '4c'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(seat: 0, type: ActionType.raise, amount: 4),
+              ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      final facts = equityCheckFacts(check!, library: lib);
+      final gto = facts.where((f) => f.contains('GTO frequency')).toList();
+      expect(gto, hasLength(1));
+      expect(gto.first, contains('after a check to hero')); // IP c-bet node
+      expect(gto.first, contains('%'));
+    });
+
+    test('no library passed → no GTO frequency FACT', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
+          _btnOpenBbCall(),
+          const StreetData(
+              street: Street.flop,
+              communityCards: ['Ks', '9h', '4c'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(seat: 0, type: ActionType.raise, amount: 4),
+              ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(equityCheckFacts(check!).any((f) => f.contains('GTO frequency')),
+          isFalse);
+    });
+
+    test('out-of-scenario hand → no GTO frequency FACT even with a library',
+        () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 5, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 5, type: ActionType.raise, amount: 5), // CO (not late)
+            HandAction(seat: 2, type: ActionType.call, amount: 5),
+          ]),
+          const StreetData(
+              street: Street.flop,
+              communityCards: ['Ks', '9h', '4c'],
+              actions: [
+                HandAction(seat: 2, type: ActionType.check),
+                HandAction(seat: 5, type: ActionType.raise, amount: 4),
+                HandAction(seat: 2, type: ActionType.call, amount: 4),
+              ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(
+          equityCheckFacts(check!, library: lib)
+              .any((f) => f.contains('GTO frequency')),
+          isFalse);
+    });
+
+    test('multiway pot facing a bet emits a multiway tendency FACT (no %)',
+        () async {
+      final check = await computeHandEquityCheck(
+        _hand(
+          heroSeat: 2,
+          heroCards: ['As', 'Ah'],
+          villainSeat: 0,
+          extraPlayers: const [
+            HandPlayer(seatIndex: 5, name: 'V2', startingStack: 200),
+          ],
+          streets: [
+            const StreetData(street: Street.preflop, actions: [
+              HandAction(seat: 2, type: ActionType.post, amount: 2),
+              HandAction(seat: 5, type: ActionType.raise, amount: 5),
+              HandAction(seat: 0, type: ActionType.call, amount: 5),
+              HandAction(seat: 2, type: ActionType.call, amount: 5),
+            ]),
+            const StreetData(
+                street: Street.flop,
+                communityCards: ['Ks', '9h', '4c'],
+                actions: [
+                  HandAction(seat: 2, type: ActionType.check),
+                  HandAction(seat: 5, type: ActionType.raise, amount: 10),
+                  HandAction(seat: 0, type: ActionType.call, amount: 10),
+                  HandAction(seat: 2, type: ActionType.call, amount: 10),
+                ]),
+          ],
+        ),
+        iterations: 500,
+        seed: 1,
+      );
+      final facts = equityCheckFacts(check!, library: lib);
+      final mw = facts.where((f) => f.contains('multiway tendency')).toList();
+      expect(mw, hasLength(1));
+      expect(mw.first, contains('3-way'));
+      expect(mw.first, contains('MDF'));
+      expect(facts.any((f) => f.contains('GTO frequency')), isFalse);
     });
   });
 }
