@@ -16,3 +16,6 @@ diag.dart
 # Range-calibration batch cache (regenerable)
 range_calib_results.json
 range_calib_poc.log
+
+# GTO frequency-library grid cache (regenerable; the library JSON itself is force-added)
+freq_grid_results.json

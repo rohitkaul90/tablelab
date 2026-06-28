@@ -190,8 +190,8 @@ List<FreqCell> tabulateSpot(
   int maxBoardLen = 5,
 }) {
   final acc = <String, _CellAcc>{};
-  _walk(root, board, <int, Map<String, double>>{}, 'first_to_act', acc, sprBucket,
-      maxBoardLen);
+  _walk(root, board, <String, Map<String, double>>{}, 'oop', 'first_to_act', acc,
+      sprBucket, maxBoardLen);
 
   final out = <FreqCell>[];
   acc.forEach((key, ca) {
@@ -217,7 +217,8 @@ List<FreqCell> tabulateSpot(
 void _walk(
   Map<String, dynamic> node,
   List<int> board,
-  Map<int, Map<String, double>> reachByPlayer,
+  Map<String, Map<String, double>> reachByPos,
+  String position, // 'oop' | 'ip' — derived STRUCTURALLY, not from node['player']
   String facing,
   Map<String, _CellAcc> acc,
   String sprBucket,
@@ -227,8 +228,8 @@ void _walk(
   final children = node['childrens'] as Map<String, dynamic>?;
   final strat = node['strategy'] as Map<String, dynamic>?;
 
-  // Chance node: deal each child card, drop conflicting combos, recurse. Its
-  // action children are the NEW street's OOP node → facing resets to first_to_act.
+  // Chance node: deal each child card, drop conflicting combos, recurse. The new
+  // street's first actor is OOP → position resets to 'oop', facing first_to_act.
   if (type == 'chance_node' || (strat == null && children != null && type != 'action_node')) {
     if (children == null) return;
     if (board.length >= maxBoardLen) return;
@@ -236,15 +237,15 @@ void _walk(
       final card = parseCard(cardStr.trim());
       if (card < 0 || board.contains(card)) return;
       final nextBoard = [...board, card];
-      final pruned = <int, Map<String, double>>{
-        for (final e in reachByPlayer.entries)
+      final pruned = <String, Map<String, double>>{
+        for (final e in reachByPos.entries)
           e.key: {
             for (final r in e.value.entries)
               if (!_keyHasCard(r.key, card)) r.key: r.value
           },
       };
-      _walk(child as Map<String, dynamic>, nextBoard, pruned, 'first_to_act', acc,
-          sprBucket, maxBoardLen);
+      _walk(child as Map<String, dynamic>, nextBoard, pruned, 'oop',
+          'first_to_act', acc, sprBucket, maxBoardLen);
     });
     return;
   }
@@ -255,14 +256,15 @@ void _walk(
   final byCombo = strat['strategy'] as Map<String, dynamic>?;
   if (actions.isEmpty || byCombo == null || byCombo.isEmpty) return;
 
-  final player = node['player'] as int? ?? 0;
-  final position = player == 0 ? 'oop' : 'ip';
+  // Position comes from tree STRUCTURE (root + post-chance = OOP, flipping each
+  // action), NOT node['player'] — that field's 0/1↔OOP/IP convention is not
+  // reliable across solver builds (verified: a build had player 0 = IP).
   final canon = canonicalActionLabels(actions);
 
-  // Initialise this player's reach map on first encounter: every combo present
+  // Initialise this position's reach map on first encounter: every combo present
   // at the player's first node arrives with full preflop weight (1.0 — our preset
   // ranges are unweighted). Thereafter absent ⇒ 0 (folded out), never resurrected.
-  var reach = reachByPlayer[player];
+  var reach = reachByPos[position];
   final firstNodeForPlayer = reach == null;
   if (reach == null) {
     reach = <String, double>{};
@@ -296,9 +298,11 @@ void _walk(
   }
 
   // Descend each action child: the acting player's reach is multiplied by that
-  // action's per-combo frequency; the other player's reach is carried unchanged.
+  // action's per-combo frequency; the other player's reach is carried unchanged,
+  // and the child node belongs to the OTHER position (strict alternation within a
+  // street until it closes into a chance node).
   if (children == null) return;
-  final other = player == 0 ? 1 : 0;
+  final other = position == 'oop' ? 'ip' : 'oop';
   for (var ai = 0; ai < actions.length; ai++) {
     final childKey = children.keys.firstWhere(
       (k) =>
@@ -320,11 +324,11 @@ void _walk(
       if (nr > 1e-9) childReach[ck] = nr;
     });
 
-    final nextReach = <int, Map<String, double>>{
-      player: childReach,
-      if (reachByPlayer[other] != null) other: reachByPlayer[other]!,
+    final nextReach = <String, Map<String, double>>{
+      position: childReach,
+      if (reachByPos[other] != null) other: reachByPos[other]!,
     };
-    _walk(child, board, nextReach, 'facing_${canon[ai]}', acc, sprBucket,
+    _walk(child, board, nextReach, other, 'facing_${canon[ai]}', acc, sprBucket,
         maxBoardLen);
   }
 }
