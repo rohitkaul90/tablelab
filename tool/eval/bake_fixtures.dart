@@ -54,14 +54,18 @@ Future<void> main(List<String> args) async {
 
   // The GTO frequency library grounds the [HEURISTIC — GTO frequency] FACT —
   // load it once so baked fixtures carry the SAME equityFacts prod injects.
-  GtoFrequencyLibrary? gtoLib;
+  // FATAL if absent: silently baking without it would diverge the eval prompt
+  // from production and give false confidence on the gate that guards prompts.
+  // (Run the baker from the repo root, where the asset path resolves.)
   final libFile = File('assets/gto_freq_library.json');
-  if (libFile.existsSync()) {
-    gtoLib = GtoFrequencyLibrary.fromJsonString(libFile.readAsStringSync());
-  } else {
-    stderr.writeln('WARN: assets/gto_freq_library.json missing — '
-        'GTO frequency FACTs will not be baked.');
+  if (!libFile.existsSync()) {
+    stderr.writeln('FATAL: assets/gto_freq_library.json not found '
+        '(cwd=${Directory.current.path}). Run the baker from the repo root — '
+        'fixtures must carry the GTO-frequency FACTs prod injects.');
+    exit(2);
   }
+  final gtoLib =
+      GtoFrequencyLibrary.fromJsonString(libFile.readAsStringSync());
 
   var baked = 0, skipped = 0;
   for (final spot in spots) {

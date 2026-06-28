@@ -58,9 +58,6 @@ class _IndexedCell {
   _IndexedCell(this.tex, this.spr, this.freqs, this.mass);
 }
 
-/// SPR buckets ordered low→high, for "nearest bucket" fallback distance.
-const List<String> _sprOrder = ['committed', 'shallow', 'medium', 'deep'];
-
 class GtoFrequencyLibrary {
   final Map<String, dynamic> meta;
   final Set<String> scenarios;
@@ -118,10 +115,13 @@ class GtoFrequencyLibrary {
   /// Resolve the GTO mix for a decision node, or null on a miss (no cell within
   /// the fallback hierarchy clears [minMass]). [board] is the street's cards.
   ///
-  /// Fallback order (design §6): exact texture+SPR → exact texture, nearest SPR →
-  /// drop connectedness → drop high-card → suit-only; at each texture level the
-  /// queried SPR is tried before the nearest. Relaxed levels that match several
-  /// cells are merged by reach mass.
+  /// Fallback (design §6, tightened after review): SPR is matched EXACTLY — a
+  /// bucket the library never solved (e.g. deep cash, where SPR>6) is a different
+  /// strategic regime, NOT a near-neighbour, so it misses rather than borrowing
+  /// the medium-SPR mix. Texture relaxes at most [maxTextureFallback] axes
+  /// (default 1 = drop only connectedness, the lowest-impact axis); dropping
+  /// pairing/high-card blends materially different boards, so it is off by
+  /// default. Relaxed levels matching several cells are merged by reach mass.
   GtoFrequencyResult? lookup({
     required String scenario,
     required List<int> board,
@@ -131,6 +131,7 @@ class GtoFrequencyLibrary {
     required String facing,
     required HandClass handClass,
     double minMass = 8.0,
+    int maxTextureFallback = 1,
   }) {
     final tex = textureCell(board);
     if (tex == null) return null;
@@ -139,46 +140,30 @@ class GtoFrequencyLibrary {
     if (group == null || group.isEmpty) return null;
 
     final want = tex.key.split('|'); // [suit, pairing, highcard, conn]
-    final sprs = _sprFallbackOrder(sprBucket);
+    final cap = maxTextureFallback.clamp(0, 3);
 
-    // texFallback 0..3: how many trailing texture axes to ignore (keep suit).
-    for (var texFallback = 0; texFallback <= 3; texFallback++) {
+    // texFallback 0..cap: how many trailing texture axes to ignore (keep suit).
+    // SPR is exact-only (no cross-regime borrowing).
+    for (var texFallback = 0; texFallback <= cap; texFallback++) {
       final axesToMatch = 4 - texFallback; // 4,3,2,1
-      for (var s = 0; s < sprs.length; s++) {
-        final spr = sprs[s];
-        final matches = group.where((c) {
-          if (c.spr != spr) return false;
-          for (var a = 0; a < axesToMatch; a++) {
-            if (c.tex[a] != want[a]) return false;
-          }
-          return true;
-        }).toList();
-        if (matches.isEmpty) continue;
-        final merged = _merge(matches);
-        if (merged.mass < minMass) continue;
-        return GtoFrequencyResult(
-          freqs: merged.freqs,
-          reachWeight: merged.mass,
-          textureFallback: texFallback,
-          sprExact: spr == sprBucket,
-        );
-      }
+      final matches = group.where((c) {
+        if (c.spr != sprBucket) return false;
+        for (var a = 0; a < axesToMatch; a++) {
+          if (c.tex[a] != want[a]) return false;
+        }
+        return true;
+      }).toList();
+      if (matches.isEmpty) continue;
+      final merged = _merge(matches);
+      if (merged.mass < minMass) continue;
+      return GtoFrequencyResult(
+        freqs: merged.freqs,
+        reachWeight: merged.mass,
+        textureFallback: texFallback,
+        sprExact: true,
+      );
     }
     return null;
-  }
-
-  /// Queried SPR first, then the remaining present buckets ordered by nearest
-  /// distance in [_sprOrder].
-  List<String> _sprFallbackOrder(String want) {
-    final present = <String>{for (final g in _groups.values) for (final c in g) c.spr};
-    final wi = _sprOrder.indexOf(want);
-    final others = present.where((s) => s != want).toList()
-      ..sort((a, b) {
-        final da = (_sprOrder.indexOf(a) - wi).abs();
-        final db = (_sprOrder.indexOf(b) - wi).abs();
-        return da.compareTo(db);
-      });
-    return [if (present.contains(want)) want, ...others];
   }
 
   ({Map<String, double> freqs, double mass}) _merge(List<_IndexedCell> cells) {

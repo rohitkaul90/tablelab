@@ -311,20 +311,15 @@ String sprBucketLabel(SprBucket b) {
 // bluff-catcher calls on its realized equity vs the pot-odds price, and vs a
 // capped / value-heavy range a player correctly OVER-folds below MDF. So MDF is
 // context for how often to defend, never an instruction to call a given hand —
-// the pot-odds / equity FACTs decide the individual spot.
+// the pot-odds / equity FACTs decide the individual spot. (The HEADS-UP formula;
+// multiway a single player defends LESS, so the live multiway FACT uses it only
+// directionally, never as a printed %.)
 
 /// Minimum defense frequency facing [bet] into [pot] (pot before the bet):
 /// pot/(pot+bet), clamped to [0,1]. 0 when there is no bet.
 double minDefenseFrequency(double pot, double bet) {
   if (bet <= 0 || pot < 0) return 0.0;
   return (pot / (pot + bet)).clamp(0.0, 1.0);
-}
-
-/// Alpha = bet/(pot+bet): the maximum fold frequency at which a bluff of size
-/// [bet] into [pot] breaks even (= 1 − MDF). Clamped to [0,1].
-double alpha(double pot, double bet) {
-  if (bet <= 0 || pot < 0) return 0.0;
-  return (bet / (pot + bet)).clamp(0.0, 1.0);
 }
 
 // ── Board volatility (DCE Tier A, the BOARD-VOLATILITY factor) ────────────────

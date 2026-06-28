@@ -62,10 +62,13 @@ class StreetEquityCheck {
   /// soft approximation of the solver tree's sizes (live bets are arbitrary).
   final String? heroFacing;
 
-  /// Pot entering this street and the chips of the bet hero faced (if any) — the
-  /// inputs to the multiway MDF FACT. [betHeroFaced] is null when hero faced no bet.
-  final int? potBeforeStreet;
+  /// Multiway-tendency FACT inputs. [betHeroFaced] = the largest bet hero faced
+  /// this street (null if none) — the gate for the line. [multiwayFieldMdf] = the
+  /// FIELD's collective minimum-defense frequency pot/(pot+bet) for a CLEAN
+  /// single-bet multiway spot, or null heads-up / when hero faced no bet / when
+  /// hero faced a RAISE (the street-start pot would then mis-size it, so no %).
   final int? betHeroFaced;
+  final double? multiwayFieldMdf;
 
   const StreetEquityCheck({
     required this.street,
@@ -80,8 +83,8 @@ class StreetEquityCheck {
     this.reqStackOffEquity,
     this.sprIsHeadsUp,
     this.heroFacing,
-    this.potBeforeStreet,
     this.betHeroFaced,
+    this.multiwayFieldMdf,
   });
 }
 
@@ -275,29 +278,30 @@ List<String> _gtoFrequencyFacts(
 }
 
 /// `[HEURISTIC — multiway tendency]` line: for multiway pots (no solver model),
-/// the closed-form per-player MDF context + directional guidance, never a %.
+/// the FIELD's collective MDF (a per-street COLLECTIVE ceiling, not a per-player
+/// target) + directional guidance. The % is the field's, and only shown for a
+/// clean single-bet spot where it is exactly derivable.
 List<String> _multiwayTendencyFacts(HandEquityCheck check) {
   final parts = <String>[];
   for (final s in check.streets) {
     if (s.villainCount <= 1) continue; // multiway only
-    if (s.potBeforeStreet == null ||
-        s.betHeroFaced == null ||
-        s.betHeroFaced! <= 0) {
-      continue;
-    }
-    final mdf = minDefenseFrequency(
-        s.potBeforeStreet!.toDouble(), s.betHeroFaced!.toDouble());
-    parts.add('${s.street.label.toLowerCase()} (${s.villainCount + 1}-way): a '
-        'heads-up defense ceiling here would be ~${(mdf * 100).round()}% (MDF), '
-        'but the FIELD\'s collective defense must meet it — so each individual '
-        'player correctly defends LESS than that');
+    if (s.betHeroFaced == null || s.betHeroFaced! <= 0) continue; // faced a bet
+    final mdf = s.multiwayFieldMdf;
+    final ceiling = mdf != null
+        ? 'the FIELD must collectively defend ~${(mdf * 100).round()}% (MDF) — '
+            'split across the ${s.villainCount + 1} players, so each defends a '
+            'SMALLER share than a heads-up ceiling'
+        : 'the FIELD\'s collective defense (MDF) is split across the '
+            '${s.villainCount + 1} players, so each defends a SMALLER share than '
+            'a heads-up ceiling';
+    parts.add('${s.street.label.toLowerCase()} (${s.villainCount + 1}-way): $ceiling');
   }
   if (parts.isEmpty) return const [];
   return [
     '[HEURISTIC — multiway tendency (no solver model — solvers are heads-up only): '
         '${parts.join('; ')}. Multiway, a balanced strategy bluffs less and '
         'value-bets tighter than heads-up; judge hero\'s call against the pot-odds '
-        'price FACT and equity. Directional only — no exact GTO frequencies apply.]'
+        'price FACT and equity, never an exact per-hand GTO frequency.]'
   ];
 }
 
@@ -809,9 +813,37 @@ int? _betHeroFaced(StreetData street, int heroSeat) {
   return maxBet;
 }
 
+/// The FIELD's collective minimum-defense frequency on [street] = pot/(pot+bet),
+/// valid only when hero faces a CLEAN single bet (exactly one aggressive action
+/// before hero's decision): only then is [potBeforeStreet] the true pre-bet pot.
+/// Returns null on a bet-then-raise line (where the street-start pot mis-sizes
+/// the MDF) or when hero faced no bet. The per-player share is below this — the
+/// field splits the defense — so the FACT frames it as a collective ceiling.
+double? _multiwayFieldMdf(
+    StreetData street, int heroSeat, int potBeforeStreet) {
+  if (potBeforeStreet <= 0) return null;
+  final acts = street.actions;
+  var heroLast = -1;
+  for (var i = 0; i < acts.length; i++) {
+    if (acts[i].seat == heroSeat) heroLast = i;
+  }
+  if (heroLast < 0) return null;
+  HandAction? bet;
+  for (var i = 0; i < heroLast; i++) {
+    final a = acts[i];
+    if (a.seat == heroSeat) continue;
+    if (a.type == ActionType.raise || a.type == ActionType.allIn) {
+      if (bet != null) return null; // a second aggression (raise) → pot is stale
+      bet = a;
+    }
+  }
+  if (bet?.amount == null || bet!.amount! <= 0) return null;
+  return minDefenseFrequency(potBeforeStreet.toDouble(), bet.amount!.toDouble());
+}
+
 /// The GTO-library scenario this hand maps to, or null when outside v1 coverage.
-/// v1 library = srp_late_v_bb: heads-up to the flop, single-raised, a late
-/// (BTN/SB) opener vs a BB caller. Gates the GTO-frequency FACT.
+/// v1 library = srp_late_v_bb: heads-up to the flop, single-raised, a BTN opener
+/// vs a BB caller. Gates the GTO-frequency FACT.
 String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
     List<_VillainState> modeled) {
   final contesting = modeled.where((v) => v.combos.isNotEmpty).toList();
@@ -838,9 +870,10 @@ String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
   } else {
     return null;
   }
-  if (openerBucketForLabel(hand.tableSetup.positionName(openerSeat)) != 'late') {
-    return null;
-  }
+  // The library was solved BTN(IP)-opener vs BB(OOP)-caller. The SB also buckets
+  // as 'late' but opens OUT of position, so its IP/OOP cells would be inverted
+  // (the lookup keys on physical position) — restrict to a BTN opener.
+  if (hand.tableSetup.positionName(openerSeat) != 'BTN') return null;
   if (hand.tableSetup.positionName(callerSeat) != 'BB') return null;
   return 'srp_late_v_bb';
 }
@@ -1294,10 +1327,14 @@ HandEquityCheck? _computeEquityCheckSync(_EquityArgs args) {
           heroFacing: street.street == Street.preflop
               ? null
               : _heroFacing(street, hero.seatIndex, potBefore),
-          potBeforeStreet: street.street == Street.preflop ? null : potBefore,
           betHeroFaced: street.street == Street.preflop
               ? null
               : _betHeroFaced(street, hero.seatIndex),
+          // Field MDF only matters multiway (heads-up the pot-odds FACT governs).
+          multiwayFieldMdf: (street.street != Street.preflop &&
+                  simVillains.length > 1)
+              ? _multiwayFieldMdf(street, hero.seatIndex, potBefore)
+              : null,
         ));
       }
     }

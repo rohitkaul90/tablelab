@@ -67,13 +67,11 @@ void main() {
       expect(r.topAction, 'bet_small');
     });
 
-    test('SPR fallback to nearest present bucket', () {
-      // spr 'deep' absent → nearest present is medium (dist 1) over shallow (2).
-      final r = _q(lib, 'As Kd 7h', 'deep')!;
-      expect(r.freqs['check'], closeTo(0.50, 1e-9)); // the medium cell
-      expect(r.sprExact, isFalse);
-      expect(r.textureFallback, 0);
-      expect(r.isInterpolated, isTrue);
+    test('SPR is exact-only: an unsolved bucket misses (no cross-regime borrow)', () {
+      // spr 'deep' is absent from the library (deep cash deferred) → no FACT,
+      // rather than silently borrowing the medium-SPR mix.
+      expect(_q(lib, 'As Kd 7h', 'deep'), isNull);
+      expect(_q(lib, 'As Kd 7h', 'committed'), isNull);
     });
 
     test('texture fallback: drop connectedness', () {
@@ -85,11 +83,21 @@ void main() {
       expect(r.freqs['check'], closeTo(0.40, 1e-9)); // shallow ace cell
     });
 
-    test('texture fallback: drop high-card merges several cells by mass', () {
-      // 9s 5h 2c = rainbow|unpaired|MIDDLING|disconnected (absent at every level
-      // until high-card is dropped). At suit+pairing, shallow matches the ace
-      // (mass100, check .40) AND broadway (mass60, check .55) cells → merge.
-      final r = _q(lib, '9s 5h 2c', 'shallow')!;
+    test('drop-high-card merge requires raising the texture-fallback cap', () {
+      // 9s 5h 2c = rainbow|unpaired|MIDDLING|disconnected (absent until high-card
+      // is dropped, level 2). Default cap (1) misses; cap 3 merges the ace
+      // (mass100, check .40) + broadway (mass60, check .55) cells by mass.
+      expect(_q(lib, '9s 5h 2c', 'shallow'), isNull); // default cap 1 → miss
+      final r = lib.lookup(
+        scenario: 'srp_late_v_bb',
+        board: _b('9s 5h 2c'),
+        sprBucket: 'shallow',
+        street: 'flop',
+        position: 'ip',
+        facing: 'facing_check',
+        handClass: HandClass.marginalMade,
+        maxTextureFallback: 3,
+      )!;
       expect(r.textureFallback, 2);
       expect(r.reachWeight, closeTo(160, 1e-9));
       expect(r.freqs['check'], closeTo((0.40 * 100 + 0.55 * 60) / 160, 1e-6));
