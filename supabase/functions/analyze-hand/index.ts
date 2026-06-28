@@ -33,13 +33,22 @@ function getCorsHeaders(req: Request): Record<string, string> {
 // client (it crashes the analysis screen). It is non-deterministic at temp 0, so
 // re-issuing the same call almost always yields clean output — detect it here so
 // the caller can retry rather than cache + return garbage.
-// deno-lint-ignore no-explicit-any
+//
+// ⚠️ This MUST stay aligned with the client's `_streetMalformed`
+// (lib/models/ai_analysis_model.dart): any street shape the client flags as
+// malformed must be flagged here too, or the server caches+bills a payload the
+// client always rejects (a paid re-spend loop). Keep the two rule-sets in sync.
 function isMalformedAnalysis(a: Record<string, unknown>): boolean {
   for (const s of ["preflop", "flop", "turn", "river"]) {
     const v = a[s];
+    if (v == null) continue; // a street the hand never reached — fine
     // A present street MUST be a plain object — a string/number, or an ARRAY
     // (typeof array === "object" in JS, hence Array.isArray), is a botched call.
-    if (v != null && (typeof v !== "object" || Array.isArray(v))) return true;
+    if (typeof v !== "object" || Array.isArray(v)) return true;
+    // …and a present `wasGto` must be a real bool (the client drops the street
+    // otherwise — mirror that here so the two detectors agree).
+    const g = (v as Record<string, unknown>).wasGto;
+    if (g != null && typeof g !== "boolean") return true;
   }
   try {
     // The tool-parameter leak signature, wherever it lands.
@@ -191,13 +200,14 @@ serve(async (req: Request) => {
       // Only a cache entry produced under the SAME reads is valid — otherwise
       // the cached coaching/equity would contradict the freshly-computed
       // on-device equity chips. A reads edit (or a pre-signature legacy row)
-      // falls through to a fresh analysis. ALSO re-validate the cached payload:
-      // a MALFORMED row written before this fix shipped must self-heal (fall
-      // through to a fresh call) rather than be served as garbage forever.
-      if (
-        cached && cached.analysis_json?._readsSignature === sig &&
-        !isMalformedAnalysis(cached.analysis_json)
-      ) {
+      // falls through to a fresh analysis. We do NOT re-validate the payload for
+      // malformation here on purpose: a legacy malformed row is served as-is and
+      // the hardened client flags it (`HandCoachingAnalysis.malformed`) and shows
+      // a re-analyze prompt. Self-healing in this branch would fire a fresh PAID
+      // Claude call on a passive screen-open (initState auto-runs the analysis),
+      // silently spending a quota slot the user never asked for — let the
+      // explicit Re-analyze (forceRefresh) tap heal it instead.
+      if (cached && cached.analysis_json?._readsSignature === sig) {
         return new Response(JSON.stringify(cached.analysis_json), {
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
@@ -275,9 +285,13 @@ serve(async (req: Request) => {
 
     if (!analysis || !usage) {
       // Every attempt was malformed (or out of time): don't cache garbage — the
-      // hardened client shows a "re-analyze" prompt on this error. Nothing is
-      // logged here, so a malformed-then-failed call does NOT cost the user a
-      // quota slot for the model's own botched output.
+      // hardened client shows a "re-analyze" prompt on this error. We DO log the
+      // last attempt's usage (counting ONE slot) as a rate-limit backstop: the
+      // screen auto-runs in initState, so without it a hand that deterministically
+      // malforms would re-burn paid Claude calls on every open with no ceiling.
+      // (Failed retries are real spend; one log row per failed request bounds it
+      // to the 20/day cap instead of unlimited — the inverse of the GRANTs footgun.)
+      if (usage) await logUsage(db, user.id, usage);
       await reportError("analyze-hand", "tool output malformed after retries");
       return new Response(
         JSON.stringify({ error: "Analysis failed. Please try again." }),

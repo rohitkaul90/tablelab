@@ -14,6 +14,10 @@ StreetFeedback? _asStreet(dynamic v) =>
 /// the hand never reached is simply absent (null) and is NOT malformed. Used to
 /// flag a degraded analysis so the screen prompts re-analyze rather than render
 /// a coaching view that references a street whose card silently vanished.
+///
+/// ⚠️ Keep in sync with the server's `isMalformedAnalysis`
+/// (supabase/functions/analyze-hand/index.ts): if the server ACCEPTS a shape the
+/// client flags here, it caches+bills a payload the client always rejects.
 bool _streetMalformed(dynamic v) {
   if (v == null) return false; // legitimately absent (e.g. folded pre-river)
   if (v is! Map<String, dynamic>) return true; // string / array / scalar

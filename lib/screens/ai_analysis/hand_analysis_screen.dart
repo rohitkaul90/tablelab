@@ -95,6 +95,9 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
                 : const [],
           );
       if (mounted) {
+        // Either branch may have consumed a paid call (a fresh/forced analysis),
+        // so refresh the quota indicators regardless of malformed-vs-clean.
+        ref.invalidate(aiUsageProvider);
         if (analysis.malformed) {
           // Claude malformed the tool call (a street as a string/array, or a
           // wrong-typed wasGto). The coaching can't be trusted (it may reference
@@ -108,8 +111,6 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
           });
         } else {
           setState(() { _analysis = analysis; _loading = false; });
-          // Refresh the quota indicators (no Realtime — manual invalidation).
-          ref.invalidate(aiUsageProvider);
         }
       }
     } catch (e) {
