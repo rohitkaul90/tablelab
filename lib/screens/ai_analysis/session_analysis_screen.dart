@@ -20,6 +20,7 @@ class SessionAnalysisScreen extends ConsumerStatefulWidget {
 class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
   SessionAnalysis? _analysis;
   bool _loading = true;
+  bool _running = false; // re-entry guard so a double-tap can't fire two paid calls
   String? _error;
   String _errorTitle = 'Analysis failed';
   bool _errorCanRetry = true;
@@ -31,6 +32,10 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
   }
 
   Future<void> _runAnalysis({bool forceRefresh = false}) async {
+    // Ignore taps while an analysis is already in flight, so a double-tap on
+    // Re-analyze / Retry can't fire two live (paid) Claude calls and race.
+    if (_running) return;
+    _running = true;
     setState(() {
       _loading = true;
       _error = null;
@@ -73,6 +78,8 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
           _errorCanRetry = true;
         }
       });
+    } finally {
+      _running = false;
     }
   }
 
@@ -109,7 +116,7 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Re-analyze',
-              onPressed: _confirmReanalyze,
+              onPressed: _loading ? null : _confirmReanalyze,
             ),
         ],
       ),
