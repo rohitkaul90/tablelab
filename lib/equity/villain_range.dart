@@ -272,8 +272,9 @@ List<String> _gtoFrequencyFacts(
         'each action with hero\'s hand class on this texture, from offline solves '
         'of this exact spot type — a soft PRIOR for frequency, NOT a read on this '
         'specific hand): ${parts.join('; ')}. Use it to sanity-check whether '
-        'hero\'s line is a normal part of a balanced strategy; a hard [FACT —] or '
-        'a decisive pot-odds price still decides the spot.$softNote]'
+        'hero\'s line is a normal part of a balanced strategy; it is NEVER by '
+        'itself a reason to mark a street wasGto:false or set leakDetected, and a '
+        'hard [FACT —] or a decisive pot-odds price still decides the spot.$softNote]'
   ];
 }
 
