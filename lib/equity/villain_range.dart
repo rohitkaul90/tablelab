@@ -301,8 +301,10 @@ List<String> _multiwayTendencyFacts(HandEquityCheck check) {
   return [
     '[HEURISTIC — multiway tendency (no solver model — solvers are heads-up only): '
         '${parts.join('; ')}. Multiway, a balanced strategy bluffs less and '
-        'value-bets tighter than heads-up; judge hero\'s call against the pot-odds '
-        'price FACT and equity, never an exact per-hand GTO frequency.]'
+        'value-bets tighter than heads-up; this is directional context only — it '
+        'is NEVER by itself a reason to mark a street wasGto:false or set '
+        'leakDetected, and a hard [FACT —] or a decisive pot-odds price still '
+        'decides hero\'s call (never an exact per-hand GTO frequency).]'
   ];
 }
 
