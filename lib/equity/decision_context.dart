@@ -297,6 +297,36 @@ String sprBucketLabel(SprBucket b) {
   }
 }
 
+// ── MDF & alpha (DCE Tier A, the MDF factor) ─────────────────────────────────
+//
+// Minimum Defense Frequency: facing a bet of [bet] into a pot of [pot] (the pot
+// BEFORE the bet), a player must continue with at least pot/(pot+bet) of their
+// range, or a pure-bluff betting range prints by auto-profit. Alpha is the
+// complementary maximum fold frequency a bluff needs to break even, and the
+// value:bluff ratio the bettor is offering. Both are closed-form and exact, and —
+// unlike a heads-up pot-odds price — apply at any player count (the FIELD's
+// COLLECTIVE defense must meet MDF, so each individual defends LESS multiway).
+//
+// MDF is a RANGE-defense ceiling, NOT a hand-specific call price: a specific
+// bluff-catcher calls on its realized equity vs the pot-odds price, and vs a
+// capped / value-heavy range a player correctly OVER-folds below MDF. So MDF is
+// context for how often to defend, never an instruction to call a given hand —
+// the pot-odds / equity FACTs decide the individual spot.
+
+/// Minimum defense frequency facing [bet] into [pot] (pot before the bet):
+/// pot/(pot+bet), clamped to [0,1]. 0 when there is no bet.
+double minDefenseFrequency(double pot, double bet) {
+  if (bet <= 0 || pot < 0) return 0.0;
+  return (pot / (pot + bet)).clamp(0.0, 1.0);
+}
+
+/// Alpha = bet/(pot+bet): the maximum fold frequency at which a bluff of size
+/// [bet] into [pot] breaks even (= 1 − MDF). Clamped to [0,1].
+double alpha(double pot, double bet) {
+  if (bet <= 0 || pot < 0) return 0.0;
+  return (bet / (pot + bet)).clamp(0.0, 1.0);
+}
+
 // ── Board volatility (DCE Tier A, the BOARD-VOLATILITY factor) ────────────────
 //
 // How much does the next card change the board? A STATIC board (equities locked

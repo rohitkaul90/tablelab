@@ -271,4 +271,31 @@ void main() {
     });
   });
 
+  group('MDF & alpha', () {
+    test('half-pot bet → MDF 2/3, alpha 1/3', () {
+      expect(minDefenseFrequency(10, 5), closeTo(10 / 15, 1e-9));
+      expect(alpha(10, 5), closeTo(5 / 15, 1e-9));
+    });
+
+    test('pot-sized bet → MDF 1/2, alpha 1/2', () {
+      expect(minDefenseFrequency(10, 10), closeTo(0.5, 1e-9));
+      expect(alpha(10, 10), closeTo(0.5, 1e-9));
+    });
+
+    test('overbet → MDF below half', () {
+      expect(minDefenseFrequency(10, 20), closeTo(10 / 30, 1e-9));
+    });
+
+    test('MDF and alpha are complementary', () {
+      for (final bet in [3.0, 7.0, 12.5, 40.0]) {
+        expect(minDefenseFrequency(20, bet) + alpha(20, bet), closeTo(1.0, 1e-9));
+      }
+    });
+
+    test('no bet / bad input → 0', () {
+      expect(minDefenseFrequency(10, 0), 0.0);
+      expect(alpha(10, 0), 0.0);
+      expect(minDefenseFrequency(-1, 5), 0.0);
+    });
+  });
 }
