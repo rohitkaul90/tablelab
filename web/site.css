@@ -257,8 +257,6 @@ table.compare tbody tr:last-child td { border-bottom: none; }
   .hero h1 { font-size: 2rem; }
   .features, .steps { grid-template-columns: 1fr; }
   .site-nav .link { display: none; }
-  .article h1 { font-size: 1.7rem; }
-  .article h2 { font-size: 1.3rem; }
 }
 
 /* ── Blog / article ────────────────────────────────────────────────────────── */
@@ -325,6 +323,13 @@ table.compare tbody tr:last-child td { border-bottom: none; }
   color: var(--secondary); font-size: 0.72rem;
   text-transform: uppercase; letter-spacing: 0.08em;
 }
-.post-card h3 { color: #fff; font-size: 1.3rem; margin: 6px 0 8px; line-height: 1.2; }
+.post-card h2 { color: #fff; font-size: 1.3rem; margin: 6px 0 8px; line-height: 1.2; }
 .post-card p { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 10px; }
 .post-card .meta { color: var(--text-faint); font-size: 0.82rem; }
+
+/* Article responsive overrides — must come AFTER the base .article rules above
+   (equal specificity, source order wins) so the mobile shrink actually applies. */
+@media (max-width: 560px) {
+  .article h1 { font-size: 1.7rem; }
+  .article h2 { font-size: 1.3rem; }
+}

@@ -1,6 +1,6 @@
 # TableLab
 
-> TableLab is a free poker bankroll tracker for cash games and tournaments, available on Android and the web. It logs sessions, records full street-by-street hand histories, runs an offline range-vs-range equity calculator, tracks player reads, and provides AI-powered coaching on sessions and individual hands. Built and operated by MagpiQ, an independent software studio in Ontario, Canada.
+> TableLab is a free poker bankroll tracker for cash games and tournaments, available on Android and the web. It logs sessions, records full street-by-street hand histories, runs an offline range-vs-range equity calculator, tracks player reads, and provides solver-grounded AI coaching on sessions and individual hands. Built and operated by MagpiQ, an independent software studio in Ontario, Canada.
 
 ## Key facts
 
@@ -13,7 +13,7 @@
 
 - Session tracking — log cash and tournament sessions with stakes, buy-in, cash-out, table size, duration, and notes.
 - Hand recorder — record full hand histories street by street, from heads-up to 9-handed, and replay them on a table.
-- AI coaching — Claude-powered analysis of sessions and individual hands with concrete, actionable feedback.
+- AI coaching — Claude explains your sessions and hands in plain English, grounded in computed equity and solver-derived GTO frequencies (where the spot is covered), never invented numbers.
 - Equity calculator — range-vs-range equity with GTO presets and Monte Carlo simulation, fully offline.
 - Player reads — track opponent tendencies and turn tags into rule-based insights.
 - Bankroll dashboard — win rate, BB/100, profit by game type, and trends across full history.
@@ -22,6 +22,8 @@
 
 - [About / Home](https://tablelab.app/about): Overview, features, how it works, and FAQ.
 - [Open App](https://tablelab.app/): The TableLab web app.
+- [Blog](https://tablelab.app/blog): Honest, solver-grounded writing for live cash and tournament players.
+- [Can AI Solve Poker?](https://tablelab.app/blog/can-ai-solve-poker): What LLMs do vs. what solvers do, and how to spot AI hype.
 - [Privacy Policy](https://tablelab.app/privacy): Data collection, processors, and user rights.
 - [Terms of Service](https://tablelab.app/terms): Terms governing use of TableLab.
 

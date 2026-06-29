@@ -16,7 +16,7 @@ AI already beat the world's best poker players. It happened in 2017, then again 
 
 So can AI solve poker? Yes, a specific kind of AI, in a specific way. The version selling you a monthly subscription is usually a different thing wearing the same word. Here's exactly what each does, where each helps your game, and how to tell the difference.
 
-> **TL;DR:** AI beat the pros, but the breakthrough (Pluribus, 2019) ran on **counterfactual regret minimization**, not a language model. LLMs out of the box are highly exploitable: in a 2026 benchmark the best general model trailed a specialized poker agent by **−16.0 bb/100**. Solvers *compute* GTO; language models *explain* it. Confusing the two is the tell of a hype-led "AI coach." ([Science, "Superhuman AI for multiplayer poker," 2019](https://www.science.org/doi/10.1126/science.aay2400))
+> **TL;DR:** AI beat the pros, but the breakthrough (Pluribus, 2019) ran on **counterfactual regret minimization**, not a language model. LLMs out of the box are highly exploitable: in a 2026 benchmark the best general model trailed a specialized poker agent by **−16.0 bb/100** ([PokerNews, 2026](https://www.pokernews.com/news/2026/04/gto-wizard-ai-outperforms-gpt-5-and-grok-4-in-new-benchmark-51020.htm)). Solvers *compute* GTO; language models *explain* it. Confusing the two is the tell of a hype-led "AI coach." ([Science, "Superhuman AI for multiplayer poker," 2019](https://www.science.org/doi/10.1126/science.aay2400))
 
 [IMAGE: dark poker table with chips and cards, wide hero; Unsplash "poker chips dark felt"]
 
@@ -73,7 +73,7 @@ The deeper problem is *how* they reason. In 2026, researchers found that LLMs le
 
 > **Our read:** a model that doesn't think in ranges will always have a leak a thinking opponent can find. <!-- [UNIQUE INSIGHT] -->
 
-How big is the gap? In a 2026 benchmark pitting general models against a specialized poker agent, the strongest general model still trailed the specialist by **−16.0 bb/100** ([PokerNews, "GTO Wizard AI Outperforms GPT-5 and Grok 4 in New Benchmark," 2026](https://www.pokernews.com/news/2026/04/gto-wizard-ai-outperforms-gpt-5-and-grok-4-in-new-benchmark-51020.htm)). At those stakes, that's not a rounding error. It's the difference between a crusher and a donator.
+How big is the gap? In a 2026 benchmark pitting general models against a specialized poker agent, the strongest general model (GPT-5.3) still trailed the specialist by **−16.0 bb/100** ([PokerNews, "GTO Wizard AI Outperforms GPT-5 and Grok 4 in New Benchmark," 2026](https://www.pokernews.com/news/2026/04/gto-wizard-ai-outperforms-gpt-5-and-grok-4-in-new-benchmark-51020.htm)). At those stakes, that's not a rounding error. It's the difference between a crusher and a donator.
 
 <figure role="img" aria-label="Win-rate gap versus a specialized poker agent, in big blinds per 100 hands" style="margin:2.5rem 0;padding:1.25rem;background:transparent">
   <svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto">
@@ -120,7 +120,7 @@ So how do you tell help from hype? Ask any AI poker tool four questions:
 
 Put a wall between the two layers. The solver owns the numbers. The language model owns the words and the judgment calls solvers can't reach, and it never crosses the wall to invent a frequency. That separation isn't a feature detail. It's the whole basis for trusting the output.
 
-We built TableLab this way on purpose. A real CFR solver (TexasSolver) produces every equity, EV, and frequency figure. The language model receives those figures as hard facts injected into its prompt, explains them in plain English, and reasons about the spots the solver can't tractably cover, but it's barred from stating a GTO number it wasn't handed. When a read is heuristic, the tool says so. <!-- [PERSONAL EXPERIENCE] -->
+We built TableLab this way on purpose. A real CFR solver (TexasSolver, run offline) produces the GTO frequencies, while an on-device engine computes the equity and pot odds. Either way, the numbers are computed, not guessed by the model. The language model receives those figures as hard facts injected into its prompt, explains them in plain English, and reasons about the spots the solver can't tractably cover, but it's barred from stating a GTO number it wasn't handed. When a read is heuristic, the tool says so. <!-- [PERSONAL EXPERIENCE] -->
 
 Here's the split in one table:
 

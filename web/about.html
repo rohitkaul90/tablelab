@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TableLab — Poker Bankroll Tracker & AI Coaching</title>
-  <meta name="description" content="TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record hands, run equity, and get AI coaching — on Android and the web.">
+  <meta name="description" content="TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record hands, run equity, and get solver-grounded AI coaching — on Android and the web.">
   <link rel="canonical" href="https://tablelab.app/about">
   <meta property="og:title" content="TableLab — Poker Bankroll Tracker & AI Coaching">
   <meta property="og:description" content="Track sessions, record hands, and get solver-grounded AI coaching. Free on Android and the web.">
@@ -18,7 +18,7 @@
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="TableLab — Poker Bankroll Tracker & AI Coaching">
-  <meta name="twitter:description" content="Free poker bankroll tracker for cash games and tournaments — sessions, hand recorder, equity calculator, and AI coaching.">
+  <meta name="twitter:description" content="Free poker bankroll tracker for cash games and tournaments — sessions, hand recorder, equity calculator, and solver-grounded AI coaching.">
   <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
   <meta name="author" content="MagpiQ">
   <link rel="stylesheet" href="/site.css">
@@ -210,7 +210,7 @@
           <div class="feature">
             <span class="ic">✨</span>
             <strong>AI Coaching</strong>
-            <span>Claude explains your sessions and hands in plain English, grounded in real equity and solver-derived GTO numbers, not guesses. It flags your leaks and says when a spot is a judgment call.</span>
+            <span>Claude explains your sessions and hands in plain English, grounded in real equity and pot-odds math, not guesses. It flags your leaks and says when a spot is a judgment call.</span>
           </div>
           <div class="feature">
             <span class="ic">🧮</span>
@@ -256,8 +256,9 @@
         <p class="lead"><strong>A language model is not a solver, and we don't pretend otherwise.</strong>
         TableLab keeps two layers cleanly separated, so you always know which is which.</p>
         <p>The <strong>numbers are computed, not guessed</strong>: equity and pot odds from an on-device
-        engine, and GTO action frequencies from a real CFR solver (TexasSolver) we run offline and ship
-        with the app. Those figures are handed to the AI as hard facts.</p>
+        engine, and, where the spot is covered, GTO action frequencies from a real CFR solver
+        (TexasSolver) we run offline and ship with the app. Those figures are handed to the AI as hard
+        facts.</p>
         <p>The <strong>AI's job is the words</strong>: it explains those numbers in plain English and
         reasons about the spots a solver can't tractably cover, like multiway pots and deep live
         decisions. It's barred from stating a GTO number it wasn't given, and it tells you when a read is

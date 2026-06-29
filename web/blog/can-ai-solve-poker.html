@@ -141,7 +141,7 @@
       <p>So can AI solve poker? Yes, a specific kind of AI, in a specific way. The version selling you a monthly subscription is usually a different thing wearing the same word. Here's exactly what each does, where each helps your game, and how to tell the difference.</p>
 
       <div class="tldr">
-        <p><strong>TL;DR:</strong> AI beat the pros, but the breakthrough (Pluribus, 2019) ran on <strong>counterfactual regret minimization</strong>, not a language model. LLMs out of the box are highly exploitable: in a 2026 benchmark the best general model trailed a specialized poker agent by <strong>&#8722;16.0 bb/100</strong>. Solvers <em>compute</em> GTO; language models <em>explain</em> it. Confusing the two is the tell of a hype-led "AI coach." (<a href="https://www.science.org/doi/10.1126/science.aay2400">Science, "Superhuman AI for multiplayer poker," 2019</a>)</p>
+        <p><strong>TL;DR:</strong> AI beat the pros, but the breakthrough (Pluribus, 2019) ran on <strong>counterfactual regret minimization</strong>, not a language model. LLMs out of the box are highly exploitable: in a 2026 benchmark the best general model trailed a specialized poker agent by <strong>&#8722;16.0 bb/100</strong> (<a href="https://www.pokernews.com/news/2026/04/gto-wizard-ai-outperforms-gpt-5-and-grok-4-in-new-benchmark-51020.htm">PokerNews, 2026</a>). Solvers <em>compute</em> GTO; language models <em>explain</em> it. Confusing the two is the tell of a hype-led "AI coach." (<a href="https://www.science.org/doi/10.1126/science.aay2400">Science, "Superhuman AI for multiplayer poker," 2019</a>)</p>
       </div>
 
       <h2>Can AI actually solve poker?</h2>
@@ -152,8 +152,8 @@
 
       <p>What's wild is how lean it was. Pluribus mastered the game in eight days on a 64-core server with under 512 GB of RAM (<a href="https://www.kdnuggets.com/2020/12/remembering-pluribus-facebook-master-difficult-poker-game.html">KDnuggets, "Remembering Pluribus," 2020</a>). No data center. No language model. Just self-play with Monte Carlo CFR, grinding toward equilibrium.</p>
 
-      <figure role="img" aria-label="Timeline of poker AI milestones from 2017 to 2026">
-        <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto">
+      <figure>
+        <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Timeline of poker AI milestones from 2017 to 2026" style="max-width:100%;height:auto">
           <line x1="40" y1="120" x2="560" y2="120" stroke="#4CAF50" stroke-width="2"/>
           <circle cx="90" cy="120" r="7" fill="#4CAF50"/>
           <text x="90" y="150" fill="#cfd8dc" font-size="13" text-anchor="middle">2017</text>
@@ -191,10 +191,10 @@
 
       <div class="callout"><p><strong>Our read:</strong> a model that doesn't think in ranges will always have a leak a thinking opponent can find.</p></div>
 
-      <p>How big is the gap? In a 2026 benchmark pitting general models against a specialized poker agent, the strongest general model still trailed the specialist by <strong>&#8722;16.0 bb/100</strong> (<a href="https://www.pokernews.com/news/2026/04/gto-wizard-ai-outperforms-gpt-5-and-grok-4-in-new-benchmark-51020.htm">PokerNews, "GTO Wizard AI Outperforms GPT-5 and Grok 4 in New Benchmark," 2026</a>). At those stakes, that's not a rounding error. It's the difference between a crusher and a donator.</p>
+      <p>How big is the gap? In a 2026 benchmark pitting general models against a specialized poker agent, the strongest general model (GPT-5.3) still trailed the specialist by <strong>&#8722;16.0 bb/100</strong> (<a href="https://www.pokernews.com/news/2026/04/gto-wizard-ai-outperforms-gpt-5-and-grok-4-in-new-benchmark-51020.htm">PokerNews, "GTO Wizard AI Outperforms GPT-5 and Grok 4 in New Benchmark," 2026</a>). At those stakes, that's not a rounding error. It's the difference between a crusher and a donator.</p>
 
-      <figure role="img" aria-label="Win-rate gap versus a specialized poker agent, in big blinds per 100 hands">
-        <svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto">
+      <figure>
+        <svg viewBox="0 0 560 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Win-rate gap versus a specialized poker agent, in big blinds per 100 hands" style="max-width:100%;height:auto">
           <text x="20" y="30" fill="#eceff1" font-size="14">Win rate vs. a specialized poker agent (bb/100)</text>
           <line x1="200" y1="50" x2="200" y2="190" stroke="#455a64" stroke-width="1" stroke-dasharray="4 3"/>
           <text x="200" y="205" fill="#90a4ae" font-size="11" text-anchor="middle">0 (specialist baseline)</text>
@@ -233,10 +233,10 @@
 
       <p>Put a wall between the two layers. The solver owns the numbers. The language model owns the words and the judgment calls solvers can't reach, and it never crosses the wall to invent a frequency. That separation isn't a feature detail. It's the whole basis for trusting the output.</p>
 
-      <p>We built TableLab this way on purpose. A real CFR solver (TexasSolver) produces every equity, EV, and frequency figure. The language model receives those figures as hard facts injected into its prompt, explains them in plain English, and reasons about the spots the solver can't tractably cover, but it's barred from stating a GTO number it wasn't handed. When a read is heuristic, the tool says so.</p>
+      <p>We built TableLab this way on purpose. A real CFR solver (TexasSolver, run offline) produces the GTO frequencies, while an on-device engine computes the equity and pot odds. Either way, the numbers are computed, not guessed by the model. The language model receives those figures as hard facts injected into its prompt, explains them in plain English, and reasons about the spots the solver can't tractably cover, but it's barred from stating a GTO number it wasn't handed. When a read is heuristic, the tool says so.</p>
 
-      <figure role="img" aria-label="Two-layer architecture: a CFR solver produces the numbers; a grounded language model produces the words.">
-        <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto">
+      <figure>
+        <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two-layer architecture: a CFR solver produces the numbers; a grounded language model produces the words." style="max-width:100%;height:auto">
           <rect x="20" y="40" width="250" height="120" rx="10" fill="rgba(76,175,80,0.10)" stroke="#4CAF50" stroke-opacity="0.7"/>
           <text x="145" y="72" fill="#81C784" font-size="15" font-weight="700" text-anchor="middle">CFR SOLVER</text>
           <text x="145" y="100" fill="#eceff1" font-size="13" text-anchor="middle">equity &#183; EV &#183; frequency</text>
