@@ -185,8 +185,9 @@ void _writeLibrary(Map<String, dynamic> results) {
     final m = v as Map<String, dynamic>;
     // Older records pre-date the stamp; fall back to the profile in the spotKey
     // (`flop|spr|PROFILE|drN`) so the filter still holds for them.
-    final profile = (m['profile'] as String?) ??
-        (spotKey.split('|').length >= 3 ? spotKey.split('|')[2] : null);
+    final keyParts = spotKey.split('|');
+    final profile =
+        (m['profile'] as String?) ?? (keyParts.length >= 3 ? keyParts[2] : null);
     final dumpRounds = (m['dump_rounds'] as int?);
     if (profile != kBetProfile ||
         (dumpRounds != null && dumpRounds != kDumpRounds)) {
@@ -204,6 +205,19 @@ void _writeLibrary(Map<String, dynamic> results) {
   if (skippedOtherProfile > 0) {
     stdout.writeln('  (skipped $skippedOtherProfile cached spots from a '
         'different profile/dump-rounds)');
+  }
+  // Refuse to clobber the shipped library with an empty/degraded one. This fires
+  // when the cache holds only OTHER-profile spots (e.g. rebuilding after the
+  // kBetProfile flip but before any matching solve has run): every spot is
+  // skipped, usedSpots==0, and writing here would replace the live library with
+  // 0 cells — silently killing the GTO-frequency FACT in prod. Abort instead.
+  if (usedSpots == 0 || all.isEmpty) {
+    stderr.writeln('ABORT: no cached spots match the current profile '
+        "('$kBetProfile', dumpRounds $kDumpRounds) — refusing to overwrite "
+        '$kLibraryPath with an empty library. Run the grid to solve '
+        '$kBetProfile spots first ($skippedOtherProfile spots skipped).');
+    exitCode = 1;
+    return;
   }
   final merged = _mergeCells(all)
     ..sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
