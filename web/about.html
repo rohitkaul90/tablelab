@@ -10,7 +10,150 @@
   <meta property="og:description" content="Track sessions, record hands, and get AI-powered coaching. Free on Android and the web.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://tablelab.app/about">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta property="og:image:alt" content="TableLab — track your poker, fix your leaks. Free bankroll tracker with hand recording, equity calculator, and AI coaching.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TableLab — Poker Bankroll Tracker & AI Coaching">
+  <meta name="twitter:description" content="Free poker bankroll tracker for cash games and tournaments — sessions, hand recorder, equity calculator, and AI coaching.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta name="author" content="MagpiQ">
   <link rel="stylesheet" href="/site.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://tablelab.app/#website",
+        "url": "https://tablelab.app",
+        "name": "TableLab",
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://tablelab.app/#app",
+        "name": "TableLab",
+        "applicationCategory": "SportsApplication",
+        "applicationSubCategory": "Poker Bankroll Tracker",
+        "operatingSystem": "Android, Web Browser",
+        "url": "https://tablelab.app",
+        "downloadUrl": "https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker",
+        "description": "TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record full hand histories, run a range-vs-range equity calculator offline, track player reads, and get AI-powered coaching on your sessions and individual hands.",
+        "image": "https://tablelab.app/icons/Icon-512.png",
+        "featureList": [
+          "Cash game and tournament session tracking",
+          "Street-by-street hand recorder and replayer",
+          "Offline range-vs-range equity calculator with GTO presets",
+          "AI coaching for sessions and hands",
+          "Player reads and tendency tracking",
+          "Bankroll dashboard with win rate and BB/100"
+        ],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/about#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is TableLab free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The core tracker, hand recorder, equity calculator, and dashboard are free. AI coaching has a generous free daily allowance."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it show ads or sell my data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No ads, and we never sell your data. Your records are private to your account and protected by row-level security."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my data sent anywhere for AI coaching?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Only when you explicitly tap Analyse. At that point the relevant session or hand is sent to Anthropic (Claude) to generate the coaching, then cached to your account."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I export my sessions?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes — export to CSV or Excel any time from the in-app Import/Export screen, and import from other trackers too."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does the equity calculator work offline?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The range-vs-range equity calculator runs entirely on your device using a Monte Carlo simulation with GTO preset ranges — no internet connection required."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is TableLab good for tournament players?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. You can log tournaments with buy-ins, re-entries, and stages, track ROI and ITM%, and use the built-in ICM calculator. Cash and tournament results are tracked separately so your stats stay clean."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I import from other poker trackers?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The importer reads CSV and Excel exports and includes presets for many popular mobile, desktop, and tournament-tracking apps, so you can bring your history with you."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is TableLab a HUD or does it help during online play?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. TableLab is a bankroll tracker and study tool for reviewing the games you play. It is not a real-time HUD or overlay and does not read or assist on any poker site during play."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What platforms does TableLab run on?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "TableLab is available on Android via Google Play and as a web app at tablelab.app that runs in any modern browser. An iOS version is not available yet."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
@@ -36,6 +179,19 @@
     </div>
 
     <div class="wrap">
+
+      <section id="what">
+        <h2 class="section-title">What is TableLab?</h2>
+        <p class="lead"><strong>TableLab is a free poker bankroll tracker and study tool for live cash
+        games and tournaments</strong>, available on Android and in any web browser. It brings together
+        five things players usually juggle across separate apps: session and bankroll tracking, a
+        street-by-street hand recorder, an offline equity calculator, opponent reads, and AI coaching
+        that reviews your sessions and hands and tells you what to work on.</p>
+        <p>It's built for serious recreational and semi-pro players who play live and want to study
+        away from the table — no spreadsheets, no desktop-only software, and no subscription to get
+        started. Your data stays private to your account, and AI analysis is opt-in, sent only when
+        you tap “Analyse”.</p>
+      </section>
 
       <section id="features">
         <h2 class="section-title">Everything in one place</h2>
@@ -94,6 +250,28 @@
         </div>
       </section>
 
+      <section id="compare">
+        <h2 class="section-title">How TableLab compares</h2>
+        <div class="compare-wrap">
+          <table class="compare">
+            <thead>
+              <tr><th>&nbsp;</th><th>TableLab</th><th>Spreadsheet</th><th>Desktop HUD tracker</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Cost</td><td>Free</td><td>Free</td><td>$60–$160+</td></tr>
+              <tr><td>Runs on your phone</td><td>Yes</td><td>Clunky</td><td>No — desktop only</td></tr>
+              <tr><td>Live cash &amp; tournament play</td><td>Built for it</td><td>Manual entry</td><td>Online play only</td></tr>
+              <tr><td>Hand recorder &amp; replayer</td><td>Yes</td><td>No</td><td>Import only</td></tr>
+              <tr><td>Equity calculator</td><td>Built in, offline</td><td>No</td><td>Separate tool</td></tr>
+              <tr><td>AI coaching</td><td>Yes</td><td>No</td><td>No</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">TableLab is a tracking and study tool, not a real-time HUD or overlay — it
+        doesn't read other sites' tables or assist during online play. It's for logging the games you
+        play and studying them afterwards.</p>
+      </section>
+
       <section id="platforms">
         <h2 class="section-title">Where to play</h2>
         <ul class="plain">
@@ -123,6 +301,32 @@
           <summary>Can I export my sessions?</summary>
           <p>Yes — export to CSV/Excel any time from the in-app Import/Export screen, and import
           from other trackers too.</p>
+        </details>
+        <details>
+          <summary>Does the equity calculator work offline?</summary>
+          <p>Yes. The range-vs-range equity calculator runs entirely on your device using a Monte
+          Carlo simulation with GTO preset ranges — no internet connection required.</p>
+        </details>
+        <details>
+          <summary>Is TableLab good for tournament players?</summary>
+          <p>Yes. You can log tournaments with buy-ins, re-entries, and stages, track ROI and ITM%,
+          and use the built-in ICM calculator. Cash and tournament results are tracked separately so
+          your stats stay clean.</p>
+        </details>
+        <details>
+          <summary>Can I import from other poker trackers?</summary>
+          <p>Yes. The importer reads CSV and Excel exports and includes presets for many popular
+          mobile, desktop, and tournament-tracking apps, so you can bring your history with you.</p>
+        </details>
+        <details>
+          <summary>Is TableLab a HUD or does it help during online play?</summary>
+          <p>No. TableLab is a bankroll tracker and study tool for reviewing the games you play. It is
+          not a real-time HUD or overlay and does not read or assist on any poker site during play.</p>
+        </details>
+        <details>
+          <summary>What platforms does TableLab run on?</summary>
+          <p>TableLab is available on Android via Google Play and as a web app at tablelab.app that
+          runs in any modern browser. An iOS version is not available yet.</p>
         </details>
       </section>
 

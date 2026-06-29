@@ -1,0 +1,31 @@
+# TableLab
+
+> TableLab is a free poker bankroll tracker for cash games and tournaments, available on Android and the web. It logs sessions, records full street-by-street hand histories, runs an offline range-vs-range equity calculator, tracks player reads, and provides AI-powered coaching on sessions and individual hands. Built and operated by MagpiQ, an independent software studio in Ontario, Canada.
+
+## Key facts
+
+- Price: Free. Core tracking, hand recorder, equity calculator, and dashboard cost nothing; AI coaching has a generous free daily allowance.
+- Platforms: Android (Google Play) and any modern web browser at https://tablelab.app
+- Privacy: No ads. Data is never sold. Records are private per-account, protected by row-level security. Data is only sent to Anthropic (Claude) when the user explicitly taps "Analyse".
+- Maker: MagpiQ, a sole proprietorship based in Ontario, Canada.
+
+## Features
+
+- Session tracking — log cash and tournament sessions with stakes, buy-in, cash-out, table size, duration, and notes.
+- Hand recorder — record full hand histories street by street, from heads-up to 9-handed, and replay them on a table.
+- AI coaching — Claude-powered analysis of sessions and individual hands with concrete, actionable feedback.
+- Equity calculator — range-vs-range equity with GTO presets and Monte Carlo simulation, fully offline.
+- Player reads — track opponent tendencies and turn tags into rule-based insights.
+- Bankroll dashboard — win rate, BB/100, profit by game type, and trends across full history.
+
+## Pages
+
+- [About / Home](https://tablelab.app/about): Overview, features, how it works, and FAQ.
+- [Open App](https://tablelab.app/): The TableLab web app.
+- [Privacy Policy](https://tablelab.app/privacy): Data collection, processors, and user rights.
+- [Terms of Service](https://tablelab.app/terms): Terms governing use of TableLab.
+
+## Contact
+
+- Support: support@tablelab.app
+- Privacy requests: privacy@tablelab.app
