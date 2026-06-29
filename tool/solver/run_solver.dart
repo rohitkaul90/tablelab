@@ -133,6 +133,20 @@ String solverConfigTag() => _config().tag;
 /// stays tractable at deep single-raised SPR (~15) where 'multi' OOMs. 'single'
 /// can't be used for sizing calibration (it offers only one size).
 String _betSizes(String profile) {
+  // Shared tiers so 'multi' and 'turn' define the flop/river ONCE (they differ
+  // only on the turn). Flop tiered = the decision we read most; lean street =
+  // single size + allin to bound tree depth.
+  void flopTiered(StringBuffer b, String pos) {
+    b.writeln('set_bet_sizes $pos,flop,bet,33,75');
+    b.writeln('set_bet_sizes $pos,flop,raise,60');
+    b.writeln('set_bet_sizes $pos,flop,allin');
+  }
+
+  void leanStreet(StringBuffer b, String pos, String street) {
+    b.writeln('set_bet_sizes $pos,$street,bet,66');
+    b.writeln('set_bet_sizes $pos,$street,allin');
+  }
+
   final b = StringBuffer();
   for (final pos in ['oop', 'ip']) {
     if (profile == 'single') {
@@ -145,27 +159,19 @@ String _betSizes(String profile) {
       b.writeln('set_bet_sizes $pos,turn,bet,50,100');
       b.writeln('set_bet_sizes $pos,river,bet,75');
     } else if (profile == 'turn') {
-      // Flop: same tiered tree as 'multi'.
-      b.writeln('set_bet_sizes $pos,flop,bet,33,75');
-      b.writeln('set_bet_sizes $pos,flop,raise,60');
-      b.writeln('set_bet_sizes $pos,flop,allin');
+      flopTiered(b, pos);
       // Turn: ONE bet size + a raise (→ check-raise exists). The raise is what
       // makes turn frequencies faithful; a second turn size tripled tree cost and
       // timed out at medium SPR in calibration, so it's dropped (single size).
       b.writeln('set_bet_sizes $pos,turn,bet,66');
       b.writeln('set_bet_sizes $pos,turn,raise,60');
       b.writeln('set_bet_sizes $pos,turn,allin');
-      // River: kept lean (not tabulated in phase 2b).
-      b.writeln('set_bet_sizes $pos,river,bet,66');
-      b.writeln('set_bet_sizes $pos,river,allin');
+      leanStreet(b, pos, 'river'); // river not tabulated in phase 2b
     } else {
-      b.writeln('set_bet_sizes $pos,flop,bet,33,75');
-      b.writeln('set_bet_sizes $pos,flop,raise,60');
-      b.writeln('set_bet_sizes $pos,flop,allin');
-      for (final street in ['turn', 'river']) {
-        b.writeln('set_bet_sizes $pos,$street,bet,66');
-        b.writeln('set_bet_sizes $pos,$street,allin');
-      }
+      // 'multi': flop tiered; turn + river lean (no turn raise — v1).
+      flopTiered(b, pos);
+      leanStreet(b, pos, 'turn');
+      leanStreet(b, pos, 'river');
     }
   }
   return b.toString();

@@ -69,11 +69,14 @@ const List<String> kRepFlops = [
   'Ks Kh 7c', '8s 8d 3c', '5h 5c 2s', 'Ah Ac 9d', 'Qh Qc 6h',
 ];
 
-List<int> _ints(String flop) =>
+/// Parse a "Th 8h 7c" flop to card ints. Public so calib_turn.dart reuses it.
+List<int> flopInts(String flop) =>
     flop.split(' ').where((t) => t.isNotEmpty).map(parseCard).toList();
 
 /// Build the scenario's preflop ranges once: IP = BTN RFI, OOP = BB call vs BTN.
-({String ip, String oop}) _scenarioRanges() {
+/// Public so the calibration runner solves the SAME ranges as the full grid
+/// (no second copy to drift) — it throws a descriptive error on a missing preset.
+({String ip, String oop}) scenarioRanges() {
   final ipKey = rfiKey('BTN', false); // cash_rfi_btn
   final oopKey = callKey('bb', openerBucketForLabel('BTN'), 'BTN', false);
   final ip = presetByKey[ipKey];
@@ -87,8 +90,9 @@ List<int> _ints(String flop) =>
   );
 }
 
-/// A grid spot: a representative flop at one SPR regime.
-SolverSpot _spot(String flop, double spr, String rangeIp, String rangeOop) {
+/// A grid spot: a representative flop at one SPR regime. Public so calib_turn.dart
+/// builds spots identically (pot 10; only SPR matters).
+SolverSpot gridSpot(String flop, double spr, String rangeIp, String rangeOop) {
   const pot = 10; // absolute scale is irrelevant — only SPR matters
   return SolverSpot(
     board: flop.split(' ').where((t) => t.isNotEmpty).toList(),
@@ -168,13 +172,28 @@ FreqCell _cellFromJson(Map<String, dynamic> j) => FreqCell(
       reachWeight: (j['reach_weight'] as num).toDouble(),
     );
 
-/// Assemble gto_freq_library.json from all cached spot results.
+/// Assemble gto_freq_library.json from cached spot results, folding in ONLY the
+/// spots solved with the current ([kBetProfile], [kDumpRounds]) — so a
+/// results.json that still holds a different profile's solves (e.g. a stale v1
+/// 'multi' cache) can't blend its donk-distorted cells into this library.
 void _writeLibrary(Map<String, dynamic> results) {
-  final ranges = _scenarioRanges();
+  final ranges = scenarioRanges();
   final all = <FreqCell>[];
   final repFlops = <String, String>{};
+  var usedSpots = 0, skippedOtherProfile = 0;
   results.forEach((spotKey, v) {
     final m = v as Map<String, dynamic>;
+    // Older records pre-date the stamp; fall back to the profile in the spotKey
+    // (`flop|spr|PROFILE|drN`) so the filter still holds for them.
+    final profile = (m['profile'] as String?) ??
+        (spotKey.split('|').length >= 3 ? spotKey.split('|')[2] : null);
+    final dumpRounds = (m['dump_rounds'] as int?);
+    if (profile != kBetProfile ||
+        (dumpRounds != null && dumpRounds != kDumpRounds)) {
+      skippedOtherProfile++;
+      return;
+    }
+    usedSpots++;
     final flop = m['flop'] as String;
     for (final cj in (m['cells'] as List)) {
       final cell = _cellFromJson(cj as Map<String, dynamic>);
@@ -182,6 +201,10 @@ void _writeLibrary(Map<String, dynamic> results) {
       if (cell.street == 'flop') repFlops.putIfAbsent(cell.texture, () => flop);
     }
   });
+  if (skippedOtherProfile > 0) {
+    stdout.writeln('  (skipped $skippedOtherProfile cached spots from a '
+        'different profile/dump-rounds)');
+  }
   final merged = _mergeCells(all)
     ..sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
   final streets = (merged.map((c) => c.street).toSet().toList()..sort()).join('+');
@@ -197,7 +220,7 @@ void _writeLibrary(Map<String, dynamic> results) {
           'SPR (tournament/short SRP); deep-cash deferred. Each cell is keyed by '
           'the SPR at its OWN street (pot reconstructed down the line), so a turn '
           'after a bet-call buckets shallower than the flop.',
-      'generated_spots': results.length,
+      'generated_spots': usedSpots,
     },
     scenarios: {
       kScenario: ScenarioLib(ranges.ip, ranges.oop, repFlops, merged),
@@ -205,7 +228,7 @@ void _writeLibrary(Map<String, dynamic> results) {
   );
   File(kLibraryPath).writeAsStringSync(lib.toJsonString());
   stdout.writeln('Wrote $kLibraryPath: ${merged.length} cells from '
-      '${results.length} spots (${repFlops.length} textures).');
+      '$usedSpots spots (${repFlops.length} textures).');
 }
 
 Future<void> main(List<String> args) async {
@@ -222,7 +245,7 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  final ranges = _scenarioRanges();
+  final ranges = scenarioRanges();
   final spots = <({String flop, String spr, double sprVal})>[];
   for (final flop in kRepFlops) {
     for (final e in kSprReps.entries) {
@@ -242,19 +265,24 @@ Future<void> main(List<String> args) async {
     }
     stdout.writeln('[${i + 1}/${spots.length}] solving ${s.flop} SPR ${s.spr} …');
     try {
-      final spot = _spot(s.flop, s.sprVal, ranges.ip, ranges.oop);
+      final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
       final tree = await solveRoot(spot,
           dumpRounds: kDumpRounds, betProfile: kBetProfile);
       // pot is fixed at 10 in _spot; effStack = spr·pot. The tabulator re-derives
       // the SPR bucket per street (flop vs the shallower turn after chips go in).
       final cells = tabulateSpot(tree.root,
-          board: _ints(s.flop),
+          board: flopInts(s.flop),
           pot0: spot.pot.toDouble(),
           effStack: spot.effStack.toDouble(),
           maxBoardLen: 4);
       results[key] = {
         'flop': s.flop,
         'spr': s.spr,
+        // Stamp the profile/dump-rounds so a library rebuild folds in ONLY
+        // matching-profile spots — a results.json carried over from a different
+        // profile (e.g. v1 'multi') must not blend its cells into this library.
+        'profile': kBetProfile,
+        'dump_rounds': kDumpRounds,
         'exploitability': tree.exploitability,
         'wall_ms': tree.wallMs,
         'cells': [for (final c in cells) c.toJson()],

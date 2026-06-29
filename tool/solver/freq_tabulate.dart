@@ -261,7 +261,15 @@ class _SprState {
     } else {
       // BET x / RAISE x — x is the street "to"-total (verified vs real dumps).
       final m = RegExp(r'([0-9]+\.?[0-9]*)').firstMatch(rawAction);
-      to = m == null ? mine : (double.tryParse(m.group(1)!) ?? mine);
+      final parsed = m == null ? null : double.tryParse(m.group(1)!);
+      if (parsed == null) {
+        // A sizeless BET/RAISE would silently zero this street's chips and
+        // mis-bucket every downstream SPR — loud, not silent (it shouldn't
+        // happen: TexasSolver always emits an amount).
+        stderr.writeln('WARN freq_tabulate: unparseable bet/raise "$rawAction" '
+            '— SPR reconstruction may be wrong for this line.');
+      }
+      to = parsed ?? mine;
     }
     return _SprState(
       effStack: effStack,
@@ -433,9 +441,34 @@ void _walk(
       position: childReach,
       if (reachByPos[other] != null) other: reachByPos[other]!,
     };
-    _walk(child, board, nextReach, other, 'facing_${canon[ai]}', acc,
+    // The FACING key the child inherits must use the live size buckets so the
+    // live lookup (which keys facing on facing_bet_small/mid/big via the shared
+    // betSizeBucket) can find the cell. canonicalActionLabels ranks bet sizes
+    // RELATIVE to the node, so a single-size tree yields a bare 'bet' that no
+    // live faced-bet key ever matches — bucket the faced bet by ABSOLUTE
+    // pot-fraction instead. Non-bet actions keep their canonical label.
+    final facingAct = canon[ai].startsWith('bet')
+        ? 'bet_${betSizeBucket(_betFrac(actions[ai], position, spr))}'
+        : canon[ai];
+    _walk(child, board, nextReach, other, 'facing_$facingAct', acc,
         spr.afterAction(position, actions[ai]), maxBoardLen);
   }
+}
+
+/// The pot-fraction of a BET action: (its street "to"-total − the actor's chips
+/// already in this street) ÷ the pot before the bet. Used to bucket a faced bet
+/// into the shared small/mid/big labels. Null (→ 'mid') if the amount or pot is
+/// unrecoverable. Matches the live `_betSizeFrac`/`betSizeBucket` pairing.
+double? _betFrac(String rawAction, String actorPos, _SprState spr) {
+  final m = RegExp(r'([0-9]+\.?[0-9]*)').firstMatch(rawAction);
+  final to = m == null ? null : double.tryParse(m.group(1)!);
+  if (to == null) return null;
+  final oop = spr.streetContrib['oop'] ?? 0;
+  final ip = spr.streetContrib['ip'] ?? 0;
+  final potBefore = spr.potStreetStart + oop + ip;
+  if (potBefore <= 0) return null;
+  final mine = spr.streetContrib[actorPos] ?? 0;
+  return (to - mine) / potBefore;
 }
 
 /// Does a combo key "a_b" contain the given card int?
@@ -450,11 +483,14 @@ bool _keyHasCard(String ckey, int card) {
 // `dart run tool/solver/freq_tabulate.dart <dump.json> <flop e.g. Ks9h4c> <spr>`
 // prints the tabulated cells for one saved dump — eyeball a real solve in phase 2.
 // <spr> is the flop SPR (e.g. 6); the bucket is re-derived per street internally.
+// [potScale] (default 10, the grid's pot) MUST match the pot the dump was solved
+// at — the SPR reconstruction adds the dump's chip-scale bet amounts to it, so a
+// wrong scale prints garbage buckets.
 
 void main(List<String> args) {
   if (args.length < 3) {
     stderr.writeln('usage: freq_tabulate <dump.json> <flop e.g. Ks9h4c> '
-        '<flopSpr e.g. 6> [maxBoardLen]');
+        '<flopSpr e.g. 6> [maxBoardLen] [potScale=10]');
     exit(64);
   }
   final root = jsonDecode(File(args[0]).readAsStringSync()) as Map<String, dynamic>;
@@ -465,7 +501,7 @@ void main(List<String> args) {
   }
   final spr = double.tryParse(args[2]) ?? 6.0;
   final maxLen = args.length > 3 ? int.tryParse(args[3]) ?? 5 : 5;
-  const pot0 = 10.0;
+  final pot0 = args.length > 4 ? double.tryParse(args[4]) ?? 10.0 : 10.0;
   final cells = tabulateSpot(root,
       board: flop, pot0: pot0, effStack: spr * pot0, maxBoardLen: maxLen);
   cells.sort((a, b) => b.reachWeight.compareTo(a.reachWeight));

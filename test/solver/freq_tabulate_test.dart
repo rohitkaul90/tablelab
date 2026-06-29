@@ -248,4 +248,72 @@ void main() {
       expect(turn.sprBucket, 'shallow');
     });
   });
+
+  // A faced bet's `facing` key must use ABSOLUTE pot-fraction size buckets
+  // (shared betSizeBucket: small <=45%, mid <=70%, big) — NOT the bare 'bet' that
+  // canonicalActionLabels emits for a single-size tree — or the live lookup (which
+  // keys facing on facing_bet_small/mid/big) can never reach the cell.
+  group('tabulateSpot facing-bet size bucketing', () {
+    // Flop checks through → turn pot 10. OOP leads turn for 6.6 (66% = 'mid');
+    // IP faces it, so IP's node is tagged facing_bet_mid, not facing_bet.
+    Map<String, dynamic> turnLeadDump() => {
+          'node_type': 'action_node',
+          'player': 0, // OOP flop
+          'strategy': {
+            'actions': ['CHECK', 'BET 5'],
+            'strategy': {'Qc Qd': [1.0, 0.0]},
+          },
+          'childrens': {
+            'CHECK': {
+              'node_type': 'action_node',
+              'player': 1, // IP flop, facing check
+              'strategy': {
+                'actions': ['CHECK', 'BET 5'],
+                'strategy': {'Ad Ah': [1.0, 0.0]},
+              },
+              'childrens': {
+                'CHECK': {
+                  'node_type': 'chance_node',
+                  'dealcards': {
+                    '2c': {
+                      'node_type': 'action_node',
+                      'player': 0, // OOP turn, leads
+                      'strategy': {
+                        'actions': ['CHECK', 'BET 6.6'],
+                        'strategy': {'Qc Qd': [0.4, 0.6]},
+                      },
+                      'childrens': {
+                        'CHECK': {'node_type': 'terminal_node'},
+                        'BET 6.6': {
+                          'node_type': 'action_node',
+                          'player': 1, // IP turn, FACING the 66% bet
+                          'strategy': {
+                            'actions': ['FOLD', 'CALL'],
+                            'strategy': {'Ad Ah': [0.3, 0.7]},
+                          },
+                          'childrens': {
+                            'FOLD': {'node_type': 'terminal_node'},
+                            'CALL': {'node_type': 'terminal_node'},
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                'BET 5': {'node_type': 'terminal_node'},
+              },
+            },
+            'BET 5': {'node_type': 'terminal_node'},
+          },
+        };
+
+    final cells =
+        tabulateSpot(turnLeadDump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 60);
+
+    test('faced 66%-pot turn bet is tagged facing_bet_mid (not bare facing_bet)', () {
+      final faced = cells.where((c) => c.street == 'turn' && c.position == 'ip');
+      expect(faced.map((c) => c.facing), contains('facing_bet_mid'));
+      expect(faced.map((c) => c.facing), isNot(contains('facing_bet')));
+    });
+  });
 }

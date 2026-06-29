@@ -13,12 +13,9 @@
 
 import 'dart:io';
 
-import 'package:tablelab/equity/card.dart';
-import 'package:tablelab/equity/chart_keys.dart';
-
+import 'freq_grid.dart' show flopInts, gridSpot, scenarioRanges;
 import 'freq_tabulate.dart';
 import 'run_solver.dart';
-import 'solver_input.dart';
 
 const String kProfile = 'turn';
 const int kDumpRounds = 2;
@@ -29,36 +26,15 @@ const double kSpr = 6.0; // medium — the OOM-risk regime for a turn raise
 // enough to measure turn-tree time/OOM + confirm per-street SPR bucketing.
 const List<String> kCalibFlops = ['Th 8h 7c'];
 
-({String ip, String oop}) _ranges() {
-  final ip = presetByKey[rfiKey('BTN', false)]!;
-  final oop = presetByKey[callKey('bb', openerBucketForLabel('BTN'), 'BTN', false)]!;
-  return (
-    ip: (ip.toList()..sort()).join(','),
-    oop: (oop.toList()..sort()).join(','),
-  );
-}
-
-List<int> _ints(String flop) =>
-    flop.split(' ').where((t) => t.isNotEmpty).map(parseCard).toList();
-
 Future<void> main() async {
-  final r = _ranges();
+  // SAME ranges + spot builder the full grid uses (shared, so the calibration
+  // can't silently solve a different spot than the shipped library).
+  final r = scenarioRanges();
   stdout.writeln('Calibration: profile=$kProfile dumpRounds=$kDumpRounds '
       'SPR=$kSpr (medium)\n');
 
   for (final flop in kCalibFlops) {
-    final spot = SolverSpot(
-      board: flop.split(' ').where((t) => t.isNotEmpty).toList(),
-      rangeIp: r.ip,
-      rangeOop: r.oop,
-      pot: kPot.round(),
-      effStack: (kSpr * kPot).round(),
-      heroContribution: 0,
-      heroCombo: 'AhKs',
-      heroIsIp: true,
-      heroPath: const [],
-      rangeTrail: 'calib',
-    );
+    final spot = gridSpot(flop, kSpr, r.ip, r.oop);
     stdout.writeln('── $flop ─────────────────────────────');
     final sw = Stopwatch()..start();
     try {
@@ -66,7 +42,7 @@ Future<void> main() async {
           dumpRounds: kDumpRounds, betProfile: kProfile);
       sw.stop();
       final cells = tabulateSpot(tree.root,
-          board: _ints(flop), pot0: kPot, effStack: kSpr * kPot, maxBoardLen: 4);
+          board: flopInts(flop), pot0: kPot, effStack: kSpr * kPot, maxBoardLen: 4);
 
       // Per-street × SPR-bucket cell counts + reach mass.
       final byStreetSpr = <String, int>{};
