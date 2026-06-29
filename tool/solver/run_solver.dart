@@ -89,11 +89,15 @@ class _SolveConfig {
   final int maxIter;
   final String betProfile; // 'multi' (tiered, realistic) | 'single' (fast POC)
   final int timeoutS; // per-spot wall-clock cap
+  final int threads; // solver worker threads (peak memory scales with this)
 
-  _SolveConfig(this.accuracy, this.maxIter, this.betProfile, this.timeoutS);
+  _SolveConfig(
+      this.accuracy, this.maxIter, this.betProfile, this.timeoutS, this.threads);
 
   /// Compact descriptor — folded into the batch cache signature so a settings
-  /// change invalidates cached solves (they'd otherwise be served stale).
+  /// change invalidates cached solves (they'd otherwise be served stale). Thread
+  /// count is intentionally EXCLUDED — it changes solve speed/peak memory, not
+  /// the GTO result, so it must not invalidate cached solves.
   String get tag => 'acc$accuracy|it$maxIter|$betProfile';
 }
 
@@ -108,7 +112,13 @@ _SolveConfig _config() {
   const known = {'single', 'multi', 'vol', 'turn'};
   if (!known.contains(bets)) bets = 'single';
   final timeoutS = int.tryParse(e['TLSOLVE_TIMEOUT_S'] ?? '') ?? 900;
-  return _SolveConfig(accuracy, maxIter, bets, timeoutS);
+  // Worker threads. Default 16; lower (e.g. 8) to cut PEAK MEMORY on the
+  // branchiest turn-raise trees — low/connected boards (9-5-2, 8-7-6) OOM mid-
+  // solve at 16 threads and the solver dies with an access violation
+  // (exit -1073741819 / 0xC0000005). Fewer threads = less concurrent working
+  // memory = the spot completes. Result is identical (not in the cache tag).
+  final threads = int.tryParse(e['TLSOLVE_THREADS'] ?? '') ?? 16;
+  return _SolveConfig(accuracy, maxIter, bets, timeoutS, threads);
 }
 
 /// The current solve-config tag (for batch.dart's cache signature).
@@ -188,7 +198,7 @@ set_range_ip ${spot.rangeIp}
 set_range_oop ${spot.rangeOop}
 ${_betSizes(profile)}set_allin_threshold 0.67
 build_tree
-set_thread_num 16
+set_thread_num ${cfg.threads}
 set_accuracy ${cfg.accuracy}
 set_max_iteration ${cfg.maxIter}
 set_print_interval 10
