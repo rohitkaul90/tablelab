@@ -134,7 +134,9 @@ List<FreqCell> _mergeCells(List<FreqCell> cells) {
   final out = <FreqCell>[];
   byKey.forEach((_, group) {
     if (group.length == 1) {
-      out.add(group.first);
+      // Drop never-reached singletons — a zero-reach cell carries no usable
+      // strategy (and the lookup's minMass would suppress it anyway).
+      if (group.first.reachWeight > 0) out.add(group.first);
       return;
     }
     final weighted = <String, double>{};
@@ -143,6 +145,11 @@ List<FreqCell> _mergeCells(List<FreqCell> cells) {
       mass += c.reachWeight;
       c.freqs.forEach((a, f) => weighted[a] = (weighted[a] ?? 0) + f * c.reachWeight);
     }
+    // The reach-weighted mean is undefined when the whole group has zero reach
+    // mass (every f * 0 = 0, then 0 / 0 = NaN — which crashes the library's JSON
+    // encode at write time). These are {texture,spr,street,pos,facing,class}
+    // combos that are never actually reached in the solved strategy; drop them.
+    if (mass <= 0) return;
     final g = group.first;
     out.add(FreqCell(
       texture: g.texture,

@@ -76,7 +76,15 @@ class FreqCell {
         'reach_weight': _round(reachWeight),
       };
 
-  static double _round(double v) => (v * 1000).roundToDouble() / 1000;
+  // Backstop: never let a stray non-finite value (NaN/Infinity) reach the JSON
+  // encoder — it throws and nukes the ENTIRE library write (losing a multi-hour
+  // solve at the final step). The merge guards against the only known source
+  // (zero-reach-mass groups), but coerce here too so one bad cell can't crash
+  // the whole file.
+  static double _round(double v) {
+    if (!v.isFinite) return 0.0;
+    return (v * 1000).roundToDouble() / 1000;
+  }
 }
 
 /// A scenario's slice of the library (one preflop range pair).
