@@ -455,6 +455,12 @@ void _walk(
     // RELATIVE to the node, so a single-size tree yields a bare 'bet' that no
     // live faced-bet key ever matches — bucket the faced bet by ABSOLUTE
     // pot-fraction instead. Non-bet actions keep their canonical label.
+    // KNOWN GAP (code-review 2026-06-29): an all-in faced action is labelled
+    // 'facing_allin' here, but the live lookup (_heroFacing in villain_range)
+    // maps a villain shove to facing_bet_<bucket> (opening) or facing_raise — so
+    // 'facing_allin' cells are currently UNREACHABLE and hero-faces-shove spots
+    // miss the GTO FACT. Fix = label an all-in like the live path; it needs a
+    // re-solve to take effect, so it's deferred to the next solve cycle.
     final facingAct = canon[ai].startsWith('bet')
         ? 'bet_${betSizeBucket(_betFrac(actions[ai], position, spr))}'
         : canon[ai];
@@ -507,7 +513,12 @@ void main(List<String> args) {
     final c = parseCard(args[1].substring(i, i + 2));
     if (c >= 0) flop.add(c);
   }
-  final spr = double.tryParse(args[2]) ?? 6.0;
+  final spr = double.tryParse(args[2]);
+  if (spr == null) {
+    stderr.writeln('ERROR: <flopSpr> must be a number (e.g. 6), got "${args[2]}". '
+        'The 3rd arg is the flop SPR now, not an sprBucket name.');
+    exit(64);
+  }
   final maxLen = args.length > 3 ? int.tryParse(args[3]) ?? 5 : 5;
   final pot0 = args.length > 4 ? double.tryParse(args[4]) ?? 10.0 : 10.0;
   final cells = tabulateSpot(root,

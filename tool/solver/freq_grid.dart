@@ -228,6 +228,17 @@ void _writeLibrary(Map<String, dynamic> results) {
   }
   final merged = _mergeCells(all)
     ..sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
+  // Post-merge empty guard: _mergeCells drops zero-reach singletons + zero-mass
+  // groups, so a non-empty `all` can still collapse to []. The pre-merge guard
+  // above only catches the no-matching-spots case — guard the actual written
+  // value too, never clobbering the shipped library with 0 cells.
+  if (merged.isEmpty) {
+    stderr.writeln('ABORT: $usedSpots matching spot(s) all tabulated to '
+        'zero-mass/zero-reach cells — refusing to overwrite $kLibraryPath '
+        'with 0 cells.');
+    exitCode = 1;
+    return;
+  }
   final streets = (merged.map((c) => c.street).toSet().toList()..sort()).join('+');
   final lib = FreqLibrary(
     meta: {

@@ -104,20 +104,25 @@ class _SolveConfig {
 _SolveConfig _config() {
   final e = Platform.environment;
   final accuracy = double.tryParse(e['TLSOLVE_ACCURACY'] ?? '') ?? 0.5;
+  // Positive-int env knob with a fallback. A bare `int.tryParse(..) ?? default`
+  // lets "0"/"-1" through (tryParse returns non-null), which would emit an
+  // invalid solver command (e.g. set_thread_num 0 crashes the solve). Reject <1.
+  int posInt(String key, int dflt) {
+    final v = int.tryParse(e[key] ?? '');
+    return (v != null && v > 0) ? v : dflt;
+  }
   // 200 iters reaches ~0.5% on these deep single-bet spots (60 only reached ~5%).
-  final maxIter = int.tryParse(e['TLSOLVE_MAXITER'] ?? '') ?? 200;
+  final maxIter = posInt('TLSOLVE_MAXITER', 200);
   // 'single' is the default: multi-bet OOMs on deep (SPR 15-20) spots; single
   // converges to ~0.5% within the tree's action space. Use 'multi' for shallow spots.
   var bets = (e['TLSOLVE_BETS'] ?? 'single').toLowerCase();
   const known = {'single', 'multi', 'vol', 'turn'};
   if (!known.contains(bets)) bets = 'single';
-  final timeoutS = int.tryParse(e['TLSOLVE_TIMEOUT_S'] ?? '') ?? 900;
-  // Worker threads. Default 16; lower (e.g. 8) to cut PEAK MEMORY on the
-  // branchiest turn-raise trees — low/connected boards (9-5-2, 8-7-6) OOM mid-
-  // solve at 16 threads and the solver dies with an access violation
-  // (exit -1073741819 / 0xC0000005). Fewer threads = less concurrent working
-  // memory = the spot completes. Result is identical (not in the cache tag).
-  final threads = int.tryParse(e['TLSOLVE_THREADS'] ?? '') ?? 16;
+  final timeoutS = posInt('TLSOLVE_TIMEOUT_S', 900);
+  // Worker threads. Default 16; lower (e.g. 8) to cut PEAK MEMORY / avoid the
+  // concurrency-race access violation (exit -1073741819) on the branchiest
+  // turn-raise trees. Result is identical (not in the cache tag).
+  final threads = posInt('TLSOLVE_THREADS', 16);
   return _SolveConfig(accuracy, maxIter, bets, timeoutS, threads);
 }
 
