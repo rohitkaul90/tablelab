@@ -285,49 +285,92 @@ Future<void> main(List<String> args) async {
     }
   }
 
-  var solved = 0, skipped = 0, failed = 0;
-  final sw = Stopwatch()..start();
-  for (var i = 0; i < spots.length; i++) {
-    if (limit != null && solved >= limit) break;
-    final s = spots[i];
-    final key = _spotKey(s.flop, s.spr);
-    if (results.containsKey(key)) {
+  // --parallel N: run up to N spots concurrently (each console_solver still uses
+  // TLSOLVE_THREADS worker threads). ONE orchestrator process; the parent isolate
+  // is the single writer of results.json. Default 1 = the old sequential run. On
+  // an M-core box set N ≈ M / TLSOLVE_THREADS (e.g. 96 vCPU / 8t → --parallel 12).
+  final parIdx = args.indexOf('--parallel');
+  final parallel = (parIdx >= 0 && parIdx + 1 < args.length
+          ? int.tryParse(args[parIdx + 1])
+          : null) ??
+      1;
+  if (parallel < 1) {
+    stderr.writeln('--parallel must be >= 1');
+    exitCode = 64;
+    return;
+  }
+
+  // Spots still needing a solve (cached ones skipped), capped to --limit if set.
+  // Each pending spot is claimed and solved exactly once by exactly one worker.
+  final pending = <({String flop, String spr, double sprVal})>[];
+  var skipped = 0;
+  for (final s in spots) {
+    if (results.containsKey(_spotKey(s.flop, s.spr))) {
       skipped++;
-      continue;
-    }
-    stdout.writeln('[${i + 1}/${spots.length}] solving ${s.flop} SPR ${s.spr} …');
-    try {
-      final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
-      final tree = await solveRoot(spot,
-          dumpRounds: kDumpRounds, betProfile: kBetProfile);
-      // pot is fixed at 10 in _spot; effStack = spr·pot. The tabulator re-derives
-      // the SPR bucket per street (flop vs the shallower turn after chips go in).
-      final cells = tabulateSpot(tree.root,
-          board: flopInts(s.flop),
-          pot0: spot.pot.toDouble(),
-          effStack: spot.effStack.toDouble(),
-          maxBoardLen: 4);
-      results[key] = {
-        'flop': s.flop,
-        'spr': s.spr,
-        // Stamp the profile/dump-rounds so a library rebuild folds in ONLY
-        // matching-profile spots — a results.json carried over from a different
-        // profile (e.g. v1 'multi') must not blend its cells into this library.
-        'profile': kBetProfile,
-        'dump_rounds': kDumpRounds,
-        'exploitability': tree.exploitability,
-        'wall_ms': tree.wallMs,
-        'cells': [for (final c in cells) c.toJson()],
-      };
-      _saveResults(results); // checkpoint after every solve (resumable)
-      solved++;
-      stdout.writeln('    ✓ ${cells.length} cells · expl '
-          '${tree.exploitability?.toStringAsFixed(2)}% · ${tree.wallMs ~/ 1000}s');
-    } catch (e) {
-      failed++;
-      stdout.writeln('    ✗ $e');
+    } else if (limit == null || pending.length < limit) {
+      pending.add(s);
     }
   }
+
+  var solved = 0, failed = 0, started = 0, next = 0;
+  final total = pending.length;
+  final sw = Stopwatch()..start();
+  stdout.writeln('Solving $total spot(s) — $parallel at a time, '
+      '$skipped cached/skipped.');
+
+  // Each worker drains the shared queue; `parallel` of them run concurrently. The
+  // ONLY suspension point is `await solveRoot` (where the external solvers run in
+  // parallel) — claiming an index (next++) and the results-mutate + _saveResults
+  // block both run WITHOUT an await, so they are atomic w.r.t. other workers under
+  // Dart's single-threaded isolate model: no race on results.json, no concurrent
+  // map modification. Each console_solver call uses its own temp dir (see
+  // _invokeSolver), so parallel solves never collide on dump files.
+  Future<void> worker() async {
+    while (true) {
+      final i = next;
+      if (i >= total) break;
+      next++;
+      final s = pending[i];
+      final n = ++started;
+      final key = _spotKey(s.flop, s.spr);
+      stdout.writeln('[$n/$total] solving ${s.flop} SPR ${s.spr} …');
+      try {
+        final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
+        final tree = await solveRoot(spot,
+            dumpRounds: kDumpRounds, betProfile: kBetProfile);
+        // --- atomic block (no await until the next loop turn) ---
+        // pot is fixed at 10 in gridSpot; effStack = spr·pot. The tabulator
+        // re-derives the SPR bucket per street (flop vs the shallower turn after
+        // chips go in).
+        final cells = tabulateSpot(tree.root,
+            board: flopInts(s.flop),
+            pot0: spot.pot.toDouble(),
+            effStack: spot.effStack.toDouble(),
+            maxBoardLen: 4);
+        results[key] = {
+          'flop': s.flop,
+          'spr': s.spr,
+          // Stamp the profile/dump-rounds so a library rebuild folds in ONLY
+          // matching-profile spots — a results.json carried over from a different
+          // profile (e.g. v1 'multi') must not blend its cells into this library.
+          'profile': kBetProfile,
+          'dump_rounds': kDumpRounds,
+          'exploitability': tree.exploitability,
+          'wall_ms': tree.wallMs,
+          'cells': [for (final c in cells) c.toJson()],
+        };
+        _saveResults(results); // checkpoint after every solve (resumable)
+        solved++;
+        stdout.writeln('    ✓ [${s.flop} ${s.spr}] ${cells.length} cells · expl '
+            '${tree.exploitability?.toStringAsFixed(2)}% · ${tree.wallMs ~/ 1000}s');
+      } catch (e) {
+        failed++;
+        stdout.writeln('    ✗ [${s.flop} ${s.spr}] $e');
+      }
+    }
+  }
+
+  await Future.wait([for (var w = 0; w < parallel; w++) worker()]);
   sw.stop();
   stdout.writeln('\nGrid: solved $solved, skipped $skipped, failed $failed '
       'in ${sw.elapsed.inMinutes}m.');
