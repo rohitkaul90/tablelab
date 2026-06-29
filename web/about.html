@@ -7,7 +7,7 @@
   <meta name="description" content="TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record hands, run equity, and get AI coaching — on Android and the web.">
   <link rel="canonical" href="https://tablelab.app/about">
   <meta property="og:title" content="TableLab — Poker Bankroll Tracker & AI Coaching">
-  <meta property="og:description" content="Track sessions, record hands, and get AI-powered coaching. Free on Android and the web.">
+  <meta property="og:description" content="Track sessions, record hands, and get solver-grounded AI coaching. Free on Android and the web.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://tablelab.app/about">
   <meta property="og:site_name" content="TableLab">
@@ -56,7 +56,7 @@
         "operatingSystem": "Android, Web Browser",
         "url": "https://tablelab.app",
         "downloadUrl": "https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker",
-        "description": "TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record full hand histories, run a range-vs-range equity calculator offline, track player reads, and get AI-powered coaching on your sessions and individual hands.",
+        "description": "TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record full hand histories, run a range-vs-range equity calculator offline, track player reads, and get solver-grounded AI coaching on your sessions and individual hands.",
         "image": "https://tablelab.app/icons/Icon-512.png",
         "featureList": [
           "Cash game and tournament session tracking",
@@ -162,6 +162,7 @@
     <nav class="site-nav">
       <a class="link" href="#features">Features</a>
       <a class="link" href="#how">How it works</a>
+      <a class="link" href="/blog">Blog</a>
       <a class="link" href="/privacy">Privacy</a>
       <a class="btn btn-primary" href="/">Open App</a>
     </nav>
@@ -209,7 +210,7 @@
           <div class="feature">
             <span class="ic">✨</span>
             <strong>AI Coaching</strong>
-            <span>Get Claude-powered analysis of your sessions and individual hands, with concrete, actionable feedback.</span>
+            <span>Claude explains your sessions and hands in plain English, grounded in real equity and solver-derived GTO numbers, not guesses. It flags your leaks and says when a spot is a judgment call.</span>
           </div>
           <div class="feature">
             <span class="ic">🧮</span>
@@ -245,9 +246,24 @@
           <div class="step">
             <div class="num">3</div>
             <strong>Get coached</strong>
-            <span>Let the AI debrief your play and surface your leaks.</span>
+            <span>The AI explains your spots with real equity and GTO numbers, and surfaces your leaks.</span>
           </div>
         </div>
+      </section>
+
+      <section id="how-analysis-works">
+        <h2 class="section-title">How our analysis works</h2>
+        <p class="lead"><strong>A language model is not a solver, and we don't pretend otherwise.</strong>
+        TableLab keeps two layers cleanly separated, so you always know which is which.</p>
+        <p>The <strong>numbers are computed, not guessed</strong>: equity and pot odds from an on-device
+        engine, and GTO action frequencies from a real CFR solver (TexasSolver) we run offline and ship
+        with the app. Those figures are handed to the AI as hard facts.</p>
+        <p>The <strong>AI's job is the words</strong>: it explains those numbers in plain English and
+        reasons about the spots a solver can't tractably cover, like multiway pots and deep live
+        decisions. It's barred from stating a GTO number it wasn't given, and it tells you when a read is
+        a judgment call rather than math.</p>
+        <p style="color: var(--text-soft);">That separation is the whole basis for trusting the output.
+        We wrote about why it matters in <a href="/blog/can-ai-solve-poker">Can AI solve poker?</a></p>
       </section>
 
       <section id="compare">
@@ -345,6 +361,7 @@
       <div class="links">
         <a href="/">Open App</a>
         <a href="/about">About</a>
+        <a href="/blog">Blog</a>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="mailto:support@tablelab.app">Contact</a>
