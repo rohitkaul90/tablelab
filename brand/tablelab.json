@@ -1,0 +1,48 @@
+{
+  "name": "tablelab",
+  "description": "Solver-grounded, anti-AI-slop voice for TableLab — a live cash + tournament poker bankroll tracker. Insider peer register for numerate live players. Programmatic mirror of project-root VOICE.md + BRAND.md.",
+  "brand": "TableLab (operated by MagpiQ)",
+  "industry": "Poker / sports-and-gaming software (bankroll tracking + solver-grounded analysis)",
+  "audience": "Serious recreational-to-semi-pro LIVE poker players (cash + MTT) who track results — numerate, advanced, skeptical of marketing and of 'AI coaching' claims; value accuracy and data ownership",
+  "mission": "Help live cash and tournament players track their results honestly and understand their game with solver-grounded analysis — no hype, no black box",
+  "tone_dimensions": {
+    "funny_serious": 0.65,
+    "formal_casual": 0.70,
+    "respectful_irreverent": 0.40,
+    "enthusiastic_matter_of_fact": 0.70
+  },
+  "readability": {
+    "flesch_grade_min": 8,
+    "flesch_grade_max": 11,
+    "flesch_ease_min": 50,
+    "flesch_ease_max": 65
+  },
+  "style": {
+    "sentence_length_mean": 16,
+    "sentence_length_std": 7,
+    "contraction_frequency": 0.9,
+    "passive_voice_max_pct": 10,
+    "vocabulary_tier": "technical",
+    "summary_label": "TL;DR"
+  },
+  "voice_samples": [
+    "https://tablelab.app/about"
+  ],
+  "do": [
+    "Separate solver output (deterministic GTO facts) from AI prose/heuristics explicitly whenever both appear in a piece",
+    "Show the math with its assumptions — state equity/EV/frequency alongside SPR, ranges, and position, never floating free",
+    "Speak as the brand 'we' and address the reader directly as 'you'",
+    "Use real, checkable examples — actual hands, ranges, and sample sizes over generalities",
+    "Use poker lingo (hero/villain/nit/SPR/ICM/MDF) naturally for an advanced audience; define a term only when a piece reaches a broader reader",
+    "Be honest about limits — say plainly when a spot is multiway or otherwise unsolvable and the analysis is heuristic"
+  ],
+  "dont": [
+    "Don't imply the AI/LLM 'solves' poker or computes GTO frequencies itself — a CFR solver (TexasSolver) does that; the AI only explains and reasons heuristically",
+    "Don't use AI-hype phrasing: 'AI-powered coaching', 'AI poker coach', 'GTO AI', 'our AI solver', 'powered by AI', 'leverage AI', 'revolutionary', 'game-changing', 'next-generation', 'cutting-edge'",
+    "Don't promise outcomes — no 'AI will fix your game', 'guaranteed edge', 'crush the games', 'unlock your potential'",
+    "Don't write sentences longer than 30 words, or paragraphs longer than 150 words",
+    "Don't use first-person singular (I/me); the brand voice is 'we'",
+    "Don't open with slop connectives — 'Let's dive in', \"In today's...\", \"It's no secret that\", 'game-changer'",
+    "Don't publish unsourced statistics or any invented solver number"
+  ]
+}
