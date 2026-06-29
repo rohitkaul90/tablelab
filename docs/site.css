@@ -198,6 +198,39 @@ ul.plain li { margin-bottom: 6px; color: var(--text-soft); }
   color: var(--text-muted);
 }
 
+/* ── Lead / definition ─────────────────────────────────────────────────────── */
+
+.lead { font-size: 1.12rem; color: var(--text-soft); margin: 0 0 14px; }
+.lead strong { color: rgba(255, 255, 255, 0.92); }
+
+/* ── Comparison table ──────────────────────────────────────────────────────── */
+
+.compare-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  min-width: 520px;
+}
+table.compare th, table.compare td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--surface-border);
+}
+table.compare thead th {
+  color: var(--secondary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+table.compare thead th:nth-child(2) { color: var(--primary); }
+table.compare tbody td { color: var(--text-muted); }
+table.compare tbody td:first-child { color: var(--text-soft); font-weight: 500; }
+table.compare tbody td:nth-child(2) { color: var(--text); font-weight: 600; }
+table.compare tbody tr:last-child td { border-bottom: none; }
+.note { color: var(--text-muted); font-size: 0.9rem; margin-top: 14px; }
+
 /* ── Footer ────────────────────────────────────────────────────────────────── */
 
 .site-footer {
