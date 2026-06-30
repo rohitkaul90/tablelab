@@ -214,7 +214,24 @@ This cycle = **deep-SPR** (`kSprReps` gained `'deep': 15.0`; same BTN-vs-BB scen
 
 | Cycle | Code prep | Notes |
 |---|---|---|
-| **River** | ✅ **prep DONE** — invoke with `TLSOLVE_PROFILE=river` (no code edits; dump-rounds is derived from the profile → 3, so `maxBoardLen=5`). Adds a faithful-river bet profile (river raise) in `run_solver.dart`; `freq_grid` reads the profile from env (default stays `turn`); the tabulator was already river-capable. River eval-coverage spec templates wait in `gen_gto_spots.dart` (report ✗ until river cells exist, then `--write`). | Heaviest tree (every street can check-raise) — biggest RAM/time consumer; **trial at `--parallel 2` first**, watch `free -g`. Likely wants the 96-vCPU box once the spot-quota increase clears |
+| **River** | ✅ prep DONE + **3-spot trial done (2026-06-30)**. Invoke `TLSOLVE_PROFILE=river` (dump-rounds derived → 3). **River converges ≤0.5% and fits 256 GB** (deep spot 1082s solve, ~89 GB peak). **TWO trial findings below.** | **⚠️ Full solve BLOCKED on a tabulation code fix — do NOT run it yet** (see below) |
+
+**River trial findings (must address before a full river solve):**
+1. **MANDATORY Dart heap flag.** The default Dart heap OOMs parsing the medium/deep river
+   dumps *even with 228 GB system RAM free* (`evacuation failed / Exhausted heap space` =
+   Dart VM heap, not system OOM). Always run river as
+   `dart --old_gen_heap_size=200000 run tool/solver/freq_grid.dart …`.
+2. **⛔ Parse+tabulate is a SERIAL single-isolate bottleneck — the real blocker.** A 3-spot
+   trial took **91 min, but only ~25 min was solving** — the other ~66 min was the Dart-side
+   `jsonDecode(readAsStringSync())` + `tabulateSpot` of the huge river dumps, which runs
+   SERIALLY in one isolate. So `--parallel` does NOT speed it up (it only overlaps the
+   external solvers) and **a bigger box does not help**. A full 78-spot river solve as-is is
+   ~20-30 h of un-parallelizable Dart work. **Fix the tabulation pipeline first**
+   (per-spot `Isolate.run` parse+tabulate / streamed parse / smaller dump), then trial again.
+
+**Golden AMI:** `ami-04c312a0a89b077c2` (us-east-2) bakes the toolchain + built
+`console_solver` + flutter deps — launch from it (`--image-id ami-04c312a0a89b077c2`) to skip
+§2 + §4 entirely; just `git archive` the branch over the baked-in repo for code changes.
 | **New scenario** (3-bet / other openers / BvB) | Parameterize `scenarioRanges()` beyond hardcoded BTN-vs-BB; thread a scenario key through the spot/library | Biggest gap (1 of ~8 scenarios); largest code change |
 | **`facing_allin` relabel** | Relabel all-ins like the live `facing_bet_*`/`facing_raise` path so shove cells are reachable | Cheap; bundle with any solve |
 | **Asymmetric per-street SPR** | Match the live asymmetric-stack lookup against the symmetric offline solve | Pre-existing latent miss (flop too) |

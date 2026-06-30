@@ -63,6 +63,13 @@ final String kBetProfile =
 /// One knob = no mismatch, and only the two valid dump-rounds are reachable.
 ///   'turn'  → flop+turn       (dump_rounds 2). The shipped default.
 ///   'river' → flop+turn+river (dump_rounds 3; the deepest tree, big-RAM box).
+/// RIVER OPERATOR NOTES (from the 2026-06-30 trial — see tool/solver/VCPU_RUNBOOK.md):
+///  - River REQUIRES a big Dart heap or it OOMs parsing the dumps (despite free system
+///    RAM): run `dart --old_gen_heap_size=200000 run tool/solver/freq_grid.dart …`.
+///  - The Dart-side jsonDecode+tabulate of river dumps is a SERIAL single-isolate
+///    bottleneck (~66 of 91 min on a 3-spot trial) that `--parallel` does NOT relieve —
+///    a full river solve needs the tabulation parallelized (per-spot Isolate.run) /
+///    lightened first. Don't launch a full river grid until that's fixed.
 /// This map is ALSO the profile allow-list (a typo'd TLSOLVE_PROFILE is rejected
 /// in main() rather than falling through to 'multi' in `_betSizes`).
 const Map<String, int> kProfileDumpRounds = {'turn': 2, 'river': 3};
