@@ -12,6 +12,10 @@ import 'dart:io';
 
 import 'solver_input.dart';
 
+/// One-shot guard so the resolved solver binary is logged once per process, not
+/// per spot. See the [_invokeSolver] log site.
+bool _loggedBin = false;
+
 class SolveResult {
   final List<String> actions; // e.g. ["CHECK", "BET 50.0", ...]
   final List<double> probs; // hero combo's strategy, aligned to actions
@@ -80,6 +84,20 @@ String _sourceDir() {
   throw StateError(
       'Set TEXASSOLVER_DIR or tool/solver/solver_config.json {"sourceDir": "..."} '
       'to the TexasSolver `source` dir (the one containing vsbuild/ and resources/).');
+}
+
+/// Resolve the built `console_solver` binary cross-platform. Windows builds to
+/// `vsbuild/console_solver.exe`; the Linux/macOS CMake out-of-source build (the
+/// big-RAM vCPU box used for deep-cash / river solves) produces
+/// `build/console_solver`. `TEXASSOLVER_BIN` overrides both.
+String _solverBin(String dir) {
+  final override = Platform.environment['TEXASSOLVER_BIN'];
+  if (override != null && override.trim().isNotEmpty) return override.trim();
+  if (Platform.isWindows) return '$dir/vsbuild/console_solver.exe';
+  for (final c in ['$dir/build/console_solver', '$dir/console_solver']) {
+    if (File(c).existsSync()) return c;
+  }
+  return '$dir/build/console_solver';
 }
 
 /// Solve parameters, env-overridable so a calibration round can tighten without
@@ -269,9 +287,17 @@ Future<_RawSolve> _invokeSolver(
     SolverSpot spot, int dumpRounds, bool verbose,
     {String? betProfile}) async {
   final dir = _sourceDir();
-  final bin = '$dir/vsbuild/console_solver.exe';
+  final bin = _solverBin(dir);
   if (!File(bin).existsSync()) {
-    throw StateError('console_solver.exe not found at $bin — build it first.');
+    throw StateError('console_solver not found at $bin — build it first.');
+  }
+  // Log the resolved binary ONCE per run. _solverBin honors a TEXASSOLVER_BIN
+  // override verbatim (needed for the Linux build path), so a stale env var
+  // could point at an older solver and silently bake wrong frequencies into the
+  // shipped library — surface the path so a wrong binary is visible in the log.
+  if (!_loggedBin) {
+    _loggedBin = true;
+    stderr.writeln('[solver] using binary: $bin');
   }
   final tmp = Directory.systemTemp.createTempSync('tlsolve_');
   try {
