@@ -89,25 +89,41 @@ class _SolveConfig {
   final int maxIter;
   final String betProfile; // 'multi' (tiered, realistic) | 'single' (fast POC)
   final int timeoutS; // per-spot wall-clock cap
+  final int threads; // solver worker threads (peak memory scales with this)
 
-  _SolveConfig(this.accuracy, this.maxIter, this.betProfile, this.timeoutS);
+  _SolveConfig(
+      this.accuracy, this.maxIter, this.betProfile, this.timeoutS, this.threads);
 
   /// Compact descriptor — folded into the batch cache signature so a settings
-  /// change invalidates cached solves (they'd otherwise be served stale).
+  /// change invalidates cached solves (they'd otherwise be served stale). Thread
+  /// count is intentionally EXCLUDED — it changes solve speed/peak memory, not
+  /// the GTO result, so it must not invalidate cached solves.
   String get tag => 'acc$accuracy|it$maxIter|$betProfile';
 }
 
 _SolveConfig _config() {
   final e = Platform.environment;
   final accuracy = double.tryParse(e['TLSOLVE_ACCURACY'] ?? '') ?? 0.5;
+  // Positive-int env knob with a fallback. A bare `int.tryParse(..) ?? default`
+  // lets "0"/"-1" through (tryParse returns non-null), which would emit an
+  // invalid solver command (e.g. set_thread_num 0 crashes the solve). Reject <1.
+  int posInt(String key, int dflt) {
+    final v = int.tryParse(e[key] ?? '');
+    return (v != null && v > 0) ? v : dflt;
+  }
   // 200 iters reaches ~0.5% on these deep single-bet spots (60 only reached ~5%).
-  final maxIter = int.tryParse(e['TLSOLVE_MAXITER'] ?? '') ?? 200;
+  final maxIter = posInt('TLSOLVE_MAXITER', 200);
   // 'single' is the default: multi-bet OOMs on deep (SPR 15-20) spots; single
   // converges to ~0.5% within the tree's action space. Use 'multi' for shallow spots.
   var bets = (e['TLSOLVE_BETS'] ?? 'single').toLowerCase();
-  if (bets != 'single' && bets != 'multi' && bets != 'vol') bets = 'single';
-  final timeoutS = int.tryParse(e['TLSOLVE_TIMEOUT_S'] ?? '') ?? 900;
-  return _SolveConfig(accuracy, maxIter, bets, timeoutS);
+  const known = {'single', 'multi', 'vol', 'turn'};
+  if (!known.contains(bets)) bets = 'single';
+  final timeoutS = posInt('TLSOLVE_TIMEOUT_S', 900);
+  // Worker threads. Default 16; lower (e.g. 8) to cut PEAK MEMORY / avoid the
+  // concurrency-race access violation (exit -1073741819) on the branchiest
+  // turn-raise trees. Result is identical (not in the cache tag).
+  final threads = posInt('TLSOLVE_THREADS', 16);
+  return _SolveConfig(accuracy, maxIter, bets, timeoutS, threads);
 }
 
 /// The current solve-config tag (for batch.dart's cache signature).
@@ -118,11 +134,34 @@ String solverConfigTag() => _config().tag;
 /// 'multi': TIERED for realism — flop (the decision we read) gets multiple sizes
 /// + a raise; turn+river get a single size to bound the deep-tree explosion at
 /// high SPR (keeps the deepest spots tractable / out of OOM territory).
+/// 'turn': the FREQUENCY-LIBRARY turn-cell profile (DCE Q1 phase 2b). Same as
+/// 'multi' on the flop, but the TURN also gets a raise + a second bet size so the
+/// turn's GTO frequencies are FAITHFUL — without a turn raise the solver can't
+/// check-raise and compensates by donk-leading the turn ~80% (the same distortion
+/// 'vol' has on the flop), which would poison a turn frequency library. The RIVER
+/// stays single-size + allin (cheap) — river cells aren't tabulated this phase
+/// (dump_rounds 2), so the deepest/branchiest layer is kept lean to bound the
+/// tree. Costs more than 'multi' (the turn raise widens the tree); OOM risk at
+/// medium SPR is measured by a calibration solve before the full grid.
 /// 'vol': board-VOLATILITY/sizing calibration — several bet sizes per street so
 /// the GTO size CHOICE (vs texture) is observable, but NO raise/allin so the tree
 /// stays tractable at deep single-raised SPR (~15) where 'multi' OOMs. 'single'
 /// can't be used for sizing calibration (it offers only one size).
 String _betSizes(String profile) {
+  // Shared tiers so 'multi' and 'turn' define the flop/river ONCE (they differ
+  // only on the turn). Flop tiered = the decision we read most; lean street =
+  // single size + allin to bound tree depth.
+  void flopTiered(StringBuffer b, String pos) {
+    b.writeln('set_bet_sizes $pos,flop,bet,33,75');
+    b.writeln('set_bet_sizes $pos,flop,raise,60');
+    b.writeln('set_bet_sizes $pos,flop,allin');
+  }
+
+  void leanStreet(StringBuffer b, String pos, String street) {
+    b.writeln('set_bet_sizes $pos,$street,bet,66');
+    b.writeln('set_bet_sizes $pos,$street,allin');
+  }
+
   final b = StringBuffer();
   for (final pos in ['oop', 'ip']) {
     if (profile == 'single') {
@@ -134,14 +173,20 @@ String _betSizes(String profile) {
       b.writeln('set_bet_sizes $pos,flop,bet,33,75');
       b.writeln('set_bet_sizes $pos,turn,bet,50,100');
       b.writeln('set_bet_sizes $pos,river,bet,75');
+    } else if (profile == 'turn') {
+      flopTiered(b, pos);
+      // Turn: ONE bet size + a raise (→ check-raise exists). The raise is what
+      // makes turn frequencies faithful; a second turn size tripled tree cost and
+      // timed out at medium SPR in calibration, so it's dropped (single size).
+      b.writeln('set_bet_sizes $pos,turn,bet,66');
+      b.writeln('set_bet_sizes $pos,turn,raise,60');
+      b.writeln('set_bet_sizes $pos,turn,allin');
+      leanStreet(b, pos, 'river'); // river not tabulated in phase 2b
     } else {
-      b.writeln('set_bet_sizes $pos,flop,bet,33,75');
-      b.writeln('set_bet_sizes $pos,flop,raise,60');
-      b.writeln('set_bet_sizes $pos,flop,allin');
-      for (final street in ['turn', 'river']) {
-        b.writeln('set_bet_sizes $pos,$street,bet,66');
-        b.writeln('set_bet_sizes $pos,$street,allin');
-      }
+      // 'multi': flop tiered; turn + river lean (no turn raise — v1).
+      flopTiered(b, pos);
+      leanStreet(b, pos, 'turn');
+      leanStreet(b, pos, 'river');
     }
   }
   return b.toString();
@@ -158,7 +203,7 @@ set_range_ip ${spot.rangeIp}
 set_range_oop ${spot.rangeOop}
 ${_betSizes(profile)}set_allin_threshold 0.67
 build_tree
-set_thread_num 16
+set_thread_num ${cfg.threads}
 set_accuracy ${cfg.accuracy}
 set_max_iteration ${cfg.maxIter}
 set_print_interval 10

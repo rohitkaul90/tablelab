@@ -783,14 +783,10 @@ String? _heroFacing(StreetData street, int heroSeat, int potBeforeStreet) {
   }
 }
 
-/// Bucket a faced bet's pot-fraction into the library's size labels. SOFT: the
-/// solver tree used ~33/75 sizes; live bets are arbitrary.
-String _facingBetBucket(double? frac) {
-  if (frac == null) return 'mid';
-  if (frac <= 0.45) return 'small';
-  if (frac <= 0.70) return 'mid';
-  return 'big';
-}
+/// Bucket a faced bet's pot-fraction into the library's size labels. Delegates
+/// to the shared [betSizeBucket] (decision_context.dart) so the live lookup and
+/// the offline tabulator bucket bets IDENTICALLY — see that function's note.
+String _facingBetBucket(double? frac) => betSizeBucket(frac);
 
 /// The largest outstanding bet/raise hero faced on [street] before his decision
 /// (the MDF FACT's bet input), or null when hero faced no aggression. The MAX

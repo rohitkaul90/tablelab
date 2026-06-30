@@ -147,7 +147,13 @@ interface Violation {
 
 // maxRetries (with the SDK's exponential backoff) so a transient connection
 // blip retries instead of erroring the spot out — fewer errored spots per run.
-const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")!, maxRetries: 4 });
+// Lazy singleton so importing this module (e.g. from score.test.ts to unit-test
+// the pure helpers) reads no env var and constructs no SDK client — only the
+// scoring path that actually calls Claude pays for it.
+let _client: Anthropic | null = null;
+function client(): Anthropic {
+  return (_client ??= new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")!, maxRetries: 4 }));
+}
 
 // deno-lint-ignore no-explicit-any
 function toolInput(message: any): Record<string, unknown> | null {
@@ -158,7 +164,7 @@ function toolInput(message: any): Record<string, unknown> | null {
 /** Call the production coaching prompt exactly as analyze-hand does. */
 async function runCoaching(fx: Fixture): Promise<Record<string, unknown>> {
   const { prompt } = buildPrompt(fx.hand, fx.reads ?? [], fx.equityFacts ?? []);
-  const message = await client.messages.create({
+  const message = await client().messages.create({
     model: COACH_MODEL,
     max_tokens: 2000,
     temperature: 0,
@@ -243,7 +249,7 @@ async function extractClaims(fx: Fixture, analysis: Record<string, unknown>): Pr
   }
   const prose = parts.join("\n");
 
-  const message = await client.messages.create({
+  const message = await client().messages.create({
     // NB: claude-opus-4-8 removed temperature/top_p/top_k (400 if sent) — unlike
     // the coach's claude-sonnet-4-6, which still accepts temperature. The judge
     // only proposes claims; the deterministic adjudicator decides, so the lack
@@ -498,27 +504,48 @@ const _coarseAction: Record<string, string> = {
 };
 
 interface ParsedFreqFact {
-  gto: Record<string, number> | null; // coarse action → frequency (0–1)
+  // One coarse-action→frequency mix PER STREET segment the FACT renders
+  // (flop, turn, …). Kept per-street because a multi-street FACT carries a
+  // separate decision per street — summing the same action across streets is
+  // a different decision and would fabricate >100% "frequencies" (a real bug
+  // the turn-coverage spots exposed). For a flop-only FACT this is a 1-element
+  // list, so single-street scoring is byte-identical to before.
+  gtoByStreet: Record<string, number>[] | null;
   multiway: boolean;
 }
 
-// Parse the injected GTO-frequency FACT's mix into coarse action frequencies.
-function parseFreqFact(equityFacts: string[]): ParsedFreqFact {
+// Parse the injected GTO-frequency FACT's mix into per-street coarse-action
+// frequencies. Within a street the small/medium/big bet labels DO sum into one
+// "bet" total (they are the same decision); across streets they do NOT.
+export function parseFreqFact(equityFacts: string[]): ParsedFreqFact {
   const gtoLine = (equityFacts ?? []).find((f) => f.includes("[HEURISTIC — GTO frequency"));
   const multiway = (equityFacts ?? []).some((f) => f.includes("[HEURISTIC — multiway tendency"));
-  if (!gtoLine) return { gto: null, multiway };
-  const freqs: Record<string, number> = {};
+  if (!gtoLine) return { gtoByStreet: null, multiway };
+  // Split into per-street segments: "flop (…): <freqs>; turn (…): <freqs>." —
+  // each freq list runs to the next ";" (street boundary) or "." (FACT end).
+  // The "(…)" descriptor can itself contain a NESTED paren — the air hand class
+  // renders as "air (no real equity)" — so match lazily up to the first "):"
+  // (a hand-class label never contains "):"). A [^)]* here would stop at the
+  // inner ")" and silently drop every air-class spot from the dimension.
+  const segRe = /(?:flop|turn|river) \(.*?\):\s*([^;.\]]*)/g;
   // Longer labels first so "small bet" matches before "bet".
   const re = /(all-in|small bet|medium bet|big bet|bet|check|call|fold|raise)\s*~(\d+)%/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(gtoLine)) !== null) {
-    const coarse = _coarseAction[m[1]];
-    if (coarse) freqs[coarse] = (freqs[coarse] ?? 0) + Number(m[2]) / 100;
+  const byStreet: Record<string, number>[] = [];
+  let seg: RegExpExecArray | null;
+  while ((seg = segRe.exec(gtoLine)) !== null) {
+    const freqs: Record<string, number> = {};
+    let m: RegExpExecArray | null;
+    re.lastIndex = 0;
+    while ((m = re.exec(seg[1])) !== null) {
+      const coarse = _coarseAction[m[1]];
+      if (coarse) freqs[coarse] = (freqs[coarse] ?? 0) + Number(m[2]) / 100;
+    }
+    if (Object.keys(freqs).length) byStreet.push(freqs);
   }
-  return { gto: Object.keys(freqs).length ? freqs : null, multiway };
+  return { gtoByStreet: byStreet.length ? byStreet : null, multiway };
 }
 
-interface FreqClaim {
+export interface FreqClaim {
   action: string; // check | bet | call | fold | raise | allin
   percent?: number | null; // explicit % the coaching stated, if any
   qualifier?: string | null; // always | usually | often | sometimes | rarely | never
@@ -555,7 +582,7 @@ const FREQ_JUDGE_SYSTEM =
 
 async function extractFreqClaims(analysis: Record<string, unknown>): Promise<FreqClaim[]> {
   const text = JSON.stringify(analysis);
-  const resp = await client.messages.create({
+  const resp = await client().messages.create({
     model: JUDGE_MODEL,
     max_tokens: 1024,
     system: FREQ_JUDGE_SYSTEM,
@@ -574,21 +601,27 @@ interface FreqAgreement {
 
 // ±15pt: the FACT is coarse (hand-class aggregate, texture-class) so only a
 // gross contradiction counts. Qualitative claims map to loose bands.
-function checkFrequencyAgreement(parsed: ParsedFreqFact, claims: FreqClaim[]): FreqAgreement {
+export function checkFrequencyAgreement(parsed: ParsedFreqFact, claims: FreqClaim[]): FreqAgreement {
   const violations: string[] = [];
-  if (parsed.gto) {
+  if (parsed.gtoByStreet) {
     for (const c of claims) {
-      const f = parsed.gto[c.action];
-      if (f == null) continue; // action the FACT doesn't list (e.g. raise) — skip
-      const pct = Math.round(f * 100);
+      // The streets whose mix lists this action. The coaching claim carries no
+      // street label, so it is consistent if it agrees with ANY street that
+      // takes the action — a violation requires contradicting them ALL (the
+      // FACT is a coarse soft prior; only gross, unambiguous conflicts count).
+      const fs = parsed.gtoByStreet
+        .map((s) => s[c.action])
+        .filter((f): f is number => f != null);
+      if (fs.length === 0) continue; // action no street lists (e.g. raise) — skip
+      const pcts = fs.map((f) => `~${Math.round(f * 100)}%`).join(" / ");
       if (c.percent != null) {
-        if (Math.abs(c.percent / 100 - f) > 0.15) {
-          violations.push(`coaching states ${c.action} ~${c.percent}% but the GTO FACT is ~${pct}%`);
+        if (fs.every((f) => Math.abs(c.percent! / 100 - f) > 0.15)) {
+          violations.push(`coaching states ${c.action} ~${c.percent}% but the GTO FACT is ${pcts}`);
         }
-      } else if (c.qualifier === "never" && f >= 0.30) {
-        violations.push(`coaching says ${c.action} is never right, but GTO takes it ~${pct}%`);
-      } else if (c.qualifier === "always" && f <= 0.70) {
-        violations.push(`coaching says ${c.action} is always right, but GTO takes it only ~${pct}%`);
+      } else if (c.qualifier === "never" && fs.every((f) => f >= 0.30)) {
+        violations.push(`coaching says ${c.action} is never right, but GTO takes it ${pcts}`);
+      } else if (c.qualifier === "always" && fs.every((f) => f <= 0.70)) {
+        violations.push(`coaching says ${c.action} is always right, but GTO takes it only ${pcts}`);
       }
     }
     return { scored: true, violations };
@@ -845,7 +878,7 @@ async function main() {
         // carried a GTO-frequency / multiway-tendency FACT (else null/unscored).
         const parsedFreq = parseFreqFact(fx.equityFacts ?? []);
         let freqAgreement: FreqAgreement | null = null;
-        if (parsedFreq.gto || parsedFreq.multiway) {
+        if (parsedFreq.gtoByStreet || parsedFreq.multiway) {
           freqAgreement = checkFrequencyAgreement(parsedFreq, await extractFreqClaims(analysis));
         }
         const mark = violations.length === 0 && verdictIssues.length === 0 ? "OK " : "ERR";

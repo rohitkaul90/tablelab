@@ -283,6 +283,21 @@ SprBucket sprBucket(double spr) {
   return SprBucket.deep;
 }
 
+/// Bucket a faced bet's pot-fraction into the GTO-frequency library's coarse
+/// size labels (small / mid / big). SOFT: the solver trees use ~33–75% sizes;
+/// live bets are arbitrary. This is the SINGLE SOURCE shared by the live lookup
+/// (`villain_range._facingBetBucket`) and the offline tabulator
+/// (`tool/solver/freq_tabulate.dart`) so a bet maps to the same bucket on both
+/// sides — otherwise a library cell labelled by one scheme is unreachable by a
+/// lookup keyed with the other (e.g. a single-size turn bet labelled bare 'bet'
+/// never matches a live 'facing_bet_mid'). Null fraction (unknown size) → 'mid'.
+String betSizeBucket(double? frac) {
+  if (frac == null) return 'mid';
+  if (frac <= 0.45) return 'small';
+  if (frac <= 0.70) return 'mid';
+  return 'big';
+}
+
 /// Human label for an SPR commitment bucket (used in the FACT prose).
 String sprBucketLabel(SprBucket b) {
   switch (b) {

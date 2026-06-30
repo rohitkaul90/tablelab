@@ -108,6 +108,96 @@
     "reads": []
   },
   {
+    "id": "gto-t-ip-fbet-marg-md",
+    "file": "tool/eval/samples/gto/gto-t-ip-fbet-marg-md.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "TURN IP facing_bet (BB leads), top pair, medium",
+    "reads": []
+  },
+  {
+    "id": "gto-t-ip-fbet-sdraw-co",
+    "file": "tool/eval/samples/gto/gto-t-ip-fbet-sdraw-co.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "TURN IP facing_bet (BB leads), OESD (strongDraw), committed",
+    "reads": []
+  },
+  {
+    "id": "gto-t-ip-fcheck-air-sh",
+    "file": "tool/eval/samples/gto/gto-t-ip-fcheck-air-sh.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "TURN IP facing_check, air, shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-t-ip-fcheck-strong-md",
+    "file": "tool/eval/samples/gto/gto-t-ip-fcheck-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "TURN IP facing_check, set (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-t-oop-fbet-marg-sh",
+    "file": "tool/eval/samples/gto/gto-t-oop-fbet-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "TURN OOP facing_bet (mid), top pair, shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-t-oop-fbet-wdraw-md",
+    "file": "tool/eval/samples/gto/gto-t-oop-fbet-wdraw-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "TURN OOP facing_bet, wheel gutshot (weakDraw), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-t-oop-fraise-strong-sh",
+    "file": "tool/eval/samples/gto/gto-t-oop-fraise-strong-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "TURN OOP facing_raise, sevens-full (strongMade), shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-t-oop-fta-air-md",
+    "file": "tool/eval/samples/gto/gto-t-oop-fta-air-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "TURN OOP first_to_act (check-through), air, medium",
+    "reads": []
+  },
+  {
+    "id": "gto-t-oop-fta-sdraw-md",
+    "file": "tool/eval/samples/gto/gto-t-oop-fta-sdraw-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "TURN OOP first_to_act (lead), OESD (strongDraw), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-t-oop-fta-strong-md",
+    "file": "tool/eval/samples/gto/gto-t-oop-fta-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "TURN OOP first_to_act (lead), set (strongMade), medium",
+    "reads": []
+  },
+  {
     "id": "pluribus-100b-101-p2",
     "file": "tool/eval/samples/pluribus/pluribus-100b-101.phh",
     "source": "pluribus/100b/101",
