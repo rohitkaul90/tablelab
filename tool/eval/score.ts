@@ -511,7 +511,7 @@ interface ParsedFreqFact {
 // Parse the injected GTO-frequency FACT's mix into per-street coarse-action
 // frequencies. Within a street the small/medium/big bet labels DO sum into one
 // "bet" total (they are the same decision); across streets they do NOT.
-function parseFreqFact(equityFacts: string[]): ParsedFreqFact {
+export function parseFreqFact(equityFacts: string[]): ParsedFreqFact {
   const gtoLine = (equityFacts ?? []).find((f) => f.includes("[HEURISTIC — GTO frequency"));
   const multiway = (equityFacts ?? []).some((f) => f.includes("[HEURISTIC — multiway tendency"));
   if (!gtoLine) return { gtoByStreet: null, multiway };
@@ -535,7 +535,7 @@ function parseFreqFact(equityFacts: string[]): ParsedFreqFact {
   return { gtoByStreet: byStreet.length ? byStreet : null, multiway };
 }
 
-interface FreqClaim {
+export interface FreqClaim {
   action: string; // check | bet | call | fold | raise | allin
   percent?: number | null; // explicit % the coaching stated, if any
   qualifier?: string | null; // always | usually | often | sometimes | rarely | never
@@ -591,7 +591,7 @@ interface FreqAgreement {
 
 // ±15pt: the FACT is coarse (hand-class aggregate, texture-class) so only a
 // gross contradiction counts. Qualitative claims map to loose bands.
-function checkFrequencyAgreement(parsed: ParsedFreqFact, claims: FreqClaim[]): FreqAgreement {
+export function checkFrequencyAgreement(parsed: ParsedFreqFact, claims: FreqClaim[]): FreqAgreement {
   const violations: string[] = [];
   if (parsed.gtoByStreet) {
     for (const c of claims) {
