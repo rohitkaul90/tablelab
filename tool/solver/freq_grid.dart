@@ -8,9 +8,11 @@
 //
 // PARAMETERISATION:
 //  - SPR regime: shallow (SPR 3 ≈ 25bb) + medium (SPR 6 ≈ 40bb) — the tournament
-//    / short-stack SRP band. Deep-cash (~100bb, flop SPR ~17) is deferred: the
-//    raise-bearing tree OOMs there, and the raise-free 'vol' profile distorts OOP
-//    by ~80% donk-leading (no check-raise).
+//    / short-stack SRP band — PLUS deep (SPR 15 ≈ 100bb deep-cash). The faithful
+//    'turn' raise-bearing tree OOMs at deep SPR on 32 GB, so deep is solved ONLY
+//    on the big-RAM vCPU box (r7a.24xlarge / 768 GB); a local re-solve should
+//    drop 'deep' from kSprReps. Faithfulness is unchanged (same 'turn' profile,
+//    not the donk-distorting raise-free 'vol').
 //  - Bet profile 'turn' (phase 2b): flop tiered (bet 33/75 + raise + allin) AND
 //    the TURN gets a raise + a second size, so turn check-raise exists and turn
 //    frequencies are FAITHFUL. v1's 'multi' lacked a turn raise → turn cells were
@@ -50,9 +52,12 @@ const String kResultsPath = 'tool/solver/freq_grid_results.json';
 const String kLibraryPath = 'assets/gto_freq_library.json';
 
 /// The spot's flop SPR regimes: name → representative SPR. Names match
-/// `decision_context.sprBucket` (3 → shallow, 6 → medium). Deep (SPR>6) deferred:
-/// 'multi' OOMs there and 'vol' distorts OOP (no check-raise) — see header.
-const Map<String, double> kSprReps = {'shallow': 3.0, 'medium': 6.0};
+/// `decision_context.sprBucket` (3 → shallow, 6 → medium, >6 → deep). 'deep'
+/// (SPR 15 ≈ 100bb deep-cash) is the OOM-blocked-locally regime — the faithful
+/// 'turn' tree explodes past 32 GB RAM there; it solves only on the big-RAM
+/// vCPU box (r7a.24xlarge / 768 GB). Drop it back to {shallow, medium} for a
+/// local re-solve.
+const Map<String, double> kSprReps = {'shallow': 3.0, 'medium': 6.0, 'deep': 15.0};
 
 /// ~24 representative flops, hand-picked to span the common texture cells
 /// (suit × pairing × high-card × connectedness). Colliding cells just add mass.

@@ -82,6 +82,20 @@ String _sourceDir() {
       'to the TexasSolver `source` dir (the one containing vsbuild/ and resources/).');
 }
 
+/// Resolve the built `console_solver` binary cross-platform. Windows builds to
+/// `vsbuild/console_solver.exe`; the Linux/macOS CMake out-of-source build (the
+/// big-RAM vCPU box used for deep-cash / river solves) produces
+/// `build/console_solver`. `TEXASSOLVER_BIN` overrides both.
+String _solverBin(String dir) {
+  final override = Platform.environment['TEXASSOLVER_BIN'];
+  if (override != null && override.trim().isNotEmpty) return override.trim();
+  if (Platform.isWindows) return '$dir/vsbuild/console_solver.exe';
+  for (final c in ['$dir/build/console_solver', '$dir/console_solver']) {
+    if (File(c).existsSync()) return c;
+  }
+  return '$dir/build/console_solver';
+}
+
 /// Solve parameters, env-overridable so a calibration round can tighten without
 /// editing code. Defaults are the "full realism" calibration settings.
 class _SolveConfig {
@@ -269,9 +283,9 @@ Future<_RawSolve> _invokeSolver(
     SolverSpot spot, int dumpRounds, bool verbose,
     {String? betProfile}) async {
   final dir = _sourceDir();
-  final bin = '$dir/vsbuild/console_solver.exe';
+  final bin = _solverBin(dir);
   if (!File(bin).existsSync()) {
-    throw StateError('console_solver.exe not found at $bin — build it first.');
+    throw StateError('console_solver not found at $bin — build it first.');
   }
   final tmp = Directory.systemTemp.createTempSync('tlsolve_');
   try {
