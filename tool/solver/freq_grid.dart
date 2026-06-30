@@ -44,23 +44,29 @@ import 'solver_input.dart';
 
 const String kScenario = 'srp_late_v_bb';
 
-// Bet profile + dump-rounds are ENV-OVERRIDABLE so a RIVER cycle runs as
-//   TLSOLVE_PROFILE=river TLSOLVE_DUMPROUNDS=3 dart run tool/solver/freq_grid.dart
+// The bet profile is ENV-OVERRIDABLE so a RIVER cycle runs as
+//   TLSOLVE_PROFILE=river dart run tool/solver/freq_grid.dart
 // without editing code, while the DEFAULT stays the shipped flop+turn config — so
 // a plain rebuild / `--write` with no env reproduces the committed library IN SYNC
 // (no code↔library desync). The spot key embeds profile+dump-rounds, so switching
 // configs never reuses a stale cache from the other (e.g. v1 'multi' or 'turn').
-//   'turn' (dr2): flop tiered + turn raise → faithful flop+turn. The shipped default.
-//   'river' (dr3): + river raise → faithful flop+turn+river (deepest tree, big-RAM box).
-final int kDumpRounds =
-    int.tryParse(Platform.environment['TLSOLVE_DUMPROUNDS'] ?? '') ?? 2;
 final String kBetProfile =
     (Platform.environment['TLSOLVE_PROFILE'] ?? 'turn').toLowerCase();
 
-/// The grid only makes sense with a faithful multi-street profile (it tabulates
-/// per-street frequencies). Guard against a typo'd TLSOLVE_PROFILE silently
-/// solving the wrong tree — `_betSizes` would fall through to 'multi'.
-const Set<String> kGridProfiles = {'turn', 'river'};
+/// Dump-rounds is DERIVED from the profile, never set independently. Each profile
+/// fixes BOTH its bet tree AND how many streets it faithfully solves, so coupling
+/// them removes a footgun: with two separate knobs a mismatched pair silently
+/// solves one tree but tabulates another — dr3 with the lean-river 'turn' profile
+/// bakes DONK-DISTORTED river cells; 'river' with dr2 burns the heaviest solve but
+/// emits zero river cells; dr1/dr0 produce a flop-only library that clobbers the
+/// committed turn cells (the regime-drop guard checks SPR buckets, NOT streets).
+/// One knob = no mismatch, and only the two valid dump-rounds are reachable.
+///   'turn'  → flop+turn       (dump_rounds 2). The shipped default.
+///   'river' → flop+turn+river (dump_rounds 3; the deepest tree, big-RAM box).
+/// This map is ALSO the profile allow-list (a typo'd TLSOLVE_PROFILE is rejected
+/// in main() rather than falling through to 'multi' in `_betSizes`).
+const Map<String, int> kProfileDumpRounds = {'turn': 2, 'river': 3};
+final int kDumpRounds = kProfileDumpRounds[kBetProfile] ?? 2;
 const String kResultsPath = 'tool/solver/freq_grid_results.json';
 // The shipped library lives in assets/ (bundled for app/web, file-readable for
 // the eval baker). The grid writes it there directly.
@@ -327,10 +333,10 @@ Future<void> main(List<String> args) async {
       ? int.tryParse(args[limitIdx + 1])
       : null;
 
-  if (!kGridProfiles.contains(kBetProfile)) {
+  if (!kProfileDumpRounds.containsKey(kBetProfile)) {
     stderr.writeln('TLSOLVE_PROFILE="$kBetProfile" is not a grid profile '
-        '(${kGridProfiles.join('/')}). The grid tabulates per-street GTO '
-        'frequencies and needs a faithful multi-street profile.');
+        '(${kProfileDumpRounds.keys.join('/')}). The grid tabulates per-street '
+        'GTO frequencies and needs a faithful multi-street profile.');
     exitCode = 64;
     return;
   }

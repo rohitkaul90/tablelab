@@ -152,26 +152,28 @@ final List<_Spec> _specs = [
       turn: 'Kd', turnAct: [_bet(2, 6), _bet(0, 16), _call(2, 16)]),
 
   // ── RIVER-decision spots (phase 2c) — TEMPLATES. These exercise river cells,
-  // which only exist after the river solve (TLSOLVE_PROFILE=river dump_rounds 3).
+  // which only exist after the river solve (TLSOLVE_PROFILE=river → dump_rounds 3).
   // Until then gen_gto_spots reports them ✗ and --write skips them. After the
   // solve, tune the river card / hand class to a POPULATED cell, then --write.
-  // Flop + turn both check through (full board, river SPR ≈ flop SPR).
+  // Flop + turn both check through (full board, river SPR ≈ flop SPR). Spread
+  // across the three texture classes (A rainbow-ace / B middling-connected /
+  // C twotone-broadway) so river coverage isn't confined to one board.
   _Spec('gto-r-ip-fcheck-strong-md', _boardA, ['7s', '7c'], 0, 50,
       [_chk(2), _chk(0)], 'RIVER IP facing_check, sevens-full (strongMade), medium',
       turn: '2c', turnAct: [_chk(2), _chk(0)],
       river: '2d', riverAct: [_chk(2), _bet(0, 8)]),
-  _Spec('gto-r-oop-fta-marg-md', _boardA, ['Ac', 'Qd'], 2, 50,
-      [_chk(2), _chk(0)], 'RIVER OOP first_to_act (lead), top pair (marginalMade), medium',
-      turn: '2c', turnAct: [_chk(2), _chk(0)],
-      river: '4s', riverAct: [_bet(2, 8), _call(0, 8)]),
-  _Spec('gto-r-oop-fbet-marg-sh', _boardA, ['Ac', 'Qd'], 2, 30,
-      [_chk(2), _chk(0)], 'RIVER OOP facing_bet (bluff-catch), top pair, shallow',
-      turn: '2c', turnAct: [_chk(2), _chk(0)],
-      river: '4s', riverAct: [_chk(2), _bet(0, 6), _call(2, 6)]),
-  _Spec('gto-r-ip-fbet-strong-md', _boardA, ['7s', '7c'], 0, 50,
-      [_chk(2), _chk(0)], 'RIVER IP facing_bet, sevens-full (strongMade), medium',
-      turn: '2c', turnAct: [_chk(2), _chk(0)],
-      river: '2d', riverAct: [_bet(2, 8), _call(0, 8)]),
+  _Spec('gto-r-oop-fta-marg-md', _boardC, ['Qc', 'Jd'], 2, 50,
+      [_chk(2), _chk(0)], 'RIVER OOP first_to_act (lead), top pair Q (marginalMade), medium',
+      turn: '2s', turnAct: [_chk(2), _chk(0)],
+      river: '3d', riverAct: [_bet(2, 8), _call(0, 8)]),
+  _Spec('gto-r-oop-fbet-marg-sh', _boardB, ['9h', 'Tc'], 2, 30,
+      [_chk(2), _chk(0)], 'RIVER OOP facing_bet (bluff-catch), top pair 9, shallow',
+      turn: '2s', turnAct: [_chk(2), _chk(0)],
+      river: '3d', riverAct: [_chk(2), _bet(0, 6), _call(2, 6)]),
+  _Spec('gto-r-ip-fbet-strong-md', _boardB, ['6h', '6d'], 0, 50,
+      [_chk(2), _chk(0)], 'RIVER IP facing_bet, set of sixes (strongMade), medium',
+      turn: '2s', turnAct: [_chk(2), _chk(0)],
+      river: '3d', riverAct: [_bet(2, 8), _call(0, 8)]),
 ];
 
 PokerHand _buildHand(_Spec s) {
