@@ -147,7 +147,13 @@ interface Violation {
 
 // maxRetries (with the SDK's exponential backoff) so a transient connection
 // blip retries instead of erroring the spot out — fewer errored spots per run.
-const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")!, maxRetries: 4 });
+// Lazy singleton so importing this module (e.g. from score.test.ts to unit-test
+// the pure helpers) reads no env var and constructs no SDK client — only the
+// scoring path that actually calls Claude pays for it.
+let _client: Anthropic | null = null;
+function client(): Anthropic {
+  return (_client ??= new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")!, maxRetries: 4 }));
+}
 
 // deno-lint-ignore no-explicit-any
 function toolInput(message: any): Record<string, unknown> | null {
@@ -158,7 +164,7 @@ function toolInput(message: any): Record<string, unknown> | null {
 /** Call the production coaching prompt exactly as analyze-hand does. */
 async function runCoaching(fx: Fixture): Promise<Record<string, unknown>> {
   const { prompt } = buildPrompt(fx.hand, fx.reads ?? [], fx.equityFacts ?? []);
-  const message = await client.messages.create({
+  const message = await client().messages.create({
     model: COACH_MODEL,
     max_tokens: 2000,
     temperature: 0,
@@ -243,7 +249,7 @@ async function extractClaims(fx: Fixture, analysis: Record<string, unknown>): Pr
   }
   const prose = parts.join("\n");
 
-  const message = await client.messages.create({
+  const message = await client().messages.create({
     // NB: claude-opus-4-8 removed temperature/top_p/top_k (400 if sent) — unlike
     // the coach's claude-sonnet-4-6, which still accepts temperature. The judge
     // only proposes claims; the deterministic adjudicator decides, so the lack
@@ -517,7 +523,11 @@ export function parseFreqFact(equityFacts: string[]): ParsedFreqFact {
   if (!gtoLine) return { gtoByStreet: null, multiway };
   // Split into per-street segments: "flop (…): <freqs>; turn (…): <freqs>." —
   // each freq list runs to the next ";" (street boundary) or "." (FACT end).
-  const segRe = /(?:flop|turn|river) \([^)]*\):\s*([^;.\]]*)/g;
+  // The "(…)" descriptor can itself contain a NESTED paren — the air hand class
+  // renders as "air (no real equity)" — so match lazily up to the first "):"
+  // (a hand-class label never contains "):"). A [^)]* here would stop at the
+  // inner ")" and silently drop every air-class spot from the dimension.
+  const segRe = /(?:flop|turn|river) \(.*?\):\s*([^;.\]]*)/g;
   // Longer labels first so "small bet" matches before "bet".
   const re = /(all-in|small bet|medium bet|big bet|bet|check|call|fold|raise)\s*~(\d+)%/g;
   const byStreet: Record<string, number>[] = [];
@@ -572,7 +582,7 @@ const FREQ_JUDGE_SYSTEM =
 
 async function extractFreqClaims(analysis: Record<string, unknown>): Promise<FreqClaim[]> {
   const text = JSON.stringify(analysis);
-  const resp = await client.messages.create({
+  const resp = await client().messages.create({
     model: JUDGE_MODEL,
     max_tokens: 1024,
     system: FREQ_JUDGE_SYSTEM,

@@ -176,8 +176,10 @@ PokerHand _buildHand(_Spec s) {
       ]),
       StreetData(
           street: Street.flop, communityCards: s.board, actions: s.flop),
-      // Per-street communityCards are CUMULATIVE-by-street: the turn holds only
-      // its single new card (board = flop's 3 + turn's 1).
+      // Per-street communityCards are INCREMENTAL: each street holds only its
+      // OWN new cards (the turn = 1 card), and the full board is their
+      // concatenation (hand_model: streets.expand((s) => s.communityCards)).
+      // Do NOT put all 4 cards here — that double-counts the flop.
       if (s.turn != null)
         StreetData(
             street: Street.turn, communityCards: [s.turn!], actions: s.turnAct),
@@ -203,9 +205,11 @@ Future<void> main(List<String> args) async {
         '— ${s.note}');
     if (ok) {
       // Show the rendered mix so we can eyeball the class/facing it resolved to.
-      // Prefer the turn line for turn spots; fall back to flop.
+      // Prefer the turn line for turn spots; fall back to flop. Match the "(…)"
+      // descriptor lazily — the air hand class renders a NESTED paren
+      // ("air (no real equity)"), so [^)]* would stop at the inner ")".
       final street = s.turn != null ? 'turn' : 'flop';
-      final m = RegExp('$street \\(([^)]*)\\): ([^;.\\]]*)').firstMatch(gto.first);
+      final m = RegExp('$street \\((.*?)\\): ([^;.\\]]*)').firstMatch(gto.first);
       if (m != null) stdout.writeln('      ${m.group(1)} → ${m.group(2)?.trim()}');
     }
   }
