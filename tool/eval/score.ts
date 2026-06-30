@@ -498,24 +498,41 @@ const _coarseAction: Record<string, string> = {
 };
 
 interface ParsedFreqFact {
-  gto: Record<string, number> | null; // coarse action → frequency (0–1)
+  // One coarse-action→frequency mix PER STREET segment the FACT renders
+  // (flop, turn, …). Kept per-street because a multi-street FACT carries a
+  // separate decision per street — summing the same action across streets is
+  // a different decision and would fabricate >100% "frequencies" (a real bug
+  // the turn-coverage spots exposed). For a flop-only FACT this is a 1-element
+  // list, so single-street scoring is byte-identical to before.
+  gtoByStreet: Record<string, number>[] | null;
   multiway: boolean;
 }
 
-// Parse the injected GTO-frequency FACT's mix into coarse action frequencies.
+// Parse the injected GTO-frequency FACT's mix into per-street coarse-action
+// frequencies. Within a street the small/medium/big bet labels DO sum into one
+// "bet" total (they are the same decision); across streets they do NOT.
 function parseFreqFact(equityFacts: string[]): ParsedFreqFact {
   const gtoLine = (equityFacts ?? []).find((f) => f.includes("[HEURISTIC — GTO frequency"));
   const multiway = (equityFacts ?? []).some((f) => f.includes("[HEURISTIC — multiway tendency"));
-  if (!gtoLine) return { gto: null, multiway };
-  const freqs: Record<string, number> = {};
+  if (!gtoLine) return { gtoByStreet: null, multiway };
+  // Split into per-street segments: "flop (…): <freqs>; turn (…): <freqs>." —
+  // each freq list runs to the next ";" (street boundary) or "." (FACT end).
+  const segRe = /(?:flop|turn|river) \([^)]*\):\s*([^;.\]]*)/g;
   // Longer labels first so "small bet" matches before "bet".
   const re = /(all-in|small bet|medium bet|big bet|bet|check|call|fold|raise)\s*~(\d+)%/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(gtoLine)) !== null) {
-    const coarse = _coarseAction[m[1]];
-    if (coarse) freqs[coarse] = (freqs[coarse] ?? 0) + Number(m[2]) / 100;
+  const byStreet: Record<string, number>[] = [];
+  let seg: RegExpExecArray | null;
+  while ((seg = segRe.exec(gtoLine)) !== null) {
+    const freqs: Record<string, number> = {};
+    let m: RegExpExecArray | null;
+    re.lastIndex = 0;
+    while ((m = re.exec(seg[1])) !== null) {
+      const coarse = _coarseAction[m[1]];
+      if (coarse) freqs[coarse] = (freqs[coarse] ?? 0) + Number(m[2]) / 100;
+    }
+    if (Object.keys(freqs).length) byStreet.push(freqs);
   }
-  return { gto: Object.keys(freqs).length ? freqs : null, multiway };
+  return { gtoByStreet: byStreet.length ? byStreet : null, multiway };
 }
 
 interface FreqClaim {
@@ -576,19 +593,25 @@ interface FreqAgreement {
 // gross contradiction counts. Qualitative claims map to loose bands.
 function checkFrequencyAgreement(parsed: ParsedFreqFact, claims: FreqClaim[]): FreqAgreement {
   const violations: string[] = [];
-  if (parsed.gto) {
+  if (parsed.gtoByStreet) {
     for (const c of claims) {
-      const f = parsed.gto[c.action];
-      if (f == null) continue; // action the FACT doesn't list (e.g. raise) — skip
-      const pct = Math.round(f * 100);
+      // The streets whose mix lists this action. The coaching claim carries no
+      // street label, so it is consistent if it agrees with ANY street that
+      // takes the action — a violation requires contradicting them ALL (the
+      // FACT is a coarse soft prior; only gross, unambiguous conflicts count).
+      const fs = parsed.gtoByStreet
+        .map((s) => s[c.action])
+        .filter((f): f is number => f != null);
+      if (fs.length === 0) continue; // action no street lists (e.g. raise) — skip
+      const pcts = fs.map((f) => `~${Math.round(f * 100)}%`).join(" / ");
       if (c.percent != null) {
-        if (Math.abs(c.percent / 100 - f) > 0.15) {
-          violations.push(`coaching states ${c.action} ~${c.percent}% but the GTO FACT is ~${pct}%`);
+        if (fs.every((f) => Math.abs(c.percent! / 100 - f) > 0.15)) {
+          violations.push(`coaching states ${c.action} ~${c.percent}% but the GTO FACT is ${pcts}`);
         }
-      } else if (c.qualifier === "never" && f >= 0.30) {
-        violations.push(`coaching says ${c.action} is never right, but GTO takes it ~${pct}%`);
-      } else if (c.qualifier === "always" && f <= 0.70) {
-        violations.push(`coaching says ${c.action} is always right, but GTO takes it only ~${pct}%`);
+      } else if (c.qualifier === "never" && fs.every((f) => f >= 0.30)) {
+        violations.push(`coaching says ${c.action} is never right, but GTO takes it ${pcts}`);
+      } else if (c.qualifier === "always" && fs.every((f) => f <= 0.70)) {
+        violations.push(`coaching says ${c.action} is always right, but GTO takes it only ${pcts}`);
       }
     }
     return { scored: true, violations };
@@ -845,7 +868,7 @@ async function main() {
         // carried a GTO-frequency / multiway-tendency FACT (else null/unscored).
         const parsedFreq = parseFreqFact(fx.equityFacts ?? []);
         let freqAgreement: FreqAgreement | null = null;
-        if (parsedFreq.gto || parsedFreq.multiway) {
+        if (parsedFreq.gtoByStreet || parsedFreq.multiway) {
           freqAgreement = checkFrequencyAgreement(parsedFreq, await extractFreqClaims(analysis));
         }
         const mark = violations.length === 0 && verdictIssues.length === 0 ? "OK " : "ERR";
