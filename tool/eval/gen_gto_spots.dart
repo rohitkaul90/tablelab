@@ -34,6 +34,12 @@ const String _spotsPath = 'tool/eval/spots.json';
 /// or bet/call), and [turnAct] produces hero's facing-node on the turn. The
 /// turn-street SPR re-buckets from the flop line (a flop bet/call shrinks it),
 /// so pair stacks with flop action to land committed/shallow/medium.
+///
+/// When [river] (the single river card) is set, the spot is a RIVER-decision
+/// spot: [flop] AND [turnAct] must both fully resolve, and [riverAct] produces
+/// hero's facing-node on the river. River cells exist only after the river solve
+/// (TLSOLVE_PROFILE=river dump_rounds 3) — until then these report ✗ and --write
+/// skips them; tune the river card / hand class against the solved library.
 class _Spec {
   final String id;
   final List<String> board;
@@ -44,9 +50,14 @@ class _Spec {
   final String note;
   final String? turn;
   final List<HandAction> turnAct;
+  final String? river;
+  final List<HandAction> riverAct;
   const _Spec(this.id, this.board, this.hero, this.heroSeat, this.stack,
       this.flop, this.note,
-      {this.turn, this.turnAct = const []});
+      {this.turn,
+      this.turnAct = const [],
+      this.river,
+      this.riverAct = const []});
 }
 
 // Action shorthands.
@@ -139,6 +150,28 @@ final List<_Spec> _specs = [
       [_bet(2, 5), _call(0, 5)],
       'TURN OOP facing_raise, sevens-full (strongMade), shallow',
       turn: 'Kd', turnAct: [_bet(2, 6), _bet(0, 16), _call(2, 16)]),
+
+  // ── RIVER-decision spots (phase 2c) — TEMPLATES. These exercise river cells,
+  // which only exist after the river solve (TLSOLVE_PROFILE=river dump_rounds 3).
+  // Until then gen_gto_spots reports them ✗ and --write skips them. After the
+  // solve, tune the river card / hand class to a POPULATED cell, then --write.
+  // Flop + turn both check through (full board, river SPR ≈ flop SPR).
+  _Spec('gto-r-ip-fcheck-strong-md', _boardA, ['7s', '7c'], 0, 50,
+      [_chk(2), _chk(0)], 'RIVER IP facing_check, sevens-full (strongMade), medium',
+      turn: '2c', turnAct: [_chk(2), _chk(0)],
+      river: '2d', riverAct: [_chk(2), _bet(0, 8)]),
+  _Spec('gto-r-oop-fta-marg-md', _boardA, ['Ac', 'Qd'], 2, 50,
+      [_chk(2), _chk(0)], 'RIVER OOP first_to_act (lead), top pair (marginalMade), medium',
+      turn: '2c', turnAct: [_chk(2), _chk(0)],
+      river: '4s', riverAct: [_bet(2, 8), _call(0, 8)]),
+  _Spec('gto-r-oop-fbet-marg-sh', _boardA, ['Ac', 'Qd'], 2, 30,
+      [_chk(2), _chk(0)], 'RIVER OOP facing_bet (bluff-catch), top pair, shallow',
+      turn: '2c', turnAct: [_chk(2), _chk(0)],
+      river: '4s', riverAct: [_chk(2), _bet(0, 6), _call(2, 6)]),
+  _Spec('gto-r-ip-fbet-strong-md', _boardA, ['7s', '7c'], 0, 50,
+      [_chk(2), _chk(0)], 'RIVER IP facing_bet, sevens-full (strongMade), medium',
+      turn: '2c', turnAct: [_chk(2), _chk(0)],
+      river: '2d', riverAct: [_bet(2, 8), _call(0, 8)]),
 ];
 
 PokerHand _buildHand(_Spec s) {
@@ -183,6 +216,11 @@ PokerHand _buildHand(_Spec s) {
       if (s.turn != null)
         StreetData(
             street: Street.turn, communityCards: [s.turn!], actions: s.turnAct),
+      if (s.river != null)
+        StreetData(
+            street: Street.river,
+            communityCards: [s.river!],
+            actions: s.riverAct),
     ],
     isTournament: false,
   );
@@ -199,16 +237,21 @@ Future<void> main(List<String> args) async {
     final check = await computeHandEquityCheck(hand, seed: 1234, iterations: 4000);
     final facts = check == null ? const <String>[] : equityCheckFacts(check, library: lib);
     final gto = facts.where((f) => f.contains('[HEURISTIC — GTO frequency')).toList();
-    final ok = gto.isNotEmpty;
+    // Verify the FACT covers the spec's TARGET street, not merely that SOME GTO
+    // FACT fired: a river spec's flop/turn nodes fire off the existing flop/turn
+    // cells even when NO river cells exist, which would mask missing river
+    // coverage. Requiring a `<street> (` segment makes a river spec read ✗ until
+    // the river solve populates river cells (then ✓), so the set self-verifies.
+    final street =
+        s.river != null ? 'river' : (s.turn != null ? 'turn' : 'flop');
+    final ok = gto.any((f) => f.contains('$street ('));
     if (ok) fired.add(s);
     stdout.writeln('${ok ? '✓' : '✗'} ${s.id}  scenario=${check?.scenarioKey}  '
         '— ${s.note}');
     if (ok) {
       // Show the rendered mix so we can eyeball the class/facing it resolved to.
-      // Prefer the turn line for turn spots; fall back to flop. Match the "(…)"
-      // descriptor lazily — the air hand class renders a NESTED paren
-      // ("air (no real equity)"), so [^)]* would stop at the inner ")".
-      final street = s.turn != null ? 'turn' : 'flop';
+      // Match the "(…)" descriptor lazily — the air hand class renders a NESTED
+      // paren ("air (no real equity)"), so [^)]* would stop at the inner ")".
       final m = RegExp('$street \\((.*?)\\): ([^;.\\]]*)').firstMatch(gto.first);
       if (m != null) stdout.writeln('      ${m.group(1)} → ${m.group(2)?.trim()}');
     }

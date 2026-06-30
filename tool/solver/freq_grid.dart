@@ -43,12 +43,24 @@ import 'run_solver.dart';
 import 'solver_input.dart';
 
 const String kScenario = 'srp_late_v_bb';
-const int kDumpRounds = 2; // flop + turn (river deferred)
-// 'turn' (phase 2b): flop tiered + TURN gets a raise so turn check-raise exists
-// → faithful turn frequencies. 'multi' (v1) lacked a turn raise → turn cells
-// would be donk-lead-distorted. River kept lean (not tabulated). The spot-key
-// embeds the profile, so switching does NOT reuse the stale 'multi' flop cache.
-const String kBetProfile = 'turn';
+
+// Bet profile + dump-rounds are ENV-OVERRIDABLE so a RIVER cycle runs as
+//   TLSOLVE_PROFILE=river TLSOLVE_DUMPROUNDS=3 dart run tool/solver/freq_grid.dart
+// without editing code, while the DEFAULT stays the shipped flop+turn config — so
+// a plain rebuild / `--write` with no env reproduces the committed library IN SYNC
+// (no code↔library desync). The spot key embeds profile+dump-rounds, so switching
+// configs never reuses a stale cache from the other (e.g. v1 'multi' or 'turn').
+//   'turn' (dr2): flop tiered + turn raise → faithful flop+turn. The shipped default.
+//   'river' (dr3): + river raise → faithful flop+turn+river (deepest tree, big-RAM box).
+final int kDumpRounds =
+    int.tryParse(Platform.environment['TLSOLVE_DUMPROUNDS'] ?? '') ?? 2;
+final String kBetProfile =
+    (Platform.environment['TLSOLVE_PROFILE'] ?? 'turn').toLowerCase();
+
+/// The grid only makes sense with a faithful multi-street profile (it tabulates
+/// per-street frequencies). Guard against a typo'd TLSOLVE_PROFILE silently
+/// solving the wrong tree — `_betSizes` would fall through to 'multi'.
+const Set<String> kGridProfiles = {'turn', 'river'};
 const String kResultsPath = 'tool/solver/freq_grid_results.json';
 // The shipped library lives in assets/ (bundled for app/web, file-readable for
 // the eval baker). The grid writes it there directly.
@@ -292,11 +304,11 @@ void _writeLibrary(Map<String, dynamic> results) {
       'dump_rounds': kDumpRounds,
       'streets': streets, // actual streets present (flop+turn in phase 2b)
       'spr_reps': kSprReps,
-      'note': 'faithful flop+turn check/bet-size/call/fold/raise/allin '
-          'freqs ("turn" profile — turn check-raise available). Shallow+medium+'
-          'deep SPR (deep-cash SPR 15 added 2026-06-30; river still deferred). '
-          'Each cell is keyed by the SPR at its OWN street (pot reconstructed '
-          'down the line), so a turn after a bet-call buckets shallower than the flop.',
+      'note': 'faithful $streets check/bet-size/call/fold/raise/allin freqs '
+          '("$kBetProfile" profile — check-raise available on every tabulated '
+          'street). Shallow+medium+deep SPR. Each cell is keyed by the SPR at its '
+          'OWN street (pot reconstructed down the line), so a turn/river after a '
+          'bet-call buckets shallower than the flop.',
       'generated_spots': usedSpots,
     },
     scenarios: {
@@ -314,6 +326,14 @@ Future<void> main(List<String> args) async {
   final limit = limitIdx >= 0 && limitIdx + 1 < args.length
       ? int.tryParse(args[limitIdx + 1])
       : null;
+
+  if (!kGridProfiles.contains(kBetProfile)) {
+    stderr.writeln('TLSOLVE_PROFILE="$kBetProfile" is not a grid profile '
+        '(${kGridProfiles.join('/')}). The grid tabulates per-street GTO '
+        'frequencies and needs a faithful multi-street profile.');
+    exitCode = 64;
+    return;
+  }
 
   final results = _loadResults();
 
@@ -391,7 +411,8 @@ Future<void> main(List<String> args) async {
             board: flopInts(s.flop),
             pot0: spot.pot.toDouble(),
             effStack: spot.effStack.toDouble(),
-            maxBoardLen: 4);
+            // dr2 → 4 (stop at turn); dr3 → 5 (walk the river).
+            maxBoardLen: kDumpRounds + 2);
         results[key] = {
           'flop': s.flop,
           'spr': s.spr,

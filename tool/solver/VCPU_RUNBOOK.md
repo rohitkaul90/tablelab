@@ -214,7 +214,7 @@ This cycle = **deep-SPR** (`kSprReps` gained `'deep': 15.0`; same BTN-vs-BB scen
 
 | Cycle | Code prep | Notes |
 |---|---|---|
-| **River** | `kDumpRounds = 3` + a faithful-river bet profile (river raise, not the lean single-size); `freq_tabulate` river handling | Heaviest tree (dump_rounds 3) — the biggest RAM consumer |
+| **River** | ✅ **prep DONE** — invoke with `TLSOLVE_PROFILE=river TLSOLVE_DUMPROUNDS=3` (no code edits). Adds a faithful-river bet profile (river raise) in `run_solver.dart`; `freq_grid` reads profile/dump-rounds from env (default stays `turn`/2) and walks `maxBoardLen=5`; the tabulator was already river-capable. River eval-coverage spec templates wait in `gen_gto_spots.dart` (report ✗ until river cells exist, then `--write`). | Heaviest tree (every street can check-raise) — biggest RAM/time consumer; **trial at `--parallel 2` first**, watch `free -g`. Likely wants the 96-vCPU box once the spot-quota increase clears |
 | **New scenario** (3-bet / other openers / BvB) | Parameterize `scenarioRanges()` beyond hardcoded BTN-vs-BB; thread a scenario key through the spot/library | Biggest gap (1 of ~8 scenarios); largest code change |
 | **`facing_allin` relabel** | Relabel all-ins like the live `facing_bet_*`/`facing_raise` path so shove cells are reachable | Cheap; bundle with any solve |
 | **Asymmetric per-street SPR** | Match the live asymmetric-stack lookup against the symmetric offline solve | Pre-existing latent miss (flop too) |

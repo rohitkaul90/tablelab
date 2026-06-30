@@ -134,7 +134,7 @@ _SolveConfig _config() {
   // 'single' is the default: multi-bet OOMs on deep (SPR 15-20) spots; single
   // converges to ~0.5% within the tree's action space. Use 'multi' for shallow spots.
   var bets = (e['TLSOLVE_BETS'] ?? 'single').toLowerCase();
-  const known = {'single', 'multi', 'vol', 'turn'};
+  const known = {'single', 'multi', 'vol', 'turn', 'river'};
   if (!known.contains(bets)) bets = 'single';
   final timeoutS = posInt('TLSOLVE_TIMEOUT_S', 900);
   // Worker threads. Default 16; lower (e.g. 8) to cut PEAK MEMORY / avoid the
@@ -157,10 +157,16 @@ String solverConfigTag() => _config().tag;
 /// turn's GTO frequencies are FAITHFUL — without a turn raise the solver can't
 /// check-raise and compensates by donk-leading the turn ~80% (the same distortion
 /// 'vol' has on the flop), which would poison a turn frequency library. The RIVER
-/// stays single-size + allin (cheap) — river cells aren't tabulated this phase
-/// (dump_rounds 2), so the deepest/branchiest layer is kept lean to bound the
-/// tree. Costs more than 'multi' (the turn raise widens the tree); OOM risk at
+/// stays single-size + allin (cheap) — river cells aren't tabulated under this
+/// profile (dump_rounds 2), so the deepest/branchiest layer is kept lean to bound
+/// the tree. Costs more than 'multi' (the turn raise widens the tree); OOM risk at
 /// medium SPR is measured by a calibration solve before the full grid.
+/// 'river': the FREQUENCY-LIBRARY river-cell profile (DCE Q1 phase 2c). Same as
+/// 'turn' on the flop+turn, but the RIVER ALSO gets a raise (+ allin) so river
+/// frequencies are FAITHFUL — without a river raise the solver can't check-raise
+/// the river and donk-leads it, the same distortion the lean river suffers. This
+/// is the DEEPEST/branchiest tree (every street can check-raise) → solve it on a
+/// big-RAM box; pair with dump_rounds 3 to tabulate the river street.
 /// 'vol': board-VOLATILITY/sizing calibration — several bet sizes per street so
 /// the GTO size CHOICE (vs texture) is observable, but NO raise/allin so the tree
 /// stays tractable at deep single-raised SPR (~15) where 'multi' OOMs. 'single'
@@ -180,6 +186,15 @@ String _betSizes(String profile) {
     b.writeln('set_bet_sizes $pos,$street,allin');
   }
 
+  // A street with ONE bet size + a raise (+ allin) → check-raise exists, so the
+  // street's GTO frequencies are FAITHFUL. The single bet size (not two) keeps the
+  // tree tractable; calibration showed a second size tripled cost / timed out.
+  void raiseStreet(StringBuffer b, String pos, String street) {
+    b.writeln('set_bet_sizes $pos,$street,bet,66');
+    b.writeln('set_bet_sizes $pos,$street,raise,60');
+    b.writeln('set_bet_sizes $pos,$street,allin');
+  }
+
   final b = StringBuffer();
   for (final pos in ['oop', 'ip']) {
     if (profile == 'single') {
@@ -193,13 +208,12 @@ String _betSizes(String profile) {
       b.writeln('set_bet_sizes $pos,river,bet,75');
     } else if (profile == 'turn') {
       flopTiered(b, pos);
-      // Turn: ONE bet size + a raise (→ check-raise exists). The raise is what
-      // makes turn frequencies faithful; a second turn size tripled tree cost and
-      // timed out at medium SPR in calibration, so it's dropped (single size).
-      b.writeln('set_bet_sizes $pos,turn,bet,66');
-      b.writeln('set_bet_sizes $pos,turn,raise,60');
-      b.writeln('set_bet_sizes $pos,turn,allin');
-      leanStreet(b, pos, 'river'); // river not tabulated in phase 2b
+      raiseStreet(b, pos, 'turn'); // faithful turn (check-raise exists)
+      leanStreet(b, pos, 'river'); // river not tabulated under 'turn'
+    } else if (profile == 'river') {
+      flopTiered(b, pos);
+      raiseStreet(b, pos, 'turn'); // faithful turn
+      raiseStreet(b, pos, 'river'); // faithful river (the deepest layer)
     } else {
       // 'multi': flop tiered; turn + river lean (no turn raise — v1).
       flopTiered(b, pos);

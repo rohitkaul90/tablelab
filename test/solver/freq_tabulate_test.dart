@@ -316,4 +316,108 @@ void main() {
       expect(faced.map((c) => c.facing), isNot(contains('facing_bet')));
     });
   });
+
+  // A flop→turn→river line (both early streets check through) must produce RIVER
+  // cells: the tabulator walks the SECOND chance node and re-buckets the board to
+  // a 5-card texture. Locks the river capability — only `maxBoardLen` gated it off
+  // (the grid now passes kDumpRounds+2 = 5 for the river cycle).
+  group('tabulateSpot river', () {
+    Map<String, dynamic> riverDump() => {
+          'node_type': 'action_node',
+          'player': 0, // OOP flop
+          'strategy': {
+            'actions': ['CHECK', 'BET 5'],
+            'strategy': {'Kc Qd': [1.0, 0.0]}, // top pair → marginalMade
+          },
+          'childrens': {
+            'BET 5': {'node_type': 'terminal_node'},
+            'CHECK': {
+              'node_type': 'action_node',
+              'player': 1, // IP flop facing check
+              'strategy': {
+                'actions': ['CHECK', 'BET 5'],
+                'strategy': {'Ad Ah': [1.0, 0.0]},
+              },
+              'childrens': {
+                'BET 5': {'node_type': 'terminal_node'},
+                'CHECK': {
+                  'node_type': 'chance_node',
+                  'dealcards': {
+                    '2s': {
+                      'node_type': 'action_node',
+                      'player': 0, // OOP turn
+                      'strategy': {
+                        'actions': ['CHECK', 'BET 6'],
+                        'strategy': {'Kc Qd': [1.0, 0.0]},
+                      },
+                      'childrens': {
+                        'BET 6': {'node_type': 'terminal_node'},
+                        'CHECK': {
+                          'node_type': 'action_node',
+                          'player': 1, // IP turn facing check
+                          'strategy': {
+                            'actions': ['CHECK', 'BET 6'],
+                            'strategy': {'Ad Ah': [1.0, 0.0]},
+                          },
+                          'childrens': {
+                            'BET 6': {'node_type': 'terminal_node'},
+                            'CHECK': {
+                              'node_type': 'chance_node',
+                              'dealcards': {
+                                '3d': {
+                                  'node_type': 'action_node',
+                                  'player': 0, // OOP river, first to act
+                                  'strategy': {
+                                    'actions': ['CHECK', 'BET 7'],
+                                    'strategy': {'Kc Qd': [0.6, 0.4]},
+                                  },
+                                  'childrens': {
+                                    'CHECK': {'node_type': 'terminal_node'},
+                                    'BET 7': {'node_type': 'terminal_node'},
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
+
+    // pot0 10, effStack 45 → flop SPR 4.5 'medium'; every street checks through
+    // (no chips), so the turn and river stay 'medium'.
+    final cells =
+        tabulateSpot(riverDump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+
+    test('produces a river OOP first_to_act cell at medium SPR', () {
+      final river = cells.where((c) =>
+          c.street == 'river' &&
+          c.position == 'oop' &&
+          c.facing == 'first_to_act');
+      expect(river, isNotEmpty);
+      final r = river.first;
+      expect(r.sprBucket, 'medium'); // checked through → flop SPR preserved
+      expect(r.freqs['check'], closeTo(0.6, 1e-9));
+      expect(r.freqs['bet'], closeTo(0.4, 1e-9));
+      expect(r.reachWeight, closeTo(1.0, 1e-9));
+    });
+
+    test('river texture is the recomputed 5-card board (not the flop)', () {
+      final r = cells.firstWhere((c) => c.street == 'river');
+      final flop = cells.firstWhere((c) => c.street == 'flop');
+      expect(r.texture, isNot(equals(flop.texture)));
+    });
+
+    test('maxBoardLen 4 (turn) caps the walk before the river', () {
+      final turnOnly = tabulateSpot(riverDump(),
+          board: _b('Ks 9h 4c'), pot0: 10, effStack: 45, maxBoardLen: 4);
+      expect(turnOnly.any((c) => c.street == 'river'), isFalse);
+      expect(turnOnly.any((c) => c.street == 'turn'), isTrue);
+    });
+  });
 }
