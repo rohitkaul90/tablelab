@@ -1,0 +1,96 @@
+{
+  "id": "gto-t-ip-fcheck-strong-md",
+  "userId": "eval",
+  "playedAt": "2026-06-28T00:00:00.000",
+  "tableSetup": {
+    "numSeats": 6,
+    "buttonSeat": 0,
+    "heroSeat": 0,
+    "smallBlind": 1,
+    "bigBlind": 2
+  },
+  "players": [
+    {
+      "seat": 0,
+      "name": "Hero",
+      "stack": 50,
+      "isHero": true,
+      "holeCards": [
+        "7s",
+        "7c"
+      ]
+    },
+    {
+      "seat": 2,
+      "name": "Villain",
+      "stack": 50,
+      "isHero": false
+    }
+  ],
+  "streets": [
+    {
+      "street": "preflop",
+      "communityCards": [],
+      "actions": [
+        {
+          "seat": 2,
+          "type": "post",
+          "amount": 2,
+          "allIn": false
+        },
+        {
+          "seat": 0,
+          "type": "raise",
+          "amount": 5,
+          "allIn": false
+        },
+        {
+          "seat": 2,
+          "type": "call",
+          "amount": 5,
+          "allIn": false
+        }
+      ]
+    },
+    {
+      "street": "flop",
+      "communityCards": [
+        "As",
+        "Kd",
+        "7h"
+      ],
+      "actions": [
+        {
+          "seat": 2,
+          "type": "check",
+          "allIn": false
+        },
+        {
+          "seat": 0,
+          "type": "check",
+          "allIn": false
+        }
+      ]
+    },
+    {
+      "street": "turn",
+      "communityCards": [
+        "Ks"
+      ],
+      "actions": [
+        {
+          "seat": 2,
+          "type": "check",
+          "allIn": false
+        },
+        {
+          "seat": 0,
+          "type": "raise",
+          "amount": 7,
+          "allIn": false
+        }
+      ]
+    }
+  ],
+  "isTournament": false
+}

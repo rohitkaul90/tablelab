@@ -28,6 +28,12 @@ const String _spotsPath = 'tool/eval/spots.json';
 /// One synthetic spot. heroSeat 0 = BTN (IP), 2 = BB (OOP). [stack] sets the SPR
 /// regime (30 → shallow ~2.5, 50 → medium ~4.5). [flop] is the post-flop action
 /// producing the intended facing-node for hero.
+///
+/// When [turn] (the single turn card) is set, the spot is a TURN-decision spot:
+/// [flop] must fully resolve the flop (both players act — typically check/check
+/// or bet/call), and [turnAct] produces hero's facing-node on the turn. The
+/// turn-street SPR re-buckets from the flop line (a flop bet/call shrinks it),
+/// so pair stacks with flop action to land committed/shallow/medium.
 class _Spec {
   final String id;
   final List<String> board;
@@ -36,8 +42,11 @@ class _Spec {
   final int stack;
   final List<HandAction> flop;
   final String note;
+  final String? turn;
+  final List<HandAction> turnAct;
   const _Spec(this.id, this.board, this.hero, this.heroSeat, this.stack,
-      this.flop, this.note);
+      this.flop, this.note,
+      {this.turn, this.turnAct = const []});
 }
 
 // Action shorthands.
@@ -84,6 +93,52 @@ final List<_Spec> _specs = [
       [_chk(2), _bet(0, 4), _call(2, 4)], 'OOP facing_bet, top pair, shallow'),
   _Spec('gto-oop-fbet-wdraw-md', _boardB, ['Tc', '4d'], 2, 50,
       [_chk(2), _bet(0, 5), _call(2, 5)], 'OOP facing_bet, gutshot (weakDraw), medium'),
+
+  // ── TURN-decision spots (phase 2b: exercise the flop+turn library cells) ──
+  // Turn cards chosen so the 4-card board maps to a populated texture cell.
+  // Flop action sets the turn SPR: check/check keeps the full ~4.5/2.5 SPR
+  // (medium/shallow); a flop bet/call shrinks it toward committed.
+  //   TA  = boardA + Ks  → As Kd 7h Ks  twotone|paired|ace|disconnected
+  //   TA2 = boardA + 2c  → As Kd 7h 2c  rainbow|unpaired|ace|disconnected
+  //   TB  = boardB + 5s  → 9s 8d 6c 5s  twotone|unpaired|middling|connected
+  //   TC2 = boardC + 2c  → Qh Th 9c 2c  twotone|unpaired|broadway|connected
+
+  // IP (BTN) turn nodes.
+  _Spec('gto-t-ip-fcheck-strong-md', _boardA, ['7s', '7c'], 0, 50,
+      [_chk(2), _chk(0)], 'TURN IP facing_check, set (strongMade), medium',
+      turn: 'Ks', turnAct: [_chk(2), _bet(0, 7)]),
+  _Spec('gto-t-ip-fcheck-air-sh', _boardA, ['9s', '4d'], 0, 30,
+      [_chk(2), _chk(0)], 'TURN IP facing_check, air, shallow',
+      turn: '2c', turnAct: [_chk(2), _bet(0, 4)]),
+  _Spec('gto-t-ip-fbet-marg-md', _boardA, ['Ac', 'Qd'], 0, 50,
+      [_chk(2), _chk(0)], 'TURN IP facing_bet (BB leads), top pair, medium',
+      turn: '2c', turnAct: [_bet(2, 6), _call(0, 6)]),
+  _Spec('gto-t-ip-fbet-sdraw-co', _boardB, ['Jh', 'Td'], 0, 30,
+      [_chk(2), _bet(0, 5), _call(2, 5)],
+      'TURN IP facing_bet (BB leads), OESD (strongDraw), committed',
+      turn: '5s', turnAct: [_bet(2, 8), _call(0, 8)]),
+
+  // OOP (BB) turn nodes.
+  _Spec('gto-t-oop-fta-strong-md', _boardA, ['7s', '7c'], 2, 50,
+      [_chk(2), _chk(0)], 'TURN OOP first_to_act (lead), set (strongMade), medium',
+      turn: 'Ks', turnAct: [_bet(2, 6), _call(0, 6)]),
+  _Spec('gto-t-oop-fta-air-md', _boardA, ['9s', '4d'], 2, 50,
+      [_chk(2), _chk(0)], 'TURN OOP first_to_act (check-through), air, medium',
+      turn: '2c', turnAct: [_chk(2), _chk(0)]),
+  _Spec('gto-t-oop-fbet-marg-sh', _boardA, ['Ac', 'Qd'], 2, 30,
+      [_chk(2), _chk(0)], 'TURN OOP facing_bet (mid), top pair, shallow',
+      turn: '4s', turnAct: [_chk(2), _bet(0, 6), _call(2, 6)]),
+  _Spec('gto-t-oop-fbet-wdraw-md', _boardA, ['5c', '4c'], 2, 50,
+      [_chk(2), _chk(0)],
+      'TURN OOP facing_bet, wheel gutshot (weakDraw), medium',
+      turn: '2c', turnAct: [_chk(2), _bet(0, 6), _call(2, 6)]),
+  _Spec('gto-t-oop-fta-sdraw-md', _boardB, ['Jh', 'Td'], 2, 50,
+      [_chk(2), _chk(0)], 'TURN OOP first_to_act (lead), OESD (strongDraw), medium',
+      turn: '5s', turnAct: [_bet(2, 6), _call(0, 6)]),
+  _Spec('gto-t-oop-fraise-strong-sh', ['Kh', '7h', '2c'], ['7s', '7d'], 2, 50,
+      [_bet(2, 5), _call(0, 5)],
+      'TURN OOP facing_raise, sevens-full (strongMade), shallow',
+      turn: 'Kd', turnAct: [_bet(2, 6), _bet(0, 16), _call(2, 16)]),
 ];
 
 PokerHand _buildHand(_Spec s) {
@@ -121,6 +176,11 @@ PokerHand _buildHand(_Spec s) {
       ]),
       StreetData(
           street: Street.flop, communityCards: s.board, actions: s.flop),
+      // Per-street communityCards are CUMULATIVE-by-street: the turn holds only
+      // its single new card (board = flop's 3 + turn's 1).
+      if (s.turn != null)
+        StreetData(
+            street: Street.turn, communityCards: [s.turn!], actions: s.turnAct),
     ],
     isTournament: false,
   );
@@ -143,7 +203,9 @@ Future<void> main(List<String> args) async {
         '— ${s.note}');
     if (ok) {
       // Show the rendered mix so we can eyeball the class/facing it resolved to.
-      final m = RegExp(r'flop \(([^)]*)\): ([^;.\]]*)').firstMatch(gto.first);
+      // Prefer the turn line for turn spots; fall back to flop.
+      final street = s.turn != null ? 'turn' : 'flop';
+      final m = RegExp('$street \\(([^)]*)\\): ([^;.\\]]*)').firstMatch(gto.first);
       if (m != null) stdout.writeln('      ${m.group(1)} → ${m.group(2)?.trim()}');
     }
   }

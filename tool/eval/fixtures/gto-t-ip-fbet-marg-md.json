@@ -1,0 +1,173 @@
+{
+  "id": "gto-t-ip-fbet-marg-md",
+  "source": "synthetic/gto",
+  "heroPlayer": 0,
+  "bucket": "gto-frequency",
+  "reads": [],
+  "hand": {
+    "id": "gto-t-ip-fbet-marg-md",
+    "userId": "eval",
+    "playedAt": "2026-06-28T00:00:00.000",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 0,
+      "heroSeat": 0,
+      "smallBlind": 1,
+      "bigBlind": 2
+    },
+    "players": [
+      {
+        "seat": 0,
+        "name": "Hero",
+        "stack": 50,
+        "isHero": true,
+        "holeCards": [
+          "Ac",
+          "Qd"
+        ]
+      },
+      {
+        "seat": 2,
+        "name": "Villain",
+        "stack": 50,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 2,
+            "type": "post",
+            "amount": 2,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "raise",
+            "amount": 5,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 5,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "As",
+          "Kd",
+          "7h"
+        ],
+        "actions": [
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "2c"
+        ],
+        "actions": [
+          {
+            "seat": 2,
+            "type": "raise",
+            "amount": 6,
+            "allIn": false
+          },
+          {
+            "seat": 0,
+            "type": "call",
+            "amount": 6,
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~62%, flop ~82%, turn ~71%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain Villain (BB) range behind the equity above: Pre-flop: called a late-position open → BB defending range (~22% of hands); Flop: check → range unchanged; Turn: raise (~60% pot) → polarized: top 22% value + bottom 9% bluffs.]",
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~82% → realized ~95% (IP, a marginal made hand); turn ~71% → realized ~82% (IP, a marginal made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]",
+    "[HEURISTIC — SPR & COMMITMENT (effective stack ÷ pot, hero-centric; ESTIMATED, not exact): flop SPR ~4.5 — to get all-in profitably needs ~45% equity (medium SPR — strength-dependent); turn SPR ~4.5 — to get all-in profitably needs ~45% equity (medium SPR — strength-dependent). Use this for the call-vs-raise / stack-off decision, NOT the bluff-catch call (pot odds govern that): at low SPR a strong-enough made hand should commit, at high SPR a one-pair hand favours pot control. With a marginal made hand villain's stack-off range skews to sets/two-pair, so require more than the raw %. The stack-off % is the equity to get all-in profitably versus a willing range, NOT hero's pot-odds price. This is heuristic context — a decisive pot-odds price FACT and the hard equity FACT still take precedence.]",
+    "[HEURISTIC — GTO frequency (a balanced solver baseline for how often to take each action with hero's hand class on this texture, from offline solves of this exact spot type — a soft PRIOR for frequency, NOT a read on this specific hand): flop (IP, a marginal made hand, after a check to hero): check ~59%, medium bet ~32%, small bet ~9%; turn (IP, a marginal made hand, facing a medium bet): call ~68%, fold ~30%, raise ~2%. Use it to sanity-check whether hero's line is a normal part of a balanced strategy; it is NEVER by itself a reason to mark a street wasGto:false or set leakDetected, and a hard [FACT —] or a decisive pot-odds price still decides the spot.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "Ac",
+      "Qd"
+    ],
+    "finalBoard": [
+      "As",
+      "Kd",
+      "7h",
+      "2c"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "As",
+          "Kd",
+          "7h"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.82215,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      },
+      {
+        "street": "turn",
+        "board": [
+          "As",
+          "Kd",
+          "7h",
+          "2c"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.70895,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": []
+      }
+    ],
+    "forcedDecision": null,
+    "realizedEquityByStreet": {
+      "flop": 0.9454724999999999,
+      "turn": 0.8152924999999999
+    },
+    "sprByStreet": {
+      "flop": 4.5,
+      "turn": 4.5
+    },
+    "boardVolatilityByStreet": {
+      "flop": {
+        "dynamicFraction": 0.42857142857142855,
+        "isDynamic": false
+      },
+      "turn": {
+        "dynamicFraction": 0.75,
+        "isDynamic": true
+      }
+    }
+  }
+}
