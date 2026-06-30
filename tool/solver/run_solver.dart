@@ -12,6 +12,10 @@ import 'dart:io';
 
 import 'solver_input.dart';
 
+/// One-shot guard so the resolved solver binary is logged once per process, not
+/// per spot. See the [_invokeSolver] log site.
+bool _loggedBin = false;
+
 class SolveResult {
   final List<String> actions; // e.g. ["CHECK", "BET 50.0", ...]
   final List<double> probs; // hero combo's strategy, aligned to actions
@@ -286,6 +290,14 @@ Future<_RawSolve> _invokeSolver(
   final bin = _solverBin(dir);
   if (!File(bin).existsSync()) {
     throw StateError('console_solver not found at $bin — build it first.');
+  }
+  // Log the resolved binary ONCE per run. _solverBin honors a TEXASSOLVER_BIN
+  // override verbatim (needed for the Linux build path), so a stale env var
+  // could point at an older solver and silently bake wrong frequencies into the
+  // shipped library — surface the path so a wrong binary is visible in the log.
+  if (!_loggedBin) {
+    _loggedBin = true;
+    stderr.writeln('[solver] using binary: $bin');
   }
   final tmp = Directory.systemTemp.createTempSync('tlsolve_');
   try {

@@ -10,7 +10,7 @@
       "medium": 6.0,
       "deep": 15.0
     },
-    "note": "phase 2b: faithful flop+turn check/bet-size/call/fold/raise/allin freqs (\"turn\" profile — turn check-raise available). Shallow+medium SPR (tournament/short SRP); deep-cash deferred. Each cell is keyed by the SPR at its OWN street (pot reconstructed down the line), so a turn after a bet-call buckets shallower than the flop.",
+    "note": "faithful flop+turn check/bet-size/call/fold/raise/allin freqs (\"turn\" profile — turn check-raise available). Shallow+medium+deep SPR (deep-cash SPR 15 added 2026-06-30; river still deferred). Each cell is keyed by the SPR at its OWN street (pot reconstructed down the line), so a turn after a bet-call buckets shallower than the flop.",
     "generated_spots": 78
   },
   "scenarios": {

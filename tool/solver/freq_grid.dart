@@ -9,10 +9,13 @@
 // PARAMETERISATION:
 //  - SPR regime: shallow (SPR 3 ≈ 25bb) + medium (SPR 6 ≈ 40bb) — the tournament
 //    / short-stack SRP band — PLUS deep (SPR 15 ≈ 100bb deep-cash). The faithful
-//    'turn' raise-bearing tree OOMs at deep SPR on 32 GB, so deep is solved ONLY
-//    on the big-RAM vCPU box (r7a.24xlarge / 768 GB); a local re-solve should
-//    drop 'deep' from kSprReps. Faithfulness is unchanged (same 'turn' profile,
-//    not the donk-distorting raise-free 'vol').
+//    'turn' raise-bearing tree can't be solved on a 32 GB box (whole-machine RAM
+//    starvation, not one solve needing 32 GB), so deep is solved on a big-RAM
+//    vCPU box (≥256 GB — an r7a.8xlarge / 256 GB cleared all 26 deep spots at
+//    --parallel 4). A local re-solve can drop 'deep' from kSprReps; even if it
+//    doesn't, _writeLibrary refuses to clobber the committed deep cells (see its
+//    regime-drop guard). Faithfulness is unchanged (same 'turn' profile, not the
+//    donk-distorting raise-free 'vol').
 //  - Bet profile 'turn' (phase 2b): flop tiered (bet 33/75 + raise + allin) AND
 //    the TURN gets a raise + a second size, so turn check-raise exists and turn
 //    frequencies are FAITHFUL. v1's 'multi' lacked a turn raise → turn cells were
@@ -53,10 +56,11 @@ const String kLibraryPath = 'assets/gto_freq_library.json';
 
 /// The spot's flop SPR regimes: name → representative SPR. Names match
 /// `decision_context.sprBucket` (3 → shallow, 6 → medium, >6 → deep). 'deep'
-/// (SPR 15 ≈ 100bb deep-cash) is the OOM-blocked-locally regime — the faithful
-/// 'turn' tree explodes past 32 GB RAM there; it solves only on the big-RAM
-/// vCPU box (r7a.24xlarge / 768 GB). Drop it back to {shallow, medium} for a
-/// local re-solve.
+/// (SPR 15 ≈ 100bb deep-cash) can't be solved on a 32 GB box; it solves on a
+/// big-RAM vCPU box (≥256 GB — an r7a.8xlarge cleared it). You CAN drop it back
+/// to {shallow, medium} for a local re-solve, but you don't have to: a local run
+/// that can't solve deep won't silently clobber the committed deep cells —
+/// _writeLibrary refuses to drop an SPR regime the shipped library already has.
 const Map<String, double> kSprReps = {'shallow': 3.0, 'medium': 6.0, 'deep': 15.0};
 
 /// ~24 representative flops, hand-picked to span the common texture cells
@@ -244,6 +248,42 @@ void _writeLibrary(Map<String, dynamic> results) {
     exitCode = 1;
     return;
   }
+  // Regime-drop guard: refuse to ship a library that DROPS an SPR bucket the
+  // committed one already covers. A local 32 GB re-solve can't solve the 'deep'
+  // spots (they OOM in the external solver); those failures are swallowed
+  // per-spot, and the empty-guard above only catches a fully-empty rebuild — so
+  // without this, the rebuild would overwrite the committed deep cells with
+  // nothing, silently regressing live deep-SPR coaching. Compare spr_bucket sets
+  // against the existing asset; abort on any drop (override with
+  // ALLOW_REGIME_DROP=1 for an intentional narrowing).
+  final existing = File(kLibraryPath);
+  if (existing.existsSync() &&
+      Platform.environment['ALLOW_REGIME_DROP'] != '1') {
+    try {
+      final prev = jsonDecode(existing.readAsStringSync()) as Map<String, dynamic>;
+      final prevScenario =
+          (prev['scenarios'] as Map?)?[kScenario] as Map<String, dynamic>?;
+      final prevCells = prevScenario?['cells'] as List?;
+      if (prevCells != null) {
+        final prevBuckets = {
+          for (final c in prevCells) (c as Map)['spr_bucket'] as String
+        };
+        final newBuckets = {for (final c in merged) c.sprBucket};
+        final dropped = (prevBuckets.difference(newBuckets).toList())..sort();
+        if (dropped.isNotEmpty) {
+          stderr.writeln('ABORT: the rebuilt library is missing SPR bucket(s) '
+              '$dropped that the committed $kLibraryPath covers — refusing to '
+              'clobber it (likely deep spots OOM\'d / were skipped on a '
+              'small-RAM box). Solve the missing regime on a big-RAM box, or set '
+              'ALLOW_REGIME_DROP=1 to override for an intentional narrowing.');
+          exitCode = 1;
+          return;
+        }
+      }
+    } catch (_) {
+      // Unreadable / old-format existing library — don't block the write on it.
+    }
+  }
   final streets = (merged.map((c) => c.street).toSet().toList()..sort()).join('+');
   final lib = FreqLibrary(
     meta: {
@@ -252,11 +292,11 @@ void _writeLibrary(Map<String, dynamic> results) {
       'dump_rounds': kDumpRounds,
       'streets': streets, // actual streets present (flop+turn in phase 2b)
       'spr_reps': kSprReps,
-      'note': 'phase 2b: faithful flop+turn check/bet-size/call/fold/raise/allin '
-          'freqs ("turn" profile — turn check-raise available). Shallow+medium '
-          'SPR (tournament/short SRP); deep-cash deferred. Each cell is keyed by '
-          'the SPR at its OWN street (pot reconstructed down the line), so a turn '
-          'after a bet-call buckets shallower than the flop.',
+      'note': 'faithful flop+turn check/bet-size/call/fold/raise/allin '
+          'freqs ("turn" profile — turn check-raise available). Shallow+medium+'
+          'deep SPR (deep-cash SPR 15 added 2026-06-30; river still deferred). '
+          'Each cell is keyed by the SPR at its OWN street (pot reconstructed '
+          'down the line), so a turn after a bet-call buckets shallower than the flop.',
       'generated_spots': usedSpots,
     },
     scenarios: {
