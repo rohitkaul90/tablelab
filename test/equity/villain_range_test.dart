@@ -1128,9 +1128,13 @@ void main() {
       expect(gto.first, contains('%'));
     });
 
-    test('deep-stacked cash spot (deep SPR) emits NO GTO frequency FACT', () async {
+    test('deep-stacked cash spot (deep SPR) emits a GTO frequency FACT '
+        '(deep covered 2026-06-30)', () async {
       final check = await computeHandEquityCheck(
-        // 200bb stacks → flop SPR ~19 (deep), which the library defers.
+        // 200bb stacks → flop SPR ~19 (deep). The library now covers the deep
+        // regime (deep-cash SPR 15 ≈ 100bb; 'deep' bucket = SPR>6), so the
+        // lookup hits and a GTO frequency FACT IS emitted — this was deferred
+        // (no deep cells) before the 2026-06-30 deep-SPR solve.
         _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, stack: 200,
             streets: [
               _btnOpenBbCall(),
@@ -1146,7 +1150,7 @@ void main() {
         seed: 1,
       );
       expect(equityCheckFacts(check!, library: lib)
-          .any((f) => f.contains('GTO frequency (')), isFalse);
+          .any((f) => f.contains('GTO frequency (')), isTrue);
     });
 
     test('no library passed → no GTO frequency FACT', () async {
