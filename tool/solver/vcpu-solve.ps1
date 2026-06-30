@@ -114,12 +114,17 @@ $pubip = (Invoke-Aws ec2 describe-instances --region $Region --instance-ids $iid
 Write-Host "PUBIP=$pubip"
 
 # -- 3. Wait for SSH, clear any reused-IP host key ----------------------------
-ssh-keygen -R $pubip *> $null
+# ssh-keygen/ssh write to stderr on the HARMLESS paths (host absent from
+# known_hosts; connection refused while the box is still booting). Under -EAP Stop
+# a REDIRECTED native stderr is wrapped into a terminating NativeCommandError, so
+# wrap these in try/catch and judge by $LASTEXITCODE, not by the error stream.
+try { ssh-keygen -R $pubip *> $null } catch { }
+$global:LASTEXITCODE = 0
 $ssh = @('-i', $key, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10', "ubuntu@$pubip")
 Write-Host "Waiting for SSH..."
 $sshOk = $false
 foreach ($i in 1..30) {
-  ssh @ssh 'echo ready' *> $null
+  try { ssh @ssh 'echo ready' *> $null } catch { }
   if ($LASTEXITCODE -eq 0) { $sshOk = $true; break }
   Start-Sleep 10
 }
