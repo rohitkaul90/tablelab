@@ -15,6 +15,30 @@ Related: `GTO_LIBRARY_COVERAGE.md` (scope map — update after every cycle), `RE
 
 ---
 
+## ⚡ Fast path — `tool/solver/vcpu-solve.ps1`
+
+Once a **golden AMI** exists (toolchain + built `console_solver` + deps baked in — §8 below),
+the launcher script collapses §1–6 into one command: launch from the AMI (capacity fallback),
+sync the current branch, start the solve in a detached tmux session. It bakes in the river
+Dart-heap flag and the 8-thread cap.
+
+```powershell
+# River re-trial (read ~/solve.log + free -g over SSH; do NOT auto-pull a --limit run):
+.\tool\solver\vcpu-solve.ps1 -GridArgs "--limit 6 --parallel 2"
+
+# Full solve, fire-and-forget (wait → pull library → terminate):
+.\tool\solver\vcpu-solve.ps1 -GridArgs "--parallel 2" -PullAndTerminate
+```
+
+Key params: `-Profile turn|river` (default river), `-GridArgs`, `-InstanceType` (+ `-Fallbacks`),
+`-Spot` (default on-demand — spot kept getting reclaimed), `-HeapMB` (default 200000),
+`-Branch`, `-AmiId` (default the golden AMI), `-PullAndTerminate` (FULL solves only — it
+refuses to auto-pull a `--limit` partial). The script prints ready-to-paste watch / tail /
+RAM / pull / terminate commands. The manual runbook below is the fallback when there's no
+golden AMI yet, or for debugging a launch.
+
+---
+
 ## 0. Prerequisites (one-time, before you start)
 
 - The **licensed TexasSolver `source` dir** on your Windows machine (the one with
