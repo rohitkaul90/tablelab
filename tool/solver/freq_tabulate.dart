@@ -294,6 +294,23 @@ class _SprState {
 /// the SPR bucket is re-derived per street from these as the pot grows (see
 /// [_SprState]). [maxBoardLen] caps the depth walked (5 = river; pass 4 to stop
 /// at the turn for tractability on huge dumps).
+/// Read a solver dump JSON file at [path] and tabulate it. The file-based entry
+/// point so the WHOLE heavy step (read + jsonDecode + tree walk) can run inside a
+/// worker isolate — the multi-GB String + Map stay local to this call and are
+/// freed when it returns, off the caller's isolate. Returns the same cells as
+/// [tabulateSpot] on the parsed root.
+List<FreqCell> tabulateDumpFile(
+  String path, {
+  required List<int> board,
+  required double pot0,
+  required double effStack,
+  int maxBoardLen = 5,
+}) {
+  final root = jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+  return tabulateSpot(root,
+      board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
+}
+
 List<FreqCell> tabulateSpot(
   Map<String, dynamic> root, {
   required List<int> board,

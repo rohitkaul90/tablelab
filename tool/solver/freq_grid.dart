@@ -34,6 +34,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:tablelab/equity/card.dart';
 import 'package:tablelab/equity/chart_keys.dart';
@@ -66,10 +67,13 @@ final String kBetProfile =
 /// RIVER OPERATOR NOTES (from the 2026-06-30 trial — see tool/solver/VCPU_RUNBOOK.md):
 ///  - River REQUIRES a big Dart heap or it OOMs parsing the dumps (despite free system
 ///    RAM): run `dart --old_gen_heap_size=200000 run tool/solver/freq_grid.dart …`.
-///  - The Dart-side jsonDecode+tabulate of river dumps is a SERIAL single-isolate
-///    bottleneck (~66 of 91 min on a 3-spot trial) that `--parallel` does NOT relieve —
-///    a full river solve needs the tabulation parallelized (per-spot Isolate.run) /
-///    lightened first. Don't launch a full river grid until that's fixed.
+///  - The Dart-side jsonDecode+tabulate of river dumps WAS a serial single-isolate
+///    bottleneck (~66 of 91 min on a 3-spot trial); it now runs in a per-spot
+///    `Isolate.run` (see the worker), so `--parallel` workers tabulate on separate
+///    cores and each huge dump's String/Map lives & dies in its own isolate heap.
+///    RAM then bounds --parallel (each in-flight isolate holds one big dump): size N
+///    so N × peak-dump-heap < system RAM, watch `free -g`. Re-trial to confirm the
+///    speedup before a full 78-spot river solve.
 /// This map is ALSO the profile allow-list (a typo'd TLSOLVE_PROFILE is rejected
 /// in main() rather than falling through to 'multi' in `_betSizes`).
 const Map<String, int> kProfileDumpRounds = {'turn': 2, 'river': 3};
@@ -397,12 +401,14 @@ Future<void> main(List<String> args) async {
       '$skipped cached/skipped.');
 
   // Each worker drains the shared queue; `parallel` of them run concurrently. The
-  // ONLY suspension point is `await solveRoot` (where the external solvers run in
-  // parallel) — claiming an index (next++) and the results-mutate + _saveResults
-  // block both run WITHOUT an await, so they are atomic w.r.t. other workers under
-  // Dart's single-threaded isolate model: no race on results.json, no concurrent
-  // map modification. Each console_solver call uses its own temp dir (see
-  // _invokeSolver), so parallel solves never collide on dump files.
+  // suspension points are `await solveToFile` (the external solvers run in parallel)
+  // and `await Isolate.run` (the parse+tabulate runs in a worker isolate, off the
+  // main isolate, so several spots tabulate on separate cores). Both let other
+  // workers proceed; claiming an index (next++) and the results-mutate +
+  // _saveResults block run WITHOUT an await, so they stay atomic w.r.t. other
+  // workers under Dart's single-threaded main isolate: no race on results.json, no
+  // concurrent map modification. Each solve uses its own temp dir (see
+  // _runSolverToDump), so parallel solves never collide on dump files.
   Future<void> worker() async {
     while (true) {
       final i = next;
@@ -412,20 +418,35 @@ Future<void> main(List<String> args) async {
       final n = ++started;
       final key = _spotKey(s.flop, s.spr);
       stdout.writeln('[$n/$total] solving ${s.flop} SPR ${s.spr} …');
+      DumpSolve? ds;
       try {
         final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
-        final tree = await solveRoot(spot,
+        ds = await solveToFile(spot,
             dumpRounds: kDumpRounds, betProfile: kBetProfile);
+        // Capture the scalars BEFORE the Isolate.run await (avoids relying on
+        // null-promotion of `ds` surviving the await).
+        final dumpPath = ds.dumpPath;
+        final expl = ds.exploitability;
+        final wallMs = ds.wallMs;
+        // pot is fixed at 10 in gridSpot; effStack = spr·pot; the tabulator
+        // re-derives the SPR bucket per street (flop vs the shallower turn/river
+        // after chips go in). dr2 → maxBoardLen 4 (turn); dr3 → 5 (river).
+        final board = flopInts(s.flop);
+        final pot0 = spot.pot.toDouble();
+        final effStack = spot.effStack.toDouble();
+        final maxLen = kDumpRounds + 2;
+        // Parse + tabulate the dump in a WORKER ISOLATE — the river dumps are huge
+        // and this step (jsonDecode + tree walk) dominated wall time, serialized on
+        // the main isolate. Its own isolate → tabulates on a separate core (so
+        // `--parallel` actually parallelizes it) and the multi-GB String/Map live &
+        // die in that isolate's heap (no main-isolate GC thrash). Only the small
+        // FreqCell JSON crosses back.
+        final cells = await Isolate.run(() {
+          final c = tabulateDumpFile(dumpPath,
+              board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxLen);
+          return [for (final cell in c) cell.toJson()];
+        });
         // --- atomic block (no await until the next loop turn) ---
-        // pot is fixed at 10 in gridSpot; effStack = spr·pot. The tabulator
-        // re-derives the SPR bucket per street (flop vs the shallower turn after
-        // chips go in).
-        final cells = tabulateSpot(tree.root,
-            board: flopInts(s.flop),
-            pot0: spot.pot.toDouble(),
-            effStack: spot.effStack.toDouble(),
-            // dr2 → 4 (stop at turn); dr3 → 5 (walk the river).
-            maxBoardLen: kDumpRounds + 2);
         results[key] = {
           'flop': s.flop,
           'spr': s.spr,
@@ -434,17 +455,19 @@ Future<void> main(List<String> args) async {
           // profile (e.g. v1 'multi') must not blend its cells into this library.
           'profile': kBetProfile,
           'dump_rounds': kDumpRounds,
-          'exploitability': tree.exploitability,
-          'wall_ms': tree.wallMs,
-          'cells': [for (final c in cells) c.toJson()],
+          'exploitability': expl,
+          'wall_ms': wallMs,
+          'cells': cells,
         };
         _saveResults(results); // checkpoint after every solve (resumable)
         solved++;
         stdout.writeln('    ✓ [${s.flop} ${s.spr}] ${cells.length} cells · expl '
-            '${tree.exploitability?.toStringAsFixed(2)}% · ${tree.wallMs ~/ 1000}s');
+            '${expl?.toStringAsFixed(2)}% · ${wallMs ~/ 1000}s');
       } catch (e) {
         failed++;
         stdout.writeln('    ✗ [${s.flop} ${s.spr}] $e');
+      } finally {
+        ds?.cleanup(); // remove the dump temp dir (after tabulating, or on failure)
       }
     }
   }

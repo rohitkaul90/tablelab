@@ -297,8 +297,36 @@ class _RawSolve {
 /// wall time. Shared by [solve] (hero-node walk, dumpRounds 1) and [solveRoot]
 /// (whole tree, dumpRounds 2). [dumpRounds] = 1 dumps the flop only, 2 adds the
 /// turn nodes (needed to read the turn chance node's per-card children).
-Future<_RawSolve> _invokeSolver(
-    SolverSpot spot, int dumpRounds, bool verbose,
+/// A solved dump left ON DISK for parsing elsewhere (typically a worker isolate,
+/// so the heavy jsonDecode + tabulate runs off the main isolate). The caller OWNS
+/// the temp dir and MUST call [cleanup] — it holds a multi-MB-to-multi-GB dump.
+class DumpSolve {
+  final String dumpPath;
+  final double? exploitability;
+  final int wallMs;
+  final Directory _tmp;
+  DumpSolve(this.dumpPath, this.exploitability, this.wallMs, this._tmp);
+  void cleanup() {
+    try {
+      _tmp.deleteSync(recursive: true);
+    } catch (_) {}
+  }
+}
+
+class _DumpRun {
+  final String dumpPath;
+  final String out; // captured solver stdout (for exploitability + verbose tail)
+  final int wallMs;
+  final Directory tmp;
+  _DumpRun(this.dumpPath, this.out, this.wallMs, this.tmp);
+}
+
+/// Run the solver on [spot], leaving the dump ON DISK (no parse here). On ANY
+/// failure the temp dir is removed and a StateError thrown; on SUCCESS the caller
+/// owns [_DumpRun.tmp] and must delete it. The single source of the solver
+/// invocation — both the parse-inline path ([_invokeSolver]) and the
+/// parse-in-isolate path ([solveToFile]) build on it.
+Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
     {String? betProfile}) async {
   final dir = _sourceDir();
   final bin = _solverBin(dir);
@@ -306,14 +334,15 @@ Future<_RawSolve> _invokeSolver(
     throw StateError('console_solver not found at $bin — build it first.');
   }
   // Log the resolved binary ONCE per run. _solverBin honors a TEXASSOLVER_BIN
-  // override verbatim (needed for the Linux build path), so a stale env var
-  // could point at an older solver and silently bake wrong frequencies into the
-  // shipped library — surface the path so a wrong binary is visible in the log.
+  // override verbatim (needed for the Linux build path), so a stale env var could
+  // point at an older solver and silently bake wrong frequencies into the shipped
+  // library — surface the path so a wrong binary is visible in the log.
   if (!_loggedBin) {
     _loggedBin = true;
     stderr.writeln('[solver] using binary: $bin');
   }
   final tmp = Directory.systemTemp.createTempSync('tlsolve_');
+  var keep = false; // hand tmp to the caller only on success
   try {
     final inputPath = '${tmp.path}/input.txt';
     final dumpPath = '${tmp.path}/out.json';
@@ -336,24 +365,39 @@ Future<_RawSolve> _invokeSolver(
     final out = await outF;
     final err = await errF;
     sw.stop();
-    if (verbose) {
-      stdout.writeln(out.split('\n').takeLast(4).join('\n'));
-    }
     if (exitCode != 0) {
       throw StateError('solver exit $exitCode\n$err\n$out');
     }
-    final outFile = File(dumpPath);
-    if (!outFile.existsSync()) {
+    if (!File(dumpPath).existsSync()) {
       throw StateError('solver produced no output_result\n$out');
     }
-    final root = jsonDecode(outFile.readAsStringSync()) as Map<String, dynamic>;
-    return _RawSolve(root, _parseExploitability(out), sw.elapsedMilliseconds);
+    keep = true;
+    return _DumpRun(dumpPath, out, sw.elapsedMilliseconds, tmp);
   } finally {
-    // Reclaim the per-solve temp dir (input.txt + a multi-MB JSON dump) on every
-    // path, including the StateError early-exits — a long batch would otherwise
-    // accumulate them in %TEMP%.
+    // Reclaim the temp dir on every FAILURE path (success hands it to the caller,
+    // who deletes it). A long batch would otherwise accumulate dumps in %TEMP%.
+    if (!keep) {
+      try {
+        tmp.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }
+}
+
+Future<_RawSolve> _invokeSolver(
+    SolverSpot spot, int dumpRounds, bool verbose,
+    {String? betProfile}) async {
+  final run = await _runSolverToDump(spot, dumpRounds, betProfile: betProfile);
+  try {
+    if (verbose) {
+      stdout.writeln(run.out.split('\n').takeLast(4).join('\n'));
+    }
+    final root =
+        jsonDecode(File(run.dumpPath).readAsStringSync()) as Map<String, dynamic>;
+    return _RawSolve(root, _parseExploitability(run.out), run.wallMs);
+  } finally {
     try {
-      tmp.deleteSync(recursive: true);
+      run.tmp.deleteSync(recursive: true);
     } catch (_) {}
   }
 }
@@ -400,6 +444,18 @@ Future<TreeSolveResult> solveRoot(SolverSpot spot,
     {int dumpRounds = 2, bool verbose = false, String? betProfile}) async {
   final raw = await _invokeSolver(spot, dumpRounds, verbose, betProfile: betProfile);
   return TreeSolveResult(raw.root, raw.exploitability, raw.wallMs);
+}
+
+/// Solve [spot] and leave the dump ON DISK without parsing it — for callers that
+/// run the heavy parse + tabulate in a worker isolate (`tabulateDumpFile`), so the
+/// big jsonDecode + tree walk don't block the main isolate. On river dumps that
+/// walk dominates wall time and serialized on the single isolate; this lets
+/// `--parallel` workers tabulate on separate cores. The caller MUST call
+/// [DumpSolve.cleanup] once it has tabulated (or on failure).
+Future<DumpSolve> solveToFile(SolverSpot spot,
+    {int dumpRounds = 2, String? betProfile}) async {
+  final run = await _runSolverToDump(spot, dumpRounds, betProfile: betProfile);
+  return DumpSolve(run.dumpPath, _parseExploitability(run.out), run.wallMs, run.tmp);
 }
 
 /// Follow a sequence of child keys from [node] — case- and "BET x"-prefix-

@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:isolate';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/equity/card.dart';
 
@@ -418,6 +422,62 @@ void main() {
           board: _b('Ks 9h 4c'), pot0: 10, effStack: 45, maxBoardLen: 4);
       expect(turnOnly.any((c) => c.street == 'river'), isFalse);
       expect(turnOnly.any((c) => c.street == 'turn'), isTrue);
+    });
+  });
+
+  // The grid runs this file-based entry point inside a worker isolate (so the heavy
+  // read + jsonDecode + walk run off the main isolate). It must produce the SAME
+  // cells as parsing the dump in-process — it only reads + decodes the file first.
+  group('tabulateDumpFile (the isolate entry point)', () {
+    test('matches tabulateSpot on the same dump, via a file', () {
+      final tmp = Directory.systemTemp.createTempSync('tabfile_');
+      try {
+        final path = '${tmp.path}/dump.json';
+        File(path).writeAsStringSync(jsonEncode(_dump()));
+        final fromFile = tabulateDumpFile(path,
+            board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+        final direct =
+            tabulateSpot(_dump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+        expect(fromFile.length, direct.length);
+        final f = _cell(fromFile,
+            street: 'turn',
+            position: 'oop',
+            facing: 'first_to_act',
+            handClass: 'marginalMade');
+        final d = _cell(direct,
+            street: 'turn',
+            position: 'oop',
+            facing: 'first_to_act',
+            handClass: 'marginalMade');
+        expect(f.freqs['check'], closeTo(d.freqs['check']!, 1e-12));
+        expect(f.reachWeight, closeTo(d.reachWeight, 1e-12));
+      } finally {
+        tmp.deleteSync(recursive: true);
+      }
+    });
+
+    // Mirrors the grid worker's exact call: tabulate inside Isolate.run and bring
+    // the small cell JSON back across the isolate boundary. Locks that the heavy
+    // step runs off-isolate and round-trips correctly (the river-bottleneck fix).
+    test('runs inside Isolate.run and round-trips the cell JSON', () async {
+      final tmp = Directory.systemTemp.createTempSync('tabiso_');
+      try {
+        final path = '${tmp.path}/dump.json';
+        File(path).writeAsStringSync(jsonEncode(_dump()));
+        final board = _b('Ks 9h 4c');
+        final cellJson = await Isolate.run(() {
+          final cells =
+              tabulateDumpFile(path, board: board, pot0: 10, effStack: 45);
+          return [for (final c in cells) c.toJson()];
+        });
+        expect(cellJson, isNotEmpty);
+        expect(cellJson.length,
+            tabulateSpot(_dump(), board: board, pot0: 10, effStack: 45).length);
+        expect(cellJson.first.keys,
+            containsAll(['street', 'spr_bucket', 'facing', 'hand_class', 'freqs']));
+      } finally {
+        tmp.deleteSync(recursive: true);
+      }
     });
   });
 }
