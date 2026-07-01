@@ -34,7 +34,6 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:tablelab/equity/card.dart';
 import 'package:tablelab/equity/chart_keys.dart';
@@ -67,13 +66,16 @@ final String kBetProfile =
 /// RIVER OPERATOR NOTES (from the 2026-06-30 trial — see tool/solver/VCPU_RUNBOOK.md):
 ///  - River REQUIRES a big Dart heap or it OOMs parsing the dumps (despite free system
 ///    RAM): run `dart --old_gen_heap_size=200000 run tool/solver/freq_grid.dart …`.
-///  - The Dart-side jsonDecode+tabulate of river dumps WAS a serial single-isolate
-///    bottleneck (~66 of 91 min on a 3-spot trial); it now runs in a per-spot
-///    `Isolate.run` (see the worker), so `--parallel` workers tabulate on separate
-///    cores and each huge dump's String/Map lives & dies in its own isolate heap.
-///    RAM then bounds --parallel (each in-flight isolate holds one big dump): size N
-///    so N × peak-dump-heap < system RAM, watch `free -g`. Re-trial to confirm the
-///    speedup before a full 78-spot river solve.
+///  - The Dart-side jsonDecode+tabulate of river dumps is a serial single-thread,
+///    GC-heavy bottleneck (~66 of 91 min on a 3-spot trial). It runs in a per-spot
+///    SUBPROCESS (tool/solver/tabulate_one.dart — see the worker), NOT an
+///    `Isolate.run`: isolates in a group SHARE one heap+GC, so N concurrent deep
+///    parses thrashed a single GC (~4.7 effective cores across 10 parses). A
+///    separate process per spot gives each parse its own heap+GC → `--parallel`
+///    truly parallelizes across cores. RAM bounds --parallel (each subprocess holds
+///    one big dump + its own big heap TLSOLVE_TABULATE_HEAP_MB): size N so
+///    N × (dump + parse-heap) < system RAM, watch `free -g`. Put TMPDIR on a big
+///    scratch (river dumps are ~15 GB each) — /dev/shm or a ≥500 GB volume.
 /// This map is ALSO the profile allow-list (a typo'd TLSOLVE_PROFILE is rejected
 /// in main() rather than falling through to 'multi' in `_betSizes`).
 const Map<String, int> kProfileDumpRounds = {'turn': 2, 'river': 3};
@@ -402,9 +404,9 @@ Future<void> main(List<String> args) async {
 
   // Each worker drains the shared queue; `parallel` of them run concurrently. The
   // suspension points are `await solveToFile` (the external solvers run in parallel)
-  // and `await Isolate.run` (the parse+tabulate runs in a worker isolate, off the
-  // main isolate, so several spots tabulate on separate cores). Both let other
-  // workers proceed; claiming an index (next++) and the results-mutate +
+  // and `await Process.run(tabulate_one)` (the parse+tabulate runs in a separate
+  // process, so several spots tabulate on separate cores with independent heaps/GC).
+  // Both let other workers proceed; claiming an index (next++) and the results-mutate +
   // _saveResults block run WITHOUT an await, so they stay atomic w.r.t. other
   // workers under Dart's single-threaded main isolate: no race on results.json, no
   // concurrent map modification. Each solve uses its own temp dir (see
@@ -431,21 +433,40 @@ Future<void> main(List<String> args) async {
         // pot is fixed at 10 in gridSpot; effStack = spr·pot; the tabulator
         // re-derives the SPR bucket per street (flop vs the shallower turn/river
         // after chips go in). dr2 → maxBoardLen 4 (turn); dr3 → 5 (river).
-        final board = flopInts(s.flop);
         final pot0 = spot.pot.toDouble();
         final effStack = spot.effStack.toDouble();
         final maxLen = kDumpRounds + 2;
-        // Parse + tabulate the dump in a WORKER ISOLATE — the river dumps are huge
-        // and this step (jsonDecode + tree walk) dominated wall time, serialized on
-        // the main isolate. Its own isolate → tabulates on a separate core (so
-        // `--parallel` actually parallelizes it) and the multi-GB String/Map live &
-        // die in that isolate's heap (no main-isolate GC thrash). Only the small
-        // FreqCell JSON crosses back.
-        final cells = await Isolate.run(() {
-          final c = tabulateDumpFile(dumpPath,
-              board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxLen);
-          return [for (final cell in c) cell.toJson()];
-        });
+        // Parse + tabulate the dump in a SEPARATE PROCESS (tool/solver/tabulate_one.dart)
+        // — NOT an Isolate. Isolate.run put every concurrent parse in ONE shared
+        // isolate-group heap, so N deep-river dumps (~15 GB each) contended on a
+        // SINGLE GC and stalled each other (measured: 10 parses shared ~4.7 cores,
+        // ~2 spots/hr on a 128-vCPU box — see tool/solver/VCPU_RUNBOOK.md). A
+        // subprocess gives each parse its own heap + GC, so `--parallel` truly
+        // parallelizes the (single-threaded, GC-heavy) jsonDecode+walk across cores.
+        // Each subprocess gets a big heap (TLSOLVE_TABULATE_HEAP_MB, default 80 GB);
+        // the main grid process never holds a giant dump. Cells come back via a file
+        // (not stdout) so a big list never buffers through Process.run.
+        final outPath = '$dumpPath.cells.json';
+        final tabHeapMb = int.tryParse(
+                Platform.environment['TLSOLVE_TABULATE_HEAP_MB'] ?? '') ??
+            80000;
+        final res = await Process.run(Platform.resolvedExecutable, [
+          '--old_gen_heap_size=$tabHeapMb',
+          'run',
+          'tool/solver/tabulate_one.dart',
+          dumpPath,
+          outPath,
+          s.flop.replaceAll(' ', ''),
+          pot0.toString(),
+          effStack.toString(),
+          maxLen.toString(),
+        ]);
+        if (res.exitCode != 0) {
+          throw StateError('tabulate_one exit ${res.exitCode}: '
+              '${(res.stderr as String).trim()}');
+        }
+        final cells =
+            jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;
         // --- atomic block (no await until the next loop turn) ---
         results[key] = {
           'flop': s.flop,

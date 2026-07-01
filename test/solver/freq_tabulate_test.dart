@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/equity/card.dart';
@@ -428,7 +427,7 @@ void main() {
   // The grid runs this file-based entry point inside a worker isolate (so the heavy
   // read + jsonDecode + walk run off the main isolate). It must produce the SAME
   // cells as parsing the dump in-process — it only reads + decodes the file first.
-  group('tabulateDumpFile (the isolate entry point)', () {
+  group('tabulateDumpFile (the tabulator entry point)', () {
     test('matches tabulateSpot on the same dump, via a file', () {
       final tmp = Directory.systemTemp.createTempSync('tabfile_');
       try {
@@ -456,28 +455,74 @@ void main() {
       }
     });
 
-    // Mirrors the grid worker's exact call: tabulate inside Isolate.run and bring
-    // the small cell JSON back across the isolate boundary. Locks that the heavy
-    // step runs off-isolate and round-trips correctly (the river-bottleneck fix).
-    test('runs inside Isolate.run and round-trips the cell JSON', () async {
-      final tmp = Directory.systemTemp.createTempSync('tabiso_');
+    // Mirrors the grid worker's new handoff (which replaced Isolate.run — isolates
+    // in a group share one heap+GC, so N concurrent deep-river parses thrashed a
+    // single GC; a subprocess per spot gives each its own heap). tabulate_one.dart
+    // writes the cell JSON to a file (its own process); the grid reads it back.
+    // Locks that the toJson → jsonEncode → file → jsonDecode round-trip is faithful.
+    test('cell JSON round-trips through a file (the subprocess handoff)', () {
+      final tmp = Directory.systemTemp.createTempSync('tabfile2_');
       try {
         final path = '${tmp.path}/dump.json';
         File(path).writeAsStringSync(jsonEncode(_dump()));
         final board = _b('Ks 9h 4c');
-        final cellJson = await Isolate.run(() {
-          final cells =
-              tabulateDumpFile(path, board: board, pot0: 10, effStack: 45);
-          return [for (final c in cells) c.toJson()];
-        });
-        expect(cellJson, isNotEmpty);
-        expect(cellJson.length,
-            tabulateSpot(_dump(), board: board, pot0: 10, effStack: 45).length);
-        expect(cellJson.first.keys,
+        final direct =
+            tabulateSpot(_dump(), board: board, pot0: 10, effStack: 45);
+        // What tabulate_one.dart writes:
+        final outPath = '${tmp.path}/cells.json';
+        final cells =
+            tabulateDumpFile(path, board: board, pot0: 10, effStack: 45);
+        File(outPath)
+            .writeAsStringSync(jsonEncode([for (final c in cells) c.toJson()]));
+        // What freq_grid.dart reads back:
+        final readBack =
+            jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;
+        expect(readBack, isNotEmpty);
+        expect(readBack.length, direct.length);
+        expect((readBack.first as Map).keys,
             containsAll(['street', 'spr_bucket', 'facing', 'hand_class', 'freqs']));
       } finally {
         tmp.deleteSync(recursive: true);
       }
     });
+
+    // Runs the REAL tabulate_one.dart as a subprocess (what the grid does), exactly
+    // to catch arg-order / flop-parse regressions cheaply — a bug here otherwise
+    // only surfaces on the (expensive, cloud) solve run. Skips if `dart` isn't on
+    // PATH; asserts a bug (non-zero exit) rather than masking it.
+    test('tabulate_one.dart subprocess writes matching cells', () async {
+      final tmp = Directory.systemTemp.createTempSync('tabproc_');
+      try {
+        final path = '${tmp.path}/dump.json';
+        File(path).writeAsStringSync(jsonEncode(_dump()));
+        final outPath = '${tmp.path}/cells.json';
+        final direct =
+            tabulateSpot(_dump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+        ProcessResult res;
+        try {
+          res = await Process.run('dart', [
+            'run',
+            'tool/solver/tabulate_one.dart',
+            path,
+            outPath,
+            'Ks9h4c',
+            '10',
+            '45',
+            '5',
+          ]);
+        } on ProcessException {
+          markTestSkipped('dart not on PATH — skipping subprocess test');
+          return;
+        }
+        expect(res.exitCode, 0, reason: 'tabulate_one stderr: ${res.stderr}');
+        final cells =
+            jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;
+        expect(cells.length, direct.length);
+        expect((cells.first as Map).keys,
+            containsAll(['street', 'spr_bucket', 'facing', 'hand_class', 'freqs']));
+      } finally {
+        tmp.deleteSync(recursive: true);
+      }
+    }, timeout: const Timeout(Duration(minutes: 2)));
   });
 }

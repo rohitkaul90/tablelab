@@ -35,8 +35,14 @@ param(
   [string]$Profile = 'river',
   # Extra args passed verbatim to freq_grid.dart (e.g. "--limit 6 --parallel 2").
   [string]$GridArgs = '--parallel 2',
-  # Dart old-gen heap cap (MB). River REQUIRES a big heap or it OOMs parsing dumps.
-  [int]$HeapMB = 200000,
+  # Dart old-gen heap cap (MB) for the MAIN grid process. Since tabulation now runs
+  # in per-spot SUBPROCESSES (tabulate_one.dart), the main process no longer holds a
+  # giant dump, so this stays small. The big heap is per-subprocess (-TabulateHeapMB).
+  [int]$HeapMB = 24000,
+  # Per-SUBPROCESS Dart old-gen heap cap (MB) for each tabulate_one.dart parse — a
+  # deep ~15 GB river dump needs a big heap. Each subprocess has its OWN heap/GC, so
+  # size --parallel so parallel * (dump + this) < system RAM (watch `free -g`).
+  [int]$TabulateHeapMB = 80000,
   # Solver worker threads (8 is the stable max - 16 raced/crashed on wet trees).
   [int]$Threads = 8,
   # Per-spot solver wall cap (s).
@@ -120,7 +126,11 @@ Write-Host "PUBIP=$pubip"
 # wrap these in try/catch and judge by $LASTEXITCODE, not by the error stream.
 try { ssh-keygen -R $pubip *> $null } catch { }
 $global:LASTEXITCODE = 0
-$ssh = @('-i', $key, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10', "ubuntu@$pubip")
+# BatchMode + ServerAlive so a probe that CONNECTS then STALLS (fresh-boot sshd
+# accepts but the session hangs) self-kills in ~10s instead of blocking forever —
+# ConnectTimeout only bounds the handshake, so without these the wait-loop could
+# wedge indefinitely (observed: a probe stuck 18 min, defeating the retry cap).
+$ssh = @('-i', $key, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2', "ubuntu@$pubip")
 Write-Host "Waiting for SSH..."
 $sshOk = $false
 foreach ($i in 1..30) {
@@ -150,8 +160,14 @@ $solveSh = @"
 cd ~/poker_tracker
 export TEXASSOLVER_DIR=`$HOME/texassolver-source
 export TEXASSOLVER_BIN=`$HOME/texassolver-source/build/console_solver
-export TMPDIR=/mnt/scratch
-TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs 2>&1 | tee ~/solve.log
+# River dumps are ~15 GB each: put scratch on the big RAM tmpfs (the golden AMI's
+# 193 GB root EBS fills at useful --parallel, truncating dumps). Raise max_map_count
+# for the tabulate subprocesses' big heaps (a big --old_gen_heap_size mmap-crashes
+# without it despite free RAM). Clear any orphaned dumps a prior killed run left.
+export TMPDIR=/dev/shm
+sudo sysctl -w vm.max_map_count=2000000 >/dev/null 2>&1 || true
+rm -rf /dev/shm/tlsolve_* /mnt/scratch/tlsolve_* 2>/dev/null || true
+TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs 2>&1 | tee ~/solve.log
 "@
 $localSh = Join-Path $env:TEMP 'run-solve.sh'
 [IO.File]::WriteAllText($localSh, ($solveSh -replace "`r`n", "`n"))
