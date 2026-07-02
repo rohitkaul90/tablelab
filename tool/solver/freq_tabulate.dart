@@ -295,10 +295,10 @@ class _SprState {
 /// [_SprState]). [maxBoardLen] caps the depth walked (5 = river; pass 4 to stop
 /// at the turn for tractability on huge dumps).
 /// Read a solver dump JSON file at [path] and tabulate it. The file-based entry
-/// point so the WHOLE heavy step (read + jsonDecode + tree walk) can run inside a
-/// worker isolate — the multi-GB String + Map stay local to this call and are
-/// freed when it returns, off the caller's isolate. Returns the same cells as
-/// [tabulateSpot] on the parsed root.
+/// point so the WHOLE heavy step (read + jsonDecode + tree walk) can run in a
+/// separate PROCESS (tool/solver/tabulate_one.dart) — the multi-GB String + Map
+/// stay local to that process's own heap and are freed when it exits, off the
+/// caller's heap/GC. Returns the same cells as [tabulateSpot] on the parsed root.
 List<FreqCell> tabulateDumpFile(
   String path, {
   required List<int> board,

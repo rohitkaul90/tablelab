@@ -44,25 +44,30 @@ import 'solver_input.dart';
 
 const String kScenario = 'srp_late_v_bb';
 
-// The bet profile is ENV-OVERRIDABLE so a RIVER cycle runs as
-//   TLSOLVE_PROFILE=river dart run tool/solver/freq_grid.dart
-// without editing code, while the DEFAULT stays the shipped flop+turn config — so
-// a plain rebuild / `--write` with no env reproduces the committed library IN SYNC
-// (no code↔library desync). The spot key embeds profile+dump-rounds, so switching
+// The bet profile is ENV-OVERRIDABLE, but the DEFAULT MUST MATCH THE SHIPPED
+// LIBRARY so a plain rebuild / `--write` with no env reproduces the committed
+// library IN SYNC (no code↔library desync). The shipped library is now the RIVER
+// config (flop+turn+river), so the default is 'river' — a stale 'turn' default
+// would make `--write` rebuild a turn-only library and silently drop the river
+// cells (the street-drop guard in _writeLibrary now backstops that, but the
+// default must still track the shipped config). Bump this in lockstep whenever a
+// new profile is shipped. The spot key embeds profile+dump-rounds, so switching
 // configs never reuses a stale cache from the other (e.g. v1 'multi' or 'turn').
 final String kBetProfile =
-    (Platform.environment['TLSOLVE_PROFILE'] ?? 'turn').toLowerCase();
+    (Platform.environment['TLSOLVE_PROFILE'] ?? 'river').toLowerCase();
 
 /// Dump-rounds is DERIVED from the profile, never set independently. Each profile
 /// fixes BOTH its bet tree AND how many streets it faithfully solves, so coupling
 /// them removes a footgun: with two separate knobs a mismatched pair silently
 /// solves one tree but tabulates another — dr3 with the lean-river 'turn' profile
 /// bakes DONK-DISTORTED river cells; 'river' with dr2 burns the heaviest solve but
-/// emits zero river cells; dr1/dr0 produce a flop-only library that clobbers the
-/// committed turn cells (the regime-drop guard checks SPR buckets, NOT streets).
+/// emits zero river cells; dr1/dr0 produce a flop-only library. (A rebuild that
+/// drops a street this way is now caught by the regime-drop guard, which checks
+/// BOTH SPR buckets AND streets against the committed asset.)
 /// One knob = no mismatch, and only the two valid dump-rounds are reachable.
-///   'turn'  → flop+turn       (dump_rounds 2). The shipped default.
+///   'turn'  → flop+turn       (dump_rounds 2).
 ///   'river' → flop+turn+river (dump_rounds 3; the deepest tree, big-RAM box).
+///            The shipped default (see kBetProfile).
 /// RIVER OPERATOR NOTES (from the 2026-06-30 trial — see tool/solver/VCPU_RUNBOOK.md):
 ///  - River REQUIRES a big Dart heap or it OOMs parsing the dumps (despite free system
 ///    RAM): run `dart --old_gen_heap_size=200000 run tool/solver/freq_grid.dart …`.
@@ -279,14 +284,18 @@ void _writeLibrary(Map<String, dynamic> results) {
     exitCode = 1;
     return;
   }
-  // Regime-drop guard: refuse to ship a library that DROPS an SPR bucket the
-  // committed one already covers. A local 32 GB re-solve can't solve the 'deep'
-  // spots (they OOM in the external solver); those failures are swallowed
-  // per-spot, and the empty-guard above only catches a fully-empty rebuild — so
-  // without this, the rebuild would overwrite the committed deep cells with
-  // nothing, silently regressing live deep-SPR coaching. Compare spr_bucket sets
-  // against the existing asset; abort on any drop (override with
-  // ALLOW_REGIME_DROP=1 for an intentional narrowing).
+  // Regime-drop guard: refuse to ship a library that DROPS an SPR bucket OR a
+  // STREET the committed one already covers. Two ways a rebuild silently narrows
+  // coverage: (a) a local 32 GB re-solve can't solve 'deep' (OOMs in the external
+  // solver), swallowed per-spot → the deep SPR bucket vanishes; (b) a plain
+  // rebuild under the DEFAULT profile (now 'river') is fine, but a rebuild forced
+  // to an OLDER profile (TLSOLVE_PROFILE=turn, dr2) re-solves as turn-only and
+  // drops the river STREET while leaving the SPR-bucket set unchanged
+  // (shallow/medium/deep/committed are the same). The empty-guard above only
+  // catches a fully-empty rebuild, so without this the rebuild would overwrite the
+  // committed cells and silently regress live coaching. Compare BOTH the spr_bucket
+  // AND the street sets against the existing asset; abort on any drop (override
+  // with ALLOW_REGIME_DROP=1 for an intentional narrowing).
   final existing = File(kLibraryPath);
   if (existing.existsSync() &&
       Platform.environment['ALLOW_REGIME_DROP'] != '1') {
@@ -300,12 +309,24 @@ void _writeLibrary(Map<String, dynamic> results) {
           for (final c in prevCells) (c as Map)['spr_bucket'] as String
         };
         final newBuckets = {for (final c in merged) c.sprBucket};
-        final dropped = (prevBuckets.difference(newBuckets).toList())..sort();
-        if (dropped.isNotEmpty) {
-          stderr.writeln('ABORT: the rebuilt library is missing SPR bucket(s) '
-              '$dropped that the committed $kLibraryPath covers — refusing to '
-              'clobber it (likely deep spots OOM\'d / were skipped on a '
-              'small-RAM box). Solve the missing regime on a big-RAM box, or set '
+        final droppedBuckets =
+            (prevBuckets.difference(newBuckets).toList())..sort();
+        final prevStreets = {
+          for (final c in prevCells) (c as Map)['street'] as String
+        };
+        final newStreets = {for (final c in merged) c.street};
+        final droppedStreets =
+            (prevStreets.difference(newStreets).toList())..sort();
+        if (droppedBuckets.isNotEmpty || droppedStreets.isNotEmpty) {
+          final missing = [
+            if (droppedBuckets.isNotEmpty) 'SPR bucket(s) $droppedBuckets',
+            if (droppedStreets.isNotEmpty) 'street(s) $droppedStreets',
+          ].join(' and ');
+          stderr.writeln('ABORT: the rebuilt library is missing $missing that '
+              'the committed $kLibraryPath covers — refusing to clobber it '
+              '(likely deep spots OOM\'d on a small-RAM box, or a rebuild forced '
+              'to an older TLSOLVE_PROFILE dropped a street). Solve the missing '
+              'regime on a big-RAM box (or use the matching profile), or set '
               'ALLOW_REGIME_DROP=1 to override for an intentional narrowing.');
           exitCode = 1;
           return;
@@ -321,7 +342,7 @@ void _writeLibrary(Map<String, dynamic> results) {
       'solver': 'TexasSolver',
       'bet_profile': kBetProfile,
       'dump_rounds': kDumpRounds,
-      'streets': streets, // actual streets present (flop+turn in phase 2b)
+      'streets': streets, // actual streets present (e.g. flop+turn+river)
       'spr_reps': kSprReps,
       'note': 'faithful $streets check/bet-size/call/fold/raise/allin freqs '
           '("$kBetProfile" profile — check-raise available on every tabulated '
@@ -425,7 +446,7 @@ Future<void> main(List<String> args) async {
         final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
         ds = await solveToFile(spot,
             dumpRounds: kDumpRounds, betProfile: kBetProfile);
-        // Capture the scalars BEFORE the Isolate.run await (avoids relying on
+        // Capture the scalars BEFORE the Process.run await (avoids relying on
         // null-promotion of `ds` surviving the await).
         final dumpPath = ds.dumpPath;
         final expl = ds.exploitability;
