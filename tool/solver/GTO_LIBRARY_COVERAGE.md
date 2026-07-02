@@ -16,23 +16,28 @@ Related: design = `launch/GTO_FREQUENCY_LIBRARY.md` (gitignored, local); tooling
 
 ---
 
-## Snapshot — as of 2026-06-30 (deep-SPR added)
+## Snapshot — as of 2026-07-01 (river added)
 
 `scenario = srp_late_v_bb` (BTN open vs BB call, heads-up, single-raised) — **the only
-scenario**. `9,137` cells total, `8,779` **serve-eligible** (clear lookup `minMass=8`) = **96%**.
+scenario**. `11,764` cells total, `11,400` **serve-eligible** (clear lookup `minMass=8`) = **97%**.
 
 | Attribute | Covered | Distribution (serve-eligible) | Gap |
 |---|---|---|---|
-| **Street** | flop + turn | turn 70% / flop 30% | **river 0%** |
-| **Position** | IP + OOP | ~50% / ~50% | none (HU complete) |
-| **SPR bucket** | shallow (~25bb) + medium (~40bb) + **deep (~100bb)**; committed appears on turn (post bet-call) | deep 28% / medium 28% / shallow 28% / committed 16% | none across the SRP band (deep added 2026-06-30) |
-| **Texture** | all **48/48** cells (3 suit × 2 pairing × 4 high-card × 2 connectedness) | fully spanned | none (flop+turn together cover the whole space) |
-| **Facing node** | all 6: first_to_act, facing_check, facing_bet_{small,mid,big}, facing_raise | big 26 / raise 21 / mid 18 / check 13 / fta 13 / small 10 | per-street size seam (below); `facing_allin` = 0 cells |
-| **Hand class** | all 5: air, weakDraw, strongDraw, marginalMade, strongMade | 13–23% each (balanced) | none |
+| **Street** | **flop + turn + river** | turn 54% / river 23% / flop 23% | none (full postflop; river added 2026-07-01) |
+| **Position** | IP + OOP | ip 51% / oop 49% | none (HU complete) |
+| **SPR bucket** | shallow (~25bb) + medium (~40bb) + **deep (~100bb)**; committed appears on turn+river (post bet-call) | deep 28% / medium 27% / shallow 27% / committed 18% | none across the SRP band |
+| **Texture** | all **48/48** cells (3 suit × 2 pairing × 4 high-card × 2 connectedness) | fully spanned | none (flop+turn+river together cover the whole space) |
+| **Facing node** | all 6: first_to_act, facing_check, facing_bet_{small,mid,big}, facing_raise | big 26 / raise 20 / mid 19 / check 13 / fta 13 / small 10 | per-street size seam (below); `facing_allin` = 0 cells |
+| **Hand class** | all 5: air, weakDraw, strongDraw, marginalMade, strongMade | 15–26% each (balanced) | none |
 
-**Per-street facing seam:** the solve bets flop 33/75 (→ small/big) and turn 66 (→ mid),
+**Per-street facing seam:** the solve bets flop 33/75 (→ small/big) and turn+river 66 (→ mid),
 so per-street the native faced-bet sizes are coarse; raises + the cross-street merge fill
 the rest. All 6 buckets exist in aggregate.
+
+**Per-street × SPR:** every street now carries all its SPR buckets — flop shallow/medium/deep
+(~880 each); turn shallow/medium/deep (~1,600 each) + committed (~1,380); river
+shallow/medium/deep/committed (~655 each). The 'river' bet profile (dump_rounds 3) makes
+river check-raise available, so river frequencies are faithful (not donk-distorted).
 
 **`facing_allin` mismatch (latent):** the tabulator labels an all-in `facing_allin` but
 the live lookup queries `facing_bet_*`/`facing_raise` — currently **0** such cells exist
@@ -49,15 +54,20 @@ is a **~low-single-digit-to-15% slice — but the single highest-frequency one**
 SRP is the most common HU postflop spot).
 
 1. **Scenario ≈ 1 of ~8** — only BTN-vs-BB single-raised. **Zero** for 3-bet/4-bet pots,
-   other openers (UTG/CO/SB), blind-vs-blind, limped pots. *Biggest gap.*
-2. **River = 0%** — next solve; heaviest tree (dump_rounds 3).
+   other openers (UTG/CO/SB), blind-vs-blind, limped pots. *Biggest gap now that river is done.*
+2. ~~**River = 0%**~~ — ✅ **covered 2026-07-01** (BTN-vs-BB SRP, all SPR incl. deep;
+   'river' profile / dump_rounds 3, so river check-raise is faithful; solved on a 128-vCPU /
+   1 TB r7a.32xlarge, 78 spots, 0 failures, all ≤0.5% expl). Full postflop (flop+turn+river)
+   for BTN-vs-BB is now complete. Remaining river gap: any non-BTN-vs-BB scenario.
 3. **Multiway = 0%** — HU only. Multiway is handled *directionally* by the MDF FACT, no freqs.
 4. ~~**Deep cash (100bb, SPR ~15–17) = 0%**~~ — ✅ **covered 2026-06-30** (deep SPR 15
-   added for BTN-vs-BB SRP, flop+turn; solved on an r7a.8xlarge / 256 GB spot box, which
-   cleared the 32 GB OOM that blocked it locally). Remaining deep gap: **river** at deep
-   SPR, and deep for any non-BTN-vs-BB scenario.
+   added for BTN-vs-BB SRP; flop+turn on an r7a.8xlarge / 256 GB spot box, then **river at
+   deep SPR added 2026-07-01**). Remaining deep gap: deep for any non-BTN-vs-BB scenario.
 5. **Game type: chip-EV only, no ICM.** No cash/tournament axis. Most applicable to
    tournaments + short cash; ICM spots (bubble, FT, pay jumps) **not modeled**.
+
+**Now that BTN-vs-BB is complete across all three streets and all SPR regimes, the next
+solve cycles are all about WIDTH (new scenarios), not DEPTH — see the roadmap.**
 
 ---
 
@@ -66,22 +76,26 @@ SRP is the most common HU postflop spot).
 Real per-spot timings this run (8 threads, local): shallow ~250–490s, medium ~750–1,430s,
 **~700s avg**. The grid is *embarrassingly parallel* (independent spots).
 
-| Milestone | Spots | Local (serial-ish) | 96-vCPU Linux (12 parallel × 8t) | Needs |
+| Milestone | Spots | Local (serial-ish) | Big-vCPU Linux | Needs |
 |---|---|---|---|---|
-| ✅ flop+turn, BTN-vs-BB (shallow+medium) | 52 | ~several h | ~50 min | — |
-| ✅ + deep SPR (same scenario, flop+turn) | 26 | **blocked (OOM @32 GB)** | **65 min @ r7a.8xlarge / 256 GB, --parallel 4** | **big RAM ✓** |
-| + River (same scenario) | ~26–78 | many h (deepest tree) | ~1–2 h | **big RAM** |
-| + each new scenario | ~78 each | ~10+ CPU-h each | ~50 min each | — |
+| ✅ flop+turn, BTN-vs-BB (shallow+medium) | 52 | ~several h | ~50 min @ 96-vCPU | — |
+| ✅ + deep SPR (same scenario, flop+turn) | 26 | **blocked (OOM @32 GB)** | 65 min @ r7a.8xlarge / 256 GB, --parallel 4 | big RAM ✓ |
+| ✅ + River (same scenario, all SPR) | 78 | **impractical (~15–30 h)** | **~6 h @ r7a.32xlarge / 1 TB, --parallel 5** | **big RAM + subprocess tabulator** |
+| + each new scenario (3-bet / other openers / BvB) | ~78 each | ~10+ CPU-h each | ~50 min–hours each | — |
 | + ICM | — | — | feasible | — |
 
-**The lever:** a 64–192 vCPU, 256–512 GB Linux box → ~8–24× throughput + unblocks
-deep-cash/river. The full river + multi-scenario + deep-cash roadmap drops from ~80–100
-local CPU-hours (deep-cash *impossible* locally) to single-digit hours / ~$20–60 of spot
-compute. License-clean — the CPU source builds on Linux (GCC flags, vendored deps; pass
-`-DCMAKE_POLICY_VERSION_MINIMUM=3.5`). No pruning, no engine change.
+**The lever:** a 64–192 vCPU, 256 GB–1 TB Linux box → ~8–24× throughput + unblocks
+deep-cash/river. **River specifically needs 1 TB RAM + the per-spot SUBPROCESS tabulator**
+(commit 0130619): deep river dumps are ~15 GB on disk → ~150 GB Dart heap to parse, so the
+old `Isolate.run` shared one GC and stalled (~2 spots/hr); a process per spot gives each its
+own heap → `--parallel` parallelizes across cores. That capped concurrency at ~5 (5×150 GB
+< 1 TB) — the remaining lever for higher parallelism is a streaming/SAX tabulator (lower
+per-parse memory). License-clean — the CPU source builds on Linux (GCC flags, vendored deps;
+pass `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`). No pruning, no engine change.
 
-**Bundle the next solve cycle:** river + facing_allin relabel + asymmetric-SPR handling +
-turn-decision eval-coverage spots + deep-SPR — all gated on the same big-RAM Linux box.
+**Bundle the next solve cycle (all WIDTH now — river/deep are done for BTN-vs-BB):** a new
+scenario (3-bet / other openers / BvB) + facing_allin relabel + asymmetric-SPR handling —
+all gated on the same big-RAM Linux box.
 
 ---
 
@@ -113,3 +127,4 @@ PY
 | 2026-06-28 | v1 (flop) | BTN-vs-BB SRP, **flop only**, shallow+medium SPR; ~23/40 textures; 1,590 cells |
 | 2026-06-29 | phase 2b (flop+turn) | **+ turn cells** (per-node SPR); textures → **48/48**; committed SPR on turn; 6,607 cells (6,172 eligible, 93%); eval re-baseline clean (freq-agreement 95.5→100%) |
 | 2026-06-30 | deep-SPR | **+ deep regime (SPR 15 ≈ 100bb deep-cash)** for BTN-vs-BB SRP, flop+turn; cleared the 32 GB OOM on an r7a.8xlarge / 256 GB spot box (25 deep spots, `--parallel 4`, 65 min, 0 failures, all ≤0.5% expl); 9,137 cells (8,779 eligible, 96%); deep ≈ 28% of eligible. **Eval re-baseline NOT yet run** (deep cells aren't exercised by the current flop/turn benchmark — deferred with the full re-baseline) |
+| 2026-07-01 | river | **+ river cells** ('river' profile / dump_rounds 3 — river check-raise faithful); full re-solve of all 78 BTN-vs-BB SRP spots (all SPR incl. deep) on a 128-vCPU / 1 TB r7a.32xlarge (us-east-1), `--parallel 5`, ~6 h, 0 failures, all ≤0.5% expl; **11,764 cells (11,400 eligible, 97%)**; river ≈ 23% of eligible. Full postflop (flop+turn+river) for BTN-vs-BB now complete. Enabled by the per-spot **subprocess tabulator** (commit 0130619) — the old Isolate.run shared-GC stalled deep river parses. **Eval re-baseline + `gen_gto_spots.dart --write` (fires the 4 river eval templates) NOT yet run — pending.** |
