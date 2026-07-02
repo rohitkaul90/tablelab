@@ -39,10 +39,20 @@ the rest. All 6 buckets exist in aggregate.
 shallow/medium/deep/committed (~655 each). The 'river' bet profile (dump_rounds 3) makes
 river check-raise available, so river frequencies are faithful (not donk-distorted).
 
-**`facing_allin` mismatch (latent):** the tabulator labels an all-in `facing_allin` but
-the live lookup queries `facing_bet_*`/`facing_raise` — currently **0** such cells exist
-(low reach → suppressed), so no live impact today; fix the label before the next solve so
-future shove cells are reachable.
+**`facing_allin` mismatch — ✅ FIXED in code 2026-07-02** (`freq_tabulate._facingActLabel`,
+tested): a faced all-in now labels like the live `_heroFacing` — opening shove →
+`facing_bet_<bucket>`, shove over a wager → `facing_raise`. Takes effect from the NEXT
+solve's tabulation (cached cells unchanged; 0 such cells existed, so nothing to migrate).
+Matters most for the 3-bet-pot scenario (shoves are routine at SPR ~1–4).
+
+**Asymmetric-SPR — ✅ RESOLVED BY CONVENTION (assessed 2026-07-02, no code change):**
+the live lookup's SPR uses the standard effective-stack convention (min of hero and the
+shortest simulated villain ÷ pot), which is exactly the symmetric offline solve's
+semantics — a live asymmetric hand at effective SPR X plays the same tree as the
+symmetric solve at SPR X, since the deeper stack's extra chips can never go in.
+TexasSolver only accepts one symmetric `set_effective_stack`, so the residual (the
+deeper player's leverage/implied-threat asymmetry) is unsolvable offline and is the
+standard industry approximation. Not a lookup bug; removed from the roadmap.
 
 ---
 
@@ -93,9 +103,13 @@ own heap → `--parallel` parallelizes across cores. That capped concurrency at 
 per-parse memory). License-clean — the CPU source builds on Linux (GCC flags, vendored deps;
 pass `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`). No pruning, no engine change.
 
-**Bundle the next solve cycle (all WIDTH now — river/deep are done for BTN-vs-BB):** a new
-scenario (3-bet / other openers / BvB) + facing_allin relabel + asymmetric-SPR handling —
-all gated on the same big-RAM Linux box.
+**Next solve cycles (all WIDTH — river/deep are done for BTN-vs-BB):** scenario order
+(decided 2026-07-02, rationale in `launch/GTO_EXPLORER.md` §7): **Cycle A =
+`3bp_bb_v_btn`** (BB 3-bets vs BTN open — SPR ~1–4 → small trees, LOCAL solve; code
+prep DONE 2026-07-02: multi-scenario grid via `TLSOLVE_SCENARIO`, scenario defined,
+facing_allin relabel, live `_deriveScenarioKey` mapping, 7 eval templates) →
+**Cycle B = `srp_early_v_bb` + `srp_middle_v_bb`** (big box; same session re-dumps
+BTN-vs-BB with explorer packs) → **Cycle C = `srp_sb_v_bb`**.
 
 ---
 

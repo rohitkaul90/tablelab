@@ -1,8 +1,9 @@
-// GTO frequency library (DCE Q1) — SOLVE GRID runner (phase 2b: turn cells).
+// GTO frequency library (DCE Q1) — SOLVE GRID runner.
 //
-// Solves the scenario srp_late_v_bb (BTN open vs BB call, heads-up) over ~24
-// representative-texture flops × {shallow, medium} SPR and tabulates each solve
-// into the checked-in frequency library (assets/gto_freq_library.json).
+// Solves ONE scenario per run (TLSOLVE_SCENARIO, default srp_late_v_bb; see
+// kScenarios) over ~26 representative-texture flops × that scenario's SPR
+// regimes, and tabulates each solve into the checked-in frequency library
+// (assets/gto_freq_library.json) — which holds EVERY cached scenario's cells.
 // Operator-only; invokes the licensed TexasSolver via run_solver.dart.
 // Design: launch/GTO_FREQUENCY_LIBRARY.md + launch/GTO_FREQ_PHASE2B_TURN.md.
 //
@@ -30,7 +31,8 @@
 //   dart run tool/solver/freq_grid.dart            # full grid (resumes via cache)
 //   dart run tool/solver/freq_grid.dart --limit 1  # smoke: solve the first spot
 //   dart run tool/solver/freq_grid.dart --write     # (re)assemble the library JSON
-//                                                   #   from cached spot results
+//                                                   #   from ALL cached scenarios
+//   TLSOLVE_SCENARIO=3bp_bb_v_btn dart run …        # solve a different scenario
 
 import 'dart:convert';
 import 'dart:io';
@@ -42,7 +44,73 @@ import 'freq_tabulate.dart';
 import 'run_solver.dart';
 import 'solver_input.dart';
 
-const String kScenario = 'srp_late_v_bb';
+/// One solvable scenario: a preflop range pair + the SPR regimes it's solved
+/// at. The grid solves ONE scenario per run (TLSOLVE_SCENARIO); the library
+/// holds every scenario's cells side by side (the live lookup keys on the
+/// scenario string `_deriveScenarioKey` produces — keep keys in sync with
+/// villain_range.dart).
+class GridScenario {
+  final String key;
+  final String description;
+
+  /// Flop SPR regimes for THIS scenario: bucket name → representative SPR.
+  /// Names must be `decision_context.sprBucket` names, and each rep must LAND
+  /// in its named bucket (the tabulator re-derives buckets from the SPR).
+  final Map<String, double> sprReps;
+
+  /// Preflop ranges (comma-joined notation), resolved from the shared GTO
+  /// preset charts — the same source the live villain model uses.
+  final ({String ip, String oop}) Function() ranges;
+
+  const GridScenario({
+    required this.key,
+    required this.description,
+    required this.sprReps,
+    required this.ranges,
+  });
+}
+
+({String ip, String oop}) _rangePair(String ipKey, String oopKey) {
+  final ip = presetByKey[ipKey];
+  final oop = presetByKey[oopKey];
+  if (ip == null || oop == null) {
+    throw StateError('missing scenario ranges ($ipKey / $oopKey)');
+  }
+  return (
+    ip: (ip.toList()..sort()).join(','),
+    oop: (oop.toList()..sort()).join(','),
+  );
+}
+
+final Map<String, GridScenario> kScenarios = {
+  'srp_late_v_bb': GridScenario(
+    key: 'srp_late_v_bb',
+    description: 'BTN open vs BB call — heads-up single-raised (aggressor IP)',
+    // The SRP band: tournament/short (3), mid (6), 100bb deep-cash (15).
+    sprReps: const {'shallow': 3.0, 'medium': 6.0, 'deep': 15.0},
+    ranges: () => _rangePair(
+        rfiKey('BTN', false)!, // cash_rfi_btn
+        callKey('bb', openerBucketForLabel('BTN'), 'BTN', false)),
+  ),
+  '3bp_bb_v_btn': GridScenario(
+    key: '3bp_bb_v_btn',
+    description: 'BTN open, BB 3-bet, BTN call — heads-up 3-bet pot '
+        '(aggressor OOP; condensed ranges)',
+    // 3-bet-pot SPR band is inherently LOW: ~1 (25–40bb eff), ~2 (~60bb),
+    // ~4 (100bb deep-cash ≈ pot 22.5bb, 89bb behind). Deep (>6) needs 250bb+
+    // stacks — not modeled. Each rep lands squarely in its bucket
+    // (committed ≤1 < shallow ≤3 < medium ≤6).
+    sprReps: const {'committed': 1.0, 'shallow': 2.0, 'medium': 4.0},
+    ranges: () => _rangePair(
+        call3BetKey('ip', false), // cash_call_3b_ip — BTN continues vs the 3-bet
+        threeBetKey('bb', 'late', false)), // cash_3b_bb_vs_btn — BB's 3-bet range
+  ),
+};
+
+/// The scenario THIS run solves (env-selected; the library write folds in every
+/// cached scenario regardless). Rejected in main() when unknown.
+final String kScenario =
+    (Platform.environment['TLSOLVE_SCENARIO'] ?? 'srp_late_v_bb').toLowerCase();
 
 // The bet profile is ENV-OVERRIDABLE, but the DEFAULT MUST MATCH THE SHIPPED
 // LIBRARY so a plain rebuild / `--write` with no env reproduces the committed
@@ -90,14 +158,14 @@ const String kResultsPath = 'tool/solver/freq_grid_results.json';
 // the eval baker). The grid writes it there directly.
 const String kLibraryPath = 'assets/gto_freq_library.json';
 
-/// The spot's flop SPR regimes: name → representative SPR. Names match
-/// `decision_context.sprBucket` (3 → shallow, 6 → medium, >6 → deep). 'deep'
-/// (SPR 15 ≈ 100bb deep-cash) can't be solved on a 32 GB box; it solves on a
-/// big-RAM vCPU box (≥256 GB — an r7a.8xlarge cleared it). You CAN drop it back
-/// to {shallow, medium} for a local re-solve, but you don't have to: a local run
-/// that can't solve deep won't silently clobber the committed deep cells —
-/// _writeLibrary refuses to drop an SPR regime the shipped library already has.
-const Map<String, double> kSprReps = {'shallow': 3.0, 'medium': 6.0, 'deep': 15.0};
+/// The SELECTED scenario's flop SPR regimes (see [GridScenario.sprReps]).
+/// srp_late_v_bb's 'deep' (SPR 15 ≈ 100bb deep-cash) can't be solved on a
+/// 32 GB box; it solves on a big-RAM vCPU box (≥256 GB — an r7a.8xlarge
+/// cleared it). A local run that can't solve deep won't silently clobber the
+/// committed deep cells — _writeLibrary refuses to drop an SPR regime the
+/// shipped library already has.
+final Map<String, double> kSprReps =
+    kScenarios[kScenario]?.sprReps ?? const {};
 
 /// ~24 representative flops, hand-picked to span the common texture cells
 /// (suit × pairing × high-card × connectedness). Colliding cells just add mass.
@@ -118,21 +186,16 @@ const List<String> kRepFlops = [
 List<int> flopInts(String flop) =>
     flop.split(' ').where((t) => t.isNotEmpty).map(parseCard).toList();
 
-/// Build the scenario's preflop ranges once: IP = BTN RFI, OOP = BB call vs BTN.
-/// Public so the calibration runner solves the SAME ranges as the full grid
-/// (no second copy to drift) — it throws a descriptive error on a missing preset.
+/// The SELECTED scenario's preflop ranges. Public so the calibration runner and
+/// pack_spike solve the SAME ranges as the full grid (no second copy to drift);
+/// throws a descriptive error on a missing preset or unknown scenario.
 ({String ip, String oop}) scenarioRanges() {
-  final ipKey = rfiKey('BTN', false); // cash_rfi_btn
-  final oopKey = callKey('bb', openerBucketForLabel('BTN'), 'BTN', false);
-  final ip = presetByKey[ipKey];
-  final oop = presetByKey[oopKey];
-  if (ip == null || oop == null) {
-    throw StateError('missing scenario ranges ($ipKey / $oopKey)');
+  final sc = kScenarios[kScenario];
+  if (sc == null) {
+    throw StateError('unknown TLSOLVE_SCENARIO "$kScenario" '
+        '(${kScenarios.keys.join('/')})');
   }
-  return (
-    ip: (ip.toList()..sort()).join(','),
-    oop: (oop.toList()..sort()).join(','),
-  );
+  return sc.ranges();
 }
 
 /// A grid spot: a representative flop at one SPR regime. Public so calib_turn.dart
@@ -154,7 +217,17 @@ SolverSpot gridSpot(String flop, double spr, String rangeIp, String rangeOop) {
 }
 
 String _spotKey(String flop, String sprName) =>
+    '$kScenario|${flop.replaceAll(' ', '')}|$sprName|$kBetProfile|dr$kDumpRounds';
+
+/// Pre-multi-scenario cache keys had no scenario segment and implicitly meant
+/// srp_late_v_bb — accept them so the carried-over river cache stays valid.
+String _legacySpotKey(String flop, String sprName) =>
     '${flop.replaceAll(' ', '')}|$sprName|$kBetProfile|dr$kDumpRounds';
+
+bool _isCached(Map<String, dynamic> results, String flop, String sprName) =>
+    results.containsKey(_spotKey(flop, sprName)) ||
+    (kScenario == 'srp_late_v_bb' &&
+        results.containsKey(_legacySpotKey(flop, sprName)));
 
 Map<String, dynamic> _loadResults() {
   final f = File(kResultsPath);
@@ -224,19 +297,21 @@ FreqCell _cellFromJson(Map<String, dynamic> j) => FreqCell(
       reachWeight: (j['reach_weight'] as num).toDouble(),
     );
 
-/// Assemble gto_freq_library.json from cached spot results, folding in ONLY the
-/// spots solved with the current ([kBetProfile], [kDumpRounds]) — so a
-/// results.json that still holds a different profile's solves (e.g. a stale v1
-/// 'multi' cache) can't blend its donk-distorted cells into this library.
+/// Assemble gto_freq_library.json from cached spot results — EVERY cached
+/// scenario, folding in ONLY the spots solved with the current
+/// ([kBetProfile], [kDumpRounds]) — so a results.json that still holds a
+/// different profile's solves (e.g. a stale v1 'multi' cache) can't blend its
+/// donk-distorted cells into this library.
 void _writeLibrary(Map<String, dynamic> results) {
-  final ranges = scenarioRanges();
-  final all = <FreqCell>[];
-  final repFlops = <String, String>{};
-  var usedSpots = 0, skippedOtherProfile = 0;
+  final cellsByScenario = <String, List<FreqCell>>{};
+  final repFlopsByScenario = <String, Map<String, String>>{};
+  final spotsByScenario = <String, int>{};
+  var usedSpots = 0, skippedOtherProfile = 0, skippedUnknownScenario = 0;
   results.forEach((spotKey, v) {
     final m = v as Map<String, dynamic>;
-    // Older records pre-date the stamp; fall back to the profile in the spotKey
-    // (`flop|spr|PROFILE|drN`) so the filter still holds for them.
+    // Older records pre-date the stamps; their key format is
+    // `flop|spr|PROFILE|drN` (scenario-less ⇒ srp_late_v_bb). New records
+    // carry explicit 'scenario'/'profile'/'dump_rounds' stamps.
     final keyParts = spotKey.split('|');
     final profile =
         (m['profile'] as String?) ?? (keyParts.length >= 3 ? keyParts[2] : null);
@@ -246,14 +321,27 @@ void _writeLibrary(Map<String, dynamic> results) {
       skippedOtherProfile++;
       return;
     }
+    final scenario = (m['scenario'] as String?) ?? 'srp_late_v_bb';
+    if (!kScenarios.containsKey(scenario)) {
+      // A cached scenario this code no longer defines — don't guess its ranges.
+      skippedUnknownScenario++;
+      return;
+    }
     usedSpots++;
+    spotsByScenario[scenario] = (spotsByScenario[scenario] ?? 0) + 1;
     final flop = m['flop'] as String;
+    final cells = cellsByScenario.putIfAbsent(scenario, () => []);
+    final repFlops = repFlopsByScenario.putIfAbsent(scenario, () => {});
     for (final cj in (m['cells'] as List)) {
       final cell = _cellFromJson(cj as Map<String, dynamic>);
-      all.add(cell);
+      cells.add(cell);
       if (cell.street == 'flop') repFlops.putIfAbsent(cell.texture, () => flop);
     }
   });
+  if (skippedUnknownScenario > 0) {
+    stdout.writeln('  (skipped $skippedUnknownScenario cached spots from '
+        'scenarios not defined in kScenarios)');
+  }
   if (skippedOtherProfile > 0) {
     stdout.writeln('  (skipped $skippedOtherProfile cached spots from a '
         'different profile/dump-rounds)');
@@ -263,7 +351,7 @@ void _writeLibrary(Map<String, dynamic> results) {
   // kBetProfile flip but before any matching solve has run): every spot is
   // skipped, usedSpots==0, and writing here would replace the live library with
   // 0 cells — silently killing the GTO-frequency FACT in prod. Abort instead.
-  if (usedSpots == 0 || all.isEmpty) {
+  if (usedSpots == 0 || cellsByScenario.isEmpty) {
     stderr.writeln('ABORT: no cached spots match the current profile '
         "('$kBetProfile', dumpRounds $kDumpRounds) — refusing to overwrite "
         '$kLibraryPath with an empty library. Run the grid to solve '
@@ -271,40 +359,55 @@ void _writeLibrary(Map<String, dynamic> results) {
     exitCode = 1;
     return;
   }
-  final merged = _mergeCells(all)
-    ..sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
-  // Post-merge empty guard: _mergeCells drops zero-reach singletons + zero-mass
-  // groups, so a non-empty `all` can still collapse to []. The pre-merge guard
-  // above only catches the no-matching-spots case — guard the actual written
-  // value too, never clobbering the shipped library with 0 cells.
-  if (merged.isEmpty) {
+  // Merge per scenario. _mergeCells drops zero-reach singletons + zero-mass
+  // groups, so a non-empty input can still collapse to [] — drop such scenarios
+  // rather than writing an empty ScenarioLib.
+  final mergedByScenario = <String, List<FreqCell>>{};
+  cellsByScenario.forEach((scenario, cells) {
+    final merged = _mergeCells(cells)
+      ..sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
+    if (merged.isNotEmpty) mergedByScenario[scenario] = merged;
+  });
+  if (mergedByScenario.isEmpty) {
     stderr.writeln('ABORT: $usedSpots matching spot(s) all tabulated to '
         'zero-mass/zero-reach cells — refusing to overwrite $kLibraryPath '
         'with 0 cells.');
     exitCode = 1;
     return;
   }
-  // Regime-drop guard: refuse to ship a library that DROPS an SPR bucket OR a
-  // STREET the committed one already covers. Two ways a rebuild silently narrows
-  // coverage: (a) a local 32 GB re-solve can't solve 'deep' (OOMs in the external
-  // solver), swallowed per-spot → the deep SPR bucket vanishes; (b) a plain
-  // rebuild under the DEFAULT profile (now 'river') is fine, but a rebuild forced
-  // to an OLDER profile (TLSOLVE_PROFILE=turn, dr2) re-solves as turn-only and
-  // drops the river STREET while leaving the SPR-bucket set unchanged
-  // (shallow/medium/deep/committed are the same). The empty-guard above only
-  // catches a fully-empty rebuild, so without this the rebuild would overwrite the
-  // committed cells and silently regress live coaching. Compare BOTH the spr_bucket
-  // AND the street sets against the existing asset; abort on any drop (override
-  // with ALLOW_REGIME_DROP=1 for an intentional narrowing).
+  // Regime-drop guard: refuse to ship a library that DROPS a SCENARIO, an SPR
+  // bucket, or a STREET the committed one already covers. Ways a rebuild
+  // silently narrows coverage: (a) a local 32 GB re-solve can't solve 'deep'
+  // (OOMs in the external solver), swallowed per-spot → the deep SPR bucket
+  // vanishes; (b) a rebuild forced to an OLDER profile (TLSOLVE_PROFILE=turn,
+  // dr2) re-solves as turn-only and drops the river STREET; (c) a results.json
+  // that lost another scenario's cached spots (fresh checkout, pruned cache)
+  // would silently drop that whole scenario. The empty-guard above only catches
+  // a fully-empty rebuild. Compare the scenario set AND, per scenario, the
+  // spr_bucket + street sets against the existing asset; abort on any drop
+  // (override with ALLOW_REGIME_DROP=1 for an intentional narrowing).
   final existing = File(kLibraryPath);
   if (existing.existsSync() &&
       Platform.environment['ALLOW_REGIME_DROP'] != '1') {
     try {
       final prev = jsonDecode(existing.readAsStringSync()) as Map<String, dynamic>;
-      final prevScenario =
-          (prev['scenarios'] as Map?)?[kScenario] as Map<String, dynamic>?;
-      final prevCells = prevScenario?['cells'] as List?;
-      if (prevCells != null) {
+      final prevScenarios =
+          (prev['scenarios'] as Map?)?.cast<String, dynamic>() ?? const {};
+      for (final entry in prevScenarios.entries) {
+        final scenario = entry.key;
+        final prevCells =
+            (entry.value as Map<String, dynamic>)['cells'] as List?;
+        if (prevCells == null || prevCells.isEmpty) continue;
+        final merged = mergedByScenario[scenario];
+        if (merged == null) {
+          stderr.writeln('ABORT: the rebuilt library DROPS scenario '
+              "'$scenario' that the committed $kLibraryPath covers — refusing "
+              'to clobber it (results.json is likely missing that scenario\'s '
+              'cached spots). Restore the cache or set ALLOW_REGIME_DROP=1 '
+              'for an intentional narrowing.');
+          exitCode = 1;
+          return;
+        }
         final prevBuckets = {
           for (final c in prevCells) (c as Map)['spr_bucket'] as String
         };
@@ -323,11 +426,12 @@ void _writeLibrary(Map<String, dynamic> results) {
             if (droppedStreets.isNotEmpty) 'street(s) $droppedStreets',
           ].join(' and ');
           stderr.writeln('ABORT: the rebuilt library is missing $missing that '
-              'the committed $kLibraryPath covers — refusing to clobber it '
-              '(likely deep spots OOM\'d on a small-RAM box, or a rebuild forced '
-              'to an older TLSOLVE_PROFILE dropped a street). Solve the missing '
-              'regime on a big-RAM box (or use the matching profile), or set '
-              'ALLOW_REGIME_DROP=1 to override for an intentional narrowing.');
+              "the committed $kLibraryPath covers for scenario '$scenario' — "
+              'refusing to clobber it (likely deep spots OOM\'d on a small-RAM '
+              'box, or a rebuild forced to an older TLSOLVE_PROFILE dropped a '
+              'street). Solve the missing regime on a big-RAM box (or use the '
+              'matching profile), or set ALLOW_REGIME_DROP=1 to override for '
+              'an intentional narrowing.');
           exitCode = 1;
           return;
         }
@@ -336,28 +440,44 @@ void _writeLibrary(Map<String, dynamic> results) {
       // Unreadable / old-format existing library — don't block the write on it.
     }
   }
-  final streets = (merged.map((c) => c.street).toSet().toList()..sort()).join('+');
+  final allMerged = mergedByScenario.values.expand((c) => c);
+  final streets =
+      (allMerged.map((c) => c.street).toSet().toList()..sort()).join('+');
   final lib = FreqLibrary(
     meta: {
       'solver': 'TexasSolver',
       'bet_profile': kBetProfile,
       'dump_rounds': kDumpRounds,
       'streets': streets, // actual streets present (e.g. flop+turn+river)
-      'spr_reps': kSprReps,
+      // Per-scenario SPR reps (each scenario is solved at its own regimes).
+      'spr_reps': {
+        for (final sc in mergedByScenario.keys)
+          sc: kScenarios[sc]?.sprReps ?? const <String, double>{},
+      },
       'note': 'faithful $streets check/bet-size/call/fold/raise/allin freqs '
           '("$kBetProfile" profile — check-raise available on every tabulated '
-          'street). Shallow+medium+deep SPR. Each cell is keyed by the SPR at its '
-          'OWN street (pot reconstructed down the line), so a turn/river after a '
-          'bet-call buckets shallower than the flop.',
+          'street). Each cell is keyed by the SPR at its OWN street (pot '
+          'reconstructed down the line), so a turn/river after a bet-call '
+          'buckets shallower than the flop.',
       'generated_spots': usedSpots,
+      'spots_per_scenario': spotsByScenario,
     },
     scenarios: {
-      kScenario: ScenarioLib(ranges.ip, ranges.oop, repFlops, merged),
+      for (final entry in mergedByScenario.entries)
+        entry.key: ScenarioLib(
+          kScenarios[entry.key]!.ranges().ip,
+          kScenarios[entry.key]!.ranges().oop,
+          repFlopsByScenario[entry.key] ?? const {},
+          entry.value,
+        ),
     },
   );
   File(kLibraryPath).writeAsStringSync(lib.toJsonString());
-  stdout.writeln('Wrote $kLibraryPath: ${merged.length} cells from '
-      '$usedSpots spots (${repFlops.length} textures).');
+  final perScenario = mergedByScenario.entries
+      .map((e) => '${e.key} ${e.value.length}')
+      .join(', ');
+  stdout.writeln('Wrote $kLibraryPath: '
+      '${allMerged.length} cells from $usedSpots spots ($perScenario).');
 }
 
 Future<void> main(List<String> args) async {
@@ -371,6 +491,12 @@ Future<void> main(List<String> args) async {
     stderr.writeln('TLSOLVE_PROFILE="$kBetProfile" is not a grid profile '
         '(${kProfileDumpRounds.keys.join('/')}). The grid tabulates per-street '
         'GTO frequencies and needs a faithful multi-street profile.');
+    exitCode = 64;
+    return;
+  }
+  if (!kScenarios.containsKey(kScenario)) {
+    stderr.writeln('TLSOLVE_SCENARIO="$kScenario" is not a defined scenario '
+        '(${kScenarios.keys.join('/')}).');
     exitCode = 64;
     return;
   }
@@ -410,7 +536,7 @@ Future<void> main(List<String> args) async {
   final pending = <({String flop, String spr, double sprVal})>[];
   var skipped = 0;
   for (final s in spots) {
-    if (results.containsKey(_spotKey(s.flop, s.spr))) {
+    if (_isCached(results, s.flop, s.spr)) {
       skipped++;
     } else if (limit == null || pending.length < limit) {
       pending.add(s);
@@ -492,9 +618,11 @@ Future<void> main(List<String> args) async {
         results[key] = {
           'flop': s.flop,
           'spr': s.spr,
-          // Stamp the profile/dump-rounds so a library rebuild folds in ONLY
-          // matching-profile spots — a results.json carried over from a different
-          // profile (e.g. v1 'multi') must not blend its cells into this library.
+          // Stamp scenario/profile/dump-rounds so a library rebuild groups each
+          // spot under its scenario and folds in ONLY matching-profile spots — a
+          // results.json carried over from a different profile (e.g. v1 'multi')
+          // must not blend its cells into this library.
+          'scenario': kScenario,
           'profile': kBetProfile,
           'dump_rounds': kDumpRounds,
           'exploitability': expl,

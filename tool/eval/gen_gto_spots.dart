@@ -52,12 +52,18 @@ class _Spec {
   final List<HandAction> turnAct;
   final String? river;
   final List<HandAction> riverAct;
+
+  /// 3-bet-pot spot (scenario 3bp_bb_v_btn): preflop becomes BTN open 5 →
+  /// BB 3-bet 18 → BTN call (pot 36 at the flop). [stack] then sets the 3bp
+  /// SPR regime: 52 → committed (~0.94), 90 → shallow (2.0), 160 → medium (~3.9).
+  final bool threeBet;
   const _Spec(this.id, this.board, this.hero, this.heroSeat, this.stack,
       this.flop, this.note,
       {this.turn,
       this.turnAct = const [],
       this.river,
-      this.riverAct = const []});
+      this.riverAct = const [],
+      this.threeBet = false});
 }
 
 // Action shorthands.
@@ -174,6 +180,42 @@ final List<_Spec> _specs = [
       [_chk(2), _chk(0)], 'RIVER IP facing_bet, set of sixes (strongMade), medium',
       turn: '2s', turnAct: [_chk(2), _chk(0)],
       river: '3d', riverAct: [_bet(2, 8), _call(0, 8)]),
+
+  // ── 3-BET-POT spots (scenario 3bp_bb_v_btn — Cycle A) — TEMPLATES until the
+  // 3-bet cells are solved (TLSOLVE_SCENARIO=3bp_bb_v_btn); they report ✗ and
+  // --write skips them until then. Preflop: BTN opens 5, BB 3-bets to 18, BTN
+  // calls → pot 36 at the flop; the aggressor (BB) is OOP. Stacks 52/90/160
+  // land committed/shallow/medium (see _Spec.threeBet). Spread hero position ×
+  // facing × hand class × SPR regime + one turn + one river decision.
+  _Spec('gto-3bp-oop-cbet-strong-sh', _boardA, ['Ah', 'Kc'], 2, 90,
+      [_bet(2, 24), _call(0, 24)],
+      '3BP OOP first_to_act (c-bet), top two (strongMade), shallow',
+      threeBet: true),
+  _Spec('gto-3bp-oop-fta-marg-md', _boardA, ['Qc', 'Qd'], 2, 160,
+      [_chk(2), _chk(0)],
+      '3BP OOP first_to_act (check), QQ under the ace (marginalMade), medium',
+      threeBet: true),
+  _Spec('gto-3bp-ip-fcheck-marg-co', _boardA, ['Ac', 'Qd'], 0, 52,
+      [_chk(2), _bet(0, 16)],
+      '3BP IP facing_check, top pair (marginalMade), committed',
+      threeBet: true),
+  _Spec('gto-3bp-ip-fbet-strong-md', _boardB, ['9h', '9c'], 0, 160,
+      [_bet(2, 24), _call(0, 24)],
+      '3BP IP facing_bet (67% c-bet), top set (strongMade), medium',
+      threeBet: true),
+  _Spec('gto-3bp-oop-fbet-air-sh', _boardC, ['Ac', '4d'], 2, 90,
+      [_chk(2), _bet(0, 18), _call(2, 18)],
+      '3BP OOP facing_bet, ace-high (air), shallow',
+      threeBet: true),
+  _Spec('gto-3bp-t-ip-fbet-marg-sh', _boardA, ['Ac', 'Qd'], 0, 90,
+      [_chk(2), _chk(0)],
+      '3BP TURN IP facing_bet (BB delays), top pair (marginalMade), shallow',
+      threeBet: true, turn: '2c', turnAct: [_bet(2, 20), _call(0, 20)]),
+  _Spec('gto-3bp-r-oop-fta-strong-md', _boardA, ['Ah', 'Kc'], 2, 160,
+      [_chk(2), _chk(0)],
+      '3BP RIVER OOP first_to_act (lead), top two (strongMade), medium',
+      threeBet: true, turn: '2c', turnAct: [_chk(2), _chk(0)],
+      river: '3d', riverAct: [_bet(2, 24), _call(0, 24)]),
 ];
 
 PokerHand _buildHand(_Spec s) {
@@ -203,12 +245,23 @@ PokerHand _buildHand(_Spec s) {
       ),
     ],
     streets: [
-      // BTN (seat 0) opens to 5, BB (seat 2) calls — single-raised, heads-up.
-      const StreetData(street: Street.preflop, actions: [
-        HandAction(seat: 2, type: ActionType.post, amount: 2),
-        HandAction(seat: 0, type: ActionType.raise, amount: 5),
-        HandAction(seat: 2, type: ActionType.call, amount: 5),
-      ]),
+      // Single-raised: BTN (seat 0) opens to 5, BB (seat 2) calls.
+      // 3-bet (threeBet): BTN opens 5, BB 3-bets to 18, BTN calls — the
+      // 3bp_bb_v_btn shape (BB aggressor, OOP; pot 36 at the flop).
+      StreetData(
+          street: Street.preflop,
+          actions: s.threeBet
+              ? const [
+                  HandAction(seat: 2, type: ActionType.post, amount: 2),
+                  HandAction(seat: 0, type: ActionType.raise, amount: 5),
+                  HandAction(seat: 2, type: ActionType.raise, amount: 18),
+                  HandAction(seat: 0, type: ActionType.call, amount: 18),
+                ]
+              : const [
+                  HandAction(seat: 2, type: ActionType.post, amount: 2),
+                  HandAction(seat: 0, type: ActionType.raise, amount: 5),
+                  HandAction(seat: 2, type: ActionType.call, amount: 5),
+                ]),
       StreetData(
           street: Street.flop, communityCards: s.board, actions: s.flop),
       // Per-street communityCards are INCREMENTAL: each street holds only its

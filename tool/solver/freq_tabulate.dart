@@ -475,19 +475,40 @@ void _walk(
     // betSizeBucket) can find the cell. canonicalActionLabels ranks bet sizes
     // RELATIVE to the node, so a single-size tree yields a bare 'bet' that no
     // live faced-bet key ever matches — bucket the faced bet by ABSOLUTE
-    // pot-fraction instead. Non-bet actions keep their canonical label.
-    // KNOWN GAP (code-review 2026-06-29): an all-in faced action is labelled
-    // 'facing_allin' here, but the live lookup (_heroFacing in villain_range)
-    // maps a villain shove to facing_bet_<bucket> (opening) or facing_raise — so
-    // 'facing_allin' cells are currently UNREACHABLE and hero-faces-shove spots
-    // miss the GTO FACT. Fix = label an all-in like the live path; it needs a
-    // re-solve to take effect, so it's deferred to the next solve cycle.
-    final facingAct = canon[ai].startsWith('bet')
-        ? 'bet_${betSizeBucket(_betFrac(actions[ai], position, spr))}'
-        : canon[ai];
+    // pot-fraction instead. An ALL-IN likewise gets the live labels (an
+    // opening shove is a bet, a shove over a wager is a raise — see
+    // _facingActLabel); a bare 'facing_allin' would be unreachable (the live
+    // _heroFacing never emits it). Non-bet actions keep their canonical label.
+    final facingAct = _facingActLabel(canon[ai], actions[ai], position, spr);
     _walk(child, board, nextReach, other, 'facing_$facingAct', acc,
         spr.afterAction(position, actions[ai]), maxBoardLen);
   }
+}
+
+/// The live-lookup-compatible facing label for a taken action: bets bucket by
+/// absolute pot-fraction; an all-in mirrors villain_range._heroFacing — with NO
+/// prior aggression this street it's an opening BET (bucketed by fraction,
+/// virtually always 'big'), over a wager it's a RAISE. Prior aggression this
+/// street ⟺ either player already has street chips (a call can't exist without
+/// a bet, and the same player can't bet twice consecutively), which the
+/// SprState street contribs encode.
+String _facingActLabel(
+    String canonLabel, String rawAction, String actorPos, SprState spr) {
+  if (canonLabel.startsWith('bet')) {
+    return 'bet_${betSizeBucket(_betFrac(rawAction, actorPos, spr))}';
+  }
+  if (canonLabel == 'allin') {
+    final other = actorPos == 'oop' ? 'ip' : 'oop';
+    final mine = spr.streetContrib[actorPos] ?? 0;
+    final theirs = spr.streetContrib[other] ?? 0;
+    if (mine > 0 || theirs > 0) return 'raise';
+    // Opening shove: to-total = everything behind; pot has no street chips yet.
+    final to = spr.effStack - spr.committedPrior;
+    final frac =
+        spr.potStreetStart > 0 ? (to / spr.potStreetStart) : null;
+    return 'bet_${betSizeBucket(frac)}';
+  }
+  return canonLabel;
 }
 
 /// The pot-fraction of a BET action: (its street "to"-total − the actor's chips

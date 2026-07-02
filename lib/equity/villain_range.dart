@@ -122,8 +122,9 @@ class HandEquityCheck {
   final bool basedOnSynthesizedAction;
 
   /// GTO frequency library (DCE Q1): which precomputed scenario this hand maps
-  /// to ('srp_late_v_bb'), or null when it's outside the library's coverage
-  /// (not heads-up, not single-raised, opener not late, or caller not the BB).
+  /// to ('srp_late_v_bb' = BTN open vs BB call; '3bp_bb_v_btn' = BTN open, BB
+  /// 3-bet, BTN call), or null when it's outside the library's coverage (not
+  /// heads-up, 4-bet+, seats/roles that don't match a solved pair, …).
   /// Gates the `[HEURISTIC — GTO frequency]` FACT to spots the library models.
   final String? scenarioKey;
 
@@ -840,9 +841,13 @@ double? _multiwayFieldMdf(
   return minDefenseFrequency(potBeforeStreet.toDouble(), bet.amount!.toDouble());
 }
 
-/// The GTO-library scenario this hand maps to, or null when outside v1 coverage.
-/// v1 library = srp_late_v_bb: heads-up to the flop, single-raised, a BTN opener
-/// vs a BB caller. Gates the GTO-frequency FACT.
+/// The GTO-library scenario this hand maps to, or null when outside coverage.
+/// Keys must match the solve grid's kScenarios (tool/solver/freq_grid.dart):
+///  - srp_late_v_bb — heads-up single-raised, BTN opener vs BB caller.
+///  - 3bp_bb_v_btn — heads-up 3-bet pot: BTN open → BB 3-bet → BTN call
+///    (the 3-bettor OOP). The BTN must be the ORIGINAL opener — a cold-called
+///    3-bet or squeeze reaches the flop with different ranges than the solve.
+/// Gates the GTO-frequency FACT.
 String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
     List<_VillainState> modeled) {
   final contesting = modeled.where((v) => v.combos.isNotEmpty).toList();
@@ -851,10 +856,11 @@ String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
   final hl = _classifyPreflop(preflop, heroSeat);
   final vl = _classifyPreflop(preflop, villainSeat);
   bool tooDeep(_PreflopLine l) =>
-      l.act == _PreAct.threeBet ||
-      l.act == _PreAct.fourBetPlus ||
-      l.calledAtLevel >= 2;
-  if (tooDeep(hl) || tooDeep(vl)) return null; // 3-bet+ pot
+      l.act == _PreAct.fourBetPlus || l.calledAtLevel >= 3;
+  if (tooDeep(hl) || tooDeep(vl)) return null; // 4-bet+ pot
+  String posOf(int seat) => hand.tableSetup.positionName(seat);
+
+  // Single-raised: opener vs a caller of the open.
   int openerSeat, callerSeat;
   if (hl.act == _PreAct.open &&
       vl.act == _PreAct.called &&
@@ -867,13 +873,36 @@ String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
     openerSeat = villainSeat;
     callerSeat = heroSeat;
   } else {
-    return null;
+    // 3-bet pot: one player 3-bet, the other called AT level 2, and the caller
+    // is the original opener (openerSeat = first raiser in the hand).
+    int threeBetterSeat;
+    if (hl.act == _PreAct.threeBet &&
+        vl.act == _PreAct.called &&
+        vl.calledAtLevel == 2) {
+      threeBetterSeat = heroSeat;
+      callerSeat = villainSeat;
+    } else if (vl.act == _PreAct.threeBet &&
+        hl.act == _PreAct.called &&
+        hl.calledAtLevel == 2) {
+      threeBetterSeat = villainSeat;
+      callerSeat = heroSeat;
+    } else {
+      return null;
+    }
+    if (hl.openerSeat != callerSeat) return null; // caller must be the opener
+    // Solved BB(OOP) 3-bettor vs BTN(IP) open-caller only — other seat pairs
+    // have different ranges AND can invert IP/OOP (the lookup keys on physical
+    // position).
+    if (posOf(threeBetterSeat) != 'BB' || posOf(callerSeat) != 'BTN') {
+      return null;
+    }
+    return '3bp_bb_v_btn';
   }
-  // The library was solved BTN(IP)-opener vs BB(OOP)-caller. The SB also buckets
-  // as 'late' but opens OUT of position, so its IP/OOP cells would be inverted
-  // (the lookup keys on physical position) — restrict to a BTN opener.
-  if (hand.tableSetup.positionName(openerSeat) != 'BTN') return null;
-  if (hand.tableSetup.positionName(callerSeat) != 'BB') return null;
+  // The SRP library was solved BTN(IP)-opener vs BB(OOP)-caller. The SB also
+  // buckets as 'late' but opens OUT of position, so its IP/OOP cells would be
+  // inverted (the lookup keys on physical position) — restrict to a BTN opener.
+  if (posOf(openerSeat) != 'BTN') return null;
+  if (posOf(callerSeat) != 'BB') return null;
   return 'srp_late_v_bb';
 }
 

@@ -6,12 +6,23 @@
     "dump_rounds": 3,
     "streets": "flop+river+turn",
     "spr_reps": {
-      "shallow": 3.0,
-      "medium": 6.0,
-      "deep": 15.0
+      "srp_late_v_bb": {
+        "shallow": 3.0,
+        "medium": 6.0,
+        "deep": 15.0
+      },
+      "3bp_bb_v_btn": {
+        "committed": 1.0,
+        "shallow": 2.0,
+        "medium": 4.0
+      }
     },
-    "note": "faithful flop+river+turn check/bet-size/call/fold/raise/allin freqs (\"river\" profile — check-raise available on every tabulated street). Shallow+medium+deep SPR. Each cell is keyed by the SPR at its OWN street (pot reconstructed down the line), so a turn/river after a bet-call buckets shallower than the flop.",
-    "generated_spots": 78
+    "note": "faithful flop+river+turn check/bet-size/call/fold/raise/allin freqs (\"river\" profile — check-raise available on every tabulated street). Each cell is keyed by the SPR at its OWN street (pot reconstructed down the line), so a turn/river after a bet-call buckets shallower than the flop.",
+    "generated_spots": 79,
+    "spots_per_scenario": {
+      "srp_late_v_bb": 78,
+      "3bp_bb_v_btn": 1
+    }
   },
   "scenarios": {
     "srp_late_v_bb": {
@@ -162535,6 +162546,2823 @@
             "fold": 0.845
           },
           "reach_weight": 0.001
+        }
+      ]
+    },
+    "3bp_bb_v_btn": {
+      "range_ip": "77,88,98s,99,AJs,AQo,AQs,ATs,JJ,JTs,KJs,KQs,QJs,T9s,TT",
+      "range_oop": "98s,A2s,A3s,A4s,A5s,AA,AJs,AKo,AKs,AQo,AQs,ATs,JJ,JTs,KK,KQs,QJs,QQ,T9s",
+      "rep_flops": {
+        "rainbow|unpaired|ace|disconnected": "As Kd 7h"
+      },
+      "cells": [
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.667,
+            "bet": 0.333
+          },
+          "reach_weight": 30911.742
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.319,
+            "fold": 0.681
+          },
+          "reach_weight": 30911.742
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.516,
+            "bet": 0.484
+          },
+          "reach_weight": 21240.718
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.472,
+            "fold": 0.528
+          },
+          "reach_weight": 21240.718
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.265,
+            "bet": 0.735
+          },
+          "reach_weight": 8773.872
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.807,
+            "fold": 0.193
+          },
+          "reach_weight": 8773.872
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.397,
+            "fold": 0.603
+          },
+          "reach_weight": 8623.149
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.626,
+            "bet": 0.374
+          },
+          "reach_weight": 8623.149
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.927,
+            "bet": 0.073
+          },
+          "reach_weight": 7799.356
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.86,
+            "bet": 0.14
+          },
+          "reach_weight": 7592.178
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.35,
+            "fold": 0.65
+          },
+          "reach_weight": 7232.095
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.694,
+            "bet": 0.306
+          },
+          "reach_weight": 6718.234
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.272,
+            "fold": 0.728
+          },
+          "reach_weight": 6718.234
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.824,
+            "bet": 0.176
+          },
+          "reach_weight": 6561.922
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.094,
+            "fold": 0.906
+          },
+          "reach_weight": 6561.922
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.508,
+            "fold": 0.492
+          },
+          "reach_weight": 6530.311
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.85,
+            "bet": 0.15
+          },
+          "reach_weight": 6373.586
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.167,
+            "fold": 0.833
+          },
+          "reach_weight": 6373.586
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.57,
+            "bet": 0.43
+          },
+          "reach_weight": 5161.657
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.437,
+            "fold": 0.563
+          },
+          "reach_weight": 5161.657
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.655,
+            "bet": 0.345
+          },
+          "reach_weight": 4186.031
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.501,
+            "bet": 0.499
+          },
+          "reach_weight": 3582.735
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.496,
+            "fold": 0.504
+          },
+          "reach_weight": 3582.735
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.264,
+            "bet": 0.736
+          },
+          "reach_weight": 2807.724
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.832,
+            "fold": 0.168
+          },
+          "reach_weight": 2807.724
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.916,
+            "fold": 0.084
+          },
+          "reach_weight": 2740.91
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.789,
+            "bet": 0.211
+          },
+          "reach_weight": 2075.762
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.948,
+            "bet": 0.052
+          },
+          "reach_weight": 1778.824
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.958,
+            "bet": 0.042
+          },
+          "reach_weight": 1716.535
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.329,
+            "fold": 0.671
+          },
+          "reach_weight": 1685.526
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.354,
+            "fold": 0.646
+          },
+          "reach_weight": 1644.223
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.505,
+            "fold": 0.495
+          },
+          "reach_weight": 1637.265
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.891,
+            "bet": 0.109
+          },
+          "reach_weight": 1513.798
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.067,
+            "fold": 0.933
+          },
+          "reach_weight": 1513.798
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.389,
+            "fold": 0.611
+          },
+          "reach_weight": 1509.711
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.629,
+            "bet": 0.371
+          },
+          "reach_weight": 1509.711
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.925,
+            "bet": 0.075
+          },
+          "reach_weight": 1190.543
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.796,
+            "bet": 0.204
+          },
+          "reach_weight": 1146.894
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.055,
+            "fold": 0.945
+          },
+          "reach_weight": 1146.894
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.372,
+            "fold": 0.628
+          },
+          "reach_weight": 1104.649
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.587,
+            "bet": 0.413
+          },
+          "reach_weight": 1104.649
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.501,
+            "fold": 0.499
+          },
+          "reach_weight": 1100.762
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.72,
+            "bet": 0.28
+          },
+          "reach_weight": 991.53
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.439,
+            "fold": 0.561
+          },
+          "reach_weight": 861.597
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.808,
+            "bet": 0.192
+          },
+          "reach_weight": 861.597
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.104,
+            "fold": 0.896
+          },
+          "reach_weight": 804.189
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.821,
+            "bet": 0.179
+          },
+          "reach_weight": 804.189
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.752,
+            "bet": 0.248
+          },
+          "reach_weight": 792.232
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.009,
+            "fold": 0.991
+          },
+          "reach_weight": 792.232
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.917,
+            "fold": 0.083
+          },
+          "reach_weight": 714.129
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.798,
+            "bet": 0.202
+          },
+          "reach_weight": 596.31
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.316,
+            "bet": 0.684
+          },
+          "reach_weight": 560.552
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.003,
+            "fold": 0.997
+          },
+          "reach_weight": 541.417
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.867,
+            "bet": 0.133
+          },
+          "reach_weight": 541.417
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.333,
+            "bet": 0.667
+          },
+          "reach_weight": 523.336
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.201,
+            "bet": 0.799
+          },
+          "reach_weight": 510.088
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.804,
+            "fold": 0.196
+          },
+          "reach_weight": 510.088
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.996,
+            "fold": 0.004
+          },
+          "reach_weight": 475.908
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.972,
+            "bet": 0.028
+          },
+          "reach_weight": 392.599
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.337,
+            "fold": 0.663
+          },
+          "reach_weight": 381.785
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.771,
+            "bet": 0.229
+          },
+          "reach_weight": 356.573
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.831,
+            "bet": 0.169
+          },
+          "reach_weight": 328.304
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.331,
+            "fold": 0.669
+          },
+          "reach_weight": 328.304
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.801,
+            "bet": 0.199
+          },
+          "reach_weight": 311.236
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 311.236
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.476,
+            "fold": 0.524
+          },
+          "reach_weight": 299.145
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.81,
+            "bet": 0.19
+          },
+          "reach_weight": 299.145
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.875,
+            "fold": 0.125
+          },
+          "reach_weight": 290.544
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.231,
+            "bet": 0.769
+          },
+          "reach_weight": 290.544
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.501,
+            "fold": 0.499
+          },
+          "reach_weight": 275.062
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.046,
+            "fold": 0.954
+          },
+          "reach_weight": 263.076
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.876,
+            "bet": 0.124
+          },
+          "reach_weight": 263.076
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.492,
+            "fold": 0.508
+          },
+          "reach_weight": 259.204
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.89,
+            "bet": 0.11
+          },
+          "reach_weight": 259.204
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.945,
+            "bet": 0.055
+          },
+          "reach_weight": 233.363
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.369,
+            "fold": 0.631
+          },
+          "reach_weight": 220.472
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.968,
+            "bet": 0.032
+          },
+          "reach_weight": 179.473
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.29,
+            "fold": 0.71
+          },
+          "reach_weight": 179.473
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 177.067
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 174.465
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.856,
+            "bet": 0.144
+          },
+          "reach_weight": 143.357
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.899,
+            "bet": 0.101
+          },
+          "reach_weight": 130.089
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.504,
+            "fold": 0.496
+          },
+          "reach_weight": 130.089
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.996,
+            "fold": 0.004
+          },
+          "reach_weight": 122.679
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.515,
+            "bet": 0.485
+          },
+          "reach_weight": 122.508
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.726,
+            "bet": 0.274
+          },
+          "reach_weight": 120.86
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.877,
+            "fold": 0.123
+          },
+          "reach_weight": 120.86
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.344,
+            "fold": 0.656
+          },
+          "reach_weight": 112.799
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.828,
+            "bet": 0.172
+          },
+          "reach_weight": 112.799
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.959,
+            "fold": 0.041
+          },
+          "reach_weight": 110.548
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.593,
+            "bet": 0.407
+          },
+          "reach_weight": 110.548
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.726,
+            "bet": 0.274
+          },
+          "reach_weight": 107.843
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.006,
+            "fold": 0.994
+          },
+          "reach_weight": 93.622
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.742,
+            "bet": 0.258
+          },
+          "reach_weight": 93.622
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.222,
+            "bet": 0.778
+          },
+          "reach_weight": 91.282
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.871,
+            "bet": 0.129
+          },
+          "reach_weight": 88.494
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.626,
+            "bet": 0.374
+          },
+          "reach_weight": 78.569
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.999,
+            "fold": 0.001
+          },
+          "reach_weight": 78.254
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.946,
+            "bet": 0.054
+          },
+          "reach_weight": 78.091
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.56,
+            "fold": 0.44
+          },
+          "reach_weight": 77.084
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.433,
+            "bet": 0.567
+          },
+          "reach_weight": 75.551
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.379,
+            "fold": 0.621
+          },
+          "reach_weight": 73.888
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.798,
+            "bet": 0.202
+          },
+          "reach_weight": 69.118
+        },
+        {
+          "texture": "monotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 63.116
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.345,
+            "bet": 0.655
+          },
+          "reach_weight": 63.037
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.241,
+            "fold": 0.759
+          },
+          "reach_weight": 57.185
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.978,
+            "bet": 0.022
+          },
+          "reach_weight": 57.185
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.345,
+            "fold": 0.655
+          },
+          "reach_weight": 55.124
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.976,
+            "bet": 0.024
+          },
+          "reach_weight": 54.126
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.227,
+            "fold": 0.773
+          },
+          "reach_weight": 54.126
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 53.909
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.925,
+            "bet": 0.075
+          },
+          "reach_weight": 53.909
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.257,
+            "bet": 0.743
+          },
+          "reach_weight": 53.024
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 49.206
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.5,
+            "fold": 0.5
+          },
+          "reach_weight": 48.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.903,
+            "bet": 0.097
+          },
+          "reach_weight": 48.0
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.78,
+            "bet": 0.22
+          },
+          "reach_weight": 47.338
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 47.338
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.243,
+            "bet": 0.757
+          },
+          "reach_weight": 45.0
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.883,
+            "bet": 0.117
+          },
+          "reach_weight": 44.511
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "check": 0.886,
+            "bet": 0.114
+          },
+          "reach_weight": 44.145
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "call": 0.31,
+            "fold": 0.69
+          },
+          "reach_weight": 44.145
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.826,
+            "bet": 0.174
+          },
+          "reach_weight": 42.996
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 42.996
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.063,
+            "bet": 0.937
+          },
+          "reach_weight": 40.263
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.572,
+            "fold": 0.428
+          },
+          "reach_weight": 39.313
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.803,
+            "bet": 0.197
+          },
+          "reach_weight": 35.82
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.86,
+            "fold": 0.14
+          },
+          "reach_weight": 35.82
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.743,
+            "bet": 0.257
+          },
+          "reach_weight": 35.506
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 32.734
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.945,
+            "bet": 0.055
+          },
+          "reach_weight": 30.914
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 30.914
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.999,
+            "fold": 0.001
+          },
+          "reach_weight": 26.376
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.537,
+            "bet": 0.463
+          },
+          "reach_weight": 24.544
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.956,
+            "fold": 0.044
+          },
+          "reach_weight": 24.544
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.992,
+            "bet": 0.008
+          },
+          "reach_weight": 23.685
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.241,
+            "fold": 0.759
+          },
+          "reach_weight": 23.685
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 23.668
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.918,
+            "bet": 0.082
+          },
+          "reach_weight": 23.668
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.805,
+            "bet": 0.195
+          },
+          "reach_weight": 22.965
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.003,
+            "fold": 0.997
+          },
+          "reach_weight": 22.899
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.918,
+            "bet": 0.082
+          },
+          "reach_weight": 22.899
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.999,
+            "fold": 0.001
+          },
+          "reach_weight": 21.744
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.346,
+            "bet": 0.654
+          },
+          "reach_weight": 21.283
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "check": 0.781,
+            "bet": 0.219
+          },
+          "reach_weight": 20.364
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.002,
+            "fold": 0.998
+          },
+          "reach_weight": 20.364
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.945,
+            "bet": 0.055
+          },
+          "reach_weight": 20.364
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "call": 0.108,
+            "fold": 0.892
+          },
+          "reach_weight": 20.364
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 20.265
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.347,
+            "fold": 0.653
+          },
+          "reach_weight": 18.482
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.722,
+            "bet": 0.278
+          },
+          "reach_weight": 16.953
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.824,
+            "bet": 0.176
+          },
+          "reach_weight": 15.648
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.338,
+            "bet": 0.662
+          },
+          "reach_weight": 15.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "check": 0.885,
+            "bet": 0.115
+          },
+          "reach_weight": 14.715
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "call": 0.136,
+            "fold": 0.864
+          },
+          "reach_weight": 14.715
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 13.626
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "check": 0.27,
+            "bet": 0.73
+          },
+          "reach_weight": 13.563
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.244,
+            "bet": 0.756
+          },
+          "reach_weight": 13.544
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 12.896
+        },
+        {
+          "texture": "monotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 12.242
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.41,
+            "fold": 0.59
+          },
+          "reach_weight": 10.913
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.777,
+            "bet": 0.223
+          },
+          "reach_weight": 8.528
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.234,
+            "bet": 0.766
+          },
+          "reach_weight": 8.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 8.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.024,
+            "bet": 0.976
+          },
+          "reach_weight": 8.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.325,
+            "fold": 0.675
+          },
+          "reach_weight": 8.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.849,
+            "bet": 0.151
+          },
+          "reach_weight": 8.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.987,
+            "bet": 0.013
+          },
+          "reach_weight": 8.0
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.949,
+            "bet": 0.051
+          },
+          "reach_weight": 7.919
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 7.919
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 0.999,
+            "fold": 0.001
+          },
+          "reach_weight": 7.356
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.068,
+            "bet": 0.932
+          },
+          "reach_weight": 7.268
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.717,
+            "bet": 0.283
+          },
+          "reach_weight": 6.896
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "check": 0.778,
+            "bet": 0.222
+          },
+          "reach_weight": 6.788
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.922,
+            "bet": 0.078
+          },
+          "reach_weight": 6.788
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 6.788
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "call": 0.003,
+            "fold": 0.997
+          },
+          "reach_weight": 6.788
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "check": 0.483,
+            "bet": 0.517
+          },
+          "reach_weight": 6.776
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 6.628
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.085,
+            "bet": 0.915
+          },
+          "reach_weight": 6.022
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "check": 0.274,
+            "bet": 0.726
+          },
+          "reach_weight": 5.624
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.733,
+            "bet": 0.267
+          },
+          "reach_weight": 5.624
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 1.0,
+            "fold": 0.0
+          },
+          "reach_weight": 5.067
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 4.942
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.671,
+            "bet": 0.329
+          },
+          "reach_weight": 4.729
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 4.123
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.409,
+            "bet": 0.591
+          },
+          "reach_weight": 3.871
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "marginalMade",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 3.658
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 3.484
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.96,
+            "bet": 0.04
+          },
+          "reach_weight": 3.484
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.002,
+            "fold": 0.998
+          },
+          "reach_weight": 3.306
+        },
+        {
+          "texture": "twotone|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "call": 0.005,
+            "fold": 0.995
+          },
+          "reach_weight": 3.274
+        },
+        {
+          "texture": "monotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 3.173
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "ip",
+          "facing": "facing_check",
+          "hand_class": "strongMade",
+          "freqs": {
+            "check": 0.887,
+            "bet": 0.113
+          },
+          "reach_weight": 3.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "ip",
+          "facing": "facing_bet_big",
+          "hand_class": "strongMade",
+          "freqs": {
+            "call": 1.0,
+            "fold": 0.0
+          },
+          "reach_weight": 3.0
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.402,
+            "bet": 0.598
+          },
+          "reach_weight": 2.835
+        },
+        {
+          "texture": "twotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 2.537
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "check": 0.408,
+            "bet": 0.592
+          },
+          "reach_weight": 2.259
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "check": 0.321,
+            "bet": 0.679
+          },
+          "reach_weight": 1.875
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.078,
+            "bet": 0.922
+          },
+          "reach_weight": 1.875
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.0,
+            "fold": 1.0
+          },
+          "reach_weight": 1.875
+        },
+        {
+          "texture": "twotone|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.006,
+            "fold": 0.994
+          },
+          "reach_weight": 1.584
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "call": 0.012,
+            "fold": 0.988
+          },
+          "reach_weight": 1.538
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.555,
+            "bet": 0.445
+          },
+          "reach_weight": 1.409
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.002,
+            "fold": 0.998
+          },
+          "reach_weight": 1.14
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 0.921
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 0.783
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "strongDraw",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 0.603
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "air",
+          "freqs": {
+            "check": 0.415,
+            "bet": 0.585
+          },
+          "reach_weight": 0.603
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "first_to_act",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "check": 0.498,
+            "bet": 0.502
+          },
+          "reach_weight": 0.576
+        },
+        {
+          "texture": "twotone|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 0.514
+        },
+        {
+          "texture": "monotone|paired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "river",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.004,
+            "fold": 0.996
+          },
+          "reach_weight": 0.495
+        },
+        {
+          "texture": "rainbow|paired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.007,
+            "fold": 0.993
+          },
+          "reach_weight": 0.287
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "air",
+          "freqs": {
+            "call": 0.001,
+            "fold": 0.999
+          },
+          "reach_weight": 0.25
+        },
+        {
+          "texture": "rainbow|unpaired|ace|disconnected",
+          "spr_bucket": "committed",
+          "street": "flop",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.002,
+            "fold": 0.998
+          },
+          "reach_weight": 0.192
+        },
+        {
+          "texture": "rainbow|unpaired|ace|connected",
+          "spr_bucket": "committed",
+          "street": "turn",
+          "position": "oop",
+          "facing": "facing_bet_big",
+          "hand_class": "weakDraw",
+          "freqs": {
+            "call": 0.002,
+            "fold": 0.998
+          },
+          "reach_weight": 0.145
         }
       ]
     }

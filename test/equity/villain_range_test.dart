@@ -1043,13 +1043,65 @@ void main() {
       expect(flop.heroFacing, 'first_to_act');
     });
 
-    test('3-bet pot → scenarioKey null', () async {
+    test('3-bet pot (BTN open, BB 3-bet, BTN call) → 3bp_bb_v_btn', () async {
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
           const StreetData(street: Street.preflop, actions: [
             HandAction(seat: 2, type: ActionType.post, amount: 2),
             HandAction(seat: 0, type: ActionType.raise, amount: 5),
             HandAction(seat: 2, type: ActionType.raise, amount: 18),
+            HandAction(seat: 0, type: ActionType.call, amount: 18),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, '3bp_bb_v_btn');
+    });
+
+    test('3bp maps from the CALLER side too (hero = BTN)', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.raise, amount: 18),
+            HandAction(seat: 0, type: ActionType.call, amount: 18),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, '3bp_bb_v_btn');
+    });
+
+    test('4-bet pot → scenarioKey null', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.raise, amount: 18),
+            HandAction(seat: 0, type: ActionType.raise, amount: 44),
+            HandAction(seat: 2, type: ActionType.call, amount: 44),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+
+    test('SB 3-bettor (not the BB) → scenarioKey null', () async {
+      // BTN opens, SB 3-bets, BTN calls — a 3-bet pot, but the 3-bettor is the
+      // SB: different range AND the solved BB-OOP orientation doesn't hold.
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 1, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 1, type: ActionType.post, amount: 1),
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5),
+            HandAction(seat: 1, type: ActionType.raise, amount: 18),
             HandAction(seat: 0, type: ActionType.call, amount: 18),
           ]),
         ]),

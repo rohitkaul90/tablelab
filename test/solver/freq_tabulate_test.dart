@@ -320,6 +320,88 @@ void main() {
     });
   });
 
+  // A faced ALL-IN must carry the LIVE lookup's labels: villain_range._heroFacing
+  // maps a shove to facing_bet_<bucket> (opening aggression) or facing_raise
+  // (aggression over a wager) — it NEVER emits 'facing_allin', so a tabulator
+  // that labels shoves that way bakes unreachable cells (the pre-2026-07 gap).
+  group('tabulateSpot faced all-in labels', () {
+    // OOP open-shoves the flop (no prior street chips) → IP faces a BET, sized
+    // by pot fraction: eff 45 into pot 10 = 450% → 'big'. In the CHECK line IP
+    // shoves over OOP's check (still opening aggression → bet), and OOP's
+    // response node to a bet-then-shove line faces a RAISE.
+    Map<String, dynamic> allinDump() => {
+          'node_type': 'action_node',
+          'player': 0, // OOP flop
+          'strategy': {
+            'actions': ['CHECK', 'BET 5', 'ALLIN'],
+            'strategy': {
+              'Qc Qd': [0.5, 0.3, 0.2],
+            },
+          },
+          'childrens': {
+            'ALLIN': {
+              'node_type': 'action_node',
+              'player': 1, // IP facing OOP's OPEN-shove
+              'strategy': {
+                'actions': ['FOLD', 'CALL'],
+                'strategy': {
+                  'Ad Ah': [0.1, 0.9],
+                },
+              },
+              'childrens': {
+                'FOLD': {'node_type': 'terminal_node'},
+                'CALL': {'node_type': 'terminal_node'},
+              },
+            },
+            'BET 5': {
+              'node_type': 'action_node',
+              'player': 1, // IP facing a 50% bet
+              'strategy': {
+                'actions': ['FOLD', 'CALL', 'ALLIN'],
+                'strategy': {
+                  'Ad Ah': [0.1, 0.5, 0.4],
+                },
+              },
+              'childrens': {
+                'FOLD': {'node_type': 'terminal_node'},
+                'CALL': {'node_type': 'terminal_node'},
+                'ALLIN': {
+                  'node_type': 'action_node',
+                  'player': 0, // OOP facing IP's shove OVER a bet
+                  'strategy': {
+                    'actions': ['FOLD', 'CALL'],
+                    'strategy': {
+                      'Qc Qd': [0.6, 0.4],
+                    },
+                  },
+                  'childrens': {
+                    'FOLD': {'node_type': 'terminal_node'},
+                    'CALL': {'node_type': 'terminal_node'},
+                  },
+                },
+              },
+            },
+            'CHECK': {'node_type': 'terminal_node'},
+          },
+        };
+
+    final cells =
+        tabulateSpot(allinDump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+
+    test('an opening shove is faced as facing_bet_big, never facing_allin', () {
+      final ipFacings =
+          cells.where((c) => c.position == 'ip').map((c) => c.facing).toSet();
+      expect(ipFacings, contains('facing_bet_big'));
+      expect(cells.map((c) => c.facing), isNot(contains('facing_allin')));
+    });
+
+    test('a shove over a bet is faced as facing_raise', () {
+      final oopFacings =
+          cells.where((c) => c.position == 'oop').map((c) => c.facing).toSet();
+      expect(oopFacings, contains('facing_raise'));
+    });
+  });
+
   // A flop→turn→river line (both early streets check through) must produce RIVER
   // cells: the tabulator walks the SECOND chance node and re-buckets the board to
   // a 5-card texture. Locks the river capability — only `maxBoardLen` gated it off
