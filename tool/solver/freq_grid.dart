@@ -33,6 +33,11 @@
 //   dart run tool/solver/freq_grid.dart --write     # (re)assemble the library JSON
 //                                                   #   from ALL cached scenarios
 //   TLSOLVE_SCENARIO=3bp_bb_v_btn dart run …        # solve a different scenario
+//   … --emit-pack <dir>                             # ALSO write a GTO Explorer
+//     pack per solved spot to <dir>/<scenario>/<flop>_<spr>/ (same parse pass —
+//     see explorer_pack.dart / launch/GTO_EXPLORER.md). Only NEWLY-SOLVED spots
+//     get packs: a cached spot is skipped entirely, so to pack it, delete its
+//     results.json entry and let it re-solve (the run warns when this applies).
 
 import 'dart:convert';
 import 'dart:io';
@@ -531,6 +536,19 @@ Future<void> main(List<String> args) async {
     return;
   }
 
+  // --emit-pack <dir>: have each spot's tabulate_one subprocess ALSO generate
+  // its GTO Explorer pack (one jsonDecode, two outputs). Explicit dir, no
+  // default — packs are hundreds of MB per spot on the big scenarios.
+  final packIdx = args.indexOf('--emit-pack');
+  final emitPackRoot = packIdx >= 0 && packIdx + 1 < args.length
+      ? args[packIdx + 1]
+      : null;
+  if (packIdx >= 0 && emitPackRoot == null) {
+    stderr.writeln('--emit-pack needs a target directory');
+    exitCode = 64;
+    return;
+  }
+
   // Spots still needing a solve (cached ones skipped), capped to --limit if set.
   // Each pending spot is claimed and solved exactly once by exactly one worker.
   final pending = <({String flop, String spr, double sprVal})>[];
@@ -548,6 +566,11 @@ Future<void> main(List<String> args) async {
   final sw = Stopwatch()..start();
   stdout.writeln('Solving $total spot(s) — $parallel at a time, '
       '$skipped cached/skipped.');
+  if (emitPackRoot != null && skipped > 0) {
+    stdout.writeln('⚠ --emit-pack: $skipped cached spot(s) will NOT get packs '
+        '(only newly-solved spots do) — delete their results.json entries to '
+        're-solve them with pack emission.');
+  }
 
   // Each worker drains the shared queue; `parallel` of them run concurrently. The
   // suspension points are `await solveToFile` (the external solvers run in parallel)
@@ -597,6 +620,10 @@ Future<void> main(List<String> args) async {
         final tabHeapMb = int.tryParse(
                 Platform.environment['TLSOLVE_TABULATE_HEAP_MB'] ?? '') ??
             80000;
+        final packDir = emitPackRoot == null
+            ? null
+            : '$emitPackRoot/$kScenario/'
+                '${s.flop.replaceAll(' ', '')}_${s.spr}';
         final res = await Process.run(Platform.resolvedExecutable, [
           '--old_gen_heap_size=$tabHeapMb',
           'run',
@@ -607,10 +634,22 @@ Future<void> main(List<String> args) async {
           pot0.toString(),
           effStack.toString(),
           maxLen.toString(),
+          if (packDir != null) ...['--emit-pack', packDir, kScenario, s.spr],
         ]);
         if (res.exitCode != 0) {
           throw StateError('tabulate_one exit ${res.exitCode}: '
               '${(res.stderr as String).trim()}');
+        }
+        if (packDir != null) {
+          // Surface the subprocess's pack report (sizes/EV coverage/timings)
+          // in the grid log — it's the only visibility into pack output.
+          final report = (res.stdout as String).trim();
+          if (report.isNotEmpty) {
+            stdout.writeln(report
+                .split('\n')
+                .map((l) => '      $l')
+                .join('\n'));
+          }
         }
         final cells =
             jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;

@@ -581,7 +581,10 @@ void main() {
         final direct =
             tabulateSpot(_dump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
         ProcessResult res;
+        final packDir = '${tmp.path}/pack';
         try {
+          // Exercise the --emit-pack path too (the grid's one-parse-two-outputs
+          // handoff): cells file + explorer pack from the same subprocess.
           res = await Process.run('dart', [
             'run',
             'tool/solver/tabulate_one.dart',
@@ -591,6 +594,10 @@ void main() {
             '10',
             '45',
             '5',
+            '--emit-pack',
+            packDir,
+            'srp_late_v_bb',
+            'medium',
           ]);
         } on ProcessException {
           markTestSkipped('dart not on PATH — skipping subprocess test');
@@ -602,6 +609,10 @@ void main() {
         expect(cells.length, direct.length);
         expect((cells.first as Map).keys,
             containsAll(['street', 'spr_bucket', 'facing', 'hand_class', 'freqs']));
+        // The pack landed beside the cells: manifest + at least the flop chunk.
+        expect(File('$packDir/manifest.json').existsSync(), isTrue,
+            reason: '--emit-pack wrote no manifest');
+        expect(File('$packDir/flop.bin.gz').existsSync(), isTrue);
       } finally {
         tmp.deleteSync(recursive: true);
       }
