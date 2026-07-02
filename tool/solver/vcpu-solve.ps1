@@ -176,6 +176,17 @@ scp -i $key $tgz "ubuntu@${pubip}:~/repo.tgz"
 if ($LASTEXITCODE -ne 0) { throw "scp repo.tgz failed" }
 ssh @ssh 'mkdir -p ~/poker_tracker && tar -xzf ~/repo.tgz -C ~/poker_tracker && cd ~/poker_tracker && flutter pub get'
 if ($LASTEXITCODE -ne 0) { throw "remote extract / flutter pub get failed" }
+# Seed the local solve cache: it is GITIGNORED (git archive omits it), and without
+# it the box's final _writeLibrary sees only THIS run's scenario, trips the
+# scenario-drop guard against the synced library asset (which has the others),
+# never prints 'Wrote ' - and -PullAndTerminate would read that as a failed solve.
+# Seeding also makes the run resumable and skips already-solved spots.
+$cache = Join-Path $repo 'tool\solver\freq_grid_results.json'
+if (Test-Path $cache) {
+  scp -i $key $cache "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.json"
+  if ($LASTEXITCODE -ne 0) { throw "scp freq_grid_results.json (cache seed) failed" }
+  Write-Host "Seeded solve cache from local freq_grid_results.json."
+}
 
 # -- 5. Start the solve in a detached tmux session ----------------------------
 # Build a run-solve.sh locally (LF endings) and scp it, to avoid nested PS->ssh->bash
