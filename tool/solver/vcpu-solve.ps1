@@ -33,13 +33,20 @@
 param(
   [ValidateSet('turn', 'river')]
   [string]$Profile = 'river',
+  # Which kScenarios entry to solve (TLSOLVE_SCENARIO for freq_grid.dart).
+  [string]$Scenario = 'srp_late_v_bb',
   # Extra args passed verbatim to freq_grid.dart (e.g. "--limit 6 --parallel 2").
   [string]$GridArgs = '--parallel 2',
+  # Also emit GTO Explorer packs on the box (freq_grid --emit-pack ~/packs) and,
+  # under -PullAndTerminate, tar + pull them back into -PackDest\<scenario>\...
+  [switch]$EmitPack,
+  # Local destination root for pulled packs (created if absent).
+  [string]$PackDest = (Join-Path $HOME 'tlpacks'),
   # Dart old-gen heap cap (MB) for the MAIN grid process. Since tabulation now runs
   # in per-spot SUBPROCESSES (tabulate_one.dart), the main process no longer holds a
   # giant dump, so this stays small. The big heap is per-subprocess (-TabulateHeapMB).
   [int]$HeapMB = 24000,
-  # Per-SUBPROCESS Dart old-gen heap cap (MB) for each tabulate_one.dart parse — a
+  # Per-SUBPROCESS Dart old-gen heap cap (MB) for each tabulate_one.dart parse - a
   # deep ~15 GB river dump needs a big heap. Each subprocess has its OWN heap/GC, so
   # size --parallel so parallel * (dump + this) < system RAM (watch `free -g`).
   [int]$TabulateHeapMB = 80000,
@@ -52,7 +59,9 @@ param(
   [string[]]$Fallbacks = @('r6i.8xlarge', 'r6a.8xlarge', 'r5.8xlarge'),
   # On-demand by default (spot kept getting reclaimed mid-setup). -Spot opts in.
   [switch]$Spot,
-  [string]$Branch = 'feature/dce-river-cells',
+  # Branch to sync onto the box; empty = the CURRENT branch (so a launcher run
+  # from a feature branch solves that branch's code, not a stale hardcode).
+  [string]$Branch = '',
   [string]$AmiId = 'ami-04c312a0a89b077c2',
   [string]$Region = 'us-east-2',
   [string]$KeyName = 'tablelab-solver',
@@ -67,6 +76,10 @@ $key = Join-Path $HOME ".ssh\$KeyName.pem"
 if (-not (Test-Path $key)) { throw "SSH key not found: $key" }
 $repo = & git rev-parse --show-toplevel 2>$null
 if (-not $repo) { throw "Run this from inside the repo (git rev-parse failed)." }
+if (-not $Branch) {
+  $Branch = (& git rev-parse --abbrev-ref HEAD).Trim()
+  if (-not $Branch -or $Branch -eq 'HEAD') { throw "Cannot resolve current branch - pass -Branch." }
+}
 
 function Invoke-Aws { # run aws, throw on non-zero exit (native exe - $ErrorAction won't)
   $out = aws @args
@@ -126,16 +139,29 @@ Write-Host "PUBIP=$pubip"
 # wrap these in try/catch and judge by $LASTEXITCODE, not by the error stream.
 try { ssh-keygen -R $pubip *> $null } catch { }
 $global:LASTEXITCODE = 0
-# BatchMode + ServerAlive so a probe that CONNECTS then STALLS (fresh-boot sshd
-# accepts but the session hangs) self-kills in ~10s instead of blocking forever —
-# ConnectTimeout only bounds the handshake, so without these the wait-loop could
-# wedge indefinitely (observed: a probe stuck 18 min, defeating the retry cap).
+# BatchMode + ServerAlive help, but a probe can STILL stall in the auth/banner
+# window (observed twice on fresh boots - those options don't cover it, and one
+# stuck ssh.exe wedged the whole launcher for 18 min). So each probe runs in a
+# BACKGROUND JOB with a hard Wait-Job timeout: a hung probe is killed and simply
+# counts as "not ready yet" - the wait-loop can never wedge on a single ssh.
 $ssh = @('-i', $key, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2', "ubuntu@$pubip")
 Write-Host "Waiting for SSH..."
 $sshOk = $false
 foreach ($i in 1..30) {
-  try { ssh @ssh 'echo ready' *> $null } catch { }
-  if ($LASTEXITCODE -eq 0) { $sshOk = $true; break }
+  $probe = Start-Job -ScriptBlock {
+    param($sshArgs)
+    ssh @sshArgs 'echo ready' *> $null
+    $LASTEXITCODE
+  } -ArgumentList (, $ssh)
+  $ready = $false
+  if (Wait-Job $probe -Timeout 20) {
+    $code = Receive-Job $probe | Select-Object -Last 1
+    if ("$code" -eq '0') { $ready = $true }
+  } else {
+    Stop-Job $probe   # probe hung post-connect - kill it and retry
+  }
+  Remove-Job $probe -Force
+  if ($ready) { $sshOk = $true; break }
   Start-Sleep 10
 }
 if (-not $sshOk) { throw "SSH never came up on $pubip - instance $iid left running for triage." }
@@ -155,6 +181,7 @@ if ($LASTEXITCODE -ne 0) { throw "remote extract / flutter pub get failed" }
 # Build a run-solve.sh locally (LF endings) and scp it, to avoid nested PS->ssh->bash
 # quoting. `$HOME is escaped so it stays literal for the remote shell; $Profile etc.
 # are interpolated by PowerShell.
+$packArgs = if ($EmitPack) { ' --emit-pack /home/ubuntu/packs' } else { '' }
 $solveSh = @"
 #!/usr/bin/env bash
 cd ~/poker_tracker
@@ -167,7 +194,7 @@ export TEXASSOLVER_BIN=`$HOME/texassolver-source/build/console_solver
 export TMPDIR=/dev/shm
 sudo sysctl -w vm.max_map_count=2000000 >/dev/null 2>&1 || true
 rm -rf /dev/shm/tlsolve_* /mnt/scratch/tlsolve_* 2>/dev/null || true
-TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs 2>&1 | tee ~/solve.log
+TLSOLVE_SCENARIO=$Scenario TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs 2>&1 | tee ~/solve.log
 "@
 $localSh = Join-Path $env:TEMP 'run-solve.sh'
 [IO.File]::WriteAllText($localSh, ($solveSh -replace "`r`n", "`n"))
@@ -176,7 +203,7 @@ if ($LASTEXITCODE -ne 0) { throw "scp run-solve.sh failed" }
 ssh @ssh 'tmux kill-session -t solve 2>/dev/null; tmux new -d -s solve "bash ~/run-solve.sh"'
 if ($LASTEXITCODE -ne 0) { throw "failed to start the tmux solve session" }
 Write-Host ""
-Write-Host "Solve started on $iid ($itype): TLSOLVE_PROFILE=$Profile $GridArgs"
+Write-Host "Solve started on $iid ($itype): TLSOLVE_SCENARIO=$Scenario TLSOLVE_PROFILE=$Profile $GridArgs$packArgs"
 Write-Host ""
 Write-Host "  Watch:      ssh -i `"$key`" ubuntu@$pubip   then  tmux attach -t solve"
 Write-Host "  Tail log:   ssh -i `"$key`" ubuntu@$pubip 'tail -f ~/solve.log'"
@@ -219,9 +246,9 @@ if ($PullAndTerminate) {
   ssh @ssh "tail -n 3 ~/solve.log"
   Write-Host "Pulling library + cache back..."
   # Relative dest paths from the repo root (Push-Location) - a 'C:/...' absolute path
-  # can trip scp's host:path colon parsing on some builds. Guard BOTH pulls: only
-  # terminate if both succeeded, else leave the box up so the solve output (and the
-  # resumable freq_grid_results.json) isn't destroyed.
+  # can trip scp's host:path colon parsing on some builds. Guard ALL pulls: only
+  # terminate if every one succeeded, else leave the box up so the solve output (and
+  # the resumable freq_grid_results.json) isn't destroyed.
   Push-Location $repo
   try {
     scp -i $key "ubuntu@${pubip}:~/poker_tracker/assets/gto_freq_library.json" 'assets/gto_freq_library.json'
@@ -229,13 +256,32 @@ if ($PullAndTerminate) {
     scp -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.json" 'tool/solver/freq_grid_results.json'
     $okCache = ($LASTEXITCODE -eq 0)
   } finally { Pop-Location }
-  if (-not ($okLib -and $okCache)) {
-    Write-Warning "A pull FAILED (library=$okLib cache=$okCache). Instance $iid LEFT RUNNING so"
-    Write-Warning "the solve output isn't lost - retry the scp, then terminate manually:"
+  $okPacks = $true
+  if ($EmitPack) {
+    # Tar on the box (thousands of small chunk files - a bare scp -r is slow and
+    # fragile), pull one archive, extract into -PackDest with Windows' bsdtar.
+    Write-Host "Pulling explorer packs (this is the multi-GB step)..."
+    ssh @ssh 'tar -czf ~/packs.tgz -C ~/packs .'
+    $okPacks = ($LASTEXITCODE -eq 0)
+    if ($okPacks) {
+      New-Item -ItemType Directory -Force $PackDest | Out-Null
+      $localTgz = Join-Path $env:TEMP 'tlpacks-pull.tgz'
+      scp -i $key "ubuntu@${pubip}:~/packs.tgz" $localTgz
+      $okPacks = ($LASTEXITCODE -eq 0)
+      if ($okPacks) {
+        tar -xzf $localTgz -C $PackDest
+        $okPacks = ($LASTEXITCODE -eq 0)
+        if ($okPacks) { Remove-Item $localTgz -Force }
+      }
+    }
+  }
+  if (-not ($okLib -and $okCache -and $okPacks)) {
+    Write-Warning "A pull FAILED (library=$okLib cache=$okCache packs=$okPacks). Instance $iid"
+    Write-Warning "LEFT RUNNING so the solve output isn't lost - retry the pull, then terminate:"
     Write-Warning "  aws ec2 terminate-instances --region $Region --instance-ids $iid"
     return
   }
   Write-Host "Terminating $iid..."
   Invoke-Aws ec2 terminate-instances --region $Region --instance-ids $iid | Out-Null
-  Write-Host "Done. Library pulled (review 'git diff', then 'git add -f' it) + instance terminated."
+  Write-Host "Done. Library pulled (review 'git diff', then 'git add -f' it)$(if ($EmitPack) { ", packs in $PackDest" }) + instance terminated."
 }
