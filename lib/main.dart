@@ -37,8 +37,15 @@ bool _isRecoverableAuthError(Object error) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase/Crashlytics is Android/iOS only — skip entirely on web.
-  if (!kIsWeb) {
+  // Firebase/Crashlytics is Android/iOS only — skip on web AND desktop.
+  // firebase_crashlytics has no Windows/Linux/macOS implementation: on those,
+  // the awaited setCrashlyticsCollectionEnabled throws a platform-interface
+  // assertion INSIDE main(), which aborts startup before runApp — the app
+  // process runs but no window ever appears (hit on `flutter run -d windows`).
+  final crashlyticsSupported = !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+  if (crashlyticsSupported) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     // Don't report crashes from debug builds (e.g. `flutter run` on a device) —
     // they pollute the production Crashlytics view with debug-only asserts that

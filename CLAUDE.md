@@ -194,7 +194,7 @@ CI generates `lib/config/supabase_config.dart` at build time from secrets — it
 
 ### Firebase Crashlytics
 
-Active on Android only. `lib/firebase_options.dart` is generated (not a stub) — do not overwrite it. `main.dart` routes `FlutterError` and `PlatformDispatcher` errors to Crashlytics, guarded by `if (!kIsWeb)` — Crashlytics throws on web. `android/app/google-services.json` is committed and required for Android builds.
+Active on Android only. `lib/firebase_options.dart` is generated (not a stub) — do not overwrite it. `main.dart` routes `FlutterError` and `PlatformDispatcher` errors to Crashlytics, guarded to **Android/iOS only** (`!kIsWeb` + `defaultTargetPlatform` check) — Crashlytics throws on web AND on desktop: on Windows the awaited `setCrashlyticsCollectionEnabled` assertion aborts `main()` before `runApp`, so the app runs headless with no window (hit 2026-07-02 on `flutter run -d windows`; a bare `!kIsWeb` guard is NOT enough). `android/app/google-services.json` is committed and required for Android builds.
 
 The Crashlytics Gradle plugin (`firebase-crashlytics-gradle:3.0.3`) requires the **Google Services plugin ≥ 4.4.1**. Keep the version in sync across both declarations: `settings.gradle.kts` plugins block and `build.gradle.kts` classpath (both `4.4.2`). A mismatch only fails **release** builds (the `uploadCrashlyticsMappingFileRelease` task), not debug — so `flutter run` won't catch it.
 
