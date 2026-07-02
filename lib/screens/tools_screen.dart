@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'equity_calculator_screen.dart';
+import 'explorer/gto_explorer_screen.dart';
 import 'icm_calculator_screen.dart';
 import '../widgets/app_drawer.dart';
 
@@ -29,11 +30,14 @@ class _ToolsScreenState extends State<ToolsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: SegmentedButton<int>(
-              // Label-only — the icon + multi-word label risked wrapping on
-              // narrow / large-font screens.
+              // Label-only + no selected checkmark: at three segments the M3
+              // checkmark widens the selected segment enough to wrap the row
+              // on phones (the SegmentedButton gotcha in CLAUDE.md).
+              showSelectedIcon: false,
               segments: const [
-                ButtonSegment(value: 0, label: Text('Equity Calculator')),
-                ButtonSegment(value: 1, label: Text('ICM Calculator')),
+                ButtonSegment(value: 0, label: Text('Equity')),
+                ButtonSegment(value: 1, label: Text('ICM')),
+                ButtonSegment(value: 2, label: Text('Study')),
               ],
               selected: {_selected},
               onSelectionChanged: (s) => setState(() => _selected = s.first),
@@ -51,6 +55,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
               children: const [
                 EquityCalculatorScreen(showScaffold: false),
                 IcmCalculatorScreen(showScaffold: false),
+                GtoExplorerScreen(showScaffold: false),
               ],
             ),
           ),
