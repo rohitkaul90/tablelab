@@ -139,29 +139,38 @@ Write-Host "PUBIP=$pubip"
 # wrap these in try/catch and judge by $LASTEXITCODE, not by the error stream.
 try { ssh-keygen -R $pubip *> $null } catch { }
 $global:LASTEXITCODE = 0
-# BatchMode + ServerAlive help, but a probe can STILL stall in the auth/banner
-# window (observed twice on fresh boots - those options don't cover it, and one
-# stuck ssh.exe wedged the whole launcher for 18 min). So each probe runs in a
-# BACKGROUND JOB with a hard Wait-Job timeout: a hung probe is killed and simply
-# counts as "not ready yet" - the wait-loop can never wedge on a single ssh.
+# BatchMode + ServerAlive help, but an ssh can STILL stall in the auth/banner
+# window (observed on fresh boots AND once in the -PullAndTerminate poll loop -
+# one stuck ssh.exe wedged the whole launcher). So EVERY remote call the
+# launcher blocks on runs in a BACKGROUND JOB with a hard Wait-Job timeout:
+# a hung ssh is killed and reported as $null (caller decides retry/give-up).
 $ssh = @('-i', $key, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2', "ubuntu@$pubip")
+
+function Invoke-SshTimed {
+  # Run a remote command with a hard wall-clock cap. Returns an object with
+  # .Code/.Out, or $null if the ssh HUNG (killed). A non-zero .Code is a real
+  # remote/connection failure, distinct from a hang.
+  param([string]$RemoteCmd, [int]$TimeoutSec = 30)
+  $j = Start-Job -ScriptBlock {
+    param($sshArgs, $cmd)
+    $out = ssh @sshArgs $cmd 2>$null
+    [pscustomobject]@{ Code = $LASTEXITCODE; Out = "$out" }
+  } -ArgumentList (, $ssh), $RemoteCmd
+  if (Wait-Job $j -Timeout $TimeoutSec) {
+    $r = Receive-Job $j | Select-Object -Last 1
+    Remove-Job $j -Force
+    return $r
+  }
+  Stop-Job $j
+  Remove-Job $j -Force
+  return $null
+}
+
 Write-Host "Waiting for SSH..."
 $sshOk = $false
 foreach ($i in 1..30) {
-  $probe = Start-Job -ScriptBlock {
-    param($sshArgs)
-    ssh @sshArgs 'echo ready' *> $null
-    $LASTEXITCODE
-  } -ArgumentList (, $ssh)
-  $ready = $false
-  if (Wait-Job $probe -Timeout 20) {
-    $code = Receive-Job $probe | Select-Object -Last 1
-    if ("$code" -eq '0') { $ready = $true }
-  } else {
-    Stop-Job $probe   # probe hung post-connect - kill it and retry
-  }
-  Remove-Job $probe -Force
-  if ($ready) { $sshOk = $true; break }
+  $r = Invoke-SshTimed 'echo ready' -TimeoutSec 20
+  if ($r -and $r.Code -eq 0) { $sshOk = $true; break }
   Start-Sleep 10
 }
 if (-not $sshOk) { throw "SSH never came up on $pubip - instance $iid left running for triage." }
@@ -238,12 +247,30 @@ if ($PullAndTerminate) {
   # ended WITHOUT writing (crash / OOM-kill / all-failed / _writeLibrary aborted on
   # a guard) - must NOT pull (stale lib) or terminate; 'running' = keep waiting.
   # Check 'wrote' BEFORE 'dead' so a clean finish (session ends right after writing)
-  # still reads as success.
+  # still reads as success. Each poll goes through Invoke-SshTimed: a HUNG poll
+  # ssh is killed and retried (this exact wedge ate a finished Cycle A run -
+  # the solve completed but the launcher never noticed). Only give up after
+  # many CONSECUTIVE failures (box unreachable ~7 min), never on one blip.
+  $failures = 0
   do {
     Start-Sleep 30
-    $state = (ssh @ssh "if grep -q '^Wrote ' ~/solve.log 2>/dev/null; then echo wrote; elif tmux has-session -t solve 2>/dev/null; then echo running; else echo dead; fi")
-    $state = "$state".Trim()
+    $r = Invoke-SshTimed "if grep -q '^Wrote ' ~/solve.log 2>/dev/null; then echo wrote; elif tmux has-session -t solve 2>/dev/null; then echo running; else echo dead; fi"
+    if ($r -and $r.Code -eq 0 -and "$($r.Out)".Trim()) {
+      $failures = 0
+      $state = "$($r.Out)".Trim()
+    } else {
+      $failures++
+      $state = 'running' # transient hang/blip - keep polling
+      if ($failures -ge 12) { $state = 'unreachable' }
+    }
   } while ($state -eq 'running')
+
+  if ($state -eq 'unreachable') {
+    Write-Warning "Lost contact with the box (12 consecutive failed polls). Instance $iid is"
+    Write-Warning "LEFT RUNNING - check it over SSH, pull manually, then terminate:"
+    Write-Warning "  aws ec2 terminate-instances --region $Region --instance-ids $iid"
+    return
+  }
 
   if ($state -ne 'wrote') {
     ssh @ssh "tail -n 30 ~/solve.log"

@@ -1,5 +1,68 @@
 [
   {
+    "id": "gto-3bp-ip-fbet-strong-md",
+    "file": "tool/eval/samples/gto/gto-3bp-ip-fbet-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "3BP IP facing_bet (75% c-bet), top set (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-3bp-ip-fcheck-marg-co",
+    "file": "tool/eval/samples/gto/gto-3bp-ip-fcheck-marg-co.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "3BP IP facing_check, top pair (marginalMade), committed",
+    "reads": []
+  },
+  {
+    "id": "gto-3bp-oop-cbet-strong-sh",
+    "file": "tool/eval/samples/gto/gto-3bp-oop-cbet-strong-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "3BP OOP first_to_act (c-bet), top two (strongMade), shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-3bp-oop-fbet-air-sh",
+    "file": "tool/eval/samples/gto/gto-3bp-oop-fbet-air-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "3BP OOP facing_bet (33%), ace-high (air), shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-3bp-oop-fta-marg-md",
+    "file": "tool/eval/samples/gto/gto-3bp-oop-fta-marg-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "3BP OOP first_to_act (check), QQ under the ace (marginalMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-3bp-r-oop-fta-strong-md",
+    "file": "tool/eval/samples/gto/gto-3bp-r-oop-fta-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "3BP RIVER OOP first_to_act (lead), top two (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-3bp-t-ip-fbet-marg-sh",
+    "file": "tool/eval/samples/gto/gto-3bp-t-ip-fbet-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "3BP TURN IP facing_bet (BB delays), top pair (marginalMade), shallow",
+    "reads": []
+  },
+  {
     "id": "gto-ip-fbet-marg-md",
     "file": "tool/eval/samples/gto/gto-ip-fbet-marg-md.json",
     "source": "synthetic/gto",

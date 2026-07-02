@@ -16,10 +16,23 @@ Related: design = `launch/GTO_FREQUENCY_LIBRARY.md` (gitignored, local); tooling
 
 ---
 
-## Snapshot — as of 2026-07-01 (river added)
+## Snapshot — as of 2026-07-02 (3-bet scenario added)
 
-`scenario = srp_late_v_bb` (BTN open vs BB call, heads-up, single-raised) — **the only
-scenario**. `11,764` cells total, `11,400` **serve-eligible** (clear lookup `minMass=8`) = **97%**.
+**TWO scenarios** (the library became multi-scenario 2026-07-02; the grid solves one per
+run via `TLSOLVE_SCENARIO`):
+- `srp_late_v_bb` (BTN open vs BB call, HU single-raised): **11,764 cells, 11,400
+  serve-eligible (97%)**, 48/48 textures, flop+turn+river,
+  shallow/medium/deep + committed.
+- `3bp_bb_v_btn` (BTN open → BB 3-bet → BTN call, HU 3-bet pot — aggressor OOP,
+  solved 2026-07-02 on an r7a.8xlarge in 41 min, 78 spots, 0 failures, ≤0.5% expl):
+  **8,027 cells, 6,564 serve-eligible (82%)**, 48/48 textures, flop+turn+river,
+  committed/shallow/medium (SPR reps 1.0/2.0/4.0 — 3-bet pots never reach deep).
+  Faced all-ins are labelled live-compatibly from this solve on (facing_bet_*/
+  facing_raise — the relabel fix). Eligibility runs lower than SRP: condensed
+  3-bet ranges concentrate reach, thinning more `{facing × class}` corners.
+
+Attribute detail below is for `srp_late_v_bb` (the anchor scenario); regenerate
+per-scenario views with the snapshot command.
 
 | Attribute | Covered | Distribution (serve-eligible) | Gap |
 |---|---|---|---|
@@ -63,8 +76,9 @@ full surface (≈8 scenarios × 3 streets × 4 SPR regimes × HU/multiway × chi
 is a **~low-single-digit-to-15% slice — but the single highest-frequency one** (BTN-vs-BB
 SRP is the most common HU postflop spot).
 
-1. **Scenario ≈ 1 of ~8** — only BTN-vs-BB single-raised. **Zero** for 3-bet/4-bet pots,
-   other openers (UTG/CO/SB), blind-vs-blind, limped pots. *Biggest gap now that river is done.*
+1. **Scenario ≈ 2 of ~8** — BTN-vs-BB single-raised + ✅ **3-bet BB-vs-BTN (added
+   2026-07-02, full flop+turn+river)**. Still zero for other openers (UTG/CO/SB —
+   Cycle B), blind-vs-blind (Cycle C), 4-bet pots, limped pots.
 2. ~~**River = 0%**~~ — ✅ **covered 2026-07-01** (BTN-vs-BB SRP, all SPR incl. deep;
    'river' profile / dump_rounds 3, so river check-raise is faithful; solved on a 128-vCPU /
    1 TB r7a.32xlarge, 78 spots, 0 failures, all ≤0.5% expl). Full postflop (flop+turn+river)
@@ -142,3 +156,4 @@ PY
 | 2026-06-29 | phase 2b (flop+turn) | **+ turn cells** (per-node SPR); textures → **48/48**; committed SPR on turn; 6,607 cells (6,172 eligible, 93%); eval re-baseline clean (freq-agreement 95.5→100%) |
 | 2026-06-30 | deep-SPR | **+ deep regime (SPR 15 ≈ 100bb deep-cash)** for BTN-vs-BB SRP, flop+turn; cleared the 32 GB OOM on an r7a.8xlarge / 256 GB spot box (25 deep spots, `--parallel 4`, 65 min, 0 failures, all ≤0.5% expl); 9,137 cells (8,779 eligible, 96%); deep ≈ 28% of eligible. **Eval re-baseline NOT yet run** (deep cells aren't exercised by the current flop/turn benchmark — deferred with the full re-baseline) |
 | 2026-07-01 | river | **+ river cells** ('river' profile / dump_rounds 3 — river check-raise faithful); full re-solve of all 78 BTN-vs-BB SRP spots (all SPR incl. deep) on a 128-vCPU / 1 TB r7a.32xlarge (us-east-1), `--parallel 5`, ~6 h, 0 failures, all ≤0.5% expl; **11,764 cells (11,400 eligible, 97%)**; river ≈ 23% of eligible. Full postflop (flop+turn+river) for BTN-vs-BB now complete. Enabled by the per-spot **subprocess tabulator** (commit 0130619) — the old Isolate.run shared-GC stalled deep river parses. **Eval re-baseline + `gen_gto_spots.dart --write` (fires the 4 river eval templates) NOT yet run — pending.** |
+| 2026-07-02 | 3-bet (Cycle A) | **+ scenario `3bp_bb_v_btn`** (BTN open → BB 3-bet → BTN call; aggressor OOP) — the library's first WIDTH cycle. 78 spots (26 flops × committed/shallow/medium), 'river' profile, r7a.8xlarge us-east-1, `--parallel 4`, **41 min, 0 failures, ≤0.5% expl**; **+8,027 cells (6,564 eligible, 82%)** → library total 19,791. First solve with the live-compatible faced-ALL-IN labels AND with **explorer packs emitted in the same pass** (`--emit-pack`; 2.3 GB → ~/tlpacks). 7 `gto-3bp-*` eval specs all fire (31/33 total; the 2 ✗ are the pre-existing SRP flop size-seam templates). **Consolidated eval re-baseline still pending (gates the merge).** |
