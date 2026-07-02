@@ -193,7 +193,11 @@ class _CellAcc {
 /// what the live `villain_range` path computes (effStack ÷ pot-at-street-start),
 /// NOT the flop spot's regime. (Storing every cell under the flop regime made
 /// turn cells mismatch the live shallower turn SPR → systematic lookup misses.)
-class _SprState {
+///
+/// PUBLIC (not `_SprState`): explorer_pack.dart walks the same dumps and reuses
+/// this verified chip accounting (street "to"-totals, all-in amounts, pot
+/// reconstruction) for its per-node pot/toCall/behind fields — one copy, no fork.
+class SprState {
   /// Effective stack behind at the FLOP (constant for the whole spot).
   final double effStack;
 
@@ -210,7 +214,7 @@ class _SprState {
   /// Cached SprBucket.name for the current street (computed once at street entry).
   final String bucket;
 
-  _SprState({
+  SprState({
     required this.effStack,
     required this.potStreetStart,
     required this.committedPrior,
@@ -223,7 +227,7 @@ class _SprState {
       pot <= 0 ? 'medium' : sprBucket((effStack - committedPrior) / pot).name;
 
   /// Root state for the flop: nothing committed yet, pot = the flop pot.
-  factory _SprState.flop(double pot0, double effStack) => _SprState(
+  factory SprState.flop(double pot0, double effStack) => SprState(
         effStack: effStack,
         potStreetStart: pot0,
         committedPrior: 0,
@@ -235,13 +239,13 @@ class _SprState {
   /// matched contribution (each player's chips) = min of the two street contribs
   /// — equal on a properly-closed street (bet→call or check→check). The new pot
   /// folds in BOTH players' chips; committedPrior advances by the matched amount.
-  _SprState nextStreet() {
+  SprState nextStreet() {
     final oop = streetContrib['oop'] ?? 0;
     final ip = streetContrib['ip'] ?? 0;
     final matched = oop < ip ? oop : ip;
     final newPot = potStreetStart + oop + ip;
     final newPrior = committedPrior + matched;
-    return _SprState(
+    return SprState(
       effStack: effStack,
       potStreetStart: newPot,
       committedPrior: newPrior,
@@ -252,7 +256,7 @@ class _SprState {
 
   /// State after [position] takes [rawAction] (updates that player's within-street
   /// "to"-total; TexasSolver action amounts are street totals, not increments).
-  _SprState afterAction(String position, String rawAction) {
+  SprState afterAction(String position, String rawAction) {
     final other = position == 'oop' ? 'ip' : 'oop';
     final mine = streetContrib[position] ?? 0;
     final theirs = streetContrib[other] ?? 0;
@@ -279,7 +283,7 @@ class _SprState {
       }
       to = parsed ?? mine;
     }
-    return _SprState(
+    return SprState(
       effStack: effStack,
       potStreetStart: potStreetStart,
       committedPrior: committedPrior,
@@ -292,7 +296,7 @@ class _SprState {
 /// Tabulate one solved spot's dump [root] into library cells. [board] is the flop
 /// (parsed ints). [pot0]/[effStack] are the spot's flop pot + effective stack —
 /// the SPR bucket is re-derived per street from these as the pot grows (see
-/// [_SprState]). [maxBoardLen] caps the depth walked (5 = river; pass 4 to stop
+/// [SprState]). [maxBoardLen] caps the depth walked (5 = river; pass 4 to stop
 /// at the turn for tractability on huge dumps).
 /// Read a solver dump JSON file at [path] and tabulate it. The file-based entry
 /// point so the WHOLE heavy step (read + jsonDecode + tree walk) can run in a
@@ -320,7 +324,7 @@ List<FreqCell> tabulateSpot(
 }) {
   final acc = <String, _CellAcc>{};
   _walk(root, board, <String, Map<String, double>>{}, 'oop', 'first_to_act', acc,
-      _SprState.flop(pot0, effStack), maxBoardLen);
+      SprState.flop(pot0, effStack), maxBoardLen);
 
   final out = <FreqCell>[];
   acc.forEach((key, ca) {
@@ -350,7 +354,7 @@ void _walk(
   String position, // 'oop' | 'ip' — derived STRUCTURALLY, not from node['player']
   String facing,
   Map<String, _CellAcc> acc,
-  _SprState spr,
+  SprState spr,
   int maxBoardLen,
 ) {
   final type = node['node_type'] as String?;
@@ -490,7 +494,7 @@ void _walk(
 /// already in this street) ÷ the pot before the bet. Used to bucket a faced bet
 /// into the shared small/mid/big labels. Null (→ 'mid') if the amount or pot is
 /// unrecoverable. Matches the live `_betSizeFrac`/`betSizeBucket` pairing.
-double? _betFrac(String rawAction, String actorPos, _SprState spr) {
+double? _betFrac(String rawAction, String actorPos, SprState spr) {
   final m = RegExp(r'([0-9]+\.?[0-9]*)').firstMatch(rawAction);
   final to = m == null ? null : double.tryParse(m.group(1)!);
   if (to == null) return null;
