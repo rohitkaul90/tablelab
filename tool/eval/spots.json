@@ -108,6 +108,42 @@
     "reads": []
   },
   {
+    "id": "gto-r-ip-fbet-strong-md",
+    "file": "tool/eval/samples/gto/gto-r-ip-fbet-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "RIVER IP facing_bet, set of sixes (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-r-ip-fcheck-strong-md",
+    "file": "tool/eval/samples/gto/gto-r-ip-fcheck-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 0,
+    "bucket": "gto-frequency",
+    "notes": "RIVER IP facing_check, sevens-full (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-r-oop-fbet-marg-sh",
+    "file": "tool/eval/samples/gto/gto-r-oop-fbet-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "RIVER OOP facing_bet (bluff-catch), top pair 9, shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-r-oop-fta-marg-md",
+    "file": "tool/eval/samples/gto/gto-r-oop-fta-marg-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "RIVER OOP first_to_act (lead), top pair Q (marginalMade), medium",
+    "reads": []
+  },
+  {
     "id": "gto-t-ip-fbet-marg-md",
     "file": "tool/eval/samples/gto/gto-t-ip-fbet-marg-md.json",
     "source": "synthetic/gto",
