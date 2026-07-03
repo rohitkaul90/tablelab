@@ -294,23 +294,44 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final actor =
         seatLabel(manifest.scenario, isOop: node.actorIsOop);
 
+    // The grid must fit BOTH dimensions: it renders square, so on a wide
+    // pane sizing by width alone overflows the viewport vertically (hit on
+    // Windows: "bottom overflowed by 301 pixels"). Bound the square by the
+    // smaller of width and (height minus the lens bar/legend chrome); in the
+    // narrow layout the parent is a scrollable with unbounded height, where
+    // width-sizing is correct.
     final grid = Padding(
       padding: const EdgeInsets.all(8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _lensBar(context),
-          const SizedBox(height: 6),
-          StrategyGrid(
-            cells: cells,
-            actionColors: colors,
-            lens: _lens,
-            onCellTap: (cell) => showComboDetailSheet(context,
-                cell: cell, node: node, comboNames: combos),
-          ),
-          if (_lens == GridLens.handClass) _classLegend(context),
-        ],
-      ),
+      child: LayoutBuilder(builder: (context, c) {
+        const chromeH = 46.0; // lens bar + spacing
+        final legendH = _lens == GridLens.handClass ? 34.0 : 0.0;
+        final side = !c.maxHeight.isFinite
+            ? c.maxWidth
+            : [c.maxWidth, c.maxHeight - chromeH - legendH]
+                .reduce((a, b) => a < b ? a : b)
+                .clamp(120.0, 4096.0);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _lensBar(context),
+            const SizedBox(height: 6),
+            Center(
+              child: SizedBox(
+                width: side,
+                height: side,
+                child: StrategyGrid(
+                  cells: cells,
+                  actionColors: colors,
+                  lens: _lens,
+                  onCellTap: (cell) => showComboDetailSheet(context,
+                      cell: cell, node: node, comboNames: combos),
+                ),
+              ),
+            ),
+            if (_lens == GridLens.handClass) _classLegend(context),
+          ],
+        );
+      }),
     );
     final overview = OverviewPanel(
       node: node,

@@ -49,10 +49,17 @@ List<Color> actionColors(List<String> actions) {
   ];
 }
 
-/// Short human label for a raw solver action ('BET 6.6' → 'Bet 6.6').
+/// Short human label for a raw solver action: 'BET 6.6' → 'Bet 6.6',
+/// 'BET 10.000000' → 'Bet 10' (dump amounts carry float noise).
 String actionDisplayLabel(String raw) {
-  final u = raw.trim();
+  var u = raw.trim();
   if (u.isEmpty) return u;
-  final lower = u.toLowerCase();
-  return lower[0].toUpperCase() + lower.substring(1);
+  u = u.toLowerCase().replaceAllMapped(RegExp(r'\d+(?:\.\d+)?'), (m) {
+    final v = double.tryParse(m.group(0)!);
+    if (v == null) return m.group(0)!;
+    return v == v.roundToDouble()
+        ? v.round().toString()
+        : ((v * 10).roundToDouble() / 10).toString();
+  });
+  return u[0].toUpperCase() + u.substring(1);
 }
