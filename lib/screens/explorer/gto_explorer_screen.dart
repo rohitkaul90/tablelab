@@ -20,6 +20,7 @@ import '../../widgets/explorer/action_colors.dart';
 import '../../widgets/explorer/action_ribbon.dart';
 import '../../widgets/explorer/overview_panel.dart';
 import '../../widgets/explorer/strategy_grid.dart';
+import '../../widgets/explorer/street_card_picker.dart';
 
 class GtoExplorerScreen extends ConsumerStatefulWidget {
   final bool showScaffold;
@@ -133,7 +134,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           color: scheme.surfaceContainerLow,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Text(
-            'Beta · flop decisions · solved to ≤0.5% exploitability on '
+            'Beta · flop to river · solved to ≤0.5% exploitability on '
             'representative boards',
             style: Theme.of(context)
                 .textTheme
@@ -247,16 +248,26 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   }
 
   List<RibbonStep> _ribbonSteps(ExplorerState state) {
-    // Actor of step i = actor of the node the first i steps lead to; the flop
-    // root is always OOP and actors strictly alternate within a street.
+    // Actor of an action step: each street starts with the OOP player and
+    // actors strictly alternate WITHIN a street; a chance step ('@Ah') deals
+    // a card and resets the alternation for the new street.
     final scenario = state.manifest?.scenario ?? '?';
-    return [
-      for (var i = 0; i < state.path.length; i++)
-        RibbonStep(
-          seatLabel(scenario, isOop: i.isEven),
-          state.path[i],
-        ),
-    ];
+    final steps = <RibbonStep>[];
+    var idxInStreet = 0;
+    var dealt = 0;
+    for (final step in state.path) {
+      if (step.startsWith('@')) {
+        dealt++;
+        steps.add(
+            RibbonStep.chance('${dealt == 1 ? 'Turn' : 'River'} ${step.substring(1)}'));
+        idxInStreet = 0;
+      } else {
+        steps.add(
+            RibbonStep(seatLabel(scenario, isOop: idxInStreet.isEven), step));
+        idxInStreet++;
+      }
+    }
+    return steps;
   }
 
   Widget _nodeView(BuildContext context, ExplorerState state, PackNode node) {
@@ -303,30 +314,90 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     });
   }
 
+  /// The cursor points at no node. Decide which end/continuation state this
+  /// is: fold ends the hand; an all-in call runs out to showdown; a closed
+  /// flop/turn offers the next street's CARD PICKER; a closed river is
+  /// showdown; a dealt card whose line has no node (all-in runouts, thin
+  /// chunks) is unavailable.
   Widget _streetClosed(BuildContext context, ExplorerState state) {
-    final last = state.path.isNotEmpty ? state.path.last.toUpperCase() : '';
-    final folded = last.startsWith('FOLD');
-    return _message(
-      context,
-      icon: folded ? Icons.close : Icons.arrow_forward,
-      title: folded ? 'Hand over — fold' : 'Flop action complete',
-      body: folded
-          ? 'This line ends the hand. Rewind with the chips above to explore '
-              'a different line.'
-          : 'This line closes the flop. Turn and river navigation are coming '
-              'in the next version — rewind with the chips above to explore '
-              'other flop lines.',
-      // No back affordance at an empty path (a malformed pack can lack the
-      // root node) — popTo also lower-bound-guards, this just hides the dead
-      // button.
-      action: state.path.isEmpty
-          ? null
-          : TextButton(
-              onPressed: () => ref
-                  .read(explorerProvider.notifier)
-                  .popTo(state.path.length - 1),
-              child: const Text('Back one step'),
+    if (state.chunkLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    Widget back() => TextButton(
+          onPressed: () =>
+              ref.read(explorerProvider.notifier).popTo(state.path.length - 1),
+          child: const Text('Back one step'),
+        );
+    if (state.path.isEmpty) {
+      return _message(context,
+          icon: Icons.error_outline,
+          title: 'Spot has no root decision',
+          body: 'This pack looks malformed — pick another spot above.');
+    }
+    final last = state.path.last.toUpperCase();
+    if (last.startsWith('FOLD')) {
+      return _message(context,
+          icon: Icons.close,
+          title: 'Hand over — fold',
+          body: 'This line ends the hand. Rewind with the chips above to '
+              'explore a different line.',
+          action: back());
+    }
+    if (last.startsWith('@')) {
+      // A card was dealt but its line has no node here (all-in runouts have
+      // no further decisions; very thin runouts can be absent from a pack).
+      return _message(context,
+          icon: Icons.casino_outlined,
+          title: 'No decisions on this runout',
+          body: 'This line has no further action to study (an all-in line, '
+              'or a runout the pack does not carry).',
+          action: back());
+    }
+    // Street closed by matched action. All-in call → showdown, no more cards
+    // to pick meaningfully street by street.
+    final streetSteps =
+        state.path.reversed.takeWhile((s) => !s.startsWith('@')).toList();
+    final allinCall = last.startsWith('CALL') &&
+        streetSteps.any((s) => s.toUpperCase().startsWith('ALLIN'));
+    final dealt = state.dealtCards.length;
+    if (allinCall) {
+      return _message(context,
+          icon: Icons.paid_outlined,
+          title: 'All-in — runout to showdown',
+          body: 'The stacks are in; there are no further decisions. Rewind '
+              'to explore other lines.',
+          action: back());
+    }
+    if (dealt >= 2) {
+      return _message(context,
+          icon: Icons.flag_outlined,
+          title: 'Showdown',
+          body: 'River action complete — the hand goes to showdown. Rewind '
+              'to explore other lines.',
+          action: back());
+    }
+    // Offer the next street's card.
+    final excluded = <String>{
+      ...?state.manifest?.flop.split(' '),
+      ...state.dealtCards,
+    };
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StreetCardPicker(
+              title: dealt == 0 ? 'Pick the turn card' : 'Pick the river card',
+              excluded: excluded,
+              onPick: (c) =>
+                  ref.read(explorerProvider.notifier).pickCard(c),
             ),
+            const SizedBox(height: 4),
+            back(),
+          ],
+        ),
+      ),
     );
   }
 

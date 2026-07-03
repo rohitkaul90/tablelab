@@ -8,9 +8,13 @@ import 'package:flutter/material.dart';
 import 'action_colors.dart';
 
 class RibbonStep {
-  final String actorLabel; // 'BB' / 'BTN'
-  final String action; // raw solver label
-  RibbonStep(this.actorLabel, this.action);
+  final String actorLabel; // 'BB' / 'BTN'; empty for a chance step
+  final String action; // raw solver label, or 'Turn Ah' / 'River 3d'
+  final bool isChance;
+  RibbonStep(this.actorLabel, this.action) : isChance = false;
+  RibbonStep.chance(this.action)
+      : actorLabel = '',
+        isChance = true;
 }
 
 class ActionRibbon extends StatelessWidget {
@@ -47,11 +51,14 @@ class ActionRibbon extends StatelessWidget {
             ),
             _chip(
               context,
-              label:
-                  '${steps[i].actorLabel} ${actionDisplayLabel(steps[i].action)}',
-              color: actionColors([steps[i].action])
-                  .first
-                  .withValues(alpha: 0.28),
+              label: steps[i].isChance
+                  ? steps[i].action
+                  : '${steps[i].actorLabel} ${actionDisplayLabel(steps[i].action)}',
+              color: steps[i].isChance
+                  ? scheme.tertiaryContainer.withValues(alpha: 0.55)
+                  : actionColors([steps[i].action])
+                      .first
+                      .withValues(alpha: 0.28),
               textColor: scheme.onSurface,
               onTap: i == steps.length - 1 ? null : () => onRewind(i + 1),
             ),
