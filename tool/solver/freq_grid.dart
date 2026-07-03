@@ -97,6 +97,28 @@ final Map<String, GridScenario> kScenarios = {
         rfiKey('BTN', false)!, // cash_rfi_btn
         callKey('bb', openerBucketForLabel('BTN'), 'BTN', false)),
   ),
+  'srp_early_v_bb': GridScenario(
+    key: 'srp_early_v_bb',
+    description: 'Early-bucket (UTG-class) open vs BB call — heads-up '
+        'single-raised (aggressor IP; tighter ranges than BTN-vs-BB)',
+    // Same SRP band as srp_late_v_bb: the pot structure is identical (open
+    // 2.5x + BB call), only the ranges differ. Representative opener range =
+    // UTG RFI (the early bucket = UTG–MP; matches the live BB-defend pairing
+    // cash_call_bb_vs_utg the lookup's opener bucketing uses).
+    sprReps: const {'shallow': 3.0, 'medium': 6.0, 'deep': 15.0},
+    ranges: () => _rangePair(
+        rfiKey('UTG', false)!, // cash_rfi_utg
+        callKey('bb', 'early', 'UTG', false)), // cash_call_bb_vs_utg
+  ),
+  'srp_middle_v_bb': GridScenario(
+    key: 'srp_middle_v_bb',
+    description: 'Middle-bucket (CO-class) open vs BB call — heads-up '
+        'single-raised (aggressor IP)',
+    sprReps: const {'shallow': 3.0, 'medium': 6.0, 'deep': 15.0},
+    ranges: () => _rangePair(
+        rfiKey('CO', false)!, // cash_rfi_co
+        callKey('bb', 'middle', 'CO', false)), // cash_call_bb_vs_co
+  ),
   '3bp_bb_v_btn': GridScenario(
     key: '3bp_bb_v_btn',
     description: 'BTN open, BB 3-bet, BTN call — heads-up 3-bet pot '

@@ -33,7 +33,10 @@
 param(
   [ValidateSet('turn', 'river')]
   [string]$Profile = 'river',
-  # Which kScenarios entry to solve (TLSOLVE_SCENARIO for freq_grid.dart).
+  # Which kScenarios entry/entries to solve (TLSOLVE_SCENARIO for
+  # freq_grid.dart). Comma-separate for a sequential BATCH on one box
+  # (e.g. 'srp_early_v_bb,srp_middle_v_bb,srp_late_v_bb'); one scenario
+  # failing does not stop the rest.
   [string]$Scenario = 'srp_late_v_bb',
   # Extra args passed verbatim to freq_grid.dart (e.g. "--limit 6 --parallel 2").
   [string]$GridArgs = '--parallel 2',
@@ -205,6 +208,11 @@ if (Test-Path $cache) {
 # quoting. `$HOME is escaped so it stays literal for the remote shell; $Profile etc.
 # are interpolated by PowerShell.
 $packArgs = if ($EmitPack) { ' --emit-pack /home/ubuntu/packs' } else { '' }
+# Scenario batch: comma list -> space list for the bash loop. One scenario
+# failing (guard abort, all-spots-failed) must not stop the rest; the poll
+# keys on the final 'BATCH DONE' sentinel, NOT on '^Wrote ' (each scenario's
+# grid run writes the library, so 'Wrote' fires after the FIRST scenario).
+$scenarioList = $Scenario -replace ',', ' '
 $solveSh = @"
 #!/usr/bin/env bash
 cd ~/poker_tracker
@@ -217,7 +225,13 @@ export TEXASSOLVER_BIN=`$HOME/texassolver-source/build/console_solver
 export TMPDIR=/dev/shm
 sudo sysctl -w vm.max_map_count=2000000 >/dev/null 2>&1 || true
 rm -rf /dev/shm/tlsolve_* /mnt/scratch/tlsolve_* 2>/dev/null || true
-TLSOLVE_SCENARIO=$Scenario TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs 2>&1 | tee ~/solve.log
+{
+for SC in $scenarioList; do
+  echo "=== SCENARIO `$SC ==="
+  TLSOLVE_SCENARIO=`$SC TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs || echo "SCENARIO `$SC FAILED"
+done
+echo "BATCH DONE"
+} 2>&1 | tee ~/solve.log
 "@
 $localSh = Join-Path $env:TEMP 'run-solve.sh'
 [IO.File]::WriteAllText($localSh, ($solveSh -replace "`r`n", "`n"))
@@ -249,7 +263,9 @@ if ($PullAndTerminate) {
   # and isn't printed at all if every spot failed); 'dead' = the tmux solve session
   # ended WITHOUT writing (crash / OOM-kill / all-failed / _writeLibrary aborted on
   # a guard) - must NOT pull (stale lib) or terminate; 'running' = keep waiting.
-  # Check 'wrote' BEFORE 'dead' so a clean finish (session ends right after writing)
+  # The completion sentinel is 'BATCH DONE' (emitted after the scenario loop -
+  # '^Wrote ' fires after the FIRST scenario of a batch, far too early). Check
+  # it BEFORE 'dead' so a clean finish (session ends right after the echo)
   # still reads as success. Each poll goes through Invoke-SshTimed: a HUNG poll
   # ssh is killed and retried (this exact wedge ate a finished Cycle A run -
   # the solve completed but the launcher never noticed). Only give up after
@@ -257,7 +273,7 @@ if ($PullAndTerminate) {
   $failures = 0
   do {
     Start-Sleep 30
-    $r = Invoke-SshTimed "if grep -q '^Wrote ' ~/solve.log 2>/dev/null; then echo wrote; elif tmux has-session -t solve 2>/dev/null; then echo running; else echo dead; fi"
+    $r = Invoke-SshTimed "if grep -q 'BATCH DONE' ~/solve.log 2>/dev/null; then echo wrote; elif tmux has-session -t solve 2>/dev/null; then echo running; else echo dead; fi"
     if ($r -and $r.Code -eq 0 -and "$($r.Out)".Trim()) {
       $failures = 0
       $state = "$($r.Out)".Trim()
@@ -285,6 +301,31 @@ if ($PullAndTerminate) {
     return
   }
 
+  # Batch health: the sentinel fires even if individual scenarios failed (a
+  # guard abort in one must not strand the others' results). Require at least
+  # ONE library write, and surface per-scenario failures loudly.
+  $chk = Invoke-SshTimed "grep -c '^Wrote ' ~/solve.log; grep -c 'SCENARIO .* FAILED' ~/solve.log" -TimeoutSec 60
+  $wroteCount = 0
+  $scenarioFails = 0
+  if ($chk) {
+    $nums = @("$($chk.Out)" -split "`r?`n" | Where-Object { $_ -match '^\d+$' })
+    if ($nums.Count -ge 1) { $wroteCount = [int]$nums[0] }
+    if ($nums.Count -ge 2) { $scenarioFails = [int]$nums[1] }
+  }
+  if ($wroteCount -eq 0) {
+    $r = Invoke-SshTimed "tail -n 30 ~/solve.log" -TimeoutSec 60
+    if ($r) { Write-Host $r.Out }
+    Write-Warning "BATCH DONE but NO library write happened (every scenario failed or"
+    Write-Warning "aborted on a guard). Instance $iid LEFT RUNNING for triage - do not"
+    Write-Warning "trust a pulled library. Terminate when done:"
+    Write-Warning "  aws ec2 terminate-instances --region $Region --instance-ids $iid"
+    return
+  }
+  if ($scenarioFails -gt 0) {
+    Write-Warning "$scenarioFails scenario(s) FAILED in the batch - the pulled library"
+    Write-Warning "holds only the successful ones (grep 'SCENARIO .* FAILED' ~/solve.log"
+    Write-Warning "on the box, or the pulled log). The library write guards still ran."
+  }
   $r = Invoke-SshTimed "tail -n 3 ~/solve.log" -TimeoutSec 60
   if ($r) { Write-Host $r.Out }
   Write-Host "Pulling library + cache back..."

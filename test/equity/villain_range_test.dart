@@ -1111,7 +1111,7 @@ void main() {
       expect(check!.scenarioKey, isNull);
     });
 
-    test('non-late opener (CO) → scenarioKey null', () async {
+    test('middle-bucket opener (CO) → srp_middle_v_bb', () async {
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 5, streets: [
           const StreetData(street: Street.preflop, actions: [
@@ -1123,7 +1123,22 @@ void main() {
         iterations: 500,
         seed: 1,
       );
-      expect(check!.scenarioKey, isNull);
+      expect(check!.scenarioKey, 'srp_middle_v_bb');
+    });
+
+    test('early-bucket opener (UTG) → srp_early_v_bb', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 3, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 3, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.call, amount: 5),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, 'srp_early_v_bb');
     });
 
     test('multiway (two villains to the flop) → scenarioKey null', () async {

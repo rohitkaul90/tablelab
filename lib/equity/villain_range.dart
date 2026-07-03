@@ -843,7 +843,9 @@ double? _multiwayFieldMdf(
 
 /// The GTO-library scenario this hand maps to, or null when outside coverage.
 /// Keys must match the solve grid's kScenarios (tool/solver/freq_grid.dart):
-///  - srp_late_v_bb — heads-up single-raised, BTN opener vs BB caller.
+///  - srp_{early,middle,late}_v_bb — heads-up single-raised, an IP opener
+///    (bucketed early/middle/late like the response charts) vs a BB caller.
+///    The SB stays excluded (opens OOP — cells would invert).
 ///  - 3bp_bb_v_btn — heads-up 3-bet pot: BTN open → BB 3-bet → BTN call
 ///    (the 3-bettor OOP). The BTN must be the ORIGINAL opener — a cold-called
 ///    3-bet or squeeze reaches the flop with different ranges than the solve.
@@ -898,12 +900,18 @@ String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
     }
     return '3bp_bb_v_btn';
   }
-  // The SRP library was solved BTN(IP)-opener vs BB(OOP)-caller. The SB also
-  // buckets as 'late' but opens OUT of position, so its IP/OOP cells would be
-  // inverted (the lookup keys on physical position) — restrict to a BTN opener.
-  if (posOf(openerSeat) != 'BTN') return null;
+  // The SRP scenarios are solved opener-IP vs BB(OOP)-caller, one per opener
+  // BUCKET (the same early/middle/late bucketing the response charts use). The
+  // SB also buckets 'late' but opens OUT of position — its IP/OOP cells would
+  // be inverted (the lookup keys on physical position), so it stays excluded.
   if (posOf(callerSeat) != 'BB') return null;
-  return 'srp_late_v_bb';
+  final openerLabel = posOf(openerSeat);
+  if (openerLabel == 'SB' || openerLabel == 'BB') return null;
+  return switch (openerBucketForLabel(openerLabel)) {
+    'late' => 'srp_late_v_bb', // BTN (SB excluded above)
+    'middle' => 'srp_middle_v_bb', // HJ/CO
+    _ => 'srp_early_v_bb', // UTG…MP (and exotic labels, matching the charts)
+  };
 }
 
 /// [seat]'s bet/raise on [street] sized as a fraction of the pot AT THE MOMENT
