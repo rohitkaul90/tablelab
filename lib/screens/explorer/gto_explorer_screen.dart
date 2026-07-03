@@ -341,20 +341,25 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(6, 4, 6, 5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  onTap: onHeaderTap,
-                  child: Text(header,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onSurfaceVariant)),
-                ),
-                ...rows,
-              ],
+            // IntrinsicWidth bounds the stretch: inside the horizontal
+            // ListView the width constraint is INFINITE, and a bare
+            // stretch-Column would demand it (RenderBox layout crash).
+            child: IntrinsicWidth(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: onHeaderTap,
+                    child: Text(header,
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.onSurfaceVariant)),
+                  ),
+                  ...rows,
+                ],
+              ),
             ),
           ),
         ),
