@@ -16,8 +16,10 @@ import '../../explorer/pack_codec.dart';
 import '../../explorer/scenario_labels.dart';
 import '../../providers/explorer_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../equity/card.dart';
 import '../../widgets/explorer/action_colors.dart';
 import '../../widgets/explorer/action_ribbon.dart';
+import '../../widgets/explorer/combo_detail_sheet.dart';
 import '../../widgets/explorer/overview_panel.dart';
 import '../../widgets/explorer/strategy_grid.dart';
 import '../../widgets/explorer/street_card_picker.dart';
@@ -39,6 +41,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   PackNode? _aggNode;
   List<List<GridCellAgg?>>? _aggCells;
   NodeSummary? _aggSummary;
+  GridLens _lens = GridLens.strategy;
 
   @override
   void initState() {
@@ -272,9 +275,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
 
   Widget _nodeView(BuildContext context, ExplorerState state, PackNode node) {
     final manifest = state.manifest!;
+    final combos = manifest.combosFor(oop: node.actorIsOop);
     if (!identical(_aggNode, node)) {
       _aggNode = node;
-      _aggCells = aggregateGrid(node, manifest.combosFor(oop: node.actorIsOop));
+      _aggCells = aggregateGrid(
+        node,
+        combos,
+        board: [
+          for (final c in [...manifest.flop.split(' '), ...state.dealtCards])
+            parseCard(c),
+        ],
+      );
       _aggSummary = summarizeNode(node);
     }
     final cells = _aggCells!;
@@ -285,7 +296,21 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
 
     final grid = Padding(
       padding: const EdgeInsets.all(8),
-      child: StrategyGrid(cells: cells, actionColors: colors),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _lensBar(context),
+          const SizedBox(height: 6),
+          StrategyGrid(
+            cells: cells,
+            actionColors: colors,
+            lens: _lens,
+            onCellTap: (cell) => showComboDetailSheet(context,
+                cell: cell, node: node, comboNames: combos),
+          ),
+          if (_lens == GridLens.handClass) _classLegend(context),
+        ],
+      ),
     );
     final overview = OverviewPanel(
       node: node,
@@ -397,6 +422,54 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             back(),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Lens toggle above the grid: strategy (action mix) vs hand class (the
+  /// same DCE classes the AI coaching quotes).
+  Widget _lensBar(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        SegmentedButton<GridLens>(
+          showSelectedIcon: false,
+          style: SegmentedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            textStyle: const TextStyle(fontSize: 11.5),
+          ),
+          segments: const [
+            ButtonSegment(value: GridLens.strategy, label: Text('Strategy')),
+            ButtonSegment(value: GridLens.handClass, label: Text('Hand class')),
+          ],
+          selected: {_lens},
+          onSelectionChanged: (s) => setState(() => _lens = s.first),
+        ),
+      ],
+    );
+  }
+
+  Widget _classLegend(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 4,
+        children: [
+          for (final e in kHandClassColors.entries)
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                  width: 9,
+                  height: 9,
+                  decoration:
+                      BoxDecoration(color: e.value, shape: BoxShape.circle)),
+              const SizedBox(width: 4),
+              Text(handClassShortLabel(e.key),
+                  style:
+                      TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+            ]),
+        ],
       ),
     );
   }

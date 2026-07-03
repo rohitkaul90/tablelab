@@ -3,6 +3,7 @@
 // unit-tested directly (test/explorer/grid_aggregation_test.dart).
 
 import 'package:tablelab/equity/card.dart';
+import 'package:tablelab/equity/decision_context.dart';
 
 import 'pack_codec.dart';
 
@@ -14,6 +15,14 @@ class GridCellAgg {
   final double reach; // Σ combo reach (0..maxCombos)
   final List<double> freqs; // reach-weighted mean per node action
   final double? equity; // reach-weighted mean, null if all NA
+
+  /// The cell's live combos (references into the node), for drill-down UI.
+  final List<PackCombo> combos;
+
+  /// Reach-dominant DCE hand class on the current board (the SAME classifier
+  /// the AI coaching FACTs use — the explorer's hand-class lens), or null
+  /// when no board was supplied / nothing classified.
+  final HandClass? dominantClass;
   GridCellAgg({
     required this.hand,
     required this.comboCount,
@@ -21,6 +30,8 @@ class GridCellAgg {
     required this.reach,
     required this.freqs,
     required this.equity,
+    required this.combos,
+    required this.dominantClass,
   });
 
   /// How "present" the cell is: reach mass ÷ the cell's full combo count.
@@ -62,23 +73,37 @@ class ActionAgg {
 }
 
 /// Aggregate [node]'s combos into a 13×13 grid. [comboNames] is the acting
-/// position's manifest combo list (comboId → name). Cells with no live combo
-/// are null.
-List<List<GridCellAgg?>> aggregateGrid(PackNode node, List<String> comboNames) {
+/// position's manifest combo list (comboId → name). When [board] (card ints)
+/// is supplied, each combo is classified against it and cells carry their
+/// reach-dominant DCE hand class (the hand-class lens). Cells with no live
+/// combo are null.
+List<List<GridCellAgg?>> aggregateGrid(
+  PackNode node,
+  List<String> comboNames, {
+  List<int>? board,
+}) {
   final nActions = node.actions.length;
   final reach = List.generate(13, (_) => List.filled(13, 0.0));
   final count = List.generate(13, (_) => List.filled(13, 0));
   final wFreq = List.generate(13, (_) => List.filled(13 * nActions, 0.0));
   final wEq = List.generate(13, (_) => List.filled(13, 0.0));
   final wEqDen = List.generate(13, (_) => List.filled(13, 0.0));
+  final cellCombos =
+      List.generate(13, (_) => List<List<PackCombo>?>.filled(13, null));
+  final classReach = board == null
+      ? null
+      : List.generate(
+          13, (_) => List.filled(13 * HandClass.values.length, 0.0));
 
   for (final c in node.combos) {
     if (c.comboId >= comboNames.length) continue;
-    final cell = comboCell(comboNames[c.comboId]);
+    final name = comboNames[c.comboId];
+    final cell = comboCell(name);
     if (cell == null) continue;
     final (row, col) = cell;
     reach[row][col] += c.reach;
     count[row][col]++;
+    (cellCombos[row][col] ??= []).add(c);
     for (var a = 0; a < nActions && a < c.freqs.length; a++) {
       wFreq[row][col * nActions + a] += c.reach * c.freqs[a];
     }
@@ -86,12 +111,33 @@ List<List<GridCellAgg?>> aggregateGrid(PackNode node, List<String> comboNames) {
       wEq[row][col] += c.reach * c.equity!;
       wEqDen[row][col] += c.reach;
     }
+    if (classReach != null) {
+      final hole = [
+        parseCard(name.substring(0, 2)),
+        parseCard(name.substring(2, 4)),
+      ];
+      final hc = classifyHandClass(hole, board!);
+      if (hc != null) {
+        classReach[row][col * HandClass.values.length + hc.index] += c.reach;
+      }
+    }
   }
 
   return List.generate(13, (row) {
     return List.generate(13, (col) {
       if (count[row][col] == 0) return null;
       final r = reach[row][col];
+      HandClass? dominant;
+      if (classReach != null) {
+        var best = 0.0;
+        for (final hc in HandClass.values) {
+          final w = classReach[row][col * HandClass.values.length + hc.index];
+          if (w > best) {
+            best = w;
+            dominant = hc;
+          }
+        }
+      }
       return GridCellAgg(
         hand: cellToHand(row, col),
         comboCount: count[row][col],
@@ -102,6 +148,8 @@ List<List<GridCellAgg?>> aggregateGrid(PackNode node, List<String> comboNames) {
             r > 0 ? wFreq[row][col * nActions + a] / r : 0.0,
         ],
         equity: wEqDen[row][col] > 0 ? wEq[row][col] / wEqDen[row][col] : null,
+        combos: cellCombos[row][col] ?? const [],
+        dominantClass: dominant,
       );
     });
   });

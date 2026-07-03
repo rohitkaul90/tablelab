@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/equity/card.dart';
+import 'package:tablelab/equity/decision_context.dart';
 import 'package:tablelab/explorer/grid_aggregation.dart';
 import 'package:tablelab/explorer/pack_codec.dart';
 
@@ -51,6 +53,8 @@ void main() {
       );
       final aks = grid[0][1]!;
       expect(aks.hand, 'AKs');
+      expect(aks.combos, hasLength(2)); // drill-down carries the live combos
+      expect(aks.dominantClass, isNull); // no board supplied
       expect(aks.comboCount, 2);
       expect(aks.maxCombos, 4);
       expect(aks.reach, closeTo(1.5, 1e-9));
@@ -63,6 +67,35 @@ void main() {
       expect(grid[2][2]!.hand, 'QQ');
       expect(grid[2][2]!.equity, isNull); // no equity data on that combo
       expect(grid[5][5], isNull); // no 99 in the node
+    });
+  });
+
+  group('hand-class lens', () {
+    test('cells classify against the board with the shared DCE classifier', () {
+      // Board Ks 9h 4c: KcKd = set of kings → strongMade; 7c2d… replaced by
+      // registry names — use combos whose classes are unambiguous.
+      const lensNames = ['KcKd', '7d2c'];
+      final board = ['Ks', '9h', '4c'].map(parseCard).toList();
+      final grid = aggregateGrid(
+        PackNode(
+          path: '',
+          street: 0,
+          actorIsOop: true,
+          potBefore: 10,
+          toCall: 0,
+          behind: 30,
+          actions: ['CHECK', 'BET 5'],
+          combos: [
+            _combo(0, 1.0, [1.0, 0.0]),
+            _combo(1, 1.0, [1.0, 0.0]),
+          ],
+        ),
+        lensNames,
+        board: board,
+      );
+      expect(grid[1][1]!.dominantClass, HandClass.strongMade); // KK = top set
+      // 72o = offsuit → lower-rank row: (row 12 = '2', col 7 = '7').
+      expect(grid[12][7]!.dominantClass, HandClass.air);
     });
   });
 
