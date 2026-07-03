@@ -28,6 +28,12 @@ class ExplorerState {
 
   /// Cursor: action steps + chance steps ('@Ah') from the flop root.
   final List<String> path;
+
+  /// PINNED runout cards ('9s'). Independent of the cursor: they survive
+  /// rewinds (replaying a street auto-deals them — the user never re-enters
+  /// cards) and only change when explicitly re-picked via their card box.
+  final String? turnCard;
+  final String? riverCard;
   final bool loading; // spot load in flight
   final bool chunkLoading; // street-chunk fetch in flight
   final String? error;
@@ -41,6 +47,8 @@ class ExplorerState {
     this.turnNodes,
     this.riverNodes,
     this.path = const [],
+    this.turnCard,
+    this.riverCard,
     this.loading = false,
     this.chunkLoading = false,
     this.error,
@@ -55,12 +63,15 @@ class ExplorerState {
     List<PackNode>? turnNodes,
     List<PackNode>? riverNodes,
     List<String>? path,
+    String? turnCard,
+    String? riverCard,
     bool? loading,
     bool? chunkLoading,
     String? error,
     bool clearError = false,
     bool clearTurn = false,
     bool clearRiver = false,
+    bool clearPins = false,
   }) {
     return ExplorerState(
       scanning: scanning ?? this.scanning,
@@ -71,6 +82,8 @@ class ExplorerState {
       turnNodes: clearTurn ? null : (turnNodes ?? this.turnNodes),
       riverNodes: clearRiver ? null : (riverNodes ?? this.riverNodes),
       path: path ?? this.path,
+      turnCard: clearPins ? null : (turnCard ?? this.turnCard),
+      riverCard: clearPins ? null : (riverCard ?? this.riverCard),
       loading: loading ?? this.loading,
       chunkLoading: chunkLoading ?? this.chunkLoading,
       error: clearError ? null : (error ?? this.error),
@@ -125,6 +138,7 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
         flopNodes: null,
         clearTurn: true,
         clearRiver: true,
+        clearPins: true, // pins are per-board
         clearError: true);
     try {
       final client = ExplorerPackClient(spot.source);
@@ -146,30 +160,74 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
   void push(String action) =>
       state = state.copyWith(path: [...state.path, action]);
 
-  /// Deal [card] ('Ah') on a closed street: appends the chance step and lazily
-  /// fetches that runout's chunk (`turn/{card}` after 0 dealt cards,
+  /// Deal [card] ('Ah') on a closed street: appends the chance step, PINS the
+  /// card for its street (so rewinds/replays never re-ask), and lazily fetches
+  /// that runout's chunk (`turn/{card}` after 0 dealt cards,
   /// `river/{turn}{card}` after 1). A missing/failed chunk keeps the step (the
-  /// screen shows a line-unavailable state with the ribbon as the way back).
+  /// screen shows a line-unavailable state with the strip as the way back).
   Future<void> pickCard(String card) async {
+    final dealt = state.dealtCards;
+    if (dealt.length >= 2) return; // river already dealt
+    final newPath = [...state.path, '@$card'];
+    state = state.copyWith(
+      path: newPath,
+      turnCard: dealt.isEmpty ? card : null,
+      riverCard: dealt.isEmpty ? null : card,
+      clearError: true,
+    );
+    await _loadChunksForPath();
+  }
+
+  /// Re-pin a street's card (the card-box tap): replaces the pin and, when the
+  /// cursor's line already contains that chance step, swaps it IN PLACE — the
+  /// betting line survives (solver trees offer identical action structures on
+  /// every runout card; sizes are pot-relative) and only the chunks re-fetch.
+  Future<void> setPinnedCard({required bool river, required String card}) async {
+    final m = state.manifest;
+    if (m == null) return;
+    // Collisions are excluded in the picker UI; guard anyway.
+    if (m.flop.split(' ').contains(card)) return;
+    if (river && card == state.turnCard) return;
+    if (!river && card == state.riverCard) return;
+    final path = [...state.path];
+    final chanceIdxs = [
+      for (var i = 0; i < path.length; i++)
+        if (path[i].startsWith('@')) i
+    ];
+    final pos = river ? 1 : 0;
+    if (chanceIdxs.length > pos) path[chanceIdxs[pos]] = '@$card';
+    state = state.copyWith(
+      path: path,
+      turnCard: river ? null : card,
+      riverCard: river ? card : null,
+      clearError: true,
+    );
+    await _loadChunksForPath();
+  }
+
+  /// Fetch the chunks the CURRENT path's dealt cards require (turn/river),
+  /// tolerating absent runouts (currentNode stays null → unavailable state).
+  Future<void> _loadChunksForPath() async {
     final client = _client;
     if (client == null) return;
     final dealt = state.dealtCards;
-    if (dealt.length >= 2) return; // river already dealt
-    final chunkId = dealt.isEmpty ? 'turn/$card' : 'river/${dealt.first}$card';
-    final newPath = [...state.path, '@$card'];
-    state = state.copyWith(path: newPath, chunkLoading: true, clearError: true);
+    final expected = state.path.join('/');
+    bool stale() => !mounted || state.path.join('/') != expected;
+    state = state.copyWith(chunkLoading: true, clearTurn: true, clearRiver: true);
+    List<PackNode>? turn;
+    List<PackNode>? river;
     try {
-      final nodes = await client.chunk(chunkId);
-      if (!mounted || state.path.join('/') != newPath.join('/')) return;
-      state = dealt.isEmpty
-          ? state.copyWith(turnNodes: nodes, chunkLoading: false)
-          : state.copyWith(riverNodes: nodes, chunkLoading: false);
-    } catch (e) {
-      if (!mounted || state.path.join('/') != newPath.join('/')) return;
-      // Leave the step in place; currentNode stays null and the screen shows
-      // the unavailable state. (Thin runouts can be absent from a pack.)
-      state = state.copyWith(chunkLoading: false);
+      if (dealt.isNotEmpty) turn = await client.chunk('turn/${dealt[0]}');
+      if (dealt.length > 1) {
+        river = await client.chunk('river/${dealt[0]}${dealt[1]}');
+      }
+    } catch (_) {
+      // Thin/absent runout — keep whatever loaded; the screen shows the
+      // unavailable state for the missing street.
     }
+    if (stale()) return;
+    state = state.copyWith(
+        turnNodes: turn, riverNodes: river, chunkLoading: false);
   }
 
   /// The client for the open spot (prefetching, Phase 3+).

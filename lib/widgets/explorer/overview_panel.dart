@@ -112,14 +112,15 @@ class OverviewPanel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: color.withValues(alpha: selected ? 0.45 : 0.22),
-        borderRadius: BorderRadius.circular(10),
         clipBehavior: Clip.antiAlias,
-        shape: selected
-            ? RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(color: color, width: 1.6),
-              )
-            : null,
+        // shape only — Material asserts if BOTH shape and borderRadius are
+        // set (crashed the whole Overview pane when a filter was selected).
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: selected
+              ? BorderSide(color: color, width: 1.6)
+              : BorderSide.none,
+        ),
         child: InkWell(
           onTap: () => onActionTap(index),
           child: Padding(

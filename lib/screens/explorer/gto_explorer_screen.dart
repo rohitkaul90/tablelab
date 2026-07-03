@@ -18,7 +18,6 @@ import '../../providers/explorer_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../equity/card.dart';
 import '../../widgets/explorer/action_colors.dart';
-import '../../widgets/explorer/action_ribbon.dart';
 import '../../widgets/explorer/combo_detail_sheet.dart';
 import '../../widgets/explorer/equity_chart.dart';
 import '../../widgets/explorer/overview_panel.dart';
@@ -253,24 +252,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   }
 
   Widget _loaded(BuildContext context, ExplorerState state) {
-    final manifest = state.manifest!;
     final node = state.currentNode;
-    final steps = _ribbonSteps(state);
     if (node != null) _ensureAgg(state, node);
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: ActionRibbon(
-            rootLabel: 'Flop ${manifest.flop}',
-            steps: steps,
-            onRewind: (n) => ref.read(explorerProvider.notifier).popTo(n),
-          ),
-        ),
-        // NAVIGATION lives up top (ribbon rewinds, this bar advances); the
-        // right pane's action cards are FILTERS, not navigation.
-        if (node != null) _advanceBar(context, state, node),
+        // The LINE STRIP: the whole hand as boxes — played actions (tap =
+        // rewind), pinned Turn/River card boxes (tap = pick/change the card;
+        // pins survive rewinds so cards are never re-entered), and the
+        // current decision's action buttons (NO frequencies — the strip
+        // reflects what the user plays; consequences live in the right pane).
+        _lineStrip(context, state, node),
         const SizedBox(height: 4),
         Expanded(
           child: node == null
@@ -281,79 +273,185 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
-  /// "BTN to act · Check 94% · Bet 10 6%" — tapping an action ADVANCES the
-  /// line (GTO-Wizard-style header controls).
-  Widget _advanceBar(BuildContext context, ExplorerState state, PackNode node) {
+  Widget _lineStrip(BuildContext context, ExplorerState state, PackNode? node) {
     final scheme = Theme.of(context).colorScheme;
-    final summary = _aggSummary!;
-    final colors = actionColors(node.actions);
-    final actor = seatLabel(state.manifest?.scenario ?? '?',
-        isOop: node.actorIsOop);
-    return SizedBox(
-      height: 38,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        children: [
-          Center(
-            child: Text('$actor to act',
+    final manifest = state.manifest!;
+    final scenario = manifest.scenario;
+    final boxes = <Widget>[];
+
+    Widget box({
+      required String label,
+      Color? color,
+      Color? borderColor,
+      VoidCallback? onTap,
+      Widget? child,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Material(
+          color: color ?? scheme.surfaceContainerHighest,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: borderColor != null
+                ? BorderSide(color: borderColor, width: 1.2)
+                : BorderSide.none,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              child: child ??
+                  Text(label,
+                      style: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Flop box (the spot's board; tap = back to the root).
+    boxes.add(box(
+      label: 'Flop ${manifest.flop}',
+      onTap: state.path.isEmpty
+          ? null
+          : () => ref.read(explorerProvider.notifier).popTo(0),
+    ));
+
+    // Played steps.
+    var idxInStreet = 0;
+    var dealtSoFar = 0;
+    for (var i = 0; i < state.path.length; i++) {
+      final step = state.path[i];
+      if (step.startsWith('@')) {
+        dealtSoFar++;
+        final river = dealtSoFar == 2;
+        boxes.add(box(
+          label: '${river ? 'River' : 'Turn'} ${step.substring(1)}',
+          color: scheme.tertiaryContainer.withValues(alpha: 0.5),
+          onTap: () => _openCardPicker(context, state, river: river),
+        ));
+        idxInStreet = 0;
+      } else {
+        final actor = seatLabel(scenario, isOop: idxInStreet.isEven);
+        final keep = i + 1;
+        boxes.add(box(
+          label: '$actor ${actionDisplayLabel(step)}',
+          color: actionColors([step]).first.withValues(alpha: 0.30),
+          onTap: i == state.path.length - 1
+              ? null
+              : () => ref.read(explorerProvider.notifier).popTo(keep),
+        ));
+        idxInStreet++;
+      }
+    }
+
+    // Current decision: the actor's actions as buttons (advance on tap).
+    if (node != null) {
+      final actor = seatLabel(scenario, isOop: node.actorIsOop);
+      final colors = actionColors(node.actions);
+      boxes.add(box(
+        label: '',
+        color: scheme.surfaceContainerHigh,
+        borderColor: scheme.primary.withValues(alpha: 0.6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$actor:',
                 style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurfaceVariant)),
-          ),
-          const SizedBox(width: 10),
-          for (var a = 0; a < node.actions.length; a++) ...[
-            Center(
-              child: Material(
-                color: colors[a].withValues(alpha: 0.30),
-                borderRadius: BorderRadius.circular(8),
+            const SizedBox(width: 6),
+            for (var a = 0; a < node.actions.length; a++) ...[
+              Material(
+                color: colors[a].withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(6),
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   onTap: () => ref
                       .read(explorerProvider.notifier)
                       .push(node.actions[a]),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    child: Text(
-                      '${actionDisplayLabel(node.actions[a])} '
-                      '${(summary.actions[a].freq * 100).toStringAsFixed(1)}%',
-                      style: const TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w700),
-                    ),
+                        horizontal: 9, vertical: 4),
+                    child: Text(actionDisplayLabel(node.actions[a]),
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
+              if (a < node.actions.length - 1) const SizedBox(width: 5),
+            ],
           ],
-        ],
+        ),
+      ));
+    }
+
+    // Future chance boxes out to the river: pinned card (dimmed) or '+'.
+    final dealt = state.dealtCards.length;
+    final ended = state.path.isNotEmpty &&
+        state.path.last.toUpperCase().startsWith('FOLD');
+    if (!ended) {
+      if (dealt < 1) {
+        boxes.add(box(
+          label: 'Turn ${state.turnCard ?? '+'}',
+          color: scheme.tertiaryContainer.withValues(alpha: 0.22),
+          onTap: () => _openCardPicker(context, state, river: false),
+        ));
+      }
+      if (dealt < 2) {
+        boxes.add(box(
+          label: 'River ${state.riverCard ?? '+'}',
+          color: scheme.tertiaryContainer.withValues(alpha: 0.22),
+          onTap: () => _openCardPicker(context, state, river: true),
+        ));
+      }
+    } else {
+      boxes.add(box(
+          label: 'Hand over',
+          color: scheme.surfaceContainerLow,
+          onTap: null));
+    }
+
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+        children: [for (final b in boxes) Center(child: b)],
       ),
     );
   }
 
-  List<RibbonStep> _ribbonSteps(ExplorerState state) {
-    // Actor of an action step: each street starts with the OOP player and
-    // actors strictly alternate WITHIN a street; a chance step ('@Ah') deals
-    // a card and resets the alternation for the new street.
-    final scenario = state.manifest?.scenario ?? '?';
-    final steps = <RibbonStep>[];
-    var idxInStreet = 0;
-    var dealt = 0;
-    for (final step in state.path) {
-      if (step.startsWith('@')) {
-        dealt++;
-        steps.add(
-            RibbonStep.chance('${dealt == 1 ? 'Turn' : 'River'} ${step.substring(1)}'));
-        idxInStreet = 0;
-      } else {
-        steps.add(
-            RibbonStep(seatLabel(scenario, isOop: idxInStreet.isEven), step));
-        idxInStreet++;
-      }
-    }
-    return steps;
+  void _openCardPicker(BuildContext context, ExplorerState state,
+      {required bool river}) {
+    final manifest = state.manifest;
+    if (manifest == null) return;
+    final excluded = <String>{
+      ...manifest.flop.split(' '),
+      // Exclude the OTHER street's pin so swaps can't collide.
+      if (river && state.turnCard != null) state.turnCard!,
+      if (!river && state.riverCard != null) state.riverCard!,
+    };
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 20),
+        child: StreetCardPicker(
+          title: 'Pick the ${river ? 'river' : 'turn'} card',
+          excluded: excluded,
+          onPick: (c) {
+            Navigator.of(sheetContext).pop();
+            ref
+                .read(explorerProvider.notifier)
+                .setPinnedCard(river: river, card: c);
+          },
+        ),
+      ),
+    );
   }
 
   Widget _nodeView(BuildContext context, ExplorerState state, PackNode node) {
@@ -643,10 +741,22 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
               'to explore other lines.',
           action: back());
     }
-    // Offer the next street's card.
+    // A pinned card for the next street AUTO-DEALS (the user never re-enters
+    // a card after a rewind; the strip's card boxes change pins explicitly).
+    final pinned = dealt == 0 ? state.turnCard : state.riverCard;
+    if (pinned != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final s = ref.read(explorerProvider);
+        if (!identical(s, state) || s.chunkLoading) return;
+        ref.read(explorerProvider.notifier).pickCard(pinned);
+      });
+      return const Center(child: CircularProgressIndicator());
+    }
+    // No pin yet: offer the next street's card inline.
     final excluded = <String>{
       ...?state.manifest?.flop.split(' '),
       ...state.dealtCards,
+      if (dealt == 0 && state.riverCard != null) state.riverCard!,
     };
     return Center(
       child: SingleChildScrollView(
