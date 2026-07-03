@@ -17,6 +17,8 @@ import '../../explorer/scenario_labels.dart';
 import '../../providers/explorer_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../equity/card.dart';
+import '../../explorer/pack_source.dart';
+import '../../explorer/preflop_ranges.dart';
 import '../../widgets/explorer/action_colors.dart';
 import '../../widgets/explorer/combo_detail_sheet.dart';
 import '../../widgets/explorer/equity_chart.dart';
@@ -44,7 +46,14 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   NodeSummary? _aggSummary;
   GridLens _lens = GridLens.strategy;
   int _rightTab = 0; // 0 = Overview, 1 = Equity chart
-  bool _preflopMode = false; // Preflop trail vs the postflop pack explorer
+  /// The preflop trail (who opened / responded / answered the 3-bet) shown in
+  /// the unified strip. Synced to the loaded spot's scenario when a spot is
+  /// opened directly.
+  PreflopTrail _trail = const PreflopTrail();
+
+  /// Which PREFLOP decision the body inspects (0 open / 1 response / 2 vs
+  /// 3-bet), or -1 when the body shows the postflop node at the cursor.
+  int _preflopInspect = -1;
   int? _actionFilter; // grid shows only this action's share (right-pane cards)
   int? _chartHoverCombo; // chart crosshair → grid cell ring
   Set<int>? _gridHoverCombos; // grid cell hover → chart dots
@@ -102,61 +111,123 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
 
   Widget _body(BuildContext context) {
     final state = ref.watch(explorerProvider);
+    final scheme = Theme.of(context).colorScheme;
+
+    // Keep the preflop strip in sync when a spot changes underneath it (the
+    // init auto-select, or a board pick) — but never clobber a user-built
+    // trail that already maps to the same scenario (HJ vs the CO
+    // representative, say).
+    ref.listen<ExplorerSpotRef?>(
+        explorerProvider.select((s) => s.spot), (prev, next) {
+      final sc = next?.scenario;
+      if (sc != null && _trail.scenarioKey != sc) {
+        setState(() => _trail = trailForScenario(sc));
+      }
+    });
 
     if (state.scanning) {
       return const Center(child: CircularProgressIndicator());
     }
-    // Preflop study works from the BUNDLED preset charts — no packs needed —
-    // so the mode toggle sits above the pack-dependent postflop body.
+
+    final preflopDecision =
+        _preflopInspect >= 0 ? _trail.decision(_preflopInspect) : null;
+
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-          child: SegmentedButton<bool>(
-            showSelectedIcon: false,
-            style: SegmentedButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              textStyle: const TextStyle(fontSize: 12),
-            ),
-            segments: const [
-              ButtonSegment(value: true, label: Text('Preflop')),
-              ButtonSegment(value: false, label: Text('Postflop')),
-            ],
-            selected: {_preflopMode},
-            onSelectionChanged: (s) =>
-                setState(() => _preflopMode = s.first),
-          ),
-        ),
+        // ONE unified line: preflop seats → flop → postflop decisions →
+        // turn/river, GTO-Wizard-style (vertical action lists per box,
+        // horizontal scroll).
+        _unifiedStrip(context, state),
         const Divider(height: 1),
         Expanded(
-          child: _preflopMode
-              ? PreflopTrailView(
-                  availableScenarios: {
-                    for (final s in state.spots) s.scenario
-                  },
-                  onStudyPostflop: _studyPostflop,
+          child: preflopDecision != null
+              ? PreflopDecisionBody(
+                  decision: preflopDecision,
+                  subtitle: _preflopSubtitle(),
                 )
-              : _postflopBody(context, state),
+              : _postflopContent(context, state),
         ),
+        if (preflopDecision == null)
+          Container(
+            width: double.infinity,
+            color: scheme.surfaceContainerLow,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Text(
+              'Beta · flop to river · solved to ≤0.5% exploitability on '
+              'representative boards',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10.5),
+              textAlign: TextAlign.center,
+            ),
+          ),
       ],
     );
   }
 
-  /// Preflop → postflop handoff: switch modes and open a spot of the matched
-  /// scenario (keeping the current spot when it already matches).
-  void _studyPostflop(String scenarioKey) {
-    final state = ref.read(explorerProvider);
-    final candidates =
-        state.spots.where((s) => s.scenario == scenarioKey).toList();
-    if (candidates.isEmpty) return;
-    setState(() => _preflopMode = false);
-    if (state.spot?.scenario != scenarioKey) {
+  String _preflopSubtitle() => switch (_preflopInspect) {
+        0 => 'opening range',
+        1 => 'vs the ${_trail.opener} open',
+        _ => 'vs the ${_trail.responder} 3-bet',
+      };
+
+  /// Apply a trail change: inspect the decision it creates, and re-target the
+  /// postflop spot when the mapped scenario changed and packs exist for it.
+  void _setTrail(PreflopTrail t, {int inspect = -1}) {
+    setState(() {
+      _trail = t;
+      _preflopInspect = inspect;
+    });
+    final sc = t.scenarioKey;
+    if (sc == null) return;
+    final st = ref.read(explorerProvider);
+    if (st.spot?.scenario == sc) return;
+    final candidates = st.spots.where((s) => s.scenario == sc).toList();
+    if (candidates.isNotEmpty) {
       ref.read(explorerProvider.notifier).selectSpot(candidates.first);
     }
   }
 
-  Widget _postflopBody(BuildContext context, ExplorerState state) {
-    final scheme = Theme.of(context).colorScheme;
+  /// The FLOP box tap: pick among the scenario's solved boards/depths.
+  void _openBoardPicker(BuildContext context, ExplorerState state) {
+    final sc = _trail.scenarioKey;
+    if (sc == null) return;
+    final candidates = state.spots.where((s) => s.scenario == sc).toList();
+    if (candidates.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text('Solved boards — ${scenarioDisplayName(sc)}',
+                  style: Theme.of(sheetContext).textTheme.titleMedium),
+            ),
+            const SizedBox(height: 4),
+            for (final s in candidates)
+              ListTile(
+                dense: true,
+                title: Text(s.flop,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(s.spr),
+                selected: identical(s, state.spot),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  setState(() => _preflopInspect = -1);
+                  ref.read(explorerProvider.notifier).selectSpot(s);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _postflopContent(BuildContext context, ExplorerState state) {
     if (state.spots.isEmpty) {
       // The developer hint (local packs dir) must never reach prod users.
       const devHint = kDebugMode
@@ -166,351 +237,426 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       return _message(
         context,
         icon: Icons.school_outlined,
-        title: 'No solved spots available yet',
-        body: 'GTO Study browses solver solutions of common preflop '
-            'scenarios. Solution packs are being rolled out — check back '
-            'soon.$devHint',
+        title: 'No solved boards on this device yet',
+        body: 'Preflop ranges work above — tap any seat\'s action. Postflop '
+            'solution packs are being rolled out — check back soon.$devHint',
       );
     }
-
-    // The spot-picker header stays visible in EVERY state below — an error on
-    // one spot must not hide the only control that can select another (a
-    // corrupt pack would otherwise brick the whole tab; there is no other
-    // path that clears ExplorerState.error).
-    return Column(
-      children: [
-        _spotHeader(context, state),
-        const Divider(height: 1),
-        if (state.loading)
-          const Expanded(child: Center(child: CircularProgressIndicator()))
-        else if (state.error != null)
-          Expanded(
-            child: _message(
-              context,
-              icon: Icons.error_outline,
-              title: 'Could not load this spot',
-              body: '${state.error}\n\nPick another spot above, or retry.',
-              action: TextButton(
-                onPressed: state.spot == null
-                    ? null
-                    : () => ref
-                        .read(explorerProvider.notifier)
-                        .selectSpot(state.spot!),
-                child: const Text('Retry'),
-              ),
-            ),
-          )
-        else if (state.manifest != null && state.flopNodes != null)
-          Expanded(child: _loaded(context, state))
-        else
-          Expanded(
-            child: _message(context,
-                icon: Icons.hourglass_empty,
-                title: 'Select a spot',
-                body: 'Pick a flop + stack depth above.'),
-          ),
-        // Beta footer — honest scope framing (26 solved flops per depth).
-        Container(
-          width: double.infinity,
-          color: scheme.surfaceContainerLow,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Text(
-            'Beta · flop to river · solved to ≤0.5% exploitability on '
-            'representative boards',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10.5),
-            textAlign: TextAlign.center,
-          ),
+    if (state.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (state.error != null) {
+      return _message(
+        context,
+        icon: Icons.error_outline,
+        title: 'Could not load this board',
+        body: '${state.error}\n\nPick another board via the Flop box, or '
+            'retry.',
+        action: TextButton(
+          onPressed: state.spot == null
+              ? null
+              : () =>
+                  ref.read(explorerProvider.notifier).selectSpot(state.spot!),
+          child: const Text('Retry'),
         ),
-      ],
-    );
-  }
-
-  Widget _spotHeader(BuildContext context, ExplorerState state) {
-    final scenarios =
-        state.spots.map((s) => s.scenario).toSet().toList()..sort();
-    final scenario = state.spot?.scenario ?? scenarios.first;
-    final inScenario =
-        state.spots.where((s) => s.scenario == scenario).toList();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Row(
-        children: [
-          if (scenarios.length > 1) ...[
-            Expanded(
-              flex: 5,
-              child: _dropdown<String>(
-                context,
-                value: scenario,
-                items: [
-                  for (final sc in scenarios)
-                    DropdownMenuItem(
-                        value: sc, child: Text(scenarioDisplayName(sc))),
-                ],
-                onChanged: (sc) {
-                  final first = state.spots.firstWhere(
-                      (s) => s.scenario == sc,
-                      orElse: () => state.spots.first);
-                  ref.read(explorerProvider.notifier).selectSpot(first);
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            flex: 4,
-            child: _dropdown(
-              context,
-              value: state.spot,
-              items: [
-                for (final s in inScenario)
-                  DropdownMenuItem(value: s, child: Text(s.label)),
-              ],
-              onChanged: (s) {
-                if (s != null) {
-                  ref.read(explorerProvider.notifier).selectSpot(s);
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dropdown<T>(
-    BuildContext context, {
-    required T? value,
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return DropdownButtonFormField<T>(
-      initialValue: value,
-      items: items,
-      onChanged: onChanged,
-      isExpanded: true,
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        border: OutlineInputBorder(),
-      ),
-      style: Theme.of(context)
-          .textTheme
-          .bodyMedium
-          ?.copyWith(fontWeight: FontWeight.w600),
-    );
+      );
+    }
+    if (state.manifest != null && state.flopNodes != null) {
+      return _loaded(context, state);
+    }
+    return _message(context,
+        icon: Icons.hourglass_empty,
+        title: 'Pick a board',
+        body: 'Complete the preflop action above, then tap the Flop box to '
+            'choose a solved board.');
   }
 
   Widget _loaded(BuildContext context, ExplorerState state) {
     final node = state.currentNode;
     if (node != null) _ensureAgg(state, node);
+    return node == null
+        ? _streetClosed(context, state)
+        : _nodeView(context, state, node);
+  }
 
-    return Column(
-      children: [
-        // The LINE STRIP: the whole hand as boxes — played actions (tap =
-        // rewind), pinned Turn/River card boxes (tap = pick/change the card;
-        // pins survive rewinds so cards are never re-entered), and the
-        // current decision's action buttons (NO frequencies — the strip
-        // reflects what the user plays; consequences live in the right pane).
-        _lineStrip(context, state, node),
-        const SizedBox(height: 4),
-        Expanded(
-          child: node == null
-              ? _streetClosed(context, state)
-              : _nodeView(context, state, node),
+  // ── The UNIFIED line strip: preflop seats → flop → postflop → river ──────
+  //
+  // GTO-Wizard-style: every decision is a BOX with its available actions
+  // listed VERTICALLY (chosen action filled), scrolling horizontally as the
+  // hand advances. Preflop boxes come from the preset charts; the FLOP box
+  // picks among the scenario's solved boards; postflop boxes are the pack
+  // tree's nodes (tap an action = replay/edit via the line/cursor model).
+
+  Widget _vRow(BuildContext context, String label, Color color,
+      {bool highlighted = false, VoidCallback? onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Material(
+        color: highlighted
+            ? color.withValues(alpha: 0.55)
+            : color.withValues(alpha: 0.16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(5),
+          side: highlighted
+              ? BorderSide(color: color, width: 1.2)
+              : BorderSide.none,
         ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 62),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight:
+                        highlighted ? FontWeight.w800 : FontWeight.w600)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _vBox(BuildContext context,
+      {required String header,
+      required List<Widget> rows,
+      VoidCallback? onHeaderTap,
+      bool inspected = false,
+      bool dimmed = false}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Opacity(
+        opacity: dimmed ? 0.5 : 1.0,
+        child: Material(
+          color: scheme.surfaceContainerHigh,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: inspected
+                ? BorderSide(
+                    color: scheme.primary.withValues(alpha: 0.75), width: 1.4)
+                : BorderSide.none,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: onHeaderTap,
+                  child: Text(header,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onSurfaceVariant)),
+                ),
+                ...rows,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _unifiedStrip(BuildContext context, ExplorerState state) {
+    final scheme = Theme.of(context).colorScheme;
+    final boxes = <Widget>[
+      ..._preflopBoxes(context),
+      _flopBox(context, state),
+      ..._postflopBoxes(context, state),
+      // Trn toggle + reset at the end of the scroll.
+      Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SegmentedButton<bool>(
+              showSelectedIcon: false,
+              style: SegmentedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                textStyle: const TextStyle(fontSize: 10),
+              ),
+              segments: const [
+                ButtonSegment(value: false, label: Text('Cash')),
+                ButtonSegment(value: true, label: Text('Trn')),
+              ],
+              selected: {_trail.trn},
+              onSelectionChanged: (s) =>
+                  _setTrail(_trail.withTrn(s.first), inspect: -1),
+            ),
+            TextButton(
+              onPressed: _trail.opener == null
+                  ? null
+                  : () => _setTrail(_trail.reset(), inspect: -1),
+              style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  textStyle: const TextStyle(fontSize: 10.5)),
+              child: const Text('Reset'),
+            ),
+          ],
+        ),
+      ),
+    ];
+    return Container(
+      height: 104,
+      color: scheme.surfaceContainerLowest,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+        children: [
+          for (final b in boxes) Align(alignment: Alignment.topLeft, child: b)
+        ],
+      ),
+    );
+  }
+
+  /// Preflop seat boxes (from the preset charts), plus the opener's vs-3-bet
+  /// box when a 3-bet happened. Any seat's action row is tappable: it rebuilds
+  /// the trail from that point (a new opener voids the response, etc.).
+  List<Widget> _preflopBoxes(BuildContext context) {
+    final t = _trail;
+    final openerIdx =
+        t.opener == null ? -1 : kTrailPositions.indexOf(t.opener!);
+    final out = <Widget>[];
+
+    for (var i = 0; i < kTrailPositions.length; i++) {
+      final pos = kTrailPositions[i];
+      final rows = <Widget>[];
+      var inspected = false;
+      VoidCallback? headerTap;
+
+      if (pos == t.opener) {
+        inspected = _preflopInspect == 0;
+        headerTap = () => setState(() => _preflopInspect = 0);
+        rows.add(_vRow(context, 'Fold', kPreflopActionColors['Fold']!,
+            onTap: () => _setTrail(t.reset(), inspect: -1)));
+        rows.add(_vRow(context, 'Raise 2.5x', kPreflopActionColors['Raise']!,
+            highlighted: true,
+            onTap: () => setState(() => _preflopInspect = 0)));
+      } else if (pos == t.responder) {
+        inspected = _preflopInspect == 1;
+        headerTap = () => setState(() => _preflopInspect = 1);
+        rows.add(_vRow(context, 'Fold', kPreflopActionColors['Fold']!,
+            onTap: () => _setTrail(t.withOpener(t.opener!), inspect: 0)));
+        for (final a in ['Call', '3-bet']) {
+          rows.add(_vRow(context, a, kPreflopActionColors[a]!,
+              highlighted: t.responderAction == a,
+              onTap: () => _setTrail(t.withResponse(pos, a), inspect: 1)));
+        }
+      } else if (openerIdx < 0) {
+        // No opener yet: any seat but the BB can open first-in.
+        if (pos == 'BB') {
+          rows.add(_vRow(context, '—', Colors.grey));
+        } else {
+          rows.add(_vRow(context, 'Fold', kPreflopActionColors['Fold']!));
+          rows.add(_vRow(context, 'Raise 2.5x', kPreflopActionColors['Raise']!,
+              onTap: () => _setTrail(t.withOpener(pos), inspect: 0)));
+        }
+      } else if (i < openerIdx && pos != 'SB' && pos != 'BB') {
+        // Folded before the open — Raise re-roots the trail here.
+        rows.add(_vRow(context, 'Fold', kPreflopActionColors['Fold']!,
+            highlighted: true));
+        rows.add(_vRow(context, 'Raise 2.5x', kPreflopActionColors['Raise']!,
+            onTap: () => _setTrail(t.withOpener(pos), inspect: 0)));
+      } else {
+        // A potential responder (after the opener, or a blind). Once another
+        // seat responded, this one shows Fold — its Call/3-bet still swap the
+        // responder role here.
+        rows.add(_vRow(context, 'Fold', kPreflopActionColors['Fold']!,
+            highlighted: t.responder != null));
+        for (final a in ['Call', '3-bet']) {
+          rows.add(_vRow(context, a, kPreflopActionColors[a]!,
+              onTap: () => _setTrail(t.withResponse(pos, a), inspect: 1)));
+        }
+      }
+      out.add(_vBox(context,
+          header: pos,
+          rows: rows,
+          onHeaderTap: headerTap,
+          inspected: inspected));
+    }
+
+    // The opener's answer to a 3-bet.
+    if (t.responderAction == '3-bet' && t.opener != null) {
+      out.add(_vBox(
+        context,
+        header: '${t.opener} (vs 3-bet)',
+        inspected: _preflopInspect == 2,
+        onHeaderTap: () => setState(() => _preflopInspect = 2),
+        rows: [
+          for (final a in ['Fold', 'Call', '4-bet'])
+            _vRow(context, a, kPreflopActionColors[a]!,
+                highlighted: t.openerResponse == a,
+                onTap: () => _setTrail(t.withOpenerResponse(a), inspect: 2)),
+        ],
+      ));
+    }
+    return out;
+  }
+
+  /// The FLOP box: the solved board for the trail's scenario (tap = pick a
+  /// board/depth), or the reason there isn't one.
+  Widget _flopBox(BuildContext context, ExplorerState state) {
+    final sc = _trail.scenarioKey;
+    final spot = state.spot;
+    final matched = sc != null && spot != null && spot.scenario == sc;
+    final hasPacks =
+        sc != null && state.spots.any((s) => s.scenario == sc);
+
+    final String detail;
+    if (!_trail.closed) {
+      detail = '—';
+    } else if (sc == null) {
+      detail = _trail.trn ? 'cash only' : 'not solved';
+    } else if (!hasPacks) {
+      detail = 'no packs';
+    } else if (matched) {
+      detail = '${spot.flop} · ${spot.spr}';
+    } else {
+      detail = 'pick a board';
+    }
+    return _vBox(
+      context,
+      header: 'FLOP',
+      inspected: false,
+      dimmed: !hasPacks || !_trail.closed,
+      rows: [
+        _vRow(context, detail, const Color(0xFF7E57C2),
+            highlighted: matched,
+            onTap: hasPacks && _trail.closed
+                ? () => _openBoardPicker(context, state)
+                : null),
       ],
     );
   }
 
-  Widget _lineStrip(BuildContext context, ExplorerState state, PackNode? node) {
-    final scheme = Theme.of(context).colorScheme;
-    final manifest = state.manifest!;
-    final scenario = manifest.scenario;
-    final boxes = <Widget>[];
-
-    Widget box({
-      required String label,
-      Color? color,
-      Color? borderColor,
-      VoidCallback? onTap,
-      Widget? child,
-      bool dimmed = false,
-    }) {
-      return Padding(
-        padding: const EdgeInsets.only(right: 6),
-        child: Opacity(
-          opacity: dimmed ? 0.45 : 1.0,
-          child: Material(
-            color: color ?? scheme.surfaceContainerHighest,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: borderColor != null
-                  ? BorderSide(color: borderColor, width: 1.2)
-                  : BorderSide.none,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onTap,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                child: child ??
-                    Text(label,
-                        style: const TextStyle(
-                            fontSize: 12.5, fontWeight: FontWeight.w700)),
-              ),
-            ),
-          ),
-        ),
-      );
+  /// Postflop decision boxes from the line/cursor model — one vertical box
+  /// per decision (actions listed, taken one filled), card boxes for the
+  /// runout, pending Turn/River placeholders, a Hand-over marker on folds.
+  /// Only rendered when the loaded spot matches the trail's scenario.
+  List<Widget> _postflopBoxes(BuildContext context, ExplorerState state) {
+    final sc = _trail.scenarioKey;
+    final spot = state.spot;
+    if (sc == null ||
+        spot == null ||
+        spot.scenario != sc ||
+        state.manifest == null ||
+        state.flopNodes == null) {
+      return const [];
     }
+    final scenario = state.manifest!.scenario;
+    final out = <Widget>[];
 
-    // One recorded step as a box. Action boxes SET THE CURSOR (inspect that
-    // decision — the line is never reset); card boxes open the picker (change
-    // the runout in place).
-    Widget stepBox(int i, String step,
-        {required int idxInStreet,
-        required int dealtSoFar,
-        required bool dimmed}) {
-      if (step.startsWith('@')) {
-        final river = dealtSoFar == 2;
-        return box(
-          label: '${river ? 'River' : 'Turn'} ${step.substring(1)}',
-          color: scheme.tertiaryContainer.withValues(alpha: 0.5),
-          dimmed: dimmed,
-          onTap: () => _openCardPicker(context, state, river: river),
-        );
-      }
-      final actor = seatLabel(scenario, isOop: idxInStreet.isEven);
-      return box(
-        label: '$actor ${actionDisplayLabel(step)}',
-        color: actionColors([step]).first.withValues(alpha: 0.30),
-        dimmed: dimmed,
-        onTap: () => ref.read(explorerProvider.notifier).setCursor(i),
-      );
-    }
-
-    // The decision box at the cursor: all available actions as buttons; the
-    // RECORDED next action (replaying a line) is outlined — tapping it
-    // replays, tapping another EDITS the line (the still-valid tail regrows).
-    Widget decisionBox(PackNode n) {
-      final actor = seatLabel(scenario, isOop: n.actorIsOop);
+    void decisionRows(List<Widget> rows, PackNode n, int stepIndex,
+        {String? taken}) {
       final colors = actionColors(n.actions);
-      final recorded = state.recordedNext;
-      return box(
-        label: '',
-        color: scheme.surfaceContainerHigh,
-        borderColor: scheme.primary.withValues(alpha: 0.6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('$actor:',
-                style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant)),
-            const SizedBox(width: 6),
-            for (var a = 0; a < n.actions.length; a++) ...[
-              Material(
-                color: colors[a]
-                    .withValues(alpha: n.actions[a] == recorded ? 0.55 : 0.35),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: n.actions[a] == recorded
-                      ? BorderSide(color: colors[a], width: 1.4)
-                      : BorderSide.none,
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(6),
-                  onTap: () => ref
-                      .read(explorerProvider.notifier)
-                      .advance(n.actions[a]),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    child: Text(actionDisplayLabel(n.actions[a]),
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-              ),
-              if (a < n.actions.length - 1) const SizedBox(width: 5),
-            ],
-          ],
-        ),
-      );
+      for (var a = 0; a < n.actions.length; a++) {
+        final action = n.actions[a];
+        rows.add(_vRow(context, actionDisplayLabel(action), colors[a],
+            highlighted: action == taken, onTap: () {
+          setState(() => _preflopInspect = -1);
+          final notifier = ref.read(explorerProvider.notifier);
+          notifier.setCursor(stepIndex);
+          notifier.advance(action);
+        }));
+      }
     }
 
-    // Flop box (tap = view the root decision).
-    boxes.add(box(
-      label: 'Flop ${manifest.flop}',
-      onTap: state.cursor == 0
-          ? null
-          : () => ref.read(explorerProvider.notifier).setCursor(0),
-    ));
-
-    // Recorded steps with the decision box inserted at the cursor. The
-    // recorded step AT the cursor is represented by the outlined button in
-    // the decision box (not duplicated as its own box).
-    var idxInStreet = 0;
+    // Walk the line: decision boxes need the node at each prefix (for the
+    // full action list); a missing chunk degrades to a single-action box.
+    final prefix = <String>[];
     var dealtSoFar = 0;
+    var idxInStreet = 0;
     for (var i = 0; i < state.line.length; i++) {
       final step = state.line[i];
-      final isChance = step.startsWith('@');
-      if (isChance) dealtSoFar++;
-      if (i == state.cursor && node != null) boxes.add(decisionBox(node));
-      if (!(i == state.cursor && !isChance)) {
-        boxes.add(stepBox(i, step,
-            idxInStreet: idxInStreet,
-            dealtSoFar: dealtSoFar,
-            dimmed: i >= state.cursor));
+      if (step.startsWith('@')) {
+        dealtSoFar++;
+        final river = dealtSoFar == 2;
+        out.add(_vBox(
+          context,
+          header: river ? 'RIVER' : 'TURN',
+          dimmed: i > state.cursor,
+          rows: [
+            _vRow(context, step.substring(1), const Color(0xFF7E57C2),
+                highlighted: true,
+                onTap: () => _openCardPicker(context, state, river: river)),
+          ],
+        ));
+        prefix.add(step);
+        idxInStreet = 0;
+        continue;
       }
-      idxInStreet = isChance ? 0 : idxInStreet + 1;
+      final node = state.nodeAt(prefix);
+      final actor = node != null
+          ? seatLabel(scenario, isOop: node.actorIsOop)
+          : seatLabel(scenario, isOop: idxInStreet.isEven);
+      final rows = <Widget>[];
+      final stepIndex = i;
+      if (node != null) {
+        decisionRows(rows, node, stepIndex, taken: step);
+      } else {
+        rows.add(_vRow(
+            context, actionDisplayLabel(step), actionColors([step]).first,
+            highlighted: true));
+      }
+      out.add(_vBox(
+        context,
+        header: actor,
+        inspected: _preflopInspect < 0 && state.cursor == stepIndex,
+        dimmed: i > state.cursor,
+        onHeaderTap: () {
+          setState(() => _preflopInspect = -1);
+          ref.read(explorerProvider.notifier).setCursor(stepIndex);
+        },
+        rows: rows,
+      ));
+      prefix.add(step);
+      idxInStreet++;
     }
-    if (state.atLineEnd && node != null) boxes.add(decisionBox(node));
 
-    // Future chance boxes out to the river (only when the line doesn't
-    // already contain them): pinned card or '+'. Fold ends with a marker.
-    final lineDealt = [
-      for (final s in state.line)
-        if (s.startsWith('@')) s
-    ].length;
+    // The live decision at the line's end (nothing taken yet).
+    final endNode = state.nodeAt(state.line);
+    if (endNode != null) {
+      final rows = <Widget>[];
+      decisionRows(rows, endNode, state.line.length);
+      out.add(_vBox(
+        context,
+        header: seatLabel(scenario, isOop: endNode.actorIsOop),
+        inspected: _preflopInspect < 0 && state.atLineEnd,
+        onHeaderTap: () {
+          setState(() => _preflopInspect = -1);
+          ref.read(explorerProvider.notifier).setCursor(state.line.length);
+        },
+        rows: rows,
+      ));
+    }
+
+    // Pending runout boxes / hand-over marker.
+    final lineDealt = dealtSoFar;
     final ended = state.line.isNotEmpty &&
         state.line.last.toUpperCase().startsWith('FOLD');
     if (!ended) {
       if (lineDealt < 1) {
-        boxes.add(box(
-          label: 'Turn ${state.turnCard ?? '+'}',
-          color: scheme.tertiaryContainer.withValues(alpha: 0.22),
-          onTap: () => _openCardPicker(context, state, river: false),
-        ));
+        out.add(_vBox(context, header: 'TURN', dimmed: true, rows: [
+          _vRow(context, state.turnCard ?? '+', const Color(0xFF7E57C2),
+              onTap: () => _openCardPicker(context, state, river: false)),
+        ]));
       }
       if (lineDealt < 2) {
-        boxes.add(box(
-          label: 'River ${state.riverCard ?? '+'}',
-          color: scheme.tertiaryContainer.withValues(alpha: 0.22),
-          onTap: () => _openCardPicker(context, state, river: true),
-        ));
+        out.add(_vBox(context, header: 'RIVER', dimmed: true, rows: [
+          _vRow(context, state.riverCard ?? '+', const Color(0xFF7E57C2),
+              onTap: () => _openCardPicker(context, state, river: true)),
+        ]));
       }
     } else {
-      boxes.add(box(
-          label: 'Hand over',
-          color: scheme.surfaceContainerLow,
-          dimmed: !state.atLineEnd,
-          onTap: null));
+      out.add(_vBox(context, header: 'END', dimmed: true, rows: [
+        _vRow(context, 'Hand over', Colors.grey),
+      ]));
     }
-
-    return SizedBox(
-      height: 46,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-        children: [for (final b in boxes) Center(child: b)],
-      ),
-    );
+    return out;
   }
 
   void _openCardPicker(BuildContext context, ExplorerState state,

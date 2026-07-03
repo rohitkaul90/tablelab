@@ -119,6 +119,91 @@ String? trailScenarioKey({
   return null;
 }
 
+/// The preflop trail's state: who opened, who responded (and how), and the
+/// opener's answer to a 3-bet. Immutable; transitions reset everything
+/// downstream of the change (a new opener voids the old response, etc.).
+class PreflopTrail {
+  final bool trn;
+  final String? opener;
+  final String? responder;
+  final String? responderAction; // 'Call' | '3-bet'
+  final String? openerResponse; // 'Call' | '4-bet' (only after a 3-bet)
+
+  const PreflopTrail({
+    this.trn = false,
+    this.opener,
+    this.responder,
+    this.responderAction,
+    this.openerResponse,
+  });
+
+  PreflopTrail withTrn(bool v) => PreflopTrail(trn: v);
+
+  PreflopTrail withOpener(String pos) => PreflopTrail(trn: trn, opener: pos);
+
+  PreflopTrail withResponse(String pos, String action) => PreflopTrail(
+      trn: trn, opener: opener, responder: pos, responderAction: action);
+
+  PreflopTrail withOpenerResponse(String action) => PreflopTrail(
+      trn: trn,
+      opener: opener,
+      responder: responder,
+      responderAction: responderAction,
+      openerResponse: action);
+
+  PreflopTrail reset() => PreflopTrail(trn: trn);
+
+  /// Decision steps that exist so far: 0 = opener's open, 1 = the response,
+  /// 2 = the opener vs the 3-bet.
+  PreflopDecision? decision(int step) {
+    final o = opener;
+    if (o == null) return null;
+    return switch (step) {
+      0 => openerDecision(o, trn: trn),
+      1 => responder == null
+          ? null
+          : responderDecision(responder!, o, trn: trn),
+      _ => (responder == null || responderAction != '3-bet')
+          ? null
+          : openerVs3BetDecision(o, responder!, trn: trn),
+    };
+  }
+
+  /// Does the preflop action CLOSE into a heads-up pot (flop can be dealt)?
+  bool get closed =>
+      responderAction == 'Call' ||
+      (responderAction == '3-bet' && openerResponse == 'Call');
+
+  /// The solved postflop scenario this trail maps to, or null.
+  String? get scenarioKey => opener == null
+      ? null
+      : trailScenarioKey(
+          opener: opener!,
+          responder: responder,
+          responderAction: responderAction,
+          openerResponse: openerResponse,
+          trn: trn,
+        );
+}
+
+/// The representative trail for a solved scenario key (the inverse of
+/// [trailScenarioKey], picking the bucket's representative opener — used to
+/// sync the strip when a spot is opened directly).
+PreflopTrail trailForScenario(String key) => switch (key) {
+      'srp_late_v_bb' => const PreflopTrail(
+          opener: 'BTN', responder: 'BB', responderAction: 'Call'),
+      'srp_middle_v_bb' => const PreflopTrail(
+          opener: 'CO', responder: 'BB', responderAction: 'Call'),
+      'srp_early_v_bb' => const PreflopTrail(
+          opener: 'UTG', responder: 'BB', responderAction: 'Call'),
+      '3bp_bb_v_btn' => const PreflopTrail(
+          opener: 'BTN',
+          responder: 'BB',
+          responderAction: '3-bet',
+          openerResponse: 'Call'),
+      _ => const PreflopTrail(),
+    };
+
 /// Build the 13×13 grid cells for a decision: each cell is one hand notation
 /// with a ONE-HOT action mix (a preset either contains the hand or not) —
 /// rendered by the same StrategyGrid/filter mechanics as postflop. For a
