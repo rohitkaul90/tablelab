@@ -21,6 +21,7 @@ import '../../widgets/explorer/action_colors.dart';
 import '../../widgets/explorer/combo_detail_sheet.dart';
 import '../../widgets/explorer/equity_chart.dart';
 import '../../widgets/explorer/overview_panel.dart';
+import '../../widgets/explorer/preflop_trail_view.dart';
 import '../../widgets/explorer/strategy_grid.dart';
 import '../../widgets/explorer/street_card_picker.dart';
 
@@ -43,6 +44,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   NodeSummary? _aggSummary;
   GridLens _lens = GridLens.strategy;
   int _rightTab = 0; // 0 = Overview, 1 = Equity chart
+  bool _preflopMode = false; // Preflop trail vs the postflop pack explorer
   int? _actionFilter; // grid shows only this action's share (right-pane cards)
   int? _chartHoverCombo; // chart crosshair → grid cell ring
   Set<int>? _gridHoverCombos; // grid cell hover → chart dots
@@ -100,11 +102,61 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
 
   Widget _body(BuildContext context) {
     final state = ref.watch(explorerProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     if (state.scanning) {
       return const Center(child: CircularProgressIndicator());
     }
+    // Preflop study works from the BUNDLED preset charts — no packs needed —
+    // so the mode toggle sits above the pack-dependent postflop body.
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+          child: SegmentedButton<bool>(
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              textStyle: const TextStyle(fontSize: 12),
+            ),
+            segments: const [
+              ButtonSegment(value: true, label: Text('Preflop')),
+              ButtonSegment(value: false, label: Text('Postflop')),
+            ],
+            selected: {_preflopMode},
+            onSelectionChanged: (s) =>
+                setState(() => _preflopMode = s.first),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _preflopMode
+              ? PreflopTrailView(
+                  availableScenarios: {
+                    for (final s in state.spots) s.scenario
+                  },
+                  onStudyPostflop: _studyPostflop,
+                )
+              : _postflopBody(context, state),
+        ),
+      ],
+    );
+  }
+
+  /// Preflop → postflop handoff: switch modes and open a spot of the matched
+  /// scenario (keeping the current spot when it already matches).
+  void _studyPostflop(String scenarioKey) {
+    final state = ref.read(explorerProvider);
+    final candidates =
+        state.spots.where((s) => s.scenario == scenarioKey).toList();
+    if (candidates.isEmpty) return;
+    setState(() => _preflopMode = false);
+    if (state.spot?.scenario != scenarioKey) {
+      ref.read(explorerProvider.notifier).selectSpot(candidates.first);
+    }
+  }
+
+  Widget _postflopBody(BuildContext context, ExplorerState state) {
+    final scheme = Theme.of(context).colorScheme;
     if (state.spots.isEmpty) {
       // The developer hint (local packs dir) must never reach prod users.
       const devHint = kDebugMode

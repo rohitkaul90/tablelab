@@ -1,0 +1,110 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/equity/chart_keys.dart';
+import 'package:tablelab/explorer/preflop_ranges.dart';
+
+void main() {
+  group('openerDecision', () {
+    test('BTN opening: raise = the RFI preset, raise+fold covers all hands',
+        () {
+      final d = openerDecision('BTN', trn: false)!;
+      expect(d.actions, ['Raise', 'Fold']);
+      expect(d.ranges[0], presetByKey['cash_rfi_btn']);
+      expect(d.comboCounts.reduce((a, b) => a + b), 1326);
+      final shares = d.shares;
+      expect(shares[0] + shares[1], closeTo(1.0, 1e-9));
+      expect(shares[0], greaterThan(0.3)); // BTN opens wide
+      expect(shares[0], lessThan(0.7));
+    });
+
+    test('the BB has no opening chart', () {
+      expect(openerDecision('BB', trn: false), isNull);
+    });
+
+    test('UTG opens tighter than BTN', () {
+      final utg = openerDecision('UTG', trn: false)!;
+      final btn = openerDecision('BTN', trn: false)!;
+      expect(utg.shares[0], lessThan(btn.shares[0]));
+    });
+  });
+
+  group('responderDecision', () {
+    test('BB vs BTN: 3-bet takes precedence over call; partitions all hands',
+        () {
+      final d = responderDecision('BB', 'BTN', trn: false);
+      expect(d.actions, ['3-bet', 'Call', 'Fold']);
+      expect(d.ranges[0].intersection(d.ranges[1]), isEmpty);
+      expect(d.comboCounts.reduce((a, b) => a + b), 1326);
+      // AA 3-bets and never merely calls under precedence.
+      expect(d.ranges[0], contains('AA'));
+      expect(d.ranges[1], isNot(contains('AA')));
+    });
+  });
+
+  group('openerVs3BetDecision', () {
+    test('scoped within the opener range; partitions it exactly', () {
+      final d = openerVs3BetDecision('BTN', 'BB', trn: false);
+      final open = presetByKey['cash_rfi_btn']!;
+      expect(d.actions, ['4-bet', 'Call', 'Fold']);
+      final union = d.ranges[0].union(d.ranges[1]).union(d.ranges[2]);
+      expect(union, open);
+      expect(d.ranges[0].intersection(d.ranges[1]), isEmpty);
+      expect(d.ranges[0], contains('AA')); // 4-bet value keeps the top
+    });
+  });
+
+  group('preflopGridCells', () {
+    test('one-hot action mix per hand; off-universe hands are absent', () {
+      final d = openerVs3BetDecision('BTN', 'BB', trn: false);
+      final cells = preflopGridCells(d);
+      var present = 0;
+      for (var r = 0; r < 13; r++) {
+        for (var c = 0; c < 13; c++) {
+          final cell = cells[r][c];
+          if (cell == null) continue;
+          present++;
+          expect(cell.freqs.where((f) => f == 1.0), hasLength(1));
+          expect(cell.freqs.where((f) => f == 0.0), hasLength(2));
+        }
+      }
+      // Only the BTN's opened hands appear (72o etc. absent).
+      expect(present, lessThan(169));
+      expect(present, greaterThan(30));
+    });
+  });
+
+  group('trailScenarioKey', () {
+    test('maps the solved scenarios and only them', () {
+      String? key({
+        required String opener,
+        String? responder,
+        String? act,
+        String? resp,
+        bool trn = false,
+      }) =>
+          trailScenarioKey(
+              opener: opener,
+              responder: responder,
+              responderAction: act,
+              openerResponse: resp,
+              trn: trn);
+
+      expect(key(opener: 'BTN', responder: 'BB', act: 'Call'),
+          'srp_late_v_bb');
+      expect(key(opener: 'CO', responder: 'BB', act: 'Call'),
+          'srp_middle_v_bb');
+      expect(key(opener: 'UTG', responder: 'BB', act: 'Call'),
+          'srp_early_v_bb');
+      expect(key(opener: 'BTN', responder: 'BB', act: '3-bet', resp: 'Call'),
+          '3bp_bb_v_btn');
+      // Excluded shapes.
+      expect(key(opener: 'SB', responder: 'BB', act: 'Call'), isNull);
+      expect(key(opener: 'BTN', responder: 'SB', act: 'Call'), isNull);
+      expect(key(opener: 'BTN', responder: 'BB', act: '3-bet', resp: '4-bet'),
+          isNull);
+      expect(key(opener: 'CO', responder: 'BB', act: '3-bet', resp: 'Call'),
+          isNull);
+      expect(key(opener: 'BTN', responder: 'BB', act: 'Call', trn: true),
+          isNull);
+    });
+  });
+}
