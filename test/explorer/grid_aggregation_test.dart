@@ -99,6 +99,28 @@ void main() {
     });
   });
 
+  group('equityCurve', () {
+    test('sorts by equity, weights x by reach, filters missing equity', () {
+      final pts = equityCurve([
+        _combo(0, 1.0, [1.0, 0.0], equity: 0.8),
+        _combo(1, 3.0, [1.0, 0.0], equity: 0.2),
+        _combo(2, 1.0, [1.0, 0.0]), // no equity → excluded
+      ]);
+      expect(pts, hasLength(2));
+      // Ascending equity: the reach-3 combo (eq 0.2) first, midpoint 1.5/4.
+      expect(pts[0].y, closeTo(0.2, 1e-9));
+      expect(pts[0].x, closeTo(1.5 / 4, 1e-9));
+      // Then eq 0.8 at midpoint (3 + 0.5)/4.
+      expect(pts[1].y, closeTo(0.8, 1e-9));
+      expect(pts[1].x, closeTo(3.5 / 4, 1e-9));
+    });
+
+    test('empty and no-equity ranges produce an empty curve', () {
+      expect(equityCurve(const []), isEmpty);
+      expect(equityCurve([_combo(0, 1.0, [1.0, 0.0])]), isEmpty);
+    });
+  });
+
   group('summarizeNode', () {
     test('action mix, combos, and EV are reach·freq-weighted', () {
       final s = summarizeNode(_node([

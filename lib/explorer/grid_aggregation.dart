@@ -155,6 +155,31 @@ List<List<GridCellAgg?>> aggregateGrid(
   });
 }
 
+/// One point on a cumulative equity-distribution curve: [x] = position in the
+/// range (0..1, reach-weighted, sorted by equity ascending), [y] = equity.
+typedef EquityCurvePoint = ({double x, double y});
+
+/// The classic solver equity-distribution curve for a node's range: sort the
+/// live combos by equity, walk them left→right weighted by reach, plot each
+/// combo's equity at its reach-weighted midpoint. Empty when the node carries
+/// no equity data.
+List<EquityCurvePoint> equityCurve(List<PackCombo> combos) {
+  final live = [
+    for (final c in combos)
+      if (c.equity != null && c.reach > 0) c
+  ]..sort((a, b) => a.equity!.compareTo(b.equity!));
+  if (live.isEmpty) return const [];
+  final total = live.fold(0.0, (s, c) => s + c.reach);
+  if (total <= 0) return const [];
+  final points = <EquityCurvePoint>[];
+  var cum = 0.0;
+  for (final c in live) {
+    points.add((x: (cum + c.reach / 2) / total, y: c.equity!));
+    cum += c.reach;
+  }
+  return points;
+}
+
 /// Node-level action mix + stats for the overview panel.
 NodeSummary summarizeNode(PackNode node) {
   final nActions = node.actions.length;

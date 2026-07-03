@@ -20,6 +20,7 @@ import '../../equity/card.dart';
 import '../../widgets/explorer/action_colors.dart';
 import '../../widgets/explorer/action_ribbon.dart';
 import '../../widgets/explorer/combo_detail_sheet.dart';
+import '../../widgets/explorer/equity_chart.dart';
 import '../../widgets/explorer/overview_panel.dart';
 import '../../widgets/explorer/strategy_grid.dart';
 import '../../widgets/explorer/street_card_picker.dart';
@@ -42,6 +43,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   List<List<GridCellAgg?>>? _aggCells;
   NodeSummary? _aggSummary;
   GridLens _lens = GridLens.strategy;
+  int _rightTab = 0; // 0 = Overview, 1 = Equity chart
 
   @override
   void initState() {
@@ -333,11 +335,36 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         );
       }),
     );
-    final overview = OverviewPanel(
-      node: node,
-      summary: summary,
-      actorLabel: actor,
-      onAction: (a) => ref.read(explorerProvider.notifier).push(a),
+    final rightPane = Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: SegmentedButton<int>(
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              textStyle: const TextStyle(fontSize: 11.5),
+            ),
+            segments: const [
+              ButtonSegment(value: 0, label: Text('Overview')),
+              ButtonSegment(value: 1, label: Text('Equity chart')),
+            ],
+            selected: {_rightTab},
+            onSelectionChanged: (s) => setState(() => _rightTab = s.first),
+          ),
+        ),
+        Expanded(
+          child: _rightTab == 0
+              ? OverviewPanel(
+                  node: node,
+                  summary: summary,
+                  actorLabel: actor,
+                  onAction: (a) =>
+                      ref.read(explorerProvider.notifier).push(a),
+                )
+              : _equityPane(context, state, node),
+        ),
+      ],
     );
 
     return LayoutBuilder(builder: (context, constraints) {
@@ -347,17 +374,70 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           children: [
             Expanded(flex: 11, child: grid),
             const VerticalDivider(width: 1),
-            Expanded(flex: 9, child: overview),
+            Expanded(flex: 9, child: rightPane),
           ],
         );
       }
       return ListView(
         children: [
           grid,
-          SizedBox(height: 420, child: overview),
+          SizedBox(height: 420, child: rightPane),
         ],
       );
     });
+  }
+
+  /// Cumulative equity distributions at the current game state: the acting
+  /// player's curve from THIS node, the opponent's from their most recent
+  /// node on the line — whose equities were computed vs exactly the range the
+  /// actor holds entering this node, so the two curves describe one state.
+  Widget _equityPane(
+      BuildContext context, ExplorerState state, PackNode node) {
+    final scenario = state.manifest?.scenario ?? '?';
+    final actorLabel = seatLabel(scenario, isOop: node.actorIsOop);
+    final oppNode = _opponentNode(state, node);
+    final series = [
+      EquityCurveSeries(
+        '$actorLabel (to act)',
+        const Color(0xFF66BB6A),
+        equityCurve(node.combos),
+      ),
+      if (oppNode != null)
+        EquityCurveSeries(
+          seatLabel(scenario, isOop: oppNode.actorIsOop),
+          const Color(0xFF64B5F6),
+          equityCurve(oppNode.combos),
+        ),
+    ];
+    if (series.every((s) => s.points.isEmpty)) {
+      return _message(context,
+          icon: Icons.show_chart,
+          title: 'No equity data at this node',
+          body: 'This pack carries no per-combo equity here.');
+    }
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: EquityChart(series: series),
+    );
+  }
+
+  /// The opponent's most recent action node on the current line (searching
+  /// prefixes longest-first across the loaded street chunks), or null when
+  /// they haven't acted yet (e.g. the flop root).
+  PackNode? _opponentNode(ExplorerState state, PackNode node) {
+    final byPath = {
+      for (final n in [
+        ...?state.flopNodes,
+        ...?state.turnNodes,
+        ...?state.riverNodes,
+      ])
+        n.path: n,
+    };
+    for (var i = state.path.length - 1; i >= 0; i--) {
+      final n = byPath[state.path.sublist(0, i).join('/')];
+      if (n != null && n.actorIsOop != node.actorIsOop) return n;
+    }
+    return null;
   }
 
   /// The cursor points at no node. Decide which end/continuation state this
