@@ -1,6 +1,8 @@
 // GTO Explorer — the Overview panel: who acts, pot state, range stats, and the
-// ACTION CARDS (frequency / combos / EV per action). Tapping a card advances
-// the line — this panel is the "forward" control, the ribbon is "back".
+// ACTION CARDS (frequency / combos / EV per action). Tapping a card toggles an
+// ACTION FILTER on the strategy grid (which combos take this action) — this
+// panel INSPECTS; navigation lives up top (the ribbon rewinds, the advance
+// bar advances).
 
 import 'package:flutter/material.dart';
 
@@ -12,13 +14,17 @@ class OverviewPanel extends StatelessWidget {
   final PackNode node;
   final NodeSummary summary;
   final String actorLabel; // 'BB' / 'BTN'
-  final void Function(String action) onAction;
+
+  /// The action index currently filtering the grid (highlighted card).
+  final int? selectedAction;
+  final void Function(int actionIndex) onActionTap;
   const OverviewPanel({
     super.key,
     required this.node,
     required this.summary,
     required this.actorLabel,
-    required this.onAction,
+    required this.selectedAction,
+    required this.onActionTap,
   });
 
   @override
@@ -53,12 +59,12 @@ class OverviewPanel extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        Text('ACTIONS',
+        Text('ACTIONS · tap to filter the grid',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
         const SizedBox(height: 6),
         for (var a = 0; a < summary.actions.length; a++)
-          _actionCard(context, summary.actions[a], colors[a]),
+          _actionCard(context, a, summary.actions[a], colors[a]),
         if (!evAvailable)
           Padding(
             padding: const EdgeInsets.only(top: 10),
@@ -98,16 +104,24 @@ class OverviewPanel extends StatelessWidget {
     );
   }
 
-  Widget _actionCard(BuildContext context, ActionAgg agg, Color color) {
+  Widget _actionCard(
+      BuildContext context, int index, ActionAgg agg, Color color) {
     final scheme = Theme.of(context).colorScheme;
+    final selected = selectedAction == index;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: color.withValues(alpha: 0.22),
+        color: color.withValues(alpha: selected ? 0.45 : 0.22),
         borderRadius: BorderRadius.circular(10),
         clipBehavior: Clip.antiAlias,
+        shape: selected
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: color, width: 1.6),
+              )
+            : null,
         child: InkWell(
-          onTap: () => onAction(agg.label),
+          onTap: () => onActionTap(index),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
@@ -139,8 +153,10 @@ class OverviewPanel extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(width: 6),
-                Icon(Icons.chevron_right,
-                    size: 18, color: scheme.onSurfaceVariant),
+                Icon(selected ? Icons.filter_alt : Icons.filter_alt_outlined,
+                    size: 18,
+                    color:
+                        selected ? scheme.onSurface : scheme.onSurfaceVariant),
               ],
             ),
           ),

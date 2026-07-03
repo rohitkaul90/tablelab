@@ -44,6 +44,27 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   NodeSummary? _aggSummary;
   GridLens _lens = GridLens.strategy;
   int _rightTab = 0; // 0 = Overview, 1 = Equity chart
+  int? _actionFilter; // grid shows only this action's share (right-pane cards)
+
+  /// Memoized per-node aggregates shared by the advance bar, grid, and
+  /// overview (LayoutBuilder rebuilds must not recompute; the painter's
+  /// identity-based shouldRepaint relies on stable lists). Node change also
+  /// clears the action filter — indices are per-node.
+  void _ensureAgg(ExplorerState state, PackNode node) {
+    if (identical(_aggNode, node)) return;
+    final manifest = state.manifest!;
+    _aggNode = node;
+    _aggCells = aggregateGrid(
+      node,
+      manifest.combosFor(oop: node.actorIsOop),
+      board: [
+        for (final c in [...manifest.flop.split(' '), ...state.dealtCards])
+          parseCard(c),
+      ],
+    );
+    _aggSummary = summarizeNode(node);
+    _actionFilter = null;
+  }
 
   @override
   void initState() {
@@ -231,6 +252,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final manifest = state.manifest!;
     final node = state.currentNode;
     final steps = _ribbonSteps(state);
+    if (node != null) _ensureAgg(state, node);
 
     return Column(
       children: [
@@ -242,6 +264,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             onRewind: (n) => ref.read(explorerProvider.notifier).popTo(n),
           ),
         ),
+        // NAVIGATION lives up top (ribbon rewinds, this bar advances); the
+        // right pane's action cards are FILTERS, not navigation.
+        if (node != null) _advanceBar(context, state, node),
         const SizedBox(height: 4),
         Expanded(
           child: node == null
@@ -249,6 +274,58 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
               : _nodeView(context, state, node),
         ),
       ],
+    );
+  }
+
+  /// "BTN to act · Check 94% · Bet 10 6%" — tapping an action ADVANCES the
+  /// line (GTO-Wizard-style header controls).
+  Widget _advanceBar(BuildContext context, ExplorerState state, PackNode node) {
+    final scheme = Theme.of(context).colorScheme;
+    final summary = _aggSummary!;
+    final colors = actionColors(node.actions);
+    final actor = seatLabel(state.manifest?.scenario ?? '?',
+        isOop: node.actorIsOop);
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        children: [
+          Center(
+            child: Text('$actor to act',
+                style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant)),
+          ),
+          const SizedBox(width: 10),
+          for (var a = 0; a < node.actions.length; a++) ...[
+            Center(
+              child: Material(
+                color: colors[a].withValues(alpha: 0.30),
+                borderRadius: BorderRadius.circular(8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => ref
+                      .read(explorerProvider.notifier)
+                      .push(node.actions[a]),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    child: Text(
+                      '${actionDisplayLabel(node.actions[a])} '
+                      '${(summary.actions[a].freq * 100).toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
     );
   }
 
@@ -278,18 +355,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   Widget _nodeView(BuildContext context, ExplorerState state, PackNode node) {
     final manifest = state.manifest!;
     final combos = manifest.combosFor(oop: node.actorIsOop);
-    if (!identical(_aggNode, node)) {
-      _aggNode = node;
-      _aggCells = aggregateGrid(
-        node,
-        combos,
-        board: [
-          for (final c in [...manifest.flop.split(' '), ...state.dealtCards])
-            parseCard(c),
-        ],
-      );
-      _aggSummary = summarizeNode(node);
-    }
+    _ensureAgg(state, node);
     final cells = _aggCells!;
     final summary = _aggSummary!;
     final colors = actionColors(node.actions);
@@ -325,6 +391,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   cells: cells,
                   actionColors: colors,
                   lens: _lens,
+                  filterAction: _actionFilter,
                   onCellTap: (cell) => showComboDetailSheet(context,
                       cell: cell, node: node, comboNames: combos),
                 ),
@@ -359,8 +426,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   node: node,
                   summary: summary,
                   actorLabel: actor,
-                  onAction: (a) =>
-                      ref.read(explorerProvider.notifier).push(a),
+                  selectedAction: _actionFilter,
+                  onActionTap: (a) => setState(
+                      () => _actionFilter = _actionFilter == a ? null : a),
                 )
               : _equityPane(context, state, node),
         ),

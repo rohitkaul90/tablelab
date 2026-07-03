@@ -38,12 +38,18 @@ class StrategyGrid extends StatelessWidget {
   final List<List<GridCellAgg?>> cells;
   final List<Color> actionColors;
   final GridLens lens;
+
+  /// When set (an index into the node's actions), the grid becomes an ACTION
+  /// FILTER view: each cell shows only that action's share — intensity =
+  /// the action's frequency, in the action's color. Overrides the lens.
+  final int? filterAction;
   final void Function(GridCellAgg cell)? onCellTap;
   const StrategyGrid({
     super.key,
     required this.cells,
     required this.actionColors,
     this.lens = GridLens.strategy,
+    this.filterAction,
     this.onCellTap,
   });
 
@@ -66,7 +72,7 @@ class StrategyGrid extends StatelessWidget {
                 },
           child: RepaintBoundary(
             child: CustomPaint(
-              painter: _GridPainter(cells, actionColors, lens),
+              painter: _GridPainter(cells, actionColors, lens, filterAction),
               size: Size.infinite,
             ),
           ),
@@ -80,7 +86,8 @@ class _GridPainter extends CustomPainter {
   final List<List<GridCellAgg?>> cells;
   final List<Color> colors;
   final GridLens lens;
-  _GridPainter(this.cells, this.colors, this.lens);
+  final int? filterAction;
+  _GridPainter(this.cells, this.colors, this.lens, this.filterAction);
 
   static const _bg = Color(0xFF141914);
   static const _absent = Color(0xFF1D231D);
@@ -113,6 +120,25 @@ class _GridPainter extends CustomPainter {
         // Range presence dims cells that are mostly folded out already.
         final alpha = 0.30 + 0.70 * cell.presence;
         canvas.drawRect(rect, paintFill..color = _absent);
+        final filter = filterAction;
+        if (filter != null) {
+          // Action-filter view: only the selected action's share, intensity =
+          // its frequency (presence still factors in so folded-out cells dim).
+          final f = filter < cell.freqs.length
+              ? cell.freqs[filter].clamp(0.0, 1.0)
+              : 0.0;
+          if (f > 0 && filter < colors.length) {
+            canvas.drawRect(
+              rect,
+              paintFill
+                ..color = colors[filter].withValues(
+                    alpha: (0.12 + 0.88 * f) * (0.45 + 0.55 * cell.presence)),
+            );
+          }
+          _text(canvas, rect, cell.hand,
+              f > 0 ? labelStyle : labelStyle.copyWith(color: _labelDim));
+          continue;
+        }
         if (lens == GridLens.handClass) {
           final hc = cell.dominantClass;
           if (hc != null) {
@@ -154,5 +180,8 @@ class _GridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GridPainter old) =>
-      old.cells != cells || old.colors != colors || old.lens != lens;
+      old.cells != cells ||
+      old.colors != colors ||
+      old.lens != lens ||
+      old.filterAction != filterAction;
 }
