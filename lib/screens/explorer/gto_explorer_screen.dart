@@ -90,6 +90,18 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep the preflop strip in sync when a spot changes underneath it (the
+    // init auto-select, or a board pick) — but never clobber a user-built
+    // trail that already maps to the same scenario. ref.listen must live
+    // DIRECTLY in build (not inside the Builder below — Riverpod asserts).
+    ref.listen<ExplorerSpotRef?>(
+        explorerProvider.select((s) => s.spot), (prev, next) {
+      final sc = next?.scenario;
+      if (sc != null && _trail.scenarioKey != sc) {
+        setState(() => _trail = trailForScenario(sc));
+      }
+    });
+
     final body = Theme(
       data: AppTheme.dark,
       child: Builder(builder: (context) {
@@ -112,18 +124,6 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   Widget _body(BuildContext context) {
     final state = ref.watch(explorerProvider);
     final scheme = Theme.of(context).colorScheme;
-
-    // Keep the preflop strip in sync when a spot changes underneath it (the
-    // init auto-select, or a board pick) — but never clobber a user-built
-    // trail that already maps to the same scenario (HJ vs the CO
-    // representative, say).
-    ref.listen<ExplorerSpotRef?>(
-        explorerProvider.select((s) => s.spot), (prev, next) {
-      final sc = next?.scenario;
-      if (sc != null && _trail.scenarioKey != sc) {
-        setState(() => _trail = trailForScenario(sc));
-      }
-    });
 
     if (state.scanning) {
       return const Center(child: CircularProgressIndicator());
