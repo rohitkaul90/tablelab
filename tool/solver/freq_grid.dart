@@ -365,14 +365,31 @@ void _writeLibrary(Map<String, dynamic> results) {
     return;
   }
   // Merge per scenario. _mergeCells drops zero-reach singletons + zero-mass
-  // groups, so a non-empty input can still collapse to [] — drop such scenarios
-  // rather than writing an empty ScenarioLib.
+  // groups, so a non-empty input can still collapse to []. That is NEVER ok
+  // to paper over: for a BRAND-NEW scenario the scenario-drop guard below
+  // can't fire (the committed library never contained it), so silently
+  // omitting it would let the operator commit a "rebuilt" library believing
+  // the scenario landed while its GTO FACT never fires in prod. Abort the
+  // whole write instead (the pre-multi-scenario code aborted here too).
   final mergedByScenario = <String, List<FreqCell>>{};
+  final emptyScenarios = <String>[];
   cellsByScenario.forEach((scenario, cells) {
     final merged = _mergeCells(cells)
       ..sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
-    if (merged.isNotEmpty) mergedByScenario[scenario] = merged;
+    if (merged.isEmpty) {
+      emptyScenarios.add(scenario);
+    } else {
+      mergedByScenario[scenario] = merged;
+    }
   });
+  if (emptyScenarios.isNotEmpty) {
+    stderr.writeln('ABORT: scenario(s) $emptyScenarios tabulated to ONLY '
+        'zero-mass/zero-reach cells — refusing to write a library that '
+        'silently omits them. Inspect those solves (bad ranges? broken '
+        'tabulation?) before rebuilding.');
+    exitCode = 1;
+    return;
+  }
   if (mergedByScenario.isEmpty) {
     stderr.writeln('ABORT: $usedSpots matching spot(s) all tabulated to '
         'zero-mass/zero-reach cells — refusing to overwrite $kLibraryPath '

@@ -315,29 +315,33 @@ class _EquityEngine {
 
 class _Bw {
   final BytesBuilder b = BytesBuilder();
-  final ByteData _s = ByteData(4);
+  // Reused scratch buffers — these writers run in the per-combo × per-action
+  // encode hot loop (~10^8 values on deep river dumps); a fresh list per
+  // value was pure GC pressure. BytesBuilder.add() copies, so reuse is safe.
+  final Uint8List _b2 = Uint8List(2);
+  final Uint8List _b4 = Uint8List(4);
+  late final ByteData _v2 = ByteData.sublistView(_b2);
+  late final ByteData _v4 = ByteData.sublistView(_b4);
 
   void u8(int v) => b.addByte(v & 0xff);
   void u16(int v) {
-    _s.setUint16(0, v, Endian.little);
-    b.add(Uint8List.fromList([_s.getUint8(0), _s.getUint8(1)]));
+    _v2.setUint16(0, v, Endian.little);
+    b.add(_b2);
   }
 
   void i16(int v) {
-    _s.setInt16(0, v, Endian.little);
-    b.add(Uint8List.fromList([_s.getUint8(0), _s.getUint8(1)]));
+    _v2.setInt16(0, v, Endian.little);
+    b.add(_b2);
   }
 
   void u32(int v) {
-    _s.setUint32(0, v, Endian.little);
-    b.add(Uint8List.fromList(
-        [_s.getUint8(0), _s.getUint8(1), _s.getUint8(2), _s.getUint8(3)]));
+    _v4.setUint32(0, v, Endian.little);
+    b.add(_b4);
   }
 
   void f32(double v) {
-    _s.setFloat32(0, v, Endian.little);
-    b.add(Uint8List.fromList(
-        [_s.getUint8(0), _s.getUint8(1), _s.getUint8(2), _s.getUint8(3)]));
+    _v4.setFloat32(0, v, Endian.little);
+    b.add(_b4);
   }
 
   void shortStr(String s) {

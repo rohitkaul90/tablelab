@@ -181,12 +181,14 @@ final List<_Spec> _specs = [
       turn: '2s', turnAct: [_chk(2), _chk(0)],
       river: '3d', riverAct: [_bet(2, 8), _call(0, 8)]),
 
-  // ── 3-BET-POT spots (scenario 3bp_bb_v_btn — Cycle A) — TEMPLATES until the
-  // 3-bet cells are solved (TLSOLVE_SCENARIO=3bp_bb_v_btn); they report ✗ and
-  // --write skips them until then. Preflop: BTN opens 5, BB 3-bets to 18, BTN
+  // ── 3-BET-POT spots (scenario 3bp_bb_v_btn — SOLVED 2026-07-02, Cycle A;
+  // all 7 fire ✓ and are written). Preflop: BTN opens 5, BB 3-bets to 18, BTN
   // calls → pot 36 at the flop; the aggressor (BB) is OOP. Stacks 52/90/160
   // land committed/shallow/medium (see _Spec.threeBet). Spread hero position ×
   // facing × hand class × SPR regime + one turn + one river decision.
+  // ⚠️ REMEMBER: --write emits samples/ + spots.json only — the eval scorer
+  // reads tool/eval/fixtures/, so new spots MUST also be BAKED
+  // (dart run tool/eval/bake_fixtures.dart) or the eval never exercises them.
   _Spec('gto-3bp-oop-cbet-strong-sh', _boardA, ['Ah', 'Kc'], 2, 90,
       [_bet(2, 24), _call(0, 24)],
       '3BP OOP first_to_act (c-bet), top two (strongMade), shallow',

@@ -69,14 +69,27 @@ void main(List<String> args) {
       board: flop, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
   File(outPath).writeAsStringSync(jsonEncode([for (final c in cells) c.toJson()]));
   if (packIdx >= 0) {
-    final r = generatePack(root,
-        board: flop,
-        pot0: pot0,
-        effStack: effStack,
-        scenario: args[packIdx + 2],
-        sprName: args[packIdx + 3],
-        outDir: args[packIdx + 1],
-        maxBoardLen: maxBoardLen);
-    printPackReport(r.manifest, r.stats);
+    // Pack emission is a SECONDARY output: the cells are already written, and
+    // a pack failure (e.g. disk-full on the packs volume) must not flip this
+    // process's exit code — the grid would then discard the successful
+    // tabulation AND delete the dump, losing the whole paid solve for the
+    // spot. Warn loudly and exit 0; the operator re-emits packs from a
+    // re-solve, the library is unaffected.
+    try {
+      final r = generatePack(root,
+          board: flop,
+          pot0: pot0,
+          effStack: effStack,
+          scenario: args[packIdx + 2],
+          sprName: args[packIdx + 3],
+          outDir: args[packIdx + 1],
+          maxBoardLen: maxBoardLen);
+      printPackReport(r.manifest, r.stats);
+    } catch (e) {
+      stderr.writeln('WARN tabulate_one: pack emission FAILED (cells are '
+          'unaffected and were written): $e');
+      stdout.writeln('pack emission FAILED for ${args[packIdx + 1]} — see '
+          'stderr; cells unaffected.');
+    }
   }
 }

@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../equity/card.dart';
 import '../../explorer/grid_aggregation.dart';
 
 class StrategyGrid extends StatelessWidget {
@@ -76,15 +77,10 @@ class _GridPainter extends CustomPainter {
     }
   }
 
-  String _handAt(int row, int col, GridCellAgg? cell) {
-    if (cell != null) return cell.hand;
-    // Absent cells still get their hand label (dimmed) for orientation.
-    const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
-    if (row == col) return ranks[row] + ranks[col];
-    return row < col
-        ? '${ranks[row]}${ranks[col]}s'
-        : '${ranks[col]}${ranks[row]}o';
-  }
+  // Absent cells still get their hand label (dimmed) for orientation — from
+  // the SHARED cell→hand naming (card.dart), not a re-fork of it.
+  String _handAt(int row, int col, GridCellAgg? cell) =>
+      cell?.hand ?? cellToHand(row, col);
 
   void _text(Canvas canvas, Rect rect, String s, TextStyle style) {
     final tp = TextPainter(

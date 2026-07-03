@@ -22,7 +22,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'explorer_pack.dart';
-import 'freq_grid.dart' show flopInts, gridSpot, kSprReps, scenarioRanges;
+import 'freq_grid.dart'
+    show flopInts, gridSpot, kScenario, kSprReps, scenarioRanges;
 import 'run_solver.dart';
 
 Future<void> main(List<String> args) async {
@@ -62,11 +63,14 @@ Future<void> main(List<String> args) async {
 
     final packDir = '$outDir/${flop.replaceAll(' ', '')}_$sprName';
     final total = Stopwatch()..start();
+    // Scenario stamp MUST follow TLSOLVE_SCENARIO like the ranges do — a
+    // hardcoded key would label a 3-bet-pot pack as single-raised in the
+    // explorer.
     final r = generatePack(root,
         board: flopInts(flop),
         pot0: spot.pot.toDouble(),
         effStack: spot.effStack.toDouble(),
-        scenario: 'srp_late_v_bb',
+        scenario: kScenario,
         sprName: sprName,
         outDir: packDir);
     total.stop();

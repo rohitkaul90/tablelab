@@ -7,6 +7,7 @@
 // Wrapped in AppTheme.dark like the other solver/felt screens — the action
 // colors are dark-calibrated and it bounds the theming work.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,6 +30,15 @@ class GtoExplorerScreen extends ConsumerStatefulWidget {
 }
 
 class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
+  // Grid aggregation memoized on the node's identity: LayoutBuilder makes
+  // _nodeView re-run on every resize/scroll rebuild, and recomputing the
+  // O(combos×actions) aggregation each time also hands _GridPainter fresh
+  // lists, defeating its shouldRepaint identity check (full 169-cell repaint
+  // per frame). Same node object → same cached aggregates.
+  PackNode? _aggNode;
+  List<List<GridCellAgg?>>? _aggCells;
+  NodeSummary? _aggSummary;
+
   @override
   void initState() {
     super.initState();
@@ -66,28 +76,48 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.spots.isEmpty) {
+      // The developer hint (local packs dir) must never reach prod users.
+      const devHint = kDebugMode
+          ? '\n\n(Developer: place packs under ~/tlpacks or pass '
+              '--dart-define=TLPACKS_DIR=<dir>.)'
+          : '';
       return _message(
         context,
         icon: Icons.school_outlined,
         title: 'No solved spots available yet',
         body: 'GTO Study browses solver solutions of common preflop '
             'scenarios. Solution packs are being rolled out — check back '
-            'soon.\n\n(Developer: place packs under ~/tlpacks or pass '
-            '--dart-define=TLPACKS_DIR=<dir>.)',
+            'soon.$devHint',
       );
     }
-    if (state.error != null) {
-      return _message(context,
-          icon: Icons.error_outline, title: 'Something went wrong',
-          body: state.error!);
-    }
 
+    // The spot-picker header stays visible in EVERY state below — an error on
+    // one spot must not hide the only control that can select another (a
+    // corrupt pack would otherwise brick the whole tab; there is no other
+    // path that clears ExplorerState.error).
     return Column(
       children: [
         _spotHeader(context, state),
         const Divider(height: 1),
         if (state.loading)
           const Expanded(child: Center(child: CircularProgressIndicator()))
+        else if (state.error != null)
+          Expanded(
+            child: _message(
+              context,
+              icon: Icons.error_outline,
+              title: 'Could not load this spot',
+              body: '${state.error}\n\nPick another spot above, or retry.',
+              action: TextButton(
+                onPressed: state.spot == null
+                    ? null
+                    : () => ref
+                        .read(explorerProvider.notifier)
+                        .selectSpot(state.spot!),
+                child: const Text('Retry'),
+              ),
+            ),
+          )
         else if (state.manifest != null && state.flopNodes != null)
           Expanded(child: _loaded(context, state))
         else
@@ -231,9 +261,13 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
 
   Widget _nodeView(BuildContext context, ExplorerState state, PackNode node) {
     final manifest = state.manifest!;
-    final combos = manifest.combosFor(oop: node.actorIsOop);
-    final cells = aggregateGrid(node, combos);
-    final summary = summarizeNode(node);
+    if (!identical(_aggNode, node)) {
+      _aggNode = node;
+      _aggCells = aggregateGrid(node, manifest.combosFor(oop: node.actorIsOop));
+      _aggSummary = summarizeNode(node);
+    }
+    final cells = _aggCells!;
+    final summary = _aggSummary!;
     final colors = actionColors(node.actions);
     final actor =
         seatLabel(manifest.scenario, isOop: node.actorIsOop);
@@ -263,15 +297,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       return ListView(
         children: [
           grid,
-          SizedBox(
-            height: 420,
-            child: OverviewPanel(
-              node: node,
-              summary: summary,
-              actorLabel: actor,
-              onAction: (a) => ref.read(explorerProvider.notifier).push(a),
-            ),
-          ),
+          SizedBox(height: 420, child: overview),
         ],
       );
     });
@@ -290,12 +316,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           : 'This line closes the flop. Turn and river navigation are coming '
               'in the next version — rewind with the chips above to explore '
               'other flop lines.',
-      action: TextButton(
-        onPressed: () => ref
-            .read(explorerProvider.notifier)
-            .popTo(state.path.length - 1),
-        child: const Text('Back one step'),
-      ),
+      // No back affordance at an empty path (a malformed pack can lack the
+      // root node) — popTo also lower-bound-guards, this just hides the dead
+      // button.
+      action: state.path.isEmpty
+          ? null
+          : TextButton(
+              onPressed: () => ref
+                  .read(explorerProvider.notifier)
+                  .popTo(state.path.length - 1),
+              child: const Text('Back one step'),
+            ),
     );
   }
 

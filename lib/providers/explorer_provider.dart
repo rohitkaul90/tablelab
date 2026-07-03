@@ -107,8 +107,10 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
       state = state.copyWith(path: [...state.path, action]);
 
   /// Truncate the cursor to the first [n] steps (0 = back to the root).
+  /// Clamped both ways: a caller computing `path.length - 1` on an empty path
+  /// passes -1, and sublist(0, -1) throws RangeError.
   void popTo(int n) {
-    if (n >= state.path.length) return;
+    if (n < 0 || n >= state.path.length) return;
     state = state.copyWith(path: state.path.sublist(0, n));
   }
 }

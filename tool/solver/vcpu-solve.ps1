@@ -141,9 +141,12 @@ try { ssh-keygen -R $pubip *> $null } catch { }
 $global:LASTEXITCODE = 0
 # BatchMode + ServerAlive help, but an ssh can STILL stall in the auth/banner
 # window (observed on fresh boots AND once in the -PullAndTerminate poll loop -
-# one stuck ssh.exe wedged the whole launcher). So EVERY remote call the
-# launcher blocks on runs in a BACKGROUND JOB with a hard Wait-Job timeout:
-# a hung ssh is killed and reported as $null (caller decides retry/give-up).
+# one stuck ssh.exe wedged the whole launcher). So every SSH the launcher
+# blocks on runs in a BACKGROUND JOB with a hard Wait-Job timeout: a hung ssh
+# is killed and reported as $null (caller decides retry/give-up). The scp
+# PULLS remain plain blocking calls: they run only after many healthy ssh
+# round-trips on the same connection, and their failure path already leaves
+# the box up for a manual retry.
 $ssh = @('-i', $key, '-o', 'StrictHostKeyChecking=accept-new', '-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2', "ubuntu@$pubip")
 
 function Invoke-SshTimed {
@@ -273,7 +276,8 @@ if ($PullAndTerminate) {
   }
 
   if ($state -ne 'wrote') {
-    ssh @ssh "tail -n 30 ~/solve.log"
+    $r = Invoke-SshTimed "tail -n 30 ~/solve.log" -TimeoutSec 60
+    if ($r) { Write-Host $r.Out }
     Write-Warning "Solve ended WITHOUT writing the library (crash / OOM / all spots failed /"
     Write-Warning "a _writeLibrary guard aborted). Instance $iid is LEFT RUNNING for triage -"
     Write-Warning "do NOT trust a pulled library. Inspect above, then terminate when done:"
@@ -281,7 +285,8 @@ if ($PullAndTerminate) {
     return
   }
 
-  ssh @ssh "tail -n 3 ~/solve.log"
+  $r = Invoke-SshTimed "tail -n 3 ~/solve.log" -TimeoutSec 60
+  if ($r) { Write-Host $r.Out }
   Write-Host "Pulling library + cache back..."
   # Relative dest paths from the repo root (Push-Location) - a 'C:/...' absolute path
   # can trip scp's host:path colon parsing on some builds. Guard ALL pulls: only
@@ -296,11 +301,23 @@ if ($PullAndTerminate) {
   } finally { Pop-Location }
   $okPacks = $true
   if ($EmitPack) {
+    # Packs are emitted only for NEWLY-solved spots: a fully-cached run never
+    # creates ~/packs, and failing the pull on that would leave the box
+    # running (billing) over a nonexistent optional output. Probe first.
+    $probe = Invoke-SshTimed 'test -d ~/packs && echo yes || echo no' -TimeoutSec 60
+    if (-not $probe -or $probe.Code -ne 0) {
+      Write-Warning "Could not probe ~/packs on the box - skipping the pack pull."
+      Write-Warning "If packs were expected, pull manually before terminating."
+      $okPacks = $false
+    } elseif ("$($probe.Out)".Trim() -ne 'yes') {
+      Write-Warning "No ~/packs on the box (all spots cached? pack emission failed?)"
+      Write-Warning "- nothing to pull; continuing to terminate."
+    } else {
     # Tar on the box (thousands of small chunk files - a bare scp -r is slow and
     # fragile), pull one archive, extract into -PackDest with Windows' bsdtar.
     Write-Host "Pulling explorer packs (this is the multi-GB step)..."
-    ssh @ssh 'tar -czf ~/packs.tgz -C ~/packs .'
-    $okPacks = ($LASTEXITCODE -eq 0)
+    $tarR = Invoke-SshTimed 'tar -czf ~/packs.tgz -C ~/packs .' -TimeoutSec 1800
+    $okPacks = ($null -ne $tarR -and $tarR.Code -eq 0)
     if ($okPacks) {
       New-Item -ItemType Directory -Force $PackDest | Out-Null
       $localTgz = Join-Path $env:TEMP 'tlpacks-pull.tgz'
@@ -312,6 +329,7 @@ if ($PullAndTerminate) {
         if ($okPacks) { Remove-Item $localTgz -Force }
       }
     }
+    } # end packs-exist branch
   }
   if (-not ($okLib -and $okCache -and $okPacks)) {
     Write-Warning "A pull FAILED (library=$okLib cache=$okCache packs=$okPacks). Instance $iid"
