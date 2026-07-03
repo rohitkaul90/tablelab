@@ -127,8 +127,8 @@ void main() {
     await n.selectSpot(spot);
     expect(n.state.currentNode, isNotNull); // flop root
 
-    n.push('CHECK');
-    n.push('CHECK');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
     expect(n.state.currentNode, isNull); // flop closed
     expect(n.state.dealtCards, isEmpty);
 
@@ -139,8 +139,8 @@ void main() {
     expect(turnNode!.street, 1);
     expect(turnNode.path, 'CHECK/CHECK/@2s');
 
-    n.push('CHECK');
-    n.push('CHECK');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
     expect(n.state.currentNode, isNull); // turn closed
 
     await n.pickCard('3d');
@@ -151,66 +151,106 @@ void main() {
     expect(riverNode.actions, ['CHECK', 'BET 7']);
   });
 
-  test('rewinding across a chance step drops the street nodes', () async {
+  test('the line PERSISTS: cursor moves freely without resetting anything',
+      () async {
     final n = ExplorerNotifier();
     await n.selectSpot(spot);
-    n.push('CHECK');
-    n.push('CHECK');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
     await n.pickCard('2s');
-    expect(n.state.turnNodes, isNotNull);
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+    await n.pickCard('3d');
+    expect(n.state.line,
+        ['CHECK', 'CHECK', '@2s', 'CHECK', 'CHECK', '@3d']);
 
-    n.popTo(2); // back to the closed flop, before the turn card
-    expect(n.state.dealtCards, isEmpty);
-    expect(n.state.turnNodes, isNull);
-    expect(n.state.riverNodes, isNull);
+    // Jump back to the flop root — the LINE is untouched, chunks stay.
+    n.setCursor(0);
+    expect(n.state.line, ['CHECK', 'CHECK', '@2s', 'CHECK', 'CHECK', '@3d']);
+    expect(n.state.dealtCards, isEmpty); // board at the cursor = flop
+    expect(n.state.currentNode!.street, 0);
+    expect(n.state.turnNodes, isNotNull); // nothing reset
+    expect(n.state.recordedNext, 'CHECK');
 
-    // Re-dealing works (chunk comes from the client LRU).
+    // Jump straight to the river decision (cursor normalizes off '@').
+    n.setCursor(5);
+    expect(n.state.currentNode!.street, 2);
+    expect(n.state.dealtCards, ['2s', '3d']);
+
+    // REPLAY from the flop by taking the recorded action — pure cursor moves.
+    n.setCursor(0);
+    await n.advance('CHECK'); // matches recorded → replay
+    expect(n.state.cursor, 1);
+    expect(n.state.line, hasLength(6)); // unchanged
+    await n.advance('CHECK'); // closes the flop; cursor skips '@2s'
+    expect(n.state.cursor, 3);
+    expect(n.state.currentNode!.street, 1); // turn node, no re-pick needed
+  });
+
+  test('EDITING mid-line rewrites from the cursor and regrows the valid tail',
+      () async {
+    final n = ExplorerNotifier();
+    await n.selectSpot(spot);
+    await n.advance('CHECK');
+    await n.advance('CHECK');
     await n.pickCard('2s');
-    expect(n.state.currentNode, isNotNull);
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+    await n.pickCard('3d');
+
+    // Go back to the SECOND flop decision (IP) and change CHECK → BET 5.
+    n.setCursor(1);
+    await n.advance('BET 5');
+    // The IP bet invalidates the rest (OOP now faces a bet; the old tail's
+    // next step '@2s' needs a CLOSED street): line = prefix + edit only.
+    expect(n.state.line, ['CHECK', 'BET 5']);
+    expect(n.state.cursor, 2);
+    // Pins survive the edit (cards are never re-entered).
+    expect(n.state.turnCard, '2s');
+    expect(n.state.riverCard, '3d');
+  });
+
+  test('EDITING with a tail that stays valid keeps it', () async {
+    final n = ExplorerNotifier();
+    await n.selectSpot(spot);
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+    await n.pickCard('2s');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+
+    // Replay to the turn root and re-take the SAME action via advance — no
+    // edit; then edit the FIRST turn action CHECK → BET 6: the tail (CHECK)
+    // is invalid vs a bet (opponent faces BET 6, whose node isn't in this
+    // synthetic dump), so the line truncates there.
+    n.setCursor(3);
+    await n.advance('BET 6');
+    expect(n.state.line, ['CHECK', 'CHECK', '@2s', 'BET 6']);
+    expect(n.state.turnCard, '2s'); // pin untouched
   });
 
   test('a runout absent from the pack leaves an unavailable (null) node',
       () async {
     final n = ExplorerNotifier();
     await n.selectSpot(spot);
-    n.push('CHECK');
-    n.push('CHECK');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
     await n.pickCard('7d'); // dump only carries the 2s turn
     expect(n.state.dealtCards, ['7d']);
     expect(n.state.currentNode, isNull);
     expect(n.state.chunkLoading, isFalse);
   });
 
-  test('picked cards are PINNED and survive rewinds past the chance step',
-      () async {
-    final n = ExplorerNotifier();
-    await n.selectSpot(spot);
-    n.push('CHECK');
-    n.push('CHECK');
-    await n.pickCard('2s');
-    n.push('CHECK');
-    n.push('CHECK');
-    await n.pickCard('3d');
-    expect(n.state.turnCard, '2s');
-    expect(n.state.riverCard, '3d');
-
-    n.popTo(0); // all the way back to the flop root
-    expect(n.state.dealtCards, isEmpty);
-    expect(n.state.turnNodes, isNull); // cursor state cleared…
-    expect(n.state.turnCard, '2s'); // …but the pins persist
-    expect(n.state.riverCard, '3d');
-  });
-
   test('setPinnedCard swaps a dealt card IN PLACE, keeping the line', () async {
     final n = ExplorerNotifier();
     await n.selectSpot(spot);
-    n.push('CHECK');
-    n.push('CHECK');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
     await n.pickCard('7d'); // absent runout → unavailable
     expect(n.state.currentNode, isNull);
 
     await n.setPinnedCard(river: false, card: '2s'); // swap to the real turn
-    expect(n.state.path, ['CHECK', 'CHECK', '@2s']); // line preserved
+    expect(n.state.line, ['CHECK', 'CHECK', '@2s']); // line preserved
     expect(n.state.turnCard, '2s');
     expect(n.state.currentNode, isNotNull); // chunk refetched
     expect(n.state.currentNode!.street, 1);
@@ -220,7 +260,7 @@ void main() {
     final n = ExplorerNotifier();
     await n.selectSpot(spot);
     await n.setPinnedCard(river: false, card: '2s'); // at the flop root
-    expect(n.state.path, isEmpty);
+    expect(n.state.line, isEmpty);
     expect(n.state.turnCard, '2s');
     expect(n.state.currentNode, isNotNull); // still the flop root
     expect(n.state.currentNode!.street, 0);

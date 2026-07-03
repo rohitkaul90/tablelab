@@ -285,73 +285,70 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       Color? borderColor,
       VoidCallback? onTap,
       Widget? child,
+      bool dimmed = false,
     }) {
       return Padding(
         padding: const EdgeInsets.only(right: 6),
-        child: Material(
-          color: color ?? scheme.surfaceContainerHighest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: borderColor != null
-                ? BorderSide(color: borderColor, width: 1.2)
-                : BorderSide.none,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              child: child ??
-                  Text(label,
-                      style: const TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w700)),
+        child: Opacity(
+          opacity: dimmed ? 0.45 : 1.0,
+          child: Material(
+            color: color ?? scheme.surfaceContainerHighest,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: borderColor != null
+                  ? BorderSide(color: borderColor, width: 1.2)
+                  : BorderSide.none,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                child: child ??
+                    Text(label,
+                        style: const TextStyle(
+                            fontSize: 12.5, fontWeight: FontWeight.w700)),
+              ),
             ),
           ),
         ),
       );
     }
 
-    // Flop box (the spot's board; tap = back to the root).
-    boxes.add(box(
-      label: 'Flop ${manifest.flop}',
-      onTap: state.path.isEmpty
-          ? null
-          : () => ref.read(explorerProvider.notifier).popTo(0),
-    ));
-
-    // Played steps.
-    var idxInStreet = 0;
-    var dealtSoFar = 0;
-    for (var i = 0; i < state.path.length; i++) {
-      final step = state.path[i];
+    // One recorded step as a box. Action boxes SET THE CURSOR (inspect that
+    // decision — the line is never reset); card boxes open the picker (change
+    // the runout in place).
+    Widget stepBox(int i, String step,
+        {required int idxInStreet,
+        required int dealtSoFar,
+        required bool dimmed}) {
       if (step.startsWith('@')) {
-        dealtSoFar++;
         final river = dealtSoFar == 2;
-        boxes.add(box(
+        return box(
           label: '${river ? 'River' : 'Turn'} ${step.substring(1)}',
           color: scheme.tertiaryContainer.withValues(alpha: 0.5),
+          dimmed: dimmed,
           onTap: () => _openCardPicker(context, state, river: river),
-        ));
-        idxInStreet = 0;
-      } else {
-        final actor = seatLabel(scenario, isOop: idxInStreet.isEven);
-        final keep = i + 1;
-        boxes.add(box(
-          label: '$actor ${actionDisplayLabel(step)}',
-          color: actionColors([step]).first.withValues(alpha: 0.30),
-          onTap: i == state.path.length - 1
-              ? null
-              : () => ref.read(explorerProvider.notifier).popTo(keep),
-        ));
-        idxInStreet++;
+        );
       }
+      final actor = seatLabel(scenario, isOop: idxInStreet.isEven);
+      return box(
+        label: '$actor ${actionDisplayLabel(step)}',
+        color: actionColors([step]).first.withValues(alpha: 0.30),
+        dimmed: dimmed,
+        onTap: () => ref.read(explorerProvider.notifier).setCursor(i),
+      );
     }
 
-    // Current decision: the actor's actions as buttons (advance on tap).
-    if (node != null) {
-      final actor = seatLabel(scenario, isOop: node.actorIsOop);
-      final colors = actionColors(node.actions);
-      boxes.add(box(
+    // The decision box at the cursor: all available actions as buttons; the
+    // RECORDED next action (replaying a line) is outlined — tapping it
+    // replays, tapping another EDITS the line (the still-valid tail regrows).
+    Widget decisionBox(PackNode n) {
+      final actor = seatLabel(scenario, isOop: n.actorIsOop);
+      final colors = actionColors(n.actions);
+      final recorded = state.recordedNext;
+      return box(
         label: '',
         color: scheme.surfaceContainerHigh,
         borderColor: scheme.primary.withValues(alpha: 0.6),
@@ -364,44 +361,82 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurfaceVariant)),
             const SizedBox(width: 6),
-            for (var a = 0; a < node.actions.length; a++) ...[
+            for (var a = 0; a < n.actions.length; a++) ...[
               Material(
-                color: colors[a].withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(6),
+                color: colors[a]
+                    .withValues(alpha: n.actions[a] == recorded ? 0.55 : 0.35),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  side: n.actions[a] == recorded
+                      ? BorderSide(color: colors[a], width: 1.4)
+                      : BorderSide.none,
+                ),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(6),
                   onTap: () => ref
                       .read(explorerProvider.notifier)
-                      .push(node.actions[a]),
+                      .advance(n.actions[a]),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 9, vertical: 4),
-                    child: Text(actionDisplayLabel(node.actions[a]),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    child: Text(actionDisplayLabel(n.actions[a]),
                         style: const TextStyle(
                             fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
                 ),
               ),
-              if (a < node.actions.length - 1) const SizedBox(width: 5),
+              if (a < n.actions.length - 1) const SizedBox(width: 5),
             ],
           ],
         ),
-      ));
+      );
     }
 
-    // Future chance boxes out to the river: pinned card (dimmed) or '+'.
-    final dealt = state.dealtCards.length;
-    final ended = state.path.isNotEmpty &&
-        state.path.last.toUpperCase().startsWith('FOLD');
+    // Flop box (tap = view the root decision).
+    boxes.add(box(
+      label: 'Flop ${manifest.flop}',
+      onTap: state.cursor == 0
+          ? null
+          : () => ref.read(explorerProvider.notifier).setCursor(0),
+    ));
+
+    // Recorded steps with the decision box inserted at the cursor. The
+    // recorded step AT the cursor is represented by the outlined button in
+    // the decision box (not duplicated as its own box).
+    var idxInStreet = 0;
+    var dealtSoFar = 0;
+    for (var i = 0; i < state.line.length; i++) {
+      final step = state.line[i];
+      final isChance = step.startsWith('@');
+      if (isChance) dealtSoFar++;
+      if (i == state.cursor && node != null) boxes.add(decisionBox(node));
+      if (!(i == state.cursor && !isChance)) {
+        boxes.add(stepBox(i, step,
+            idxInStreet: idxInStreet,
+            dealtSoFar: dealtSoFar,
+            dimmed: i >= state.cursor));
+      }
+      idxInStreet = isChance ? 0 : idxInStreet + 1;
+    }
+    if (state.atLineEnd && node != null) boxes.add(decisionBox(node));
+
+    // Future chance boxes out to the river (only when the line doesn't
+    // already contain them): pinned card or '+'. Fold ends with a marker.
+    final lineDealt = [
+      for (final s in state.line)
+        if (s.startsWith('@')) s
+    ].length;
+    final ended = state.line.isNotEmpty &&
+        state.line.last.toUpperCase().startsWith('FOLD');
     if (!ended) {
-      if (dealt < 1) {
+      if (lineDealt < 1) {
         boxes.add(box(
           label: 'Turn ${state.turnCard ?? '+'}',
           color: scheme.tertiaryContainer.withValues(alpha: 0.22),
           onTap: () => _openCardPicker(context, state, river: false),
         ));
       }
-      if (dealt < 2) {
+      if (lineDealt < 2) {
         boxes.add(box(
           label: 'River ${state.riverCard ?? '+'}',
           color: scheme.tertiaryContainer.withValues(alpha: 0.22),
@@ -412,6 +447,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       boxes.add(box(
           label: 'Hand over',
           color: scheme.surfaceContainerLow,
+          dimmed: !state.atLineEnd,
           onTap: null));
     }
 
@@ -660,57 +696,60 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
-  /// The opponent's most recent action node on the current line (searching
+  /// The opponent's most recent action node BEFORE the cursor (searching
   /// prefixes longest-first across the loaded street chunks), or null when
   /// they haven't acted yet (e.g. the flop root).
   PackNode? _opponentNode(ExplorerState state, PackNode node) {
-    final byPath = {
-      for (final n in [
-        ...?state.flopNodes,
-        ...?state.turnNodes,
-        ...?state.riverNodes,
-      ])
-        n.path: n,
-    };
-    for (var i = state.path.length - 1; i >= 0; i--) {
-      final n = byPath[state.path.sublist(0, i).join('/')];
+    final prefix = state.prefix;
+    for (var i = prefix.length - 1; i >= 0; i--) {
+      final n = state.nodeAt(prefix.sublist(0, i));
       if (n != null && n.actorIsOop != node.actorIsOop) return n;
     }
     return null;
   }
 
-  /// The cursor points at no node. Decide which end/continuation state this
-  /// is: fold ends the hand; an all-in call runs out to showdown; a closed
-  /// flop/turn offers the next street's CARD PICKER; a closed river is
-  /// showdown; a dealt card whose line has no node (all-in runouts, thin
-  /// chunks) is unavailable.
+  /// The cursor points at no node. Mid-line that only means a missing chunk
+  /// (the line itself is intact); at the line's END decide the state: fold
+  /// ends the hand; an all-in call runs out; a closed flop/turn auto-deals
+  /// the pinned card or offers the picker; a closed river is showdown.
   Widget _streetClosed(BuildContext context, ExplorerState state) {
     if (state.chunkLoading) {
       return const Center(child: CircularProgressIndicator());
     }
     Widget back() => TextButton(
-          onPressed: () =>
-              ref.read(explorerProvider.notifier).popTo(state.path.length - 1),
+          onPressed: () => ref
+              .read(explorerProvider.notifier)
+              .setCursor(state.cursor > 0 ? state.cursor - 1 : 0),
           child: const Text('Back one step'),
         );
-    if (state.path.isEmpty) {
+    if (state.line.isEmpty) {
       return _message(context,
           icon: Icons.error_outline,
           title: 'Spot has no root decision',
           body: 'This pack looks malformed — pick another spot above.');
     }
-    final last = state.path.last.toUpperCase();
+    if (!state.atLineEnd) {
+      // Inspecting mid-line but the street's chunk is missing (thin runout).
+      return _message(context,
+          icon: Icons.casino_outlined,
+          title: 'This street is unavailable',
+          body: 'The pack does not carry this runout. Change the '
+              '${state.dealtCards.length <= 1 ? 'turn' : 'river'} card via '
+              'its box above, or tap an earlier action.',
+          action: back());
+    }
+    final last = state.line.last.toUpperCase();
     if (last.startsWith('FOLD')) {
       return _message(context,
           icon: Icons.close,
           title: 'Hand over — fold',
-          body: 'This line ends the hand. Rewind with the chips above to '
-              'explore a different line.',
+          body: 'This line ends the hand. Tap any earlier box above to '
+              'review a decision — the line stays as played.',
           action: back());
     }
     if (last.startsWith('@')) {
-      // A card was dealt but its line has no node here (all-in runouts have
-      // no further decisions; very thin runouts can be absent from a pack).
+      // A card was dealt but its line has no node (all-in runouts have no
+      // further decisions; very thin runouts can be absent from a pack).
       return _message(context,
           icon: Icons.casino_outlined,
           title: 'No decisions on this runout',
@@ -721,7 +760,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     // Street closed by matched action. All-in call → showdown, no more cards
     // to pick meaningfully street by street.
     final streetSteps =
-        state.path.reversed.takeWhile((s) => !s.startsWith('@')).toList();
+        state.line.reversed.takeWhile((s) => !s.startsWith('@')).toList();
     final allinCall = last.startsWith('CALL') &&
         streetSteps.any((s) => s.toUpperCase().startsWith('ALLIN'));
     final dealt = state.dealtCards.length;
@@ -729,16 +768,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       return _message(context,
           icon: Icons.paid_outlined,
           title: 'All-in — runout to showdown',
-          body: 'The stacks are in; there are no further decisions. Rewind '
-              'to explore other lines.',
+          body: 'The stacks are in; there are no further decisions. Tap any '
+              'earlier box above to review a decision.',
           action: back());
     }
     if (dealt >= 2) {
       return _message(context,
           icon: Icons.flag_outlined,
           title: 'Showdown',
-          body: 'River action complete — the hand goes to showdown. Rewind '
-              'to explore other lines.',
+          body: 'River action complete — the hand goes to showdown. Tap any '
+              'earlier box above to review a decision; the line stays as '
+              'played.',
           action: back());
     }
     // A pinned card for the next street AUTO-DEALS (the user never re-enters

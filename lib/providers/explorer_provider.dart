@@ -1,8 +1,16 @@
-// GTO Explorer — navigation state: which spot is open, the decoded chunks for
-// the streets on the current line, and the cursor (action path + dealt cards)
-// within them. Phase 2: full flop → turn → river navigation; turn/river chunks
-// are LAZILY fetched when a card is picked (chance steps are '@Ah' path steps,
-// matching the pack's node paths).
+// GTO Explorer — navigation state: which spot is open, the RECORDED LINE of
+// the hand, and a CURSOR within it.
+//
+// The line (actions + '@Ah' chance steps) is persistent — reaching showdown
+// and tapping any earlier box just moves the cursor to inspect that decision;
+// nothing resets. Editing (choosing a different action at the cursor) rewrites
+// the line from that point and REGROWS the old tail, keeping every subsequent
+// step that is still valid in the new branch (solver nodes offer different
+// actions per branch, so an edit may or may not invalidate later streets).
+// Runout cards are PINNED per street: they survive rewinds/edits, auto-deal on
+// replay, and change only via their card box (in-place swap — the betting line
+// survives because solver trees offer identical action structures on every
+// runout card; sizes are pot-relative).
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,17 +29,21 @@ class ExplorerState {
   final PackManifest? manifest;
   final List<PackNode>? flopNodes;
 
-  /// Decoded chunk for the CURRENT line's turn card (null until one is
-  /// picked), and likewise for the river. Replaced when the line changes.
+  /// Decoded chunks for the LINE's pinned runout (`turn/{turnCard}`,
+  /// `river/{turnCard}{riverCard}`). Null until dealt / loading / absent.
   final List<PackNode>? turnNodes;
   final List<PackNode>? riverNodes;
 
-  /// Cursor: action steps + chance steps ('@Ah') from the flop root.
-  final List<String> path;
+  /// The RECORDED line: action steps + chance steps ('@Ah') from the flop
+  /// root. Persistent — never truncated by navigation, only by edits.
+  final List<String> line;
 
-  /// PINNED runout cards ('9s'). Independent of the cursor: they survive
-  /// rewinds (replaying a street auto-deals them — the user never re-enters
-  /// cards) and only change when explicitly re-picked via their card box.
+  /// How many steps of [line] are "played" from the viewer's standpoint. The
+  /// node under inspection is the one reached by line[0..cursor). Always
+  /// normalized to not rest ON a chance step.
+  final int cursor;
+
+  /// Pinned runout cards ('9s') — see the header note.
   final String? turnCard;
   final String? riverCard;
   final bool loading; // spot load in flight
@@ -46,7 +58,8 @@ class ExplorerState {
     this.flopNodes,
     this.turnNodes,
     this.riverNodes,
-    this.path = const [],
+    this.line = const [],
+    this.cursor = 0,
     this.turnCard,
     this.riverCard,
     this.loading = false,
@@ -62,7 +75,8 @@ class ExplorerState {
     List<PackNode>? flopNodes,
     List<PackNode>? turnNodes,
     List<PackNode>? riverNodes,
-    List<String>? path,
+    List<String>? line,
+    int? cursor,
     String? turnCard,
     String? riverCard,
     bool? loading,
@@ -81,7 +95,8 @@ class ExplorerState {
       flopNodes: flopNodes ?? this.flopNodes,
       turnNodes: clearTurn ? null : (turnNodes ?? this.turnNodes),
       riverNodes: clearRiver ? null : (riverNodes ?? this.riverNodes),
-      path: path ?? this.path,
+      line: line ?? this.line,
+      cursor: cursor ?? this.cursor,
       turnCard: clearPins ? null : (turnCard ?? this.turnCard),
       riverCard: clearPins ? null : (riverCard ?? this.riverCard),
       loading: loading ?? this.loading,
@@ -90,28 +105,46 @@ class ExplorerState {
     );
   }
 
-  /// Cards dealt on the current line, in deal order ('Ah', '3d').
+  /// The steps up to the cursor (the position being inspected).
+  List<String> get prefix => line.sublist(0, cursor.clamp(0, line.length));
+
+  /// Cards dealt WITHIN the cursor prefix, in deal order — drives the board
+  /// shown in the grid/lens at the inspected position.
   List<String> get dealtCards => [
-        for (final s in path)
+        for (final s in prefix)
           if (s.startsWith('@')) s.substring(1)
       ];
 
-  /// The node the cursor points at, or null (street closed / hand over /
-  /// chunk not loaded). Node paths are the '/'-joined steps from the root;
-  /// which chunk to search follows from how many cards have been dealt.
-  PackNode? get currentNode {
-    final nodes = switch (dealtCards.length) {
-      0 => flopNodes,
-      1 => turnNodes,
-      _ => riverNodes,
-    };
+  List<PackNode>? _nodesForDealt(int dealt) => switch (dealt) {
+        0 => flopNodes,
+        1 => turnNodes,
+        _ => riverNodes,
+      };
+
+  /// Node reached by [steps], or null (closed street / hand over / chunk
+  /// missing).
+  PackNode? nodeAt(List<String> steps) {
+    var dealt = 0;
+    for (final s in steps) {
+      if (s.startsWith('@')) dealt++;
+    }
+    final nodes = _nodesForDealt(dealt);
     if (nodes == null) return null;
-    final key = path.join('/');
+    final key = steps.join('/');
     for (final n in nodes) {
       if (n.path == key) return n;
     }
     return null;
   }
+
+  /// The node under the cursor.
+  PackNode? get currentNode => nodeAt(prefix);
+
+  /// The recorded action at the cursor (the "as played" choice the decision
+  /// box highlights), or null at the line's end.
+  String? get recordedNext => cursor < line.length ? line[cursor] : null;
+
+  bool get atLineEnd => cursor >= line.length;
 }
 
 class ExplorerNotifier extends StateNotifier<ExplorerState> {
@@ -134,7 +167,8 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     state = state.copyWith(
         spot: spot,
         loading: true,
-        path: const [],
+        line: const [],
+        cursor: 0,
         flopNodes: null,
         clearTurn: true,
         clearRiver: true,
@@ -157,77 +191,153 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     }
   }
 
-  void push(String action) =>
-      state = state.copyWith(path: [...state.path, action]);
-
-  /// Deal [card] ('Ah') on a closed street: appends the chance step, PINS the
-  /// card for its street (so rewinds/replays never re-ask), and lazily fetches
-  /// that runout's chunk (`turn/{card}` after 0 dealt cards,
-  /// `river/{turn}{card}` after 1). A missing/failed chunk keeps the step (the
-  /// screen shows a line-unavailable state with the strip as the way back).
-  Future<void> pickCard(String card) async {
-    final dealt = state.dealtCards;
-    if (dealt.length >= 2) return; // river already dealt
-    final newPath = [...state.path, '@$card'];
-    state = state.copyWith(
-      path: newPath,
-      turnCard: dealt.isEmpty ? card : null,
-      riverCard: dealt.isEmpty ? null : card,
-      clearError: true,
-    );
-    await _loadChunksForPath();
+  /// Move the viewer to step [i] of the line WITHOUT changing the line — the
+  /// "replay any point, even after showdown" navigation. Normalizes forward
+  /// off chance steps (they are not decisions).
+  void setCursor(int i) {
+    var c = i.clamp(0, state.line.length);
+    while (c < state.line.length && state.line[c].startsWith('@')) {
+      c++;
+    }
+    state = state.copyWith(cursor: c, clearError: true);
   }
 
-  /// Re-pin a street's card (the card-box tap): replaces the pin and, when the
-  /// cursor's line already contains that chance step, swaps it IN PLACE — the
-  /// betting line survives (solver trees offer identical action structures on
-  /// every runout card; sizes are pot-relative) and only the chunks re-fetch.
-  Future<void> setPinnedCard({required bool river, required String card}) async {
+  /// Take [action] at the cursor.
+  ///  - Matches the recorded step → pure replay: the cursor advances (through
+  ///    any following chance steps), the line is untouched.
+  ///  - Differs (or the cursor is at the line's end) → the line is EDITED:
+  ///    rewritten up to the cursor + the new action, then the old tail is
+  ///    REGROWN — every subsequent recorded step that remains valid in the
+  ///    new branch is kept (an edit may or may not invalidate later streets).
+  Future<void> advance(String action) async {
+    final s = state;
+    if (s.recordedNext == action) {
+      setCursor(s.cursor + 1);
+      return;
+    }
+    final oldTail = s.cursor + 1 <= s.line.length
+        ? s.line.sublist((s.cursor + 1).clamp(0, s.line.length))
+        : const <String>[];
+    final newLine = [...s.prefix, action];
+    state = s.copyWith(line: newLine, cursor: newLine.length, clearError: true);
+    await _regrowTail(oldTail);
+  }
+
+  /// Deal [card] at the line's end (closed street): appends the chance step,
+  /// pins the card for its street, advances the cursor through it, and
+  /// fetches the runout's chunks.
+  Future<void> pickCard(String card) async {
+    final s = state;
+    if (!s.atLineEnd) return; // mid-line cards change via setPinnedCard
+    final dealt = [
+      for (final x in s.line)
+        if (x.startsWith('@')) x
+    ].length;
+    if (dealt >= 2) return;
+    final newLine = [...s.line, '@$card'];
+    state = s.copyWith(
+      line: newLine,
+      cursor: newLine.length,
+      turnCard: dealt == 0 ? card : null,
+      riverCard: dealt == 0 ? null : card,
+      clearError: true,
+    );
+    await _loadChunksForLine();
+  }
+
+  /// Re-pin a street's card (the card-box tap): replaces the pin and swaps
+  /// any matching chance step IN PLACE — the betting line survives; only the
+  /// chunks re-fetch. Valid at any cursor position.
+  Future<void> setPinnedCard(
+      {required bool river, required String card}) async {
     final m = state.manifest;
     if (m == null) return;
-    // Collisions are excluded in the picker UI; guard anyway.
     if (m.flop.split(' ').contains(card)) return;
     if (river && card == state.turnCard) return;
     if (!river && card == state.riverCard) return;
-    final path = [...state.path];
+    final line = [...state.line];
     final chanceIdxs = [
-      for (var i = 0; i < path.length; i++)
-        if (path[i].startsWith('@')) i
+      for (var i = 0; i < line.length; i++)
+        if (line[i].startsWith('@')) i
     ];
     final pos = river ? 1 : 0;
-    if (chanceIdxs.length > pos) path[chanceIdxs[pos]] = '@$card';
+    if (chanceIdxs.length > pos) line[chanceIdxs[pos]] = '@$card';
     state = state.copyWith(
-      path: path,
+      line: line,
       turnCard: river ? null : card,
       riverCard: river ? card : null,
       clearError: true,
     );
-    await _loadChunksForPath();
+    await _loadChunksForLine();
   }
 
-  /// Fetch the chunks the CURRENT path's dealt cards require (turn/river),
-  /// tolerating absent runouts (currentNode stays null → unavailable state).
-  Future<void> _loadChunksForPath() async {
+  /// Fetch the chunks the LINE's pinned runout requires, tolerating absent
+  /// runouts (nodes stay null → the screen shows an unavailable state).
+  Future<void> _loadChunksForLine() async {
     final client = _client;
     if (client == null) return;
-    final dealt = state.dealtCards;
-    final expected = state.path.join('/');
-    bool stale() => !mounted || state.path.join('/') != expected;
-    state = state.copyWith(chunkLoading: true, clearTurn: true, clearRiver: true);
+    final t = state.turnCard;
+    final r = state.riverCard;
+    final expectedLine = state.line.join('/');
+    bool stale() =>
+        !mounted ||
+        state.line.join('/') != expectedLine ||
+        state.turnCard != t ||
+        state.riverCard != r;
+    state =
+        state.copyWith(chunkLoading: true, clearTurn: true, clearRiver: true);
     List<PackNode>? turn;
     List<PackNode>? river;
     try {
-      if (dealt.isNotEmpty) turn = await client.chunk('turn/${dealt[0]}');
-      if (dealt.length > 1) {
-        river = await client.chunk('river/${dealt[0]}${dealt[1]}');
-      }
+      if (t != null) turn = await client.chunk('turn/$t');
+      if (t != null && r != null) river = await client.chunk('river/$t$r');
     } catch (_) {
-      // Thin/absent runout — keep whatever loaded; the screen shows the
-      // unavailable state for the missing street.
+      // Thin/absent runout — keep whatever loaded.
     }
     if (stale()) return;
     state = state.copyWith(
         turnNodes: turn, riverNodes: river, chunkLoading: false);
+  }
+
+  /// Is the CURRENT street of [steps] cleanly closed (bet matched by a call,
+  /// or checked through heads-up)? Structural — a missing/terminal node must
+  /// not read as "closed" (that conflation once regrew a card onto an
+  /// unresponded bet).
+  static bool _streetIsClosed(List<String> steps) {
+    final street =
+        steps.reversed.takeWhile((s) => !s.startsWith('@')).toList();
+    if (street.isEmpty) return false;
+    final last = street.first.toUpperCase(); // reversed → first = latest
+    if (last.startsWith('CALL')) return true;
+    return street.length >= 2 &&
+        street.every((s) => s.toUpperCase().startsWith('CHECK'));
+  }
+
+  /// After an edit, regrow the old tail: append each old step while it stays
+  /// valid in the new branch — an action must be offered by the node reached;
+  /// a chance step needs a cleanly closed street (and never follows a fold).
+  Future<void> _regrowTail(List<String> oldTail) async {
+    if (oldTail.isEmpty) return;
+    await _loadChunksForLine(); // chunks for the pinned runout, if any
+    if (!mounted) return;
+    final grown = [...state.line];
+    var dealtCount = [
+      for (final x in grown)
+        if (x.startsWith('@')) x
+    ].length;
+    for (final step in oldTail) {
+      if (step.startsWith('@')) {
+        if (!_streetIsClosed(grown) || dealtCount >= 2) break;
+        grown.add(step);
+        dealtCount++;
+      } else {
+        final node = state.nodeAt(grown);
+        if (node == null || !node.actions.contains(step)) break;
+        grown.add(step);
+      }
+    }
+    if (grown.length == state.line.length) return;
+    state = state.copyWith(line: grown);
   }
 
   /// The client for the open spot (prefetching, Phase 3+).
@@ -256,25 +366,6 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
         villainCombos: manifest.oopCombos,
         board: [for (final c in manifest.flop.split(' ')) parseCard(c)],
       ),
-    );
-  }
-
-  /// Truncate the cursor to the first [n] steps (0 = back to the flop root).
-  /// Clamped both ways: a caller computing `path.length - 1` on an empty path
-  /// passes -1, and sublist(0, -1) throws RangeError. Dropping a chance step
-  /// drops its street's nodes (the chunk stays warm in the client LRU, so
-  /// re-dealing the same card is instant).
-  void popTo(int n) {
-    if (n < 0 || n >= state.path.length) return;
-    final newPath = state.path.sublist(0, n);
-    final dealt = [
-      for (final s in newPath)
-        if (s.startsWith('@')) s
-    ].length;
-    state = state.copyWith(
-      path: newPath,
-      clearTurn: dealt < 1,
-      clearRiver: dealt < 2,
     );
   }
 }
