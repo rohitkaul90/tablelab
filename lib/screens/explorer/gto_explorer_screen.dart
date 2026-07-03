@@ -555,12 +555,27 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final scenario = state.manifest!.scenario;
     final out = <Widget>[];
 
+    // A BET for everything behind (or a CALL of one) reads '(all-in)' so the
+    // committed-depth lines aren't a surprise when the runout has no nodes.
+    String rowLabel(PackNode n, String action) {
+      final u = action.toUpperCase();
+      var allIn = false;
+      if (u.startsWith('CALL')) {
+        allIn = n.toCall >= n.behind - 1e-6;
+      } else if (u.startsWith('BET')) {
+        final amt =
+            double.tryParse(RegExp(r'[0-9.]+').firstMatch(u)?.group(0) ?? '');
+        allIn = amt != null && amt >= n.behind - 1e-6;
+      }
+      return '${actionDisplayLabel(action)}${allIn ? ' · all-in' : ''}';
+    }
+
     void decisionRows(List<Widget> rows, PackNode n, int stepIndex,
         {String? taken}) {
       final colors = actionColors(n.actions);
       for (var a = 0; a < n.actions.length; a++) {
         final action = n.actions[a];
-        rows.add(_vRow(context, actionDisplayLabel(action), colors[a],
+        rows.add(_vRow(context, rowLabel(n, action), colors[a],
             highlighted: action == taken, onTap: () {
           setState(() => _preflopInspect = -1);
           final notifier = ref.read(explorerProvider.notifier);
@@ -899,6 +914,27 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
+  /// Did the line's LAST action put the stacks in (bet/raise for everything
+  /// behind, or a call of one)? Uses the pack's per-node chip state.
+  bool _lineIsAllIn(ExplorerState state) {
+    for (var i = state.line.length - 1; i >= 0; i--) {
+      final step = state.line[i];
+      if (step.startsWith('@')) continue;
+      final n = state.nodeAt(state.line.sublist(0, i));
+      if (n == null) return false;
+      final u = step.toUpperCase();
+      if (u.startsWith('ALLIN')) return true;
+      if (u.startsWith('CALL')) return n.toCall >= n.behind - 1e-6;
+      if (u.startsWith('BET') || u.startsWith('RAISE')) {
+        final amt = double.tryParse(
+            RegExp(r'[0-9.]+').firstMatch(u)?.group(0) ?? '');
+        return amt != null && amt >= n.behind - 1e-6;
+      }
+      return false;
+    }
+    return false;
+  }
+
   /// The opponent's most recent action node BEFORE the cursor (searching
   /// prefixes longest-first across the loaded street chunks), or null when
   /// they haven't acted yet (e.g. the flop root).
@@ -951,13 +987,23 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           action: back());
     }
     if (last.startsWith('@')) {
-      // A card was dealt but its line has no node (all-in runouts have no
-      // further decisions; very thin runouts can be absent from a pack).
+      // A card was dealt but its line has no node. Distinguish the ALL-IN
+      // line (stacks are in — the pack is fine, there are just no more
+      // decisions) from a runout chunk the pack doesn't carry.
+      if (_lineIsAllIn(state)) {
+        return _message(context,
+            icon: Icons.paid_outlined,
+            title: 'All-in — runout to showdown',
+            body: 'The stacks went in on an earlier street; there are no '
+                'further decisions on this line. Tap any earlier box above '
+                'to review a decision.',
+            action: back());
+      }
       return _message(context,
           icon: Icons.casino_outlined,
           title: 'No decisions on this runout',
-          body: 'This line has no further action to study (an all-in line, '
-              'or a runout the pack does not carry).',
+          body: 'The pack does not carry this runout — change the card via '
+              'its box above, or tap an earlier action.',
           action: back());
     }
     // Street closed by matched action. All-in call → showdown, no more cards
