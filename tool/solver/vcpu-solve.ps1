@@ -57,6 +57,10 @@ param(
   [int]$Threads = 8,
   # Per-spot solver wall cap (s).
   [int]$TimeoutS = 7200,
+  # Root EBS size (GB). The AMI snapshot is ~193 GB; grow it for pack-emitting
+  # batches (packs + their pull-time tar both land on the root volume - a
+  # 3-scenario river batch produces ~60-70 GB of packs). gp3 costs ~cents/day.
+  [int]$RootGB = 0,
   [string]$InstanceType = 'r7i.8xlarge',
   # Fall back through these (same 256 GB class) if the chosen type lacks capacity.
   [string[]]$Fallbacks = @('r6i.8xlarge', 'r6a.8xlarge', 'r5.8xlarge'),
@@ -115,6 +119,10 @@ foreach ($type in (@($InstanceType) + $Fallbacks)) {
     '--tag-specifications', $tag, '--count', '1',
     '--query', 'Instances[0].InstanceId', '--output', 'text')
   if ($Spot) { $a += @('--instance-market-options', 'MarketType=spot') }
+  if ($RootGB -gt 0) {
+    $a += @('--block-device-mappings',
+      "DeviceName=/dev/sda1,Ebs={VolumeSize=$RootGB,VolumeType=gp3}")
+  }
   Write-Host "Launching $type ($(if ($Spot) {'spot'} else {'on-demand'}))..."
   $out = aws @a
   # Pull the i-... id out of stdout robustly - an AWS CLI notice line alongside the
