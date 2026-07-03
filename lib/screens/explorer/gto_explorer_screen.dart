@@ -405,8 +405,11 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         ),
       ),
     ];
+    // Height must fit the TALLEST box (header + 3 action rows) with slack for
+    // text scaling — a fixed-height horizontal list overflows loudly (21px
+    // RenderFlex overflow at 104).
     return Container(
-      height: 104,
+      height: 128,
       color: scheme.surfaceContainerLowest,
       child: ListView(
         scrollDirection: Axis.horizontal,
