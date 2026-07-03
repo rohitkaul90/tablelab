@@ -45,6 +45,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   GridLens _lens = GridLens.strategy;
   int _rightTab = 0; // 0 = Overview, 1 = Equity chart
   int? _actionFilter; // grid shows only this action's share (right-pane cards)
+  int? _chartHoverCombo; // chart crosshair → grid cell ring
+  Set<int>? _gridHoverCombos; // grid cell hover → chart dots
 
   /// Memoized per-node aggregates shared by the advance bar, grid, and
   /// overview (LayoutBuilder rebuilds must not recompute; the painter's
@@ -64,6 +66,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
     _aggSummary = summarizeNode(node);
     _actionFilter = null;
+    _chartHoverCombo = null; // combo ids are per node/actor
+    _gridHoverCombos = null;
   }
 
   @override
@@ -392,6 +396,20 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   actionColors: colors,
                   lens: _lens,
                   filterAction: _actionFilter,
+                  highlightCell: _chartHoverCombo != null &&
+                          _chartHoverCombo! < combos.length
+                      ? comboCell(combos[_chartHoverCombo!])
+                      : null,
+                  onCellHover: (cell) {
+                    final ids = cell == null
+                        ? null
+                        : cells[cell.$1][cell.$2]
+                            ?.combos
+                            .map((c) => c.comboId)
+                            .toSet();
+                    if (setEquals(ids, _gridHoverCombos)) return;
+                    setState(() => _gridHoverCombos = ids);
+                  },
                   onCellTap: (cell) => showComboDetailSheet(context,
                       cell: cell, node: node, comboNames: combos),
                 ),
@@ -455,37 +473,92 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     });
   }
 
-  /// Cumulative equity distributions at the current game state: the acting
-  /// player's curve from THIS node, the opponent's from their most recent
-  /// node on the line — whose equities were computed vs exactly the range the
-  /// actor holds entering this node, so the two curves describe one state.
+  /// Cumulative equity distributions at the current game state — BOTH players,
+  /// always: the acting player's curve from THIS node; the opponent's from
+  /// their most recent node on the line (whose equities were computed vs
+  /// exactly the range the actor holds entering this node). At the flop root
+  /// the opponent has never acted, so their curve is Monte-Carlo'd on-device
+  /// once per spot (cached in the notifier) and labeled as estimated.
   Widget _equityPane(
       BuildContext context, ExplorerState state, PackNode node) {
-    final scenario = state.manifest?.scenario ?? '?';
+    final manifest = state.manifest!;
+    final scenario = manifest.scenario;
     final actorLabel = seatLabel(scenario, isOop: node.actorIsOop);
+    final oppLabel = seatLabel(scenario, isOop: !node.actorIsOop);
+    final actorNames = manifest.combosFor(oop: node.actorIsOop);
+    final oppNames = manifest.combosFor(oop: !node.actorIsOop);
+    final actorSeries = EquityCurveSeries(
+      '$actorLabel (to act)',
+      const Color(0xFF66BB6A),
+      equityCurve(node.combos),
+      actorNames,
+    );
+
+    Widget chart(List<EquityCurveSeries> series, {String? note}) {
+      if (series.every((s) => s.points.isEmpty)) {
+        return _message(context,
+            icon: Icons.show_chart,
+            title: 'No equity data at this node',
+            body: 'This pack carries no per-combo equity here.');
+      }
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: EquityChart(
+                series: series,
+                highlightCombos: _gridHoverCombos,
+                onHoverCombo: (id) {
+                  if (id == _chartHoverCombo) return;
+                  setState(() => _chartHoverCombo = id);
+                },
+              ),
+            ),
+            if (note != null)
+              Text(note,
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ],
+        ),
+      );
+    }
+
     final oppNode = _opponentNode(state, node);
-    final series = [
-      EquityCurveSeries(
-        '$actorLabel (to act)',
-        const Color(0xFF66BB6A),
-        equityCurve(node.combos),
-      ),
-      if (oppNode != null)
+    if (oppNode != null) {
+      return chart([
+        actorSeries,
         EquityCurveSeries(
-          seatLabel(scenario, isOop: oppNode.actorIsOop),
+          oppLabel,
           const Color(0xFF64B5F6),
           equityCurve(oppNode.combos),
+          oppNames,
         ),
-    ];
-    if (series.every((s) => s.points.isEmpty)) {
-      return _message(context,
-          icon: Icons.show_chart,
-          title: 'No equity data at this node',
-          body: 'This pack carries no per-combo equity here.');
+      ]);
     }
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: EquityChart(series: series),
+    // Flop root: the opponent's curve is computed on-device (once per spot).
+    return FutureBuilder<List<PackCombo>>(
+      future: ref.read(explorerProvider.notifier).rootOpponentEquities(),
+      builder: (context, snap) {
+        final opp = snap.data;
+        return chart(
+          [
+            actorSeries,
+            if (opp != null && opp.isNotEmpty)
+              EquityCurveSeries(
+                '$oppLabel (est.)',
+                const Color(0xFF64B5F6),
+                equityCurve(opp),
+                oppNames,
+              ),
+          ],
+          note: opp == null
+              ? 'computing $oppLabel equity…'
+              : '$oppLabel curve estimated on-device (full ranges, this board)',
+        );
+      },
     );
   }
 

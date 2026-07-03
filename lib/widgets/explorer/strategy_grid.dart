@@ -44,6 +44,13 @@ class StrategyGrid extends StatelessWidget {
   /// the action's frequency, in the action's color. Overrides the lens.
   final int? filterAction;
   final void Function(GridCellAgg cell)? onCellTap;
+
+  /// Cell to draw an illumination ring on (chart hover → grid link).
+  final (int, int)? highlightCell;
+
+  /// Fired as the pointer moves across cells (null on exit) — feeds the
+  /// grid → chart link. Only fires on cell CHANGE.
+  final void Function((int, int)? cell)? onCellHover;
   const StrategyGrid({
     super.key,
     required this.cells,
@@ -51,6 +58,8 @@ class StrategyGrid extends StatelessWidget {
     this.lens = GridLens.strategy,
     this.filterAction,
     this.onCellTap,
+    this.highlightCell,
+    this.onCellHover,
   });
 
   @override
@@ -58,22 +67,33 @@ class StrategyGrid extends StatelessWidget {
     return AspectRatio(
       aspectRatio: 1,
       child: LayoutBuilder(builder: (context, constraints) {
-        return GestureDetector(
-          onTapUp: onCellTap == null
+        (int, int)? cellAt(Offset local) {
+          final col = (local.dx / constraints.maxWidth * 13).floor();
+          final row = (local.dy / constraints.maxHeight * 13).floor();
+          if (row < 0 || row > 12 || col < 0 || col > 12) return null;
+          return (row, col);
+        }
+
+        return MouseRegion(
+          onHover: onCellHover == null
               ? null
-              : (d) {
-                  final col =
-                      (d.localPosition.dx / constraints.maxWidth * 13).floor();
-                  final row =
-                      (d.localPosition.dy / constraints.maxHeight * 13).floor();
-                  if (row < 0 || row > 12 || col < 0 || col > 12) return;
-                  final cell = cells[row][col];
-                  if (cell != null) onCellTap!(cell);
-                },
-          child: RepaintBoundary(
-            child: CustomPaint(
-              painter: _GridPainter(cells, actionColors, lens, filterAction),
-              size: Size.infinite,
+              : (e) => onCellHover!(cellAt(e.localPosition)),
+          onExit: onCellHover == null ? null : (_) => onCellHover!(null),
+          child: GestureDetector(
+            onTapUp: onCellTap == null
+                ? null
+                : (d) {
+                    final c = cellAt(d.localPosition);
+                    if (c == null) return;
+                    final cell = cells[c.$1][c.$2];
+                    if (cell != null) onCellTap!(cell);
+                  },
+            child: RepaintBoundary(
+              child: CustomPaint(
+                painter: _GridPainter(
+                    cells, actionColors, lens, filterAction, highlightCell),
+                size: Size.infinite,
+              ),
             ),
           ),
         );
@@ -87,7 +107,9 @@ class _GridPainter extends CustomPainter {
   final List<Color> colors;
   final GridLens lens;
   final int? filterAction;
-  _GridPainter(this.cells, this.colors, this.lens, this.filterAction);
+  final (int, int)? highlightCell;
+  _GridPainter(this.cells, this.colors, this.lens, this.filterAction,
+      this.highlightCell);
 
   static const _bg = Color(0xFF141914);
   static const _absent = Color(0xFF1D231D);
@@ -163,6 +185,19 @@ class _GridPainter extends CustomPainter {
         _text(canvas, rect, cell.hand, labelStyle);
       }
     }
+
+    // Chart-hover link: illuminate the hovered combo's cell.
+    final hl = highlightCell;
+    if (hl != null) {
+      final rect = Rect.fromLTWH(hl.$2 * cw, hl.$1 * ch, cw - 1, ch - 1);
+      canvas.drawRect(
+        rect.deflate(0.75),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = const Color(0xFFFFF176), // soft amber ring
+      );
+    }
   }
 
   // Absent cells still get their hand label (dimmed) for orientation — from
@@ -183,5 +218,6 @@ class _GridPainter extends CustomPainter {
       old.cells != cells ||
       old.colors != colors ||
       old.lens != lens ||
-      old.filterAction != filterAction;
+      old.filterAction != filterAction ||
+      old.highlightCell != highlightCell;
 }

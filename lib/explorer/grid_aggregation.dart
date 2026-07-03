@@ -157,7 +157,8 @@ List<List<GridCellAgg?>> aggregateGrid(
 
 /// One point on a cumulative equity-distribution curve: [x] = position in the
 /// range (0..1, reach-weighted, sorted by equity ascending), [y] = equity.
-typedef EquityCurvePoint = ({double x, double y});
+/// Carries its combo's id so hover/linking can illuminate the grid cell.
+typedef EquityCurvePoint = ({double x, double y, int comboId});
 
 /// The classic solver equity-distribution curve for a node's range: sort the
 /// live combos by equity, walk them left→right weighted by reach, plot each
@@ -174,7 +175,8 @@ List<EquityCurvePoint> equityCurve(List<PackCombo> combos) {
   final points = <EquityCurvePoint>[];
   var cum = 0.0;
   for (final c in live) {
-    points.add((x: (cum + c.reach / 2) / total, y: c.equity!));
+    points
+        .add((x: (cum + c.reach / 2) / total, y: c.equity!, comboId: c.comboId));
     cum += c.reach;
   }
   return points;

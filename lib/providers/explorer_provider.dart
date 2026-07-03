@@ -4,12 +4,15 @@
 // are LAZILY fetched when a card is picked (chance steps are '@Ah' path steps,
 // matching the pack's node paths).
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../equity/card.dart';
 import '../explorer/explorer_client.dart';
 import '../explorer/pack_codec.dart';
 import '../explorer/pack_manifest.dart';
 import '../explorer/pack_source.dart';
+import '../explorer/root_equity.dart';
 
 class ExplorerState {
   final bool scanning; // initial spot discovery in flight
@@ -129,6 +132,8 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
       final nodes = await client.chunk('flop');
       if (!mounted || state.spot != spot) return;
       _client = client;
+      _rootOppFuture = null; // per-spot cache
+      _rootOppSpot = null;
       state =
           state.copyWith(manifest: manifest, flopNodes: nodes, loading: false);
     } catch (e) {
@@ -169,6 +174,32 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
 
   /// The client for the open spot (prefetching, Phase 3+).
   ExplorerPackClient? get client => _client;
+
+  Future<List<PackCombo>>? _rootOppFuture;
+  ExplorerSpotRef? _rootOppSpot;
+
+  /// Equity distribution for the player who has NOT acted at the flop root
+  /// (the IP player) — the packs store no equity for them there, so it's
+  /// Monte-Carlo'd on-device ONCE per spot (compute isolate) and cached.
+  Future<List<PackCombo>> rootOpponentEquities() {
+    final spot = state.spot;
+    final manifest = state.manifest;
+    if (spot == null || manifest == null) {
+      return Future.value(const <PackCombo>[]);
+    }
+    if (_rootOppFuture != null && identical(_rootOppSpot, spot)) {
+      return _rootOppFuture!;
+    }
+    _rootOppSpot = spot;
+    return _rootOppFuture = compute(
+      computeRootEquities,
+      RootEquityPayload(
+        heroCombos: manifest.ipCombos, // the flop root's actor is always OOP
+        villainCombos: manifest.oopCombos,
+        board: [for (final c in manifest.flop.split(' ')) parseCard(c)],
+      ),
+    );
+  }
 
   /// Truncate the cursor to the first [n] steps (0 = back to the flop root).
   /// Clamped both ways: a caller computing `path.length - 1` on an empty path
