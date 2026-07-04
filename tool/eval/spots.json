@@ -63,6 +63,51 @@
     "reads": []
   },
   {
+    "id": "gto-e-ip-fcheck-marg-sh",
+    "file": "tool/eval/samples/gto/gto-e-ip-fcheck-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 3,
+    "bucket": "gto-frequency",
+    "notes": "EARLY IP facing_check, top pair (marginalMade), shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-e-oop-fbet-marg-md",
+    "file": "tool/eval/samples/gto/gto-e-oop-fbet-marg-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "EARLY OOP facing_bet (big), top pair, medium",
+    "reads": []
+  },
+  {
+    "id": "gto-e-oop-fta-strong-md",
+    "file": "tool/eval/samples/gto/gto-e-oop-fta-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "EARLY OOP first_to_act (lead), set (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-e-r-oop-fbet-marg-sh",
+    "file": "tool/eval/samples/gto/gto-e-r-oop-fbet-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "EARLY RIVER OOP facing_bet (bluff-catch), top pair 9, shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-e-t-ip-fcheck-strong-md",
+    "file": "tool/eval/samples/gto/gto-e-t-ip-fcheck-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 3,
+    "bucket": "gto-frequency",
+    "notes": "EARLY TURN IP facing_check, set (strongMade), medium",
+    "reads": []
+  },
+  {
     "id": "gto-ip-fbet-marg-md",
     "file": "tool/eval/samples/gto/gto-ip-fbet-marg-md.json",
     "source": "synthetic/gto",
@@ -114,6 +159,51 @@
     "hero": 0,
     "bucket": "gto-frequency",
     "notes": "IP facing_check, set (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-m-ip-fcheck-air-sh",
+    "file": "tool/eval/samples/gto/gto-m-ip-fcheck-air-sh.json",
+    "source": "synthetic/gto",
+    "hero": 5,
+    "bucket": "gto-frequency",
+    "notes": "MIDDLE IP facing_check, air, shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-m-oop-fbet-wdraw-md",
+    "file": "tool/eval/samples/gto/gto-m-oop-fbet-wdraw-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "MIDDLE OOP facing_bet (small), gutshot (weakDraw), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-m-oop-fta-marg-sh",
+    "file": "tool/eval/samples/gto/gto-m-oop-fta-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "MIDDLE OOP first_to_act (check-through), top pair, shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-m-r-ip-fbet-strong-md",
+    "file": "tool/eval/samples/gto/gto-m-r-ip-fbet-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 5,
+    "bucket": "gto-frequency",
+    "notes": "MIDDLE RIVER IP facing_bet, set of sixes (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-m-t-oop-fbet-marg-sh",
+    "file": "tool/eval/samples/gto/gto-m-t-oop-fbet-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "MIDDLE TURN OOP facing_bet (mid), top pair, shallow",
     "reads": []
   },
   {

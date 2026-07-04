@@ -1241,19 +1241,23 @@ void main() {
 
     test('out-of-scenario hand → no GTO frequency FACT even with a library',
         () async {
+      // SB opener: the one SRP shape excluded by design (opens OOP — the
+      // position-keyed cells would invert). CO/UTG openers map to their own
+      // scenarios since Cycle B, so they no longer test the negative path.
       final check = await computeHandEquityCheck(
-        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 5, streets: [
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 1, streets: [
           const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 1, type: ActionType.post, amount: 1), // SB
             HandAction(seat: 2, type: ActionType.post, amount: 2),
-            HandAction(seat: 5, type: ActionType.raise, amount: 5), // CO (not late)
+            HandAction(seat: 1, type: ActionType.raise, amount: 5), // SB opens
             HandAction(seat: 2, type: ActionType.call, amount: 5),
           ]),
           const StreetData(
               street: Street.flop,
               communityCards: ['Ks', '9h', '4c'],
               actions: [
-                HandAction(seat: 2, type: ActionType.check),
-                HandAction(seat: 5, type: ActionType.raise, amount: 4),
+                // SB is OOP postflop and leads; the BB hero calls.
+                HandAction(seat: 1, type: ActionType.raise, amount: 4),
                 HandAction(seat: 2, type: ActionType.call, amount: 4),
               ]),
         ]),

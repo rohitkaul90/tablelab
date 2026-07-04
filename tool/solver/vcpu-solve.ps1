@@ -168,7 +168,11 @@ function Invoke-SshTimed {
   $j = Start-Job -ScriptBlock {
     param($sshArgs, $cmd)
     $out = ssh @sshArgs $cmd 2>$null
-    [pscustomobject]@{ Code = $LASTEXITCODE; Out = "$out" }
+    # Join with NEWLINES: "$out" space-joins the line array, which corrupted
+    # multi-line results (the batch health check parsed 'grep 1; grep 0' as
+    # the single token '1 0' -> false 'no library write' -> Cycle B's box was
+    # left running after a fully successful solve).
+    [pscustomobject]@{ Code = $LASTEXITCODE; Out = ($out -join "`n") }
   } -ArgumentList (, $ssh), $RemoteCmd
   if (Wait-Job $j -Timeout $TimeoutSec) {
     $r = Receive-Job $j | Select-Object -Last 1

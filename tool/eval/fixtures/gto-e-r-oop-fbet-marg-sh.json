@@ -1,0 +1,232 @@
+{
+  "id": "gto-e-r-oop-fbet-marg-sh",
+  "source": "synthetic/gto",
+  "heroPlayer": 2,
+  "bucket": "gto-frequency",
+  "reads": [],
+  "hand": {
+    "id": "gto-e-r-oop-fbet-marg-sh",
+    "userId": "eval",
+    "playedAt": "2026-06-28T00:00:00.000",
+    "tableSetup": {
+      "numSeats": 6,
+      "buttonSeat": 0,
+      "heroSeat": 2,
+      "smallBlind": 1,
+      "bigBlind": 2
+    },
+    "players": [
+      {
+        "seat": 2,
+        "name": "Hero",
+        "stack": 30,
+        "isHero": true,
+        "holeCards": [
+          "9h",
+          "Tc"
+        ]
+      },
+      {
+        "seat": 3,
+        "name": "Villain",
+        "stack": 30,
+        "isHero": false
+      }
+    ],
+    "streets": [
+      {
+        "street": "preflop",
+        "communityCards": [],
+        "actions": [
+          {
+            "seat": 2,
+            "type": "post",
+            "amount": 2,
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "raise",
+            "amount": 5,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 5,
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "flop",
+        "communityCards": [
+          "9s",
+          "8d",
+          "6c"
+        ],
+        "actions": [
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "turn",
+        "communityCards": [
+          "2s"
+        ],
+        "actions": [
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "check",
+            "allIn": false
+          }
+        ]
+      },
+      {
+        "street": "river",
+        "communityCards": [
+          "3d"
+        ],
+        "actions": [
+          {
+            "seat": 2,
+            "type": "check",
+            "allIn": false
+          },
+          {
+            "seat": 3,
+            "type": "raise",
+            "amount": 6,
+            "allIn": false
+          },
+          {
+            "seat": 2,
+            "type": "call",
+            "amount": 6,
+            "allIn": false
+          }
+        ]
+      }
+    ],
+    "isTournament": false
+  },
+  "equityFacts": [
+    "[FACT — Hero equity vs the modeled villain range(s), computed on-device by Monte Carlo (10000 trials), NOT by you: pre-flop ~28%, flop ~61%, turn ~60%, river ~31%. These are deterministic ground truth — your assessment of each street MUST be consistent with them. The modeled villain ranges already include a GTO-balanced share of bluffs, so this is hero's true bluff-catch equity — compare it directly to any pot-odds price FACT (whether labelled \"Price for hero to call\" or \"Price hero was getting when he folded\") to decide call vs fold. A low number means hero loses to most of villain's range and is at best a weak bluff-catcher.]",
+    "[FACT — Villain Villain (UTG) range behind the equity above: Pre-flop: open-raised → UTG opening range (~6% of hands); Flop: check → range unchanged; Turn: check → range unchanged; River: raise (~60% pot) → polarized: top 22% value + bottom 9% bluffs.]",
+    "[HEURISTIC — Equity REALIZATION (raw equity discounted for hero's position + hand class; ESTIMATED, not exact): flop ~61% → realized ~46% (OOP, a marginal made hand); turn ~60% → realized ~45% (OOP, a marginal made hand); river ~31% → realized ~23% (OOP, a marginal made hand). A marginal hand out of position rarely realizes its raw equity; a strong made hand over-realizes. Weigh the continue / bluff-catch read against the REALIZED figure, not the raw one — but this is heuristic context: a decisive pot-odds price FACT and the hard equity FACT above still take precedence.]",
+    "[HEURISTIC — SPR & COMMITMENT (effective stack ÷ pot, hero-centric; ESTIMATED, not exact): flop SPR ~2.5 — to get all-in profitably needs ~42% equity (low SPR — favours stacking off strong made hands); turn SPR ~2.5 — to get all-in profitably needs ~42% equity (low SPR — favours stacking off strong made hands); river SPR ~2.5 — to get all-in profitably needs ~42% equity (low SPR — favours stacking off strong made hands). Use this for the call-vs-raise / stack-off decision, NOT the bluff-catch call (pot odds govern that): at low SPR a strong-enough made hand should commit, at high SPR a one-pair hand favours pot control. With a marginal made hand villain's stack-off range skews to sets/two-pair, so require more than the raw %. The stack-off % is the equity to get all-in profitably versus a willing range, NOT hero's pot-odds price. This is heuristic context — a decisive pot-odds price FACT and the hard equity FACT still take precedence.]",
+    "[HEURISTIC — GTO frequency (a balanced solver baseline for how often to take each action with hero's hand class on this texture, from offline solves of this exact spot type — a soft PRIOR for frequency, NOT a read on this specific hand): flop (OOP, a marginal made hand, first to act): check ~97%, small bet ~3%; turn (OOP, a marginal made hand, first to act): check ~77%, small bet ~19%, bet ~3%, big bet ~1%; river (OOP, a marginal made hand, facing a medium bet): fold ~47%, call ~47%, raise ~6%. Use it to sanity-check whether hero's line is a normal part of a balanced strategy; it is NEVER by itself a reason to mark a street wasGto:false or set leakDetected, and a hard [FACT —] or a decisive pot-odds price still decides the spot.]"
+  ],
+  "labels": {
+    "heroHoleCards": [
+      "9h",
+      "Tc"
+    ],
+    "finalBoard": [
+      "9s",
+      "8d",
+      "6c",
+      "2s",
+      "3d"
+    ],
+    "perStreet": [
+      {
+        "street": "flop",
+        "board": [
+          "9s",
+          "8d",
+          "6c"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.6084,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "5-6-7-8-9",
+          "6-7-8-9-T"
+        ]
+      },
+      {
+        "street": "turn",
+        "board": [
+          "9s",
+          "8d",
+          "6c",
+          "2s"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.60355,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "5-6-7-8-9",
+          "6-7-8-9-T"
+        ]
+      },
+      {
+        "street": "river",
+        "board": [
+          "9s",
+          "8d",
+          "6c",
+          "2s",
+          "3d"
+        ],
+        "heroCategory": "ONE_PAIR",
+        "heroEquity": 0.3109,
+        "boatOrQuadsPossible": false,
+        "flushPossible": false,
+        "flushSuit": null,
+        "allowedStraightWindows": [
+          "2-3-4-5-6",
+          "5-6-7-8-9",
+          "6-7-8-9-T"
+        ]
+      }
+    ],
+    "forcedDecision": {
+      "street": "river",
+      "heroCalled": true,
+      "requiredPct": 27,
+      "heroEquityPct": 31,
+      "forcedAction": "call",
+      "heroActionCorrect": true
+    },
+    "realizedEquityByStreet": {
+      "flop": 0.45630000000000004,
+      "turn": 0.4526625,
+      "river": 0.23317500000000002
+    },
+    "sprByStreet": {
+      "flop": 2.5,
+      "turn": 2.5,
+      "river": 2.5
+    },
+    "boardVolatilityByStreet": {
+      "flop": {
+        "dynamicFraction": 0.673469387755102,
+        "isDynamic": true
+      },
+      "turn": {
+        "dynamicFraction": 0.875,
+        "isDynamic": true
+      }
+    }
+  }
+}
