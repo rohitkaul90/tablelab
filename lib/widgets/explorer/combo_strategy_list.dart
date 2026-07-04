@@ -1,7 +1,8 @@
-// GTO Explorer — the per-combo strategy list for a selected grid cell: a hand
-// and all its suit combos, each with its strategy mix as a stacked bar plus the
-// per-action frequency (colored to match the actions above). Has NO scrollable
-// of its own — it sits inside the Overview panel's ListView.
+// GTO Explorer — the Hands panel's combo BOXES for the hovered grid cell (a
+// hand + all its suits), laid out two per row like GTO Wizard. Each box shows
+// the suit-colored combo and its per-action strategy frequencies (e.g.
+// "Check 90% / Bet 33% 10%") over a thin stacked bar. No scrollable of its own
+// — it sits inside the Overview panel's ListView.
 
 import 'package:flutter/material.dart';
 
@@ -28,63 +29,106 @@ class ComboStrategyList extends StatelessWidget {
     3: Color(0xFFE0E0E0), // s
   };
 
+  static String _pct(double f) {
+    final v = f * 100;
+    return v == v.roundToDouble() ? '${v.round()}%' : '${v.toStringAsFixed(1)}%';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = actionColors(node.actions);
     final combos = [...cell.combos]..sort((a, b) => b.reach.compareTo(a.reach));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [for (final c in combos) _row(context, c, colors)],
-    );
+    // Two boxes per row.
+    final rows = <Widget>[];
+    for (var i = 0; i < combos.length; i += 2) {
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        // IntrinsicHeight bounds the row's height so the two boxes can stretch
+        // to equal height — a bare stretch inside the ListView's unbounded
+        // vertical axis crashes (RenderFlex size MISSING / h<=Infinity).
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _box(context, combos[i], colors)),
+              const SizedBox(width: 8),
+              if (i + 1 < combos.length)
+                Expanded(child: _box(context, combos[i + 1], colors))
+              else
+                const Expanded(child: SizedBox()),
+            ],
+          ),
+        ),
+      ));
+    }
+    return Column(children: rows);
   }
 
-  Widget _row(BuildContext context, PackCombo c, List<Color> colors) {
+  Widget _box(BuildContext context, PackCombo c, List<Color> colors) {
     final scheme = Theme.of(context).colorScheme;
     final name =
         c.comboId < comboNames.length ? comboNames[c.comboId] : '#${c.comboId}';
-    final hasFreq = c.freqs.any((f) => f > 0);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
+    // Actions taken, dominant first.
+    final taken = [
+      for (var a = 0; a < c.freqs.length && a < node.actions.length; a++)
+        if (c.freqs[a] > 0) a
+    ]..sort((a, b) => c.freqs[b].compareTo(c.freqs[a]));
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 7),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(width: 46, child: _label(name)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: SizedBox(
-                height: 12,
-                child: Row(children: [
-                  for (var a = 0; a < c.freqs.length && a < colors.length; a++)
-                    if (c.freqs[a] > 0)
-                      Expanded(
-                        flex: (c.freqs[a] * 1000).round(),
-                        child: ColoredBox(color: colors[a]),
-                      ),
-                  if (!hasFreq)
-                    Expanded(
-                        child:
-                            ColoredBox(color: scheme.surfaceContainerHighest)),
-                ]),
+          _label(name),
+          const SizedBox(height: 6),
+          for (final a in taken)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Row(
+                children: [
+                  Container(
+                    width: 9,
+                    height: 9,
+                    decoration:
+                        BoxDecoration(color: colors[a], shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                        actionSizeLabel(node.actions[a],
+                            potBefore: node.potBefore, behind: node.behind),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13.5)),
+                  ),
+                  Text(_pct(c.freqs[a]),
+                      style: const TextStyle(
+                          fontSize: 13.5, fontWeight: FontWeight.w800)),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          // Per-action frequency, colored to match the bar / the actions above.
-          SizedBox(
-            width: 74,
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 6,
-              children: [
+          const SizedBox(height: 6),
+          // Thin stacked strategy bar.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: SizedBox(
+              height: 6,
+              child: Row(children: [
                 for (var a = 0; a < c.freqs.length && a < colors.length; a++)
                   if (c.freqs[a] > 0)
-                    Text('${(c.freqs[a] * 100).round()}',
-                        style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w800,
-                            color: colors[a])),
-              ],
+                    Expanded(
+                      flex: (c.freqs[a] * 1000).round(),
+                      child: ColoredBox(color: colors[a]),
+                    ),
+                if (taken.isEmpty)
+                  Expanded(
+                      child: ColoredBox(color: scheme.surfaceContainerHighest)),
+              ]),
             ),
           ),
         ],
@@ -100,7 +144,7 @@ class ComboStrategyList extends StatelessWidget {
           TextSpan(
             text: '${part[0]}${kSuitSymbols[kSuitChars.indexOf(part[1])]}',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: _suitColors[kSuitChars.indexOf(part[1])],
             ),

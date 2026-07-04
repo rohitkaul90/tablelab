@@ -170,27 +170,79 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       }),
     );
     if (!widget.showScaffold) return body;
+    // Focus mode: drop the app bar (and the bottom nav, via MainNavigation) so
+    // the spot gets the full window; float a small controls cluster instead.
+    final maximized = ref.watch(studyMaximizedProvider);
+    void setMax(bool v) =>
+        ref.read(studyMaximizedProvider.notifier).state = v;
     return Theme(
       data: AppTheme.dark,
       child: Scaffold(
-        appBar: AppBar(
-          // Study is a bottom-nav tab now: the hamburger opens the app drawer,
-          // and the gear holds the Cash/Tournament toggle (+ room for future
-          // options like stack sizes) so it costs no strip space.
-          leading: IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
+        appBar: maximized
+            ? null
+            : AppBar(
+                // The hamburger opens the app drawer; the gear holds the
+                // Cash/Tournament + stack-depth settings; fullscreen enters
+                // focus mode.
+                leading: IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () =>
+                      mainScaffoldKey.currentState?.openDrawer(),
+                ),
+                title: const Text('GTO Study'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.fullscreen),
+                    tooltip: 'Focus mode',
+                    onPressed: () => setMax(true),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.tune),
+                    tooltip: 'Study settings',
+                    onPressed: () => _openStudySettings(context),
+                  ),
+                ],
+              ),
+        body: maximized
+            ? Stack(
+                children: [
+                  Positioned.fill(child: SafeArea(child: body)),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: SafeArea(child: _focusControls(context, setMax)),
+                  ),
+                ],
+              )
+            : body,
+      ),
+    );
+  }
+
+  /// The floating controls shown in focus mode (settings + exit), since the app
+  /// bar is hidden. A translucent pill so it reads over the felt/strip.
+  Widget _focusControls(BuildContext context, void Function(bool) setMax) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerHighest.withValues(alpha: 0.82),
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Study settings',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _openStudySettings(context),
           ),
-          title: const Text('GTO Study'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.tune),
-              tooltip: 'Study settings',
-              onPressed: () => _openStudySettings(context),
-            ),
-          ],
-        ),
-        body: body,
+          IconButton(
+            icon: const Icon(Icons.fullscreen_exit),
+            tooltip: 'Exit focus mode',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => setMax(false),
+          ),
+        ],
       ),
     );
   }
@@ -1153,19 +1205,28 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                           _chartHoverCombo! < combos.length
                       ? comboCell(combos[_chartHoverCombo!])
                       : null,
+                  // Hover drives the Hands panel: the hovered hand's combos
+                  // populate the boxes (sticky — the last hand stays shown when
+                  // the mouse leaves the grid, so it doesn't flicker to empty).
                   onCellHover: (cell) {
-                    final ids = cell == null
-                        ? null
-                        : cells[cell.$1][cell.$2]
-                            ?.combos
-                            .map((c) => c.comboId)
-                            .toSet();
-                    if (setEquals(ids, _gridHoverCombos)) return;
-                    setState(() => _gridHoverCombos = ids);
+                    final agg =
+                        cell == null ? null : cells[cell.$1][cell.$2];
+                    final ids = agg?.combos.map((c) => c.comboId).toSet();
+                    final hand = agg?.hand;
+                    final handChanged = hand != null && hand != _selectedHand;
+                    if (setEquals(ids, _gridHoverCombos) && !handChanged) {
+                      return;
+                    }
+                    setState(() {
+                      _gridHoverCombos = ids;
+                      if (hand != null) _selectedHand = hand;
+                    });
                   },
+                  // Tap also selects (touch, where there is no hover) and shows
+                  // the Overview so the Hands panel is visible.
                   onCellTap: (cell) => setState(() {
                     _selectedHand = cell.hand;
-                    _rightTab = 0; // reveal the Hands panel in the Overview
+                    _rightTab = 0;
                   }),
                 ),
               ),
@@ -1176,6 +1237,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       }),
     );
     final rightPane = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -1194,20 +1256,21 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           ),
         ),
         Expanded(
-          child: _rightTab == 0
-              ? OverviewPanel(
-                  node: node,
-                  summary: summary,
-                  actorLabel: actor,
-                  selectedAction: _actionFilter,
-                  bbPerUnit:
-                      bbPerUnit(manifest.scenario, manifest.pot0),
-                  comboNames: combos,
-                  selectedCell: _selectedCellFor(cells),
-                  onActionTap: (a) => setState(
-                      () => _actionFilter = _actionFilter == a ? null : a),
-                )
-              : _equityPane(context, state, node),
+          // Both tabs render the Overview; the Equity-chart tab swaps the stat
+          // box for the equity chart above the actions.
+          child: OverviewPanel(
+            node: node,
+            summary: summary,
+            actorLabel: actor,
+            selectedAction: _actionFilter,
+            bbPerUnit: bbPerUnit(manifest.scenario, manifest.pot0),
+            comboNames: combos,
+            selectedCell: _selectedCellFor(cells),
+            headerChart:
+                _rightTab == 1 ? _equityPane(context, state, node) : null,
+            onActionTap: (a) => setState(
+                () => _actionFilter = _actionFilter == a ? null : a),
+          ),
         ),
       ],
     );
@@ -1255,35 +1318,39 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       actorNames,
     );
 
+    // Fixed height — the chart now sits inside the Overview's scroll (above the
+    // actions), not a full pane, so it can't use Expanded.
     Widget chart(List<EquityCurveSeries> series, {String? note}) {
       if (series.every((s) => s.points.isEmpty)) {
-        return _message(context,
-            icon: Icons.show_chart,
-            title: 'No equity data at this node',
-            body: 'This pack carries no per-combo equity here.');
+        return Text('No per-combo equity at this node.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant));
       }
-      return Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: EquityChart(
-                series: series,
-                highlightCombos: _gridHoverCombos,
-                onHoverCombo: (id) {
-                  if (id == _chartHoverCombo) return;
-                  setState(() => _chartHoverCombo = id);
-                },
-              ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 200,
+            child: EquityChart(
+              series: series,
+              highlightCombos: _gridHoverCombos,
+              onHoverCombo: (id) {
+                if (id == _chartHoverCombo) return;
+                setState(() => _chartHoverCombo = id);
+              },
             ),
-            if (note != null)
-              Text(note,
+          ),
+          if (note != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(note,
                   style: TextStyle(
                       fontSize: 10,
                       color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ],
-        ),
+            ),
+        ],
       );
     }
 
@@ -1578,7 +1645,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// same DCE classes the AI coaching quotes).
   Widget _lensBar(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         SegmentedButton<GridLens>(
           showSelectedIcon: false,

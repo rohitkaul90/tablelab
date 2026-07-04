@@ -408,3 +408,9 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
 
 final explorerProvider = StateNotifierProvider<ExplorerNotifier, ExplorerState>(
     (ref) => ExplorerNotifier());
+
+/// Focus/maximize mode for the Study tab: when true the app chrome (the GTO
+/// Study app bar + the bottom navigation) hides so the spot gets the full
+/// window. Toggled from the Study screen; MainNavigation watches it to drop the
+/// bottom nav.
+final studyMaximizedProvider = StateProvider<bool>((ref) => false);

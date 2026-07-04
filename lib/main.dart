@@ -182,6 +182,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     // up later. The calculators (Equity/ICM) now live in the drawer's Tools.
     final showStudy =
         kDebugMode || ref.watch(explorerProvider).spots.isNotEmpty;
+    // Study focus mode hides the bottom nav for a full-window spot view.
+    final maximized = ref.watch(studyMaximizedProvider);
 
     final tabs = <Widget>[
       const DashboardScreen(),
@@ -203,8 +205,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       // Cap text scaling for the bottom bar so its labels stay single-line. On a
       // large system font setting (e.g. Samsung "Large" font / screen zoom) the
       // longest label wrapped to two lines within its equal-width slot. Clamping
-      // to 1.0 keeps all labels on one line.
-      bottomNavigationBar: MediaQuery.withClampedTextScaling(
+      // to 1.0 keeps all labels on one line. Hidden in Study focus mode.
+      bottomNavigationBar: maximized
+          ? null
+          : MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.0,
         child: NavigationBar(
           selectedIndex: index,
