@@ -18,6 +18,11 @@ class OverviewPanel extends StatelessWidget {
   /// The action index currently filtering the grid (highlighted card).
   final int? selectedAction;
   final void Function(int actionIndex) onActionTap;
+
+  /// bb per normalized pack unit (the solver scale pins the flop pot to 10).
+  /// When non-null the pot/price show in big blinds; null (a scenario with no
+  /// bb anchor) falls back to a pot-relative price.
+  final double? bbPerUnit;
   const OverviewPanel({
     super.key,
     required this.node,
@@ -25,7 +30,13 @@ class OverviewPanel extends StatelessWidget {
     required this.actorLabel,
     required this.selectedAction,
     required this.onActionTap,
+    this.bbPerUnit,
   });
+
+  static String _fmtBB(double v) {
+    final s = v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+    return '${s}bb';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,14 +55,25 @@ class OverviewPanel extends StatelessWidget {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
+        // The pack solves in a normalized chip scale (flop pot pinned to 10,
+        // stacks = SPR×10). With a bb anchor we show the pot/price in big
+        // blinds; SPR is always the scale-free depth read.
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            _stat(context, 'Pot', node.potBefore.toStringAsFixed(1)),
-            if (node.toCall > 0)
-              _stat(context, 'To call', node.toCall.toStringAsFixed(1)),
-            _stat(context, 'Behind', node.behind.toStringAsFixed(1)),
+            if (bbPerUnit != null && node.potBefore > 0)
+              _stat(context, 'Pot', _fmtBB(node.potBefore * bbPerUnit!)),
+            if (node.toCall > 0 && node.potBefore > 0)
+              _stat(
+                  context,
+                  'To call',
+                  bbPerUnit != null
+                      ? _fmtBB(node.toCall * bbPerUnit!)
+                      : '${(node.toCall / node.potBefore * 100).round()}% pot'),
+            if (node.potBefore > 0)
+              _stat(context, 'SPR',
+                  (node.behind / node.potBefore).toStringAsFixed(1)),
             _stat(context, 'Combos', summary.totalReach.toStringAsFixed(1)),
             if (summary.equityMean != null)
               _stat(context, 'Equity',
@@ -138,7 +160,9 @@ class OverviewPanel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(actionDisplayLabel(agg.label),
+                      Text(
+                          actionSizeLabel(agg.label,
+                              potBefore: node.potBefore, behind: node.behind),
                           style: const TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w700)),
                       Text(

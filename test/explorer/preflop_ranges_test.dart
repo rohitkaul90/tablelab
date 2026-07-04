@@ -110,4 +110,50 @@ void main() {
           isNull);
     });
   });
+
+  group('bb anchoring', () {
+    test('bbPerUnit anchors the normalized pot-10 scale to bb', () {
+      expect(bbPerUnit('srp_late_v_bb', 10), closeTo(0.55, 1e-9));
+      expect(bbPerUnit('3bp_bb_v_btn', 10), closeTo(2.25, 1e-9));
+      expect(bbPerUnit('unknown_scenario', 10), isNull);
+    });
+
+    test('per-player preflop investment matches the flop anchor', () {
+      // Each player commits half of (flop pot − dead SB): SRP 2.5, 3-bet 11.
+      expect(perPlayerPreflopInvestBB('srp_late_v_bb'), closeTo(2.5, 1e-9));
+      expect(perPlayerPreflopInvestBB('3bp_bb_v_btn'), closeTo(11.0, 1e-9));
+      expect(perPlayerPreflopInvestBB('unknown'), isNull);
+    });
+
+    test('depthLabelBB maps SPR regimes to approximate starting stacks', () {
+      expect(depthLabelBB('srp_late_v_bb', 'shallow'), '~20bb');
+      expect(depthLabelBB('srp_late_v_bb', 'deep'), '~100bb');
+      expect(depthLabelBB('3bp_bb_v_btn', 'committed'), '~30bb');
+      expect(depthLabelBB('3bp_bb_v_btn', 'medium'), '~100bb');
+      // An unmapped scenario/regime falls back to the raw regime name.
+      expect(depthLabelBB('future_scenario', 'deep'), 'deep');
+    });
+  });
+
+  group('effective stack (bb)', () {
+    test('a seat box shows starting stack minus its posted blind', () {
+      // Non-blind seats have nothing in yet → full starting stack.
+      expect(preflopEffStackBB('UTG', 100), closeTo(100, 1e-9));
+      expect(preflopEffStackBB('BTN', 100), closeTo(100, 1e-9));
+      // Blinds are already posted.
+      expect(preflopEffStackBB('SB', 100), closeTo(99.5, 1e-9));
+      expect(preflopEffStackBB('BB', 100), closeTo(99.0, 1e-9));
+    });
+
+    test('the vs-3-bet box subtracts the opener already-committed open', () {
+      expect(preflopEffStackBBVs3Bet(100), closeTo(97.5, 1e-9));
+    });
+
+    test('the flop chains from the same starting stack', () {
+      // start − each player's preflop investment = the flop effective stack.
+      final start = 82.5 + perPlayerPreflopInvestBB('srp_late_v_bb')!; // 85
+      expect(preflopEffStackBB('BTN', start) - // opener before the open
+          perPlayerPreflopInvestBB('srp_late_v_bb')!, closeTo(82.5, 1e-9));
+    });
+  });
 }

@@ -195,6 +195,21 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     }
   }
 
+  /// Clear the recorded postflop line back to the flop root — keeps the loaded
+  /// spot (board + manifest + flop nodes), drops the line, cursor, pinned
+  /// runout and its chunks. Backs the strip's "Reset" (rewind to preflop).
+  void resetLine() {
+    state = state.copyWith(
+      line: const [],
+      cursor: 0,
+      clearTurn: true,
+      clearRiver: true,
+      clearPins: true,
+      chunkLoading: false,
+      clearError: true,
+    );
+  }
+
   /// Move the viewer to step [i] of the line WITHOUT changing the line — the
   /// "replay any point, even after showdown" navigation. Normalizes forward
   /// off chance steps (they are not decisions).

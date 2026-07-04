@@ -15,6 +15,78 @@ import 'grid_aggregation.dart';
 /// 6-max seats in action order.
 const List<String> kTrailPositions = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
 
+/// Flop pot in BIG BLINDS per solved scenario — the anchor that maps the
+/// solver's normalized chip scale (flop pot pinned to pot0 = 10) back to bb.
+/// SRP = open 2.5x + BB call + dead SB (5.5bb); the 3-bet pot = BTN open, BB
+/// 3-bet to 11, BTN call (22.5bb). Mirrors tool/solver freq_grid.dart
+/// kScenarios; a scenario absent here (a future hosted pack) simply shows no bb.
+const Map<String, double> kScenarioFlopPotBB = {
+  'srp_late_v_bb': 5.5,
+  'srp_early_v_bb': 5.5,
+  'srp_middle_v_bb': 5.5,
+  '3bp_bb_v_btn': 22.5,
+};
+
+/// bb per normalized pack unit for [scenario] (flop pot is pinned to [pot0], so
+/// one unit = flopPotBB/pot0 bb). Null when the scenario has no bb anchor.
+double? bbPerUnit(String scenario, double pot0) {
+  final potBB = kScenarioFlopPotBB[scenario];
+  if (potBB == null || pot0 <= 0) return null;
+  return potBB / pot0;
+}
+
+/// Approximate STARTING stack in bb for each solved SPR regime — the solver's
+/// design intent (short / mid / deep-cash). Shown in the settings depth picker
+/// (and used to order it) INSTEAD of the raw regime name. Approximate: the pack
+/// buckets by SPR, so 'deep' reads ~100bb even though the flop 'Behind' lands a
+/// touch lower. Keys ordered shallowest→deepest. Mirrors freq_grid.dart's
+/// sprReps commentary.
+const Map<String, Map<String, int>> kScenarioDepthStartBB = {
+  'srp_late_v_bb': {'shallow': 20, 'medium': 40, 'deep': 100},
+  'srp_early_v_bb': {'shallow': 20, 'medium': 40, 'deep': 100},
+  'srp_middle_v_bb': {'shallow': 20, 'medium': 40, 'deep': 100},
+  '3bp_bb_v_btn': {'committed': 30, 'shallow': 60, 'medium': 100},
+};
+
+/// The bb depth label for a scenario + SPR regime, e.g. '~100bb'; falls back to
+/// the raw regime name for a scenario with no bb mapping (future hosted packs).
+String depthLabelBB(String scenario, String regime) {
+  final bb = kScenarioDepthStartBB[scenario]?[regime];
+  return bb != null ? '~${bb}bb' : regime;
+}
+
+/// The preflop betting sizes (in bb) the strip models — matched so the final
+/// preflop pot equals the scenario's [kScenarioFlopPotBB] anchor (open 2.5x +
+/// BB call = 5.5bb; + BB 3-bet 11 + call = 22.5bb).
+const double kSbBlind = 0.5;
+const double kBbBlind = 1.0;
+const double kOpenToBB = 2.5;
+const double kThreeBetToBB = 11.0;
+
+double _postedBlind(String seat) => switch (seat) {
+      'SB' => kSbBlind,
+      'BB' => kBbBlind,
+      _ => 0.0,
+    };
+
+/// The per-player preflop investment (bb) that brings the pot to the scenario's
+/// flop anchor — each of the two players in a heads-up pot puts in this much
+/// (SRP 2.5, 3-bet pot 11). Derived from the flop pot minus the dead SB.
+double? perPlayerPreflopInvestBB(String scenario) {
+  final potBB = kScenarioFlopPotBB[scenario];
+  return potBB == null ? null : (potBB - kSbBlind) / 2;
+}
+
+/// Effective (remaining) stack in bb going INTO [seat]'s decision, given the
+/// deep starting stack [startEff]. Each seat box is that seat's FIRST preflop
+/// decision, so only its posted blind is in the pot yet.
+double preflopEffStackBB(String seat, double startEff) =>
+    startEff - _postedBlind(seat);
+
+/// The opener's remaining stack in bb going into its vs-3-bet decision — its
+/// open (2.5x) is already committed.
+double preflopEffStackBBVs3Bet(double startEff) => startEff - kOpenToBB;
+
 /// One decision point on the trail: an actor, its available actions, and the
 /// (mutually exclusive) hand set per action. The last action is always the
 /// implicit remainder (fold — or check where folding is impossible).
@@ -143,6 +215,17 @@ class PreflopTrail {
   });
 
   PreflopTrail withTrn(bool v) => PreflopTrail(trn: v);
+
+  /// Flip cash/tournament while KEEPING the current line (the gear-menu toggle,
+  /// which should not blow away the seats the user already built — unlike
+  /// [withTrn], which resets the whole trail).
+  PreflopTrail withTrnKeeping(bool v) => PreflopTrail(
+        trn: v,
+        opener: opener,
+        responder: responder,
+        responderAction: responderAction,
+        openerResponse: openerResponse,
+      );
 
   PreflopTrail withOpener(String pos) => PreflopTrail(trn: trn, opener: pos);
 

@@ -1,6 +1,8 @@
 // GTO Explorer — the runout card picker shown when a street's action closes:
-// a compact 13×4 grid of the deck, board cards disabled. Every runout exists
-// in a solved spot's tree, so any enabled card is a valid continuation.
+// a compact 13×4 grid of the deck, board cards disabled. The library stores
+// only ONE suit-isomorphic representative per equivalent runout, so [available]
+// (when supplied) restricts the enabled cards to the ones the pack actually
+// solved — picking a missing twin would dead-end into "no decisions".
 
 import 'package:flutter/material.dart';
 
@@ -9,11 +11,17 @@ import '../../equity/card.dart';
 class StreetCardPicker extends StatelessWidget {
   final String title; // 'Pick the turn card'
   final Set<String> excluded; // card names already on the board
+
+  /// Runout cards the pack actually solved. Null = no restriction (offer all);
+  /// otherwise cards outside this set render disabled (suit-equivalent twins the
+  /// library merged away).
+  final Set<String>? available;
   final void Function(String card) onPick;
   const StreetCardPicker({
     super.key,
     required this.title,
     required this.excluded,
+    this.available,
     required this.onPick,
   });
 
@@ -53,7 +61,10 @@ class StreetCardPicker extends StatelessWidget {
   }
 
   Widget _card(BuildContext context, ColorScheme scheme, String name) {
-    final disabled = excluded.contains(name);
+    // Disabled = already on the board, OR a suit-equivalent runout the library
+    // merged away (not in [available]).
+    final disabled = excluded.contains(name) ||
+        (available != null && !available!.contains(name));
     final suit = name[1];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),

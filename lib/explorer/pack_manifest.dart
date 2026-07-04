@@ -31,6 +31,29 @@ class PackManifest {
 
   List<String> combosFor({required bool oop}) => oop ? oopCombos : ipCombos;
 
+  /// The turn cards this pack actually solved (a `turn/<card>` chunk exists).
+  /// The library stores only ONE suit-isomorphic representative per equivalent
+  /// runout (e.g. on a monotone board the three off-suit blanks collapse to
+  /// fewer stored cards), so the runout picker must offer only these — the
+  /// missing twins have no node and dead-end into "no decisions on this runout".
+  Set<String> availableTurnCards() {
+    const p = 'turn/';
+    return {
+      for (final k in chunks.keys)
+        if (k.startsWith(p) && k.length == p.length + 2) k.substring(p.length),
+    };
+  }
+
+  /// The river cards this pack solved for the given (stored) turn card — a
+  /// `river/<turn><river>` chunk exists. See [availableTurnCards].
+  Set<String> availableRiverCards(String turnCard) {
+    final p = 'river/$turnCard';
+    return {
+      for (final k in chunks.keys)
+        if (k.startsWith(p) && k.length == p.length + 2) k.substring(p.length),
+    };
+  }
+
   factory PackManifest.fromJson(Map<String, dynamic> j) {
     final version = j['version'];
     final combos = j['combos'];

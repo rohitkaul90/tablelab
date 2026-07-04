@@ -79,7 +79,9 @@ class _ComboList extends StatelessWidget {
                     decoration: BoxDecoration(
                         color: colors[a], shape: BoxShape.circle)),
                 const SizedBox(width: 4),
-                Text(actionDisplayLabel(node.actions[a]),
+                Text(
+                    actionSizeLabel(node.actions[a],
+                        potBefore: node.potBefore, behind: node.behind),
                     style: TextStyle(
                         fontSize: 11, color: scheme.onSurfaceVariant)),
               ]),
@@ -99,8 +101,7 @@ class _ComboList extends StatelessWidget {
     for (var a = 0; a < node.actions.length && a < c.evs.length; a++) {
       final ev = c.evs[a];
       if (ev != null) {
-        evParts.add(
-            '${actionDisplayLabel(node.actions[a])} ${ev.toStringAsFixed(2)}');
+        evParts.add('${actionSizeLabel(node.actions[a], potBefore: node.potBefore, behind: node.behind)} ${ev.toStringAsFixed(2)}');
       }
     }
     return Padding(

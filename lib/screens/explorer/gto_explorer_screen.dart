@@ -19,6 +19,7 @@ import '../../theme/app_theme.dart';
 import '../../equity/card.dart';
 import '../../explorer/pack_source.dart';
 import '../../explorer/preflop_ranges.dart';
+import '../../explorer/root_equity.dart';
 import '../../widgets/explorer/action_colors.dart';
 import '../../widgets/explorer/combo_detail_sheet.dart';
 import '../../widgets/explorer/equity_chart.dart';
@@ -26,6 +27,7 @@ import '../../widgets/explorer/overview_panel.dart';
 import '../../widgets/explorer/preflop_trail_view.dart';
 import '../../widgets/explorer/strategy_grid.dart';
 import '../../widgets/explorer/street_card_picker.dart';
+import '../../widgets/app_drawer.dart';
 
 class GtoExplorerScreen extends ConsumerStatefulWidget {
   final bool showScaffold;
@@ -54,9 +56,58 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// Which PREFLOP decision the body inspects (0 open / 1 response / 2 vs
   /// 3-bet), or -1 when the body shows the postflop node at the cursor.
   int _preflopInspect = -1;
+  String? _depthPref; // chosen stack-depth regime (settings gear); board picks use it
   int? _actionFilter; // grid shows only this action's share (right-pane cards)
   int? _chartHoverCombo; // chart crosshair → grid cell ring
   Set<int>? _gridHoverCombos; // grid cell hover → chart dots
+
+  /// Memoized on-device MC for the opponent's curve at a turn/river root (their
+  /// reach-weighted range on this board) — keyed so it recomputes only on a
+  /// real node change, not on every hover-driven rebuild.
+  String? _oppEqKey;
+  Future<List<PackCombo>>? _oppEqFuture;
+
+  /// Horizontal scroll of the unified strip. The line can grow past the
+  /// viewport (a deep all-in runout has many boxes), so we auto-scroll to keep
+  /// the live decision visible and show edge chevrons when there is more.
+  final ScrollController _stripCtrl = ScrollController();
+  String? _lastStripScenario; // reset scroll to the left on a scenario change
+  int _lastStripLineLen = 0; // chase the end only when the line GROWS
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _stripCtrl.addListener(_refreshStripArrows);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(explorerProvider.notifier).init();
+    });
+  }
+
+  @override
+  void dispose() {
+    _stripCtrl.removeListener(_refreshStripArrows);
+    _stripCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Recompute whether the strip can scroll either way; setState only when a
+  /// flag flips (a couple of times per gesture, not per pixel).
+  void _refreshStripArrows() {
+    if (!_stripCtrl.hasClients ||
+        !_stripCtrl.position.hasContentDimensions) {
+      return;
+    }
+    final l = _stripCtrl.offset > 4;
+    final r = _stripCtrl.offset < _stripCtrl.position.maxScrollExtent - 4;
+    if (l != _canScrollLeft || r != _canScrollRight) {
+      setState(() {
+        _canScrollLeft = l;
+        _canScrollRight = r;
+      });
+    }
+  }
 
   /// Memoized per-node aggregates shared by the advance bar, grid, and
   /// overview (LayoutBuilder rebuilds must not recompute; the painter's
@@ -81,14 +132,6 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(explorerProvider.notifier).init();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     // Keep the preflop strip in sync when a spot changes underneath it (the
     // init auto-select, or a board pick) — but never clobber a user-built
@@ -96,6 +139,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     // DIRECTLY in build (not inside the Builder below — Riverpod asserts).
     ref.listen<ExplorerSpotRef?>(
         explorerProvider.select((s) => s.spot), (prev, next) {
+      // Depth regimes differ per scenario, so a scenario switch drops any
+      // remembered depth (the picker/settings then follow the loaded spot).
+      if (prev?.scenario != next?.scenario) _depthPref = null;
       final sc = next?.scenario;
       if (sc != null && _trail.scenarioKey != sc) {
         setState(() => _trail = trailForScenario(sc));
@@ -115,10 +161,136 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     return Theme(
       data: AppTheme.dark,
       child: Scaffold(
-        appBar: AppBar(title: const Text('GTO Study')),
+        appBar: AppBar(
+          // Study is a bottom-nav tab now: the hamburger opens the app drawer,
+          // and the gear holds the Cash/Tournament toggle (+ room for future
+          // options like stack sizes) so it costs no strip space.
+          leading: IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
+          ),
+          title: const Text('GTO Study'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.tune),
+              tooltip: 'Study settings',
+              onPressed: () => _openStudySettings(context),
+            ),
+          ],
+        ),
         body: body,
       ),
     );
+  }
+
+  /// The header gear: table-type (Cash/Tournament) and stack-depth (in bb)
+  /// controls — the depth that used to sit next to each flop. Flips
+  /// [PreflopTrail.trn] while KEEPING the built line; switches the loaded spot
+  /// to the chosen depth on the same board.
+  void _openStudySettings(BuildContext rootContext) {
+    showModalBottomSheet<void>(
+      context: rootContext,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final scheme = Theme.of(sheetContext).colorScheme;
+        Widget label(String t) => Text(t,
+            style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant, letterSpacing: 1.2));
+        return SafeArea(
+          child: StatefulBuilder(builder: (ctx, setSheet) {
+            final scenario = ref.read(explorerProvider).spot?.scenario ??
+                _trail.scenarioKey;
+            final depths = (scenario != null && !_trail.trn)
+                ? kScenarioDepthStartBB[scenario]
+                : null;
+            final currentDepth =
+                _depthPref ?? ref.read(explorerProvider).spot?.spr;
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Study settings',
+                      style: Theme.of(sheetContext).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  label('TABLE TYPE'),
+                  const SizedBox(height: 8),
+                  SegmentedButton<bool>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Cash')),
+                      ButtonSegment(value: true, label: Text('Tournament')),
+                    ],
+                    selected: {_trail.trn},
+                    onSelectionChanged: (s) {
+                      _setTrail(_trail.withTrnKeeping(s.first), inspect: -1);
+                      setSheet(() {});
+                    },
+                  ),
+                  if (depths != null) ...[
+                    const SizedBox(height: 18),
+                    label('STACK DEPTH'),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      showSelectedIcon: false,
+                      style: SegmentedButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 12)),
+                      segments: [
+                        for (final e in depths.entries)
+                          ButtonSegment(
+                              value: e.key, label: Text('~${e.value}bb')),
+                      ],
+                      selected: {
+                        if (currentDepth != null &&
+                            depths.containsKey(currentDepth))
+                          currentDepth
+                        else
+                          depths.keys.last
+                      },
+                      onSelectionChanged: (s) {
+                        _setDepth(s.first);
+                        setSheet(() {});
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  Text(
+                    depths != null
+                        ? 'Stack depth is approximate — packs are solved per '
+                            'SPR bucket. Tournament mode uses ICM-aware preflop '
+                            'ranges; solved postflop packs are cash-only.'
+                        : 'Tournament mode uses ICM-aware preflop ranges. '
+                            'Solved postflop packs are cash-only for now.',
+                    style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  /// Switch the loaded spot to [regime] on the SAME board (the settings depth
+  /// picker), and remember it so subsequent board picks use it.
+  void _setDepth(String regime) {
+    setState(() => _depthPref = regime);
+    final st = ref.read(explorerProvider);
+    final spot = st.spot;
+    if (spot == null) return;
+    final target = st.spots
+        .where((s) =>
+            s.scenario == spot.scenario &&
+            s.flop == spot.flop &&
+            s.spr == regime)
+        .toList();
+    if (target.isNotEmpty && !identical(target.first, spot)) {
+      setState(() => _preflopInspect = -1);
+      ref.read(explorerProvider.notifier).selectSpot(target.first);
+    }
   }
 
   Widget _body(BuildContext context) {
@@ -200,7 +372,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     }
   }
 
-  /// The FLOP box tap: pick among the scenario's solved boards/depths.
+  /// The FLOP box tap: pick among the scenario's solved BOARDS (depth is chosen
+  /// in the settings gear, so the picker no longer lists per-depth rows).
   /// [scenarioKey] overrides the trail's mapping (unknown-scenario packs).
   void _openBoardPicker(BuildContext context, ExplorerState state,
       {String? scenarioKey}) {
@@ -208,6 +381,15 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     if (sc == null) return;
     final candidates = state.spots.where((s) => s.scenario == sc).toList();
     if (candidates.isEmpty) return;
+    // Unique boards (each board is solved at every depth), in discovery order.
+    final seen = <String>{};
+    final boards = [
+      for (final s in candidates)
+        if (seen.add(s.flop)) s.flop
+    ];
+    // Load the picked board at the current depth preference (fall back to the
+    // loaded spot's depth, then any depth that board has).
+    final regime = _depthPref ?? state.spot?.spr;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -221,17 +403,20 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   style: Theme.of(sheetContext).textTheme.titleMedium),
             ),
             const SizedBox(height: 4),
-            for (final s in candidates)
+            for (final flop in boards)
               ListTile(
                 dense: true,
-                title: Text(s.flop,
+                title: Text(flop,
                     style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text(s.spr),
-                selected: identical(s, state.spot),
+                selected: state.spot?.flop == flop,
                 onTap: () {
                   Navigator.of(sheetContext).pop();
+                  final forFlop =
+                      candidates.where((s) => s.flop == flop).toList();
+                  final pick = forFlop.firstWhere((s) => s.spr == regime,
+                      orElse: () => forFlop.first);
                   setState(() => _preflopInspect = -1);
-                  ref.read(explorerProvider.notifier).selectSpot(s);
+                  ref.read(explorerProvider.notifier).selectSpot(pick);
                 },
               ),
           ],
@@ -355,10 +540,19 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
+  /// Compact bb formatter for the box chip ('82.5bb', '4bb', '100bb').
+  String _fmtBB(double v) {
+    final s = v == v.roundToDouble()
+        ? v.toInt().toString()
+        : v.toStringAsFixed(1);
+    return '${s}bb';
+  }
+
   Widget _vBox(BuildContext context,
       {required String header,
       required List<Widget> rows,
       VoidCallback? onHeaderTap,
+      double? effStackBB, // effective stack shown next to the header
       bool inspected = false,
       bool dimmed = false}) {
     final scheme = Theme.of(context).colorScheme;
@@ -388,11 +582,24 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                 children: [
                   InkWell(
                     onTap: onHeaderTap,
-                    child: Text(header,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: scheme.onSurfaceVariant)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(header,
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: scheme.onSurfaceVariant)),
+                        if (effStackBB != null) ...[
+                          const SizedBox(width: 5),
+                          Text(_fmtBB(effStackBB),
+                              style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: scheme.primary)),
+                        ],
+                      ],
+                    ),
                   ),
                   ...rows,
                 ],
@@ -404,56 +611,152 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
+  /// The deep STARTING stack in bb the strip chains from. Prefer the loaded
+  /// pack's exact flop effective stack (so preflop→flop→turn→river reads
+  /// smoothly): start = flopEffective + each player's preflop investment. Falls
+  /// back to the nominal depth-regime stack when no matching pack is loaded.
+  double? _startEffBB(ExplorerState state) {
+    final sc = _trail.scenarioKey;
+    if (sc == null) return null;
+    final invest = perPlayerPreflopInvestBB(sc);
+    final m = state.manifest;
+    if (m != null && m.scenario == sc && invest != null) {
+      final bpu = bbPerUnit(sc, m.pot0);
+      if (bpu != null) return m.effStack * bpu + invest;
+    }
+    final regime = _depthPref ?? state.spot?.spr;
+    if (regime == null) return null;
+    return kScenarioDepthStartBB[sc]?[regime]?.toDouble();
+  }
+
   Widget _unifiedStrip(BuildContext context, ExplorerState state) {
     final scheme = Theme.of(context).colorScheme;
     final boxes = <Widget>[
-      ..._preflopBoxes(context),
+      ..._preflopBoxes(context, _startEffBB(state)),
       _flopBox(context, state),
       ..._postflopBoxes(context, state),
-      // Trn toggle + reset at the end of the scroll.
+      // Reset at the end of the scroll: rewind the recorded postflop line back
+      // to preflop, keeping the trail + board (the Cash/Tournament toggle moved
+      // to the header gear). Disabled when there's no postflop line to clear.
       Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SegmentedButton<bool>(
-              showSelectedIcon: false,
-              style: SegmentedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                textStyle: const TextStyle(fontSize: 10),
-              ),
-              segments: const [
-                ButtonSegment(value: false, label: Text('Cash')),
-                ButtonSegment(value: true, label: Text('Trn')),
-              ],
-              selected: {_trail.trn},
-              onSelectionChanged: (s) =>
-                  _setTrail(_trail.withTrn(s.first), inspect: -1),
-            ),
-            TextButton(
-              onPressed: _trail.opener == null
-                  ? null
-                  : () => _setTrail(_trail.reset(), inspect: -1),
-              style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  textStyle: const TextStyle(fontSize: 10.5)),
-              child: const Text('Reset'),
-            ),
-          ],
+        child: TextButton(
+          onPressed: state.line.isEmpty
+              ? null
+              : () {
+                  ref.read(explorerProvider.notifier).resetLine();
+                  setState(() => _preflopInspect = 0);
+                },
+          style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              textStyle: const TextStyle(fontSize: 10.5)),
+          child: const Text('Reset'),
         ),
       ),
     ];
+    // Keep the live decision on screen as the line grows (e.g. a river all-in
+    // pushes the next actor's box off the right edge).
+    _maybeAutoScrollStrip(state);
     // Height must fit the TALLEST box (header + 3 action rows) with slack for
     // text scaling — a fixed-height horizontal list overflows loudly (21px
     // RenderFlex overflow at 104).
-    return Container(
+    return SizedBox(
       height: 128,
-      color: scheme.surfaceContainerLowest,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+      child: Stack(
         children: [
-          for (final b in boxes) Align(alignment: Alignment.topLeft, child: b)
+          Container(
+            height: 128,
+            color: scheme.surfaceContainerLowest,
+            child: ListView(
+              controller: _stripCtrl,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+              children: [
+                for (final b in boxes)
+                  Align(alignment: Alignment.topLeft, child: b)
+              ],
+            ),
+          ),
+          _stripArrow(context, left: true),
+          _stripArrow(context, left: false),
         ],
+      ),
+    );
+  }
+
+  /// After a strip content change: reset to the left on a new scenario, and
+  /// chase the newest decision when the line GREW and the cursor is at its end
+  /// (don't yank the view while inspecting an earlier box, or on a preflop-only
+  /// load — the chevrons cover manual scrolling). Also refreshes the arrows so
+  /// the right chevron appears on the very first overflowing layout.
+  void _maybeAutoScrollStrip(ExplorerState state) {
+    final scen = state.spot?.scenario;
+    final len = state.line.length;
+    final scenarioChanged = scen != _lastStripScenario;
+    final grew = len > _lastStripLineLen;
+    final shrank = len < _lastStripLineLen; // reset / edit-back
+    _lastStripScenario = scen;
+    _lastStripLineLen = len;
+    if (!scenarioChanged && !grew && !shrank) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_stripCtrl.hasClients) return;
+      if (scenarioChanged || shrank) {
+        _stripCtrl.jumpTo(0);
+      } else if (grew && state.atLineEnd) {
+        final max = _stripCtrl.position.maxScrollExtent;
+        if (max > _stripCtrl.offset + 4) {
+          _stripCtrl.animateTo(max,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOut);
+        }
+      }
+      _refreshStripArrows();
+    });
+  }
+
+  /// A tap-to-scroll chevron with a fade, shown only when the strip can scroll
+  /// that way (there are more action boxes off that edge).
+  Widget _stripArrow(BuildContext context, {required bool left}) {
+    final scheme = Theme.of(context).colorScheme;
+    final show = left ? _canScrollLeft : _canScrollRight;
+    return Positioned(
+      left: left ? 0 : null,
+      right: left ? null : 0,
+      top: 0,
+      bottom: 0,
+      child: IgnorePointer(
+        ignoring: !show,
+        child: AnimatedOpacity(
+          opacity: show ? 1 : 0,
+          duration: const Duration(milliseconds: 150),
+          child: Container(
+            width: 36,
+            alignment: left ? Alignment.centerLeft : Alignment.centerRight,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: left ? Alignment.centerLeft : Alignment.centerRight,
+                end: left ? Alignment.centerRight : Alignment.centerLeft,
+                colors: [
+                  scheme.surfaceContainerLowest,
+                  scheme.surfaceContainerLowest.withValues(alpha: 0),
+                ],
+              ),
+            ),
+            child: InkWell(
+              onTap: () {
+                if (!_stripCtrl.hasClients) return;
+                final target = (left
+                        ? _stripCtrl.offset - 220
+                        : _stripCtrl.offset + 220)
+                    .clamp(0.0, _stripCtrl.position.maxScrollExtent);
+                _stripCtrl.animateTo(target,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOut);
+              },
+              child: Icon(left ? Icons.chevron_left : Icons.chevron_right,
+                  color: scheme.onSurface),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -461,7 +764,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// Preflop seat boxes (from the preset charts), plus the opener's vs-3-bet
   /// box when a 3-bet happened. Any seat's action row is tappable: it rebuilds
   /// the trail from that point (a new opener voids the response, etc.).
-  List<Widget> _preflopBoxes(BuildContext context) {
+  List<Widget> _preflopBoxes(BuildContext context, double? startEffBB) {
     final t = _trail;
     final openerIdx =
         t.opener == null ? -1 : kTrailPositions.indexOf(t.opener!);
@@ -521,6 +824,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           header: pos,
           rows: rows,
           onHeaderTap: headerTap,
+          effStackBB: startEffBB == null
+              ? null
+              : preflopEffStackBB(pos, startEffBB),
           inspected: inspected));
     }
 
@@ -530,6 +836,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         context,
         header: '${t.opener} (vs 3-bet)',
         inspected: _preflopInspect == 2,
+        effStackBB: startEffBB == null
+            ? null
+            : preflopEffStackBBVs3Bet(startEffBB),
         onHeaderTap: () => setState(() => _preflopInspect = 2),
         rows: [
           for (final a in ['Fold', 'Call', '4-bet'])
@@ -549,10 +858,15 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// forward-compatible packs into a dead end (review finding).
   Widget _flopBox(BuildContext context, ExplorerState state) {
     final spot = state.spot;
+    // The flop-root effective stack (bb) of the loaded pack — the same figure
+    // the preflop chain lands on.
+    final m = state.manifest;
+    final bpu = m != null ? bbPerUnit(m.scenario, m.pot0) : null;
+    final flopEffBB = (m != null && bpu != null) ? m.effStack * bpu : null;
     final spotUnknown =
         spot != null && trailForScenario(spot.scenario).opener == null;
     if (spotUnknown) {
-      return _vBox(context, header: 'FLOP', rows: [
+      return _vBox(context, header: 'FLOP', effStackBB: flopEffBB, rows: [
         _vRow(context, '${spot.flop} · ${spot.spr}', const Color(0xFF7E57C2),
             highlighted: true,
             onTap: () =>
@@ -572,7 +886,11 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     } else if (!hasPacks) {
       detail = 'no packs';
     } else if (matched) {
-      detail = '${spot.flop} · ${spot.spr}';
+      // Depth moved to the settings gear — show just the board for mapped
+      // scenarios; unmapped (forward-compat) packs keep the raw regime.
+      detail = kScenarioDepthStartBB.containsKey(spot.scenario)
+          ? spot.flop
+          : '${spot.flop} · ${spot.spr}';
     } else {
       detail = 'pick a board';
     }
@@ -581,6 +899,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       header: 'FLOP',
       inspected: false,
       dimmed: !hasPacks || !_trail.closed,
+      // The flop effective stack, once a matched solved board is loaded.
+      effStackBB: matched ? flopEffBB : null,
       rows: [
         _vRow(context, detail, const Color(0xFF7E57C2),
             highlighted: matched,
@@ -605,21 +925,19 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final known = trailForScenario(spot.scenario).opener != null;
     if (known && _trail.scenarioKey != spot.scenario) return const [];
     final scenario = state.manifest!.scenario;
+    // bb per normalized pack unit — turns each node's pot into a running pot in
+    // bb (null for a scenario with no bb anchor → the box shows no pot).
+    final bpu = bbPerUnit(scenario, state.manifest!.pot0);
     final out = <Widget>[];
 
-    // A BET for everything behind (or a CALL of one) reads '(all-in)' so the
-    // committed-depth lines aren't a surprise when the runout has no nodes.
+    // Bet/raise sizes render as % of pot; a shove reads 'All-in'. A CALL of
+    // everything behind is flagged too so committed-depth lines aren't a
+    // surprise when the runout has no nodes.
     String rowLabel(PackNode n, String action) {
-      final u = action.toUpperCase();
-      var allIn = false;
-      if (u.startsWith('CALL')) {
-        allIn = n.toCall >= n.behind - 1e-6;
-      } else if (u.startsWith('BET')) {
-        final amt =
-            double.tryParse(RegExp(r'[0-9.]+').firstMatch(u)?.group(0) ?? '');
-        allIn = amt != null && amt >= n.behind - 1e-6;
+      if (action.toUpperCase().startsWith('CALL')) {
+        return n.toCall >= n.behind - 1e-6 ? 'Call · all-in' : 'Call';
       }
-      return '${actionDisplayLabel(action)}${allIn ? ' · all-in' : ''}';
+      return actionSizeLabel(action, potBefore: n.potBefore, behind: n.behind);
     }
 
     void decisionRows(List<Widget> rows, PackNode n, int stepIndex,
@@ -647,10 +965,16 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       if (step.startsWith('@')) {
         dealtSoFar++;
         final river = dealtSoFar == 2;
+        // Effective stack entering the new street = the behind of the first
+        // node after the card (a chance node moves no chips).
+        final nextNode = state.nodeAt([...prefix, step]);
         out.add(_vBox(
           context,
           header: river ? 'RIVER' : 'TURN',
           dimmed: i > state.cursor,
+          effStackBB: (bpu != null && nextNode != null)
+              ? nextNode.behind * bpu
+              : null,
           rows: [
             _vRow(context, step.substring(1), const Color(0xFF7E57C2),
                 highlighted: true,
@@ -679,6 +1003,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         header: actor,
         inspected: _preflopInspect < 0 && state.cursor == stepIndex,
         dimmed: i > state.cursor,
+        effStackBB: (bpu != null && node != null) ? node.behind * bpu : null,
         onHeaderTap: () {
           setState(() => _preflopInspect = -1);
           ref.read(explorerProvider.notifier).setCursor(stepIndex);
@@ -698,6 +1023,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         context,
         header: seatLabel(scenario, isOop: endNode.actorIsOop),
         inspected: _preflopInspect < 0 && state.atLineEnd,
+        effStackBB: bpu != null ? endNode.behind * bpu : null,
         onHeaderTap: () {
           setState(() => _preflopInspect = -1);
           ref.read(explorerProvider.notifier).setCursor(state.line.length);
@@ -743,6 +1069,14 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       if (river && state.turnCard != null) state.turnCard!,
       if (!river && state.riverCard != null) state.riverCard!,
     };
+    // Offer only the runouts the pack solved (suit-isomorphic representatives);
+    // the merged twins have no node. River availability keys off the (stored)
+    // turn card.
+    final available = river
+        ? (state.turnCard != null
+            ? manifest.availableRiverCards(state.turnCard!)
+            : null)
+        : manifest.availableTurnCards();
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -751,6 +1085,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         child: StreetCardPicker(
           title: 'Pick the ${river ? 'river' : 'turn'} card',
           excluded: excluded,
+          available: available,
           onPick: (c) {
             Navigator.of(sheetContext).pop();
             ref
@@ -851,6 +1186,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   summary: summary,
                   actorLabel: actor,
                   selectedAction: _actionFilter,
+                  bbPerUnit:
+                      bbPerUnit(manifest.scenario, manifest.pot0),
                   onActionTap: (a) => setState(
                       () => _actionFilter = _actionFilter == a ? null : a),
                 )
@@ -950,14 +1287,62 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         ),
       ]);
     }
-    if (opp != null && cursorDealt > 0) {
-      // A turn/river root: the opponent hasn't acted on THIS street yet, so
-      // no same-board equity exists for them — show the actor alone, say why.
-      return chart(
-        [actorSeries],
-        note:
-            '$oppLabel curve appears after they act on this street (their '
-            'stored equities belong to the previous board)',
+    if (cursorDealt > 0) {
+      // A turn/river ROOT: the opponent hasn't acted on THIS street, so they
+      // have no same-board STORED equity. Unlike the flop root their range is
+      // reach-skewed by earlier betting, so we Monte-Carlo it WEIGHTED by reach
+      // (their entering range narrowed by their last action) on this board.
+      if (opp == null) {
+        return chart([actorSeries],
+            note: '$oppLabel has not acted on this street yet.');
+      }
+      final board = [
+        for (final c in [...manifest.flop.split(' '), ...state.dealtCards])
+          parseCard(c)
+      ];
+      final oppRange = _narrowedByAction(opp.node, opp.taken);
+      final key = '${manifest.flop}|${state.dealtCards.join('/')}|'
+          '${opp.node.path}|${opp.taken}|${node.path}';
+      if (key != _oppEqKey) {
+        _oppEqKey = key;
+        _oppEqFuture = compute(
+          computeOppRangeEquities,
+          OppRangeEquityPayload(
+            hero: [
+              for (final c in oppRange)
+                if (c.comboId < oppNames.length)
+                  WeightedCombo(c.comboId, oppNames[c.comboId], c.reach),
+            ],
+            villain: [
+              for (final c in node.combos)
+                if (c.comboId < actorNames.length)
+                  WeightedCombo(c.comboId, actorNames[c.comboId], c.reach),
+            ],
+            board: board,
+          ),
+        );
+      }
+      return FutureBuilder<List<PackCombo>>(
+        future: _oppEqFuture,
+        builder: (context, snap) {
+          final oppEq = snap.data;
+          return chart(
+            [
+              actorSeries,
+              if (oppEq != null && oppEq.isNotEmpty)
+                EquityCurveSeries(
+                  '$oppLabel (est.)',
+                  const Color(0xFF64B5F6),
+                  equityCurve(oppEq),
+                  oppNames,
+                ),
+            ],
+            note: oppEq == null
+                ? 'computing $oppLabel equity…'
+                : '$oppLabel curve estimated on-device (reach-weighted range, '
+                    'this board)',
+          );
+        },
       );
     }
     // Flop root: the opponent's curve is computed on-device (once per spot).
@@ -1144,6 +1529,12 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       ...state.dealtCards,
       if (dealt == 0 && state.riverCard != null) state.riverCard!,
     };
+    // Offer only solved runouts (see _openCardPicker).
+    final available = dealt == 0
+        ? state.manifest?.availableTurnCards()
+        : (state.turnCard != null
+            ? state.manifest?.availableRiverCards(state.turnCard!)
+            : null);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -1153,6 +1544,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             StreetCardPicker(
               title: dealt == 0 ? 'Pick the turn card' : 'Pick the river card',
               excluded: excluded,
+              available: available,
               onPick: (c) =>
                   ref.read(explorerProvider.notifier).pickCard(c),
             ),

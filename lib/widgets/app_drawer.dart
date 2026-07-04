@@ -10,6 +10,7 @@ import '../screens/data_privacy_screen.dart';
 import '../screens/terms_of_service_screen.dart';
 import '../screens/help_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/tools_screen.dart';
 import '../screens/tournament_calendar_screen.dart';
 import 'feedback_sheet.dart';
 import 'profile_avatar.dart';
@@ -141,6 +142,20 @@ class AppDrawer extends ConsumerWidget {
 
                     // ── App section ──────────────────────────────────────
                     _SectionLabel('APP', theme),
+                    ListTile(
+                      leading: const Icon(Icons.construction_outlined),
+                      title: const Text('Tools'),
+                      subtitle: const Text('Equity & ICM calculators',
+                          style: TextStyle(fontSize: 11)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ToolsScreen()),
+                        );
+                      },
+                    ),
                     ListTile(
                       leading: const Icon(Icons.event_outlined),
                       title: const Text('Tournament Calendar'),

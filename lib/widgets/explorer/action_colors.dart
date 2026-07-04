@@ -49,6 +49,25 @@ List<Color> actionColors(List<String> actions) {
   ];
 }
 
+/// User-facing action label that renders bet/raise SIZES as a percent of the
+/// pot ('BET 8' into a pot of 10 → 'Bet 80%') and collapses a shove to
+/// 'All-in'. The solver's normalized chip amount is meaningless to a user once
+/// the pot shows in bb. [potBefore] and [behind] are the node's pot and
+/// remaining stack in the SAME normalized units as the bet amount. Non-sized
+/// actions (Check/Call/Fold) fall back to [actionDisplayLabel].
+String actionSizeLabel(String raw,
+    {required double potBefore, required double behind}) {
+  final m = RegExp(r'^\s*(BET|RAISE)\s+([0-9.]+)', caseSensitive: false)
+      .firstMatch(raw);
+  if (m == null) return actionDisplayLabel(raw);
+  final amt = double.tryParse(m.group(2)!);
+  if (amt == null) return actionDisplayLabel(raw);
+  if (amt >= behind - 1e-6) return 'All-in';
+  if (potBefore <= 0) return actionDisplayLabel(raw);
+  final verb = m.group(1)!.toUpperCase() == 'BET' ? 'Bet' : 'Raise';
+  return '$verb ${(amt / potBefore * 100).round()}%';
+}
+
 /// Short human label for a raw solver action: 'BET 6.6' → 'Bet 6.6',
 /// 'BET 10.000000' → 'Bet 10' (dump amounts carry float noise).
 String actionDisplayLabel(String raw) {
