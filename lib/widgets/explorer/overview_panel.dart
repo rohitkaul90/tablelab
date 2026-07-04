@@ -1,21 +1,22 @@
-// GTO Explorer — the Overview panel: who acts, pot state, range stats, and the
-// ACTION CARDS (frequency / combos / EV per action). Tapping a card toggles an
-// ACTION FILTER on the strategy grid (which combos take this action) — this
-// panel INSPECTS; navigation lives up top (the ribbon rewinds, the advance
-// bar advances).
+// GTO Explorer — the Overview panel: who acts, pot state, range stats, the
+// compact ACTION ROWS (one line each: frequency per action; tap filters the
+// grid), and a HANDS section listing the SELECTED grid cell's combos (a hand +
+// all its suits) with each combo's strategy. This panel INSPECTS; navigation
+// lives up top (the ribbon rewinds, the strip advances).
 
 import 'package:flutter/material.dart';
 
 import '../../explorer/grid_aggregation.dart';
 import '../../explorer/pack_codec.dart';
 import 'action_colors.dart';
+import 'combo_strategy_list.dart';
 
 class OverviewPanel extends StatelessWidget {
   final PackNode node;
   final NodeSummary summary;
   final String actorLabel; // 'BB' / 'BTN'
 
-  /// The action index currently filtering the grid (highlighted card).
+  /// The action index currently filtering the grid (highlighted row).
   final int? selectedAction;
   final void Function(int actionIndex) onActionTap;
 
@@ -23,6 +24,11 @@ class OverviewPanel extends StatelessWidget {
   /// When non-null the pot/price show in big blinds; null (a scenario with no
   /// bb anchor) falls back to a pot-relative price.
   final double? bbPerUnit;
+
+  /// The grid cell whose combos the HANDS section shows (tap a grid cell to
+  /// select). Null → a hint. The acting position's combo names decode combos.
+  final GridCellAgg? selectedCell;
+  final List<String> comboNames;
   const OverviewPanel({
     super.key,
     required this.node,
@@ -30,7 +36,9 @@ class OverviewPanel extends StatelessWidget {
     required this.actorLabel,
     required this.selectedAction,
     required this.onActionTap,
+    required this.comboNames,
     this.bbPerUnit,
+    this.selectedCell,
   });
 
   static String _fmtBB(double v) {
@@ -42,7 +50,6 @@ class OverviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final colors = actionColors(node.actions);
-    final evAvailable = summary.actions.any((a) => a.evMean != null);
 
     return ListView(
       padding: const EdgeInsets.all(12),
@@ -86,18 +93,47 @@ class OverviewPanel extends StatelessWidget {
                 color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
         const SizedBox(height: 6),
         for (var a = 0; a < summary.actions.length; a++)
-          _actionCard(context, a, summary.actions[a], colors[a]),
-        if (!evAvailable)
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Text(
-              'Per-action EV is available on flop root decisions only in this '
-              'version.',
+          _actionRow(context, a, summary.actions[a], colors[a]),
+        const SizedBox(height: 16),
+        // HANDS — the selected cell's exact combos and their strategy.
+        Row(
+          children: [
+            Text('HANDS',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
+            if (selectedCell != null) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${selectedCell!.hand} · ${selectedCell!.comboCount} of '
+                  '${selectedCell!.maxCombos} combos',
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (selectedCell == null)
+          Text('Tap a hand in the grid to see its exact combos and their '
+              'strategy.',
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
-            ),
+                  ?.copyWith(color: scheme.onSurfaceVariant))
+        else if (selectedCell!.combos.isEmpty)
+          Text('${selectedCell!.hand} has no live combos at this node.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant))
+        else
+          ComboStrategyList(
+            cell: selectedCell!,
+            node: node,
+            comboNames: comboNames,
           ),
       ],
     );
@@ -126,60 +162,54 @@ class OverviewPanel extends StatelessWidget {
     );
   }
 
-  Widget _actionCard(
+  /// One compact single-line action row: color dot · label · combos · freq% ·
+  /// filter toggle. Tap filters the grid to the combos taking this action.
+  Widget _actionRow(
       BuildContext context, int index, ActionAgg agg, Color color) {
     final scheme = Theme.of(context).colorScheme;
     final selected = selectedAction == index;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Material(
-        color: color.withValues(alpha: selected ? 0.45 : 0.22),
+        color: color.withValues(alpha: selected ? 0.42 : 0.20),
         clipBehavior: Clip.antiAlias,
-        // shape only — Material asserts if BOTH shape and borderRadius are
-        // set (crashed the whole Overview pane when a filter was selected).
+        // shape only — Material asserts if BOTH shape and borderRadius are set.
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: selected
-              ? BorderSide(color: color, width: 1.6)
-              : BorderSide.none,
+          borderRadius: BorderRadius.circular(8),
+          side: selected ? BorderSide(color: color, width: 1.4) : BorderSide.none,
         ),
         child: InkWell(
           onTap: () => onActionTap(index),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: 11,
+                  height: 11,
                   decoration:
                       BoxDecoration(color: color, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                          actionSizeLabel(agg.label,
-                              potBefore: node.potBefore, behind: node.behind),
-                          style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w700)),
-                      Text(
-                        '${agg.combos.toStringAsFixed(1)} combos'
-                        '${agg.evMean != null ? ' · EV ${agg.evMean!.toStringAsFixed(2)}' : ''}',
-                        style: TextStyle(
-                            fontSize: 11.5, color: scheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
+                  child: Text(
+                      actionSizeLabel(agg.label,
+                          potBefore: node.potBefore, behind: node.behind),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700)),
                 ),
+                Text(agg.combos.toStringAsFixed(0),
+                    style:
+                        TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                const SizedBox(width: 10),
                 Text('${(agg.freq * 100).toStringAsFixed(1)}%',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w800)),
-                const SizedBox(width: 6),
+                        fontSize: 15, fontWeight: FontWeight.w800)),
+                const SizedBox(width: 4),
                 Icon(selected ? Icons.filter_alt : Icons.filter_alt_outlined,
-                    size: 18,
+                    size: 15,
                     color:
                         selected ? scheme.onSurface : scheme.onSurfaceVariant),
               ],

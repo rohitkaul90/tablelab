@@ -21,7 +21,6 @@ import '../../explorer/pack_source.dart';
 import '../../explorer/preflop_ranges.dart';
 import '../../explorer/root_equity.dart';
 import '../../widgets/explorer/action_colors.dart';
-import '../../widgets/explorer/combo_detail_sheet.dart';
 import '../../widgets/explorer/equity_chart.dart';
 import '../../widgets/explorer/overview_panel.dart';
 import '../../widgets/explorer/preflop_trail_view.dart';
@@ -60,6 +59,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   int? _actionFilter; // grid shows only this action's share (right-pane cards)
   int? _chartHoverCombo; // chart crosshair → grid cell ring
   Set<int>? _gridHoverCombos; // grid cell hover → chart dots
+  String? _selectedHand; // grid cell tapped → its combos in the Hands panel
+  // (stored as the hand, e.g. 'A3s', so the selection survives node changes)
 
   /// Memoized on-device MC for the opponent's curve at a turn/river root (their
   /// reach-weighted range on this board) — keyed so it recomputes only on a
@@ -129,6 +130,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     _actionFilter = null;
     _chartHoverCombo = null; // combo ids are per node/actor
     _gridHoverCombos = null;
+  }
+
+  /// The aggregate cell for the currently selected hand at this node (null when
+  /// nothing is selected or the hand has no live combos here). Selection is kept
+  /// by HAND ('A3s') so it survives navigating to a different node.
+  GridCellAgg? _selectedCellFor(List<List<GridCellAgg?>> cells) {
+    final hand = _selectedHand;
+    if (hand == null) return null;
+    final (r, c) = handToCell(hand);
+    if (r < 0 || r >= 13 || c < 0 || c >= 13) return null;
+    return cells[r][c];
   }
 
   @override
@@ -1151,8 +1163,10 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                     if (setEquals(ids, _gridHoverCombos)) return;
                     setState(() => _gridHoverCombos = ids);
                   },
-                  onCellTap: (cell) => showComboDetailSheet(context,
-                      cell: cell, node: node, comboNames: combos),
+                  onCellTap: (cell) => setState(() {
+                    _selectedHand = cell.hand;
+                    _rightTab = 0; // reveal the Hands panel in the Overview
+                  }),
                 ),
               ),
             ),
@@ -1188,6 +1202,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   selectedAction: _actionFilter,
                   bbPerUnit:
                       bbPerUnit(manifest.scenario, manifest.pot0),
+                  comboNames: combos,
+                  selectedCell: _selectedCellFor(cells),
                   onActionTap: (a) => setState(
                       () => _actionFilter = _actionFilter == a ? null : a),
                 )
@@ -1210,7 +1226,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       return ListView(
         children: [
           grid,
-          SizedBox(height: 420, child: rightPane),
+          // Taller on narrow layouts so the compact actions + the Hands list
+          // are both reachable within the pane's own scroll.
+          SizedBox(height: 560, child: rightPane),
         ],
       );
     });
