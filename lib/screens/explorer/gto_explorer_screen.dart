@@ -125,6 +125,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final state = ref.watch(explorerProvider);
     final scheme = Theme.of(context).colorScheme;
 
+    // Release-mode gap in the ref.listen sync: the auto-selected spot can be
+    // fully loaded BEFORE this screen ever mounts (ToolsScreen gates the child
+    // on spots.isNotEmpty), so the change-only listener never fires and the
+    // trail stays empty — dead navigation. Sync lazily here instead: a direct
+    // field assignment during build is safe (the new value is used below).
+    final spot0 = state.spot;
+    if (spot0 != null && _trail.opener == null) {
+      final synced = trailForScenario(spot0.scenario);
+      if (synced.opener != null) _trail = synced;
+    }
+
     if (state.scanning) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -190,8 +201,10 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   }
 
   /// The FLOP box tap: pick among the scenario's solved boards/depths.
-  void _openBoardPicker(BuildContext context, ExplorerState state) {
-    final sc = _trail.scenarioKey;
+  /// [scenarioKey] overrides the trail's mapping (unknown-scenario packs).
+  void _openBoardPicker(BuildContext context, ExplorerState state,
+      {String? scenarioKey}) {
+    final sc = scenarioKey ?? _trail.scenarioKey;
     if (sc == null) return;
     final candidates = state.spots.where((s) => s.scenario == sc).toList();
     if (candidates.isEmpty) return;
@@ -262,6 +275,30 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       );
     }
     if (state.manifest != null && state.flopNodes != null) {
+      // The strip's line and the loaded spot can diverge (trail edited to an
+      // unsolved/pack-less scenario, or Reset): rendering the OLD spot's
+      // grid under the NEW line is silently wrong study data. Gate on match
+      // (unknown future scenario keys pass — they have no trail to match).
+      final spot = state.spot;
+      if (spot != null &&
+          trailForScenario(spot.scenario).opener != null &&
+          _trail.scenarioKey != spot.scenario) {
+        return _message(
+          context,
+          icon: Icons.sync_problem,
+          title: 'Preflop line changed',
+          body: 'The line above no longer matches the loaded board '
+              '(${scenarioDisplayName(spot.scenario)}). Restore it, or '
+              'complete the new line to a solved spot.',
+          action: TextButton(
+            onPressed: () => setState(() {
+              _trail = trailForScenario(spot.scenario);
+              _preflopInspect = -1;
+            }),
+            child: const Text('Restore the line for this board'),
+          ),
+        );
+      }
       return _loaded(context, state);
     }
     return _message(context,
@@ -506,10 +543,23 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   }
 
   /// The FLOP box: the solved board for the trail's scenario (tap = pick a
-  /// board/depth), or the reason there isn't one.
+  /// board/depth), or the reason there isn't one. A spot whose scenario key
+  /// has NO trail mapping (future hosted packs, newer scenarios than this
+  /// client) stays navigable generically — the trail model must not turn
+  /// forward-compatible packs into a dead end (review finding).
   Widget _flopBox(BuildContext context, ExplorerState state) {
-    final sc = _trail.scenarioKey;
     final spot = state.spot;
+    final spotUnknown =
+        spot != null && trailForScenario(spot.scenario).opener == null;
+    if (spotUnknown) {
+      return _vBox(context, header: 'FLOP', rows: [
+        _vRow(context, '${spot.flop} · ${spot.spr}', const Color(0xFF7E57C2),
+            highlighted: true,
+            onTap: () =>
+                _openBoardPicker(context, state, scenarioKey: spot.scenario)),
+      ]);
+    }
+    final sc = _trail.scenarioKey;
     final matched = sc != null && spot != null && spot.scenario == sc;
     final hasPacks =
         sc != null && state.spots.any((s) => s.scenario == sc);
@@ -546,15 +596,14 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// runout, pending Turn/River placeholders, a Hand-over marker on folds.
   /// Only rendered when the loaded spot matches the trail's scenario.
   List<Widget> _postflopBoxes(BuildContext context, ExplorerState state) {
-    final sc = _trail.scenarioKey;
     final spot = state.spot;
-    if (sc == null ||
-        spot == null ||
-        spot.scenario != sc ||
-        state.manifest == null ||
-        state.flopNodes == null) {
+    if (spot == null || state.manifest == null || state.flopNodes == null) {
       return const [];
     }
+    // Known scenarios must match the trail (divergent line = hidden boxes);
+    // UNKNOWN scenario keys render generically (forward compat).
+    final known = trailForScenario(spot.scenario).opener != null;
+    if (known && _trail.scenarioKey != spot.scenario) return const [];
     final scenario = state.manifest!.scenario;
     final out = <Widget>[];
 
@@ -657,10 +706,12 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       ));
     }
 
-    // Pending runout boxes / hand-over marker.
+    // Pending runout boxes / hand-over marker. An ALL-IN closure ends the
+    // decisions too — its placeholders would invite dead card picks.
     final lineDealt = dealtSoFar;
-    final ended = state.line.isNotEmpty &&
+    final folded = state.line.isNotEmpty &&
         state.line.last.toUpperCase().startsWith('FOLD');
+    final ended = folded || _lineIsAllIn(state);
     if (!ended) {
       if (lineDealt < 1) {
         out.add(_vBox(context, header: 'TURN', dimmed: true, rows: [
@@ -676,7 +727,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       }
     } else {
       out.add(_vBox(context, header: 'END', dimmed: true, rows: [
-        _vRow(context, 'Hand over', Colors.grey),
+        _vRow(context, folded ? 'Hand over' : 'All-in', Colors.grey),
       ]));
     }
     return out;
@@ -881,17 +932,33 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       );
     }
 
-    final oppNode = _opponentNode(state, node);
-    if (oppNode != null) {
+    // The opponent's curve must describe the range the actor actually FACES:
+    // their last node's ENTERING reach narrowed by the action they took, and
+    // only when that node is on the SAME street (its stored equities are for
+    // its own board — a flop node's equity under a turn actor's curve told a
+    // wrong advantage story; review finding).
+    final opp = _opponentLast(state, node);
+    final cursorDealt = state.dealtCards.length;
+    if (opp != null && opp.dealt == cursorDealt) {
       return chart([
         actorSeries,
         EquityCurveSeries(
           oppLabel,
           const Color(0xFF64B5F6),
-          equityCurve(oppNode.combos),
+          equityCurve(_narrowedByAction(opp.node, opp.taken)),
           oppNames,
         ),
       ]);
+    }
+    if (opp != null && cursorDealt > 0) {
+      // A turn/river root: the opponent hasn't acted on THIS street yet, so
+      // no same-board equity exists for them — show the actor alone, say why.
+      return chart(
+        [actorSeries],
+        note:
+            '$oppLabel curve appears after they act on this street (their '
+            'stored equities belong to the previous board)',
+      );
     }
     // Flop root: the opponent's curve is computed on-device (once per spot).
     return FutureBuilder<List<PackCombo>>(
@@ -938,16 +1005,44 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     return false;
   }
 
-  /// The opponent's most recent action node BEFORE the cursor (searching
-  /// prefixes longest-first across the loaded street chunks), or null when
-  /// they haven't acted yet (e.g. the flop root).
-  PackNode? _opponentNode(ExplorerState state, PackNode node) {
+  /// The opponent's most recent decision BEFORE the cursor: their node, the
+  /// action they TOOK there (the next line step), and how many cards were
+  /// dealt at that node (its street). Null when they haven't acted yet.
+  ({PackNode node, String taken, int dealt})? _opponentLast(
+      ExplorerState state, PackNode node) {
     final prefix = state.prefix;
     for (var i = prefix.length - 1; i >= 0; i--) {
+      if (prefix[i].startsWith('@')) continue;
       final n = state.nodeAt(prefix.sublist(0, i));
-      if (n != null && n.actorIsOop != node.actorIsOop) return n;
+      if (n != null && n.actorIsOop != node.actorIsOop) {
+        var dealt = 0;
+        for (var k = 0; k < i; k++) {
+          if (prefix[k].startsWith('@')) dealt++;
+        }
+        return (node: n, taken: prefix[i], dealt: dealt);
+      }
     }
     return null;
+  }
+
+  /// The opponent's range AFTER the action they took: entering reach × that
+  /// action's per-combo frequency. Their node's stored equity is valid on the
+  /// node's own street — the caller only uses this same-street.
+  List<PackCombo> _narrowedByAction(PackNode oppNode, String taken) {
+    final ai = oppNode.actions.indexOf(taken);
+    if (ai < 0) return oppNode.combos;
+    return [
+      for (final c in oppNode.combos)
+        if (ai < c.freqs.length && c.reach * c.freqs[ai] > 1e-6)
+          PackCombo(
+            comboId: c.comboId,
+            reach: c.reach * c.freqs[ai],
+            equity: c.equity,
+            evPassive: c.evPassive,
+            freqs: c.freqs,
+            evs: c.evs,
+          ),
+    ];
   }
 
   /// The cursor points at no node. Mid-line that only means a missing chunk
@@ -958,10 +1053,10 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     if (state.chunkLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+    // stepBack normalizes BACKWARD over chance steps — setCursor(cursor-1)
+    // normalizes forward and was a no-op right after a dealt card.
     Widget back() => TextButton(
-          onPressed: () => ref
-              .read(explorerProvider.notifier)
-              .setCursor(state.cursor > 0 ? state.cursor - 1 : 0),
+          onPressed: () => ref.read(explorerProvider.notifier).stepBack(),
           child: const Text('Back one step'),
         );
     if (state.line.isEmpty) {
@@ -1010,13 +1105,12 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           action: back());
     }
     // Street closed by matched action. All-in call → showdown, no more cards
-    // to pick meaningfully street by street.
-    final streetSteps =
-        state.line.reversed.takeWhile((s) => !s.startsWith('@')).toList();
-    final allinCall = last.startsWith('CALL') &&
-        streetSteps.any((s) => s.toUpperCase().startsWith('ALLIN'));
+    // to pick meaningfully street by street. _lineIsAllIn covers BOTH the
+    // literal ALLIN label and a full-stack BET called (packs express most
+    // shoves as 'BET <everything behind>' — the literal check alone walked
+    // users into a dead card pick; review finding).
     final dealt = state.dealtCards.length;
-    if (allinCall) {
+    if (_lineIsAllIn(state)) {
       return _message(context,
           icon: Icons.paid_outlined,
           title: 'All-in — runout to showdown',

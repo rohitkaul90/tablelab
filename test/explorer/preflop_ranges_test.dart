@@ -49,6 +49,9 @@ void main() {
       expect(union, open);
       expect(d.ranges[0].intersection(d.ranges[1]), isEmpty);
       expect(d.ranges[0], contains('AA')); // 4-bet value keeps the top
+      // Shares divide by the DECISION'S universe (the opened range), so they
+      // sum to 1 — dividing by 1326 understated every vs-3-bet frequency.
+      expect(d.shares.reduce((a, b) => a + b), closeTo(1.0, 1e-9));
     });
   });
 

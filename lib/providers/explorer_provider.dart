@@ -173,6 +173,10 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
         clearTurn: true,
         clearRiver: true,
         clearPins: true, // pins are per-board
+        // Reset chunkLoading too: a street-chunk fetch made stale by this
+        // spot switch early-returns WITHOUT clearing it, and a stuck flag
+        // wedges _streetClosed in an infinite spinner (review finding).
+        chunkLoading: false,
         clearError: true);
     try {
       final client = ExplorerPackClient(spot.source);
@@ -202,6 +206,19 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     state = state.copyWith(cursor: c, clearError: true);
   }
 
+  /// Step the cursor BACK one decision. setCursor normalizes FORWARD, so
+  /// `setCursor(cursor - 1)` over a chance step lands right back where it was
+  /// (the Back button was a no-op after a dealt card — review finding);
+  /// normalize BACKWARD instead.
+  void stepBack() {
+    var c = state.cursor - 1;
+    while (c > 0 && state.line[c].startsWith('@')) {
+      c--;
+    }
+    if (c < 0) c = 0;
+    state = state.copyWith(cursor: c, clearError: true);
+  }
+
   /// Take [action] at the cursor.
   ///  - Matches the recorded step → pure replay: the cursor advances (through
   ///    any following chance steps), the line is untouched.
@@ -220,7 +237,7 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
         : const <String>[];
     final newLine = [...s.prefix, action];
     state = s.copyWith(line: newLine, cursor: newLine.length, clearError: true);
-    await _regrowTail(oldTail);
+    await _regrowTail(oldTail, baseLine: newLine);
   }
 
   /// Deal [card] at the line's end (closed street): appends the chance step,
@@ -316,10 +333,14 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
   /// After an edit, regrow the old tail: append each old step while it stays
   /// valid in the new branch — an action must be offered by the node reached;
   /// a chance step needs a cleanly closed street (and never follows a fold).
-  Future<void> _regrowTail(List<String> oldTail) async {
+  /// [baseLine] is the edited line this regrow belongs to: the await below is
+  /// a real gap (chunk IO), and grafting a stale tail onto a line the user
+  /// has ALREADY re-edited would fabricate steps they never chose.
+  Future<void> _regrowTail(List<String> oldTail,
+      {required List<String> baseLine}) async {
     if (oldTail.isEmpty) return;
     await _loadChunksForLine(); // chunks for the pinned runout, if any
-    if (!mounted) return;
+    if (!mounted || state.line.join('/') != baseLine.join('/')) return;
     final grown = [...state.line];
     var dealtCount = [
       for (final x in grown)

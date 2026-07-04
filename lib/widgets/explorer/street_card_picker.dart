@@ -33,13 +33,18 @@ class StreetCardPicker extends StatelessWidget {
         Text(title, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         for (var s = 3; s >= 0; s--) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var r = 12; r >= 0; r--)
-                _card(context, scheme,
-                    '${kRankChars[r]}${kSuitChars[s]}'),
-            ],
+          // FittedBox: 13 fixed-width cards ≈ 442px — on a 360–412dp phone an
+          // unshrinkable Row overflowed and clipped the low ranks untappable.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var r = 12; r >= 0; r--)
+                  _card(context, scheme,
+                      '${kRankChars[r]}${kSuitChars[s]}'),
+              ],
+            ),
           ),
           const SizedBox(height: 4),
         ],

@@ -26,13 +26,18 @@ class PreflopDecision {
   PreflopDecision(this.actorLabel, this.actions, this.ranges)
       : assert(actions.length == ranges.length);
 
-  /// Combos per action (pair 6 / suited 4 / offsuit 12; total 1326).
+  /// Combos per action (pair 6 / suited 4 / offsuit 12).
   List<int> get comboCounts =>
       [for (final r in ranges) r.fold(0, (s, h) => s + _combosOf(h))];
 
-  /// Share of ALL hands per action (sums to 1).
-  List<double> get shares =>
-      [for (final c in comboCounts) c / 1326.0];
+  /// Share per action of the DECISION'S OWN universe (sums to 1). For the
+  /// opener/responder that universe is all 1326 combos; for the vs-3-bet
+  /// decision it is the opener's opened range — dividing by 1326 there
+  /// understated every frequency by ~4× (review finding).
+  List<double> get shares {
+    final total = comboCounts.fold(0, (a, b) => a + b);
+    return [for (final c in comboCounts) total == 0 ? 0.0 : c / total];
+  }
 }
 
 int _combosOf(String hand) {
