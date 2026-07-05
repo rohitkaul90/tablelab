@@ -61,10 +61,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   double? _livePL;
   late int _liveDuration;
 
-  /// Game types already pre-filled from the previous session this open — so
-  /// toggling cash↔tournament defaults each type ONCE and doesn't clobber the
-  /// user's edits when they toggle back.
-  final Set<String> _defaultedTypes = <String>{};
+  /// True once the one-time carry-over defaults for the initial game type have
+  /// been applied (guards the async provider-resolves path from re-firing).
+  bool _initialDefaultsApplied = false;
 
   bool get _isTournament => _gameType == 'tournament';
   bool get _isOnline =>
@@ -81,8 +80,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       final existingStake = s.stakes;
       _isCustomStake =
           !kStakeOptions.contains(existingStake) && existingStake != 'N/A';
-      _selectedStake =
-          (_isCustomStake || existingStake == 'N/A') ? kStakeOptions[0] : existingStake;
+      // Custom stake → 'Other' sentinel so the dropdown matches the custom field
+      // (not '1/2'); 'N/A' (tournament, dropdown hidden) falls back to the first.
+      _selectedStake = _isCustomStake
+          ? 'Other'
+          : (existingStake == 'N/A' ? kStakeOptions[0] : existingStake);
       if (_isCustomStake) _customStakeCtrl.text = existingStake;
       _buyInCtrl.text = s.buyIn.toStringAsFixed(0);
       _cashOutCtrl.text = s.cashOut.toStringAsFixed(0);
@@ -128,8 +130,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _handsPerHourCtrl.text = '25';
       // Pre-fill location/country/currency/stakes/table-size/buy-in from the
       // most recent completed session of this game type — logging is faster
-      // when the usual venue/stakes carry over.
-      _applyDefaultsFor(_gameType);
+      // when the usual venue/stakes carry over. Applied before the controller
+      // listeners are attached below so the buy-in write doesn't fire _updateLive.
+      _applyInitialDefaults();
     }
     _buyInCtrl.addListener(_updateLive);
     _cashOutCtrl.addListener(_updateLive);
@@ -154,34 +157,67 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     super.dispose();
   }
 
-  /// Carry venue/stakes/etc. over from the most recent completed session of
-  /// [gameType] — but only the FIRST time each type is selected this open, so a
-  /// cash↔tournament toggle-back doesn't overwrite the user's edits.
-  void _applyDefaultsFor(String gameType) {
-    if (!_defaultedTypes.add(gameType)) return; // already defaulted this type
-    final sessions =
-        ref.read(completedSessionsProvider).valueOrNull ?? const <SessionModel>[];
-    String typeOf(String g) => g == 'sit_and_go' ? 'tournament' : g;
-    final matching = [
-      for (final s in sessions)
-        if (typeOf(s.gameType) == gameType) s
-    ]..sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
-    final last = matching.isEmpty ? null : matching.first;
-    if (last == null) return;
+  /// Apply the one-time carry-over defaults for the initial game type. If the
+  /// sessions provider hasn't resolved yet (cold start), wait for it and apply
+  /// once — so the pre-fill isn't silently skipped when the FAB is tapped before
+  /// the first fetch completes.
+  void _applyInitialDefaults() {
+    final async = ref.read(completedSessionsProvider);
+    final sessions = async.valueOrNull;
+    if (sessions != null) {
+      _applyCarryOverDefaults(sessions, _gameType);
+      _initialDefaultsApplied = true;
+      return;
+    }
+    ref.listenManual<AsyncValue<List<SessionModel>>>(completedSessionsProvider,
+        (prev, next) {
+      if (_initialDefaultsApplied || widget.session != null) return;
+      final loaded = next.valueOrNull;
+      if (loaded == null) return;
+      _initialDefaultsApplied = true;
+      setState(() => _applyCarryOverDefaults(loaded, _gameType));
+    });
+  }
 
-    _locationName = last.location ?? '';
+  /// Carry venue/stakes/currency/table-size/buy-in over from the most recent
+  /// completed session of [gameType]'s family. Re-applied on every game-type
+  /// toggle so each type shows ITS OWN last session (never the other type's
+  /// leftovers); when the family has no prior session the carry-over fields are
+  /// reset to a clean slate rather than left contaminated.
+  void _applyCarryOverDefaults(List<SessionModel> sessions, String gameType) {
+    final d = sessionDefaultsFor(sessions, gameType);
+    if (d == null) {
+      _resetCarryOverFields();
+      return;
+    }
+    _locationName = d.location ?? '';
     _selectedRoom =
-        kPokerRooms.where((r) => r.storageKey == last.location).firstOrNull;
-    _currency = last.currency;
-    _country = last.country;
-    _tableSize = last.tableSize;
-    final stake = last.stakes;
+        kPokerRooms.where((r) => r.storageKey == d.location).firstOrNull;
+    _currency = d.currency;
+    _country = d.country;
+    _tableSize = d.tableSize;
+    final stake = d.stakes;
     if (stake.isNotEmpty && stake != 'N/A') {
       _isCustomStake = !kStakeOptions.contains(stake);
-      _selectedStake = _isCustomStake ? kStakeOptions[0] : stake;
+      // A custom stake must select the 'Other' sentinel so the dropdown and the
+      // custom-stakes field agree (showing '1/2' while saving '3/6' is a bug).
+      _selectedStake = _isCustomStake ? 'Other' : stake;
       _customStakeCtrl.text = _isCustomStake ? stake : '';
     }
-    _buyInCtrl.text = last.buyIn.toStringAsFixed(0);
+    _buyInCtrl.text = d.buyIn.toStringAsFixed(0);
+  }
+
+  /// Reset only the carry-over fields to their blank/new-session defaults.
+  void _resetCarryOverFields() {
+    _locationName = '';
+    _selectedRoom = null;
+    _currency = 'CAD';
+    _country = null;
+    _tableSize = null;
+    _isCustomStake = false;
+    _selectedStake = kStakeOptions[0];
+    _customStakeCtrl.clear();
+    _buyInCtrl.clear();
   }
 
   double get _totalExpenses =>
@@ -438,9 +474,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               onSelectionChanged: (v) {
                 setState(() {
                   _gameType = v.first;
-                  // Default this type's fields from its last session (new logs
-                  // only; edit mode keeps the session's own values).
-                  if (widget.session == null) _applyDefaultsFor(_gameType);
+                  // Re-default this type's fields from ITS last session (new logs
+                  // only; edit mode keeps the session's own values) so toggling
+                  // never leaves the other type's buy-in/currency behind.
+                  if (widget.session == null) {
+                    final sessions =
+                        ref.read(completedSessionsProvider).valueOrNull ??
+                            const <SessionModel>[];
+                    _applyCarryOverDefaults(sessions, _gameType);
+                  }
                   _updateLive();
                 });
                 _fetchRakePreset();

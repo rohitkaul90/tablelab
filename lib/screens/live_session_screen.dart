@@ -142,16 +142,16 @@ class _LiveSessionStartScreenState
   bool _submitted = false;
   bool _saving = false;
 
-  /// Game types already pre-filled from the previous session this open (default
-  /// each type once; don't clobber edits on a toggle-back).
-  final Set<String> _defaultedTypes = <String>{};
+  /// True once the one-time carry-over defaults for the initial game type have
+  /// been applied (guards the async provider-resolves path from re-firing).
+  bool _initialDefaultsApplied = false;
 
   bool get _isTournament => _gameType == 'tournament';
 
   @override
   void initState() {
     super.initState();
-    _applyDefaultsFor(_gameType);
+    _applyInitialDefaults();
   }
 
   @override
@@ -161,31 +161,62 @@ class _LiveSessionStartScreenState
     super.dispose();
   }
 
-  /// Carry venue/stakes/currency/table-size/buy-in over from the most recent
-  /// completed session of [gameType] — first time each type is picked this open.
-  void _applyDefaultsFor(String gameType) {
-    if (!_defaultedTypes.add(gameType)) return;
-    final sessions =
-        ref.read(completedSessionsProvider).valueOrNull ?? const <SessionModel>[];
-    String typeOf(String g) => g == 'sit_and_go' ? 'tournament' : g;
-    final matching = [
-      for (final s in sessions)
-        if (typeOf(s.gameType) == gameType) s
-    ]..sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
-    final last = matching.isEmpty ? null : matching.first;
-    if (last == null) return;
+  /// Apply the one-time carry-over defaults for the initial game type, waiting
+  /// for the sessions provider to resolve if the screen opened on a cold start
+  /// (so the pre-fill isn't silently skipped before the first fetch completes).
+  void _applyInitialDefaults() {
+    final async = ref.read(completedSessionsProvider);
+    final sessions = async.valueOrNull;
+    if (sessions != null) {
+      _applyCarryOverDefaults(sessions, _gameType);
+      _initialDefaultsApplied = true;
+      return;
+    }
+    ref.listenManual<AsyncValue<List<SessionModel>>>(completedSessionsProvider,
+        (prev, next) {
+      if (_initialDefaultsApplied) return;
+      final loaded = next.valueOrNull;
+      if (loaded == null) return;
+      _initialDefaultsApplied = true;
+      setState(() => _applyCarryOverDefaults(loaded, _gameType));
+    });
+  }
 
-    _locationName = last.location ?? '';
-    _currency = last.currency;
-    _country = last.country;
-    _tableSize = last.tableSize;
-    final stake = last.stakes;
+  /// Carry venue/stakes/currency/table-size/buy-in over from the most recent
+  /// completed session of [gameType]'s family. Re-applied on every game-type
+  /// toggle so each type shows ITS OWN last session; when the family has no
+  /// prior session the carry-over fields reset to a clean slate.
+  void _applyCarryOverDefaults(List<SessionModel> sessions, String gameType) {
+    final d = sessionDefaultsFor(sessions, gameType);
+    if (d == null) {
+      _resetCarryOverFields();
+      return;
+    }
+    _locationName = d.location ?? '';
+    _currency = d.currency;
+    _country = d.country;
+    _tableSize = d.tableSize;
+    final stake = d.stakes;
     if (stake.isNotEmpty && stake != 'N/A') {
       _isCustomStake = !kStakeOptions.contains(stake);
-      _selectedStake = _isCustomStake ? kStakeOptions[0] : stake;
+      // A custom stake selects the 'Other' sentinel so the dropdown and the
+      // custom-stakes field agree.
+      _selectedStake = _isCustomStake ? 'Other' : stake;
       _customStakeCtrl.text = _isCustomStake ? stake : '';
     }
-    _buyInCtrl.text = last.buyIn.toStringAsFixed(0);
+    _buyInCtrl.text = d.buyIn.toStringAsFixed(0);
+  }
+
+  /// Reset only the carry-over fields to their blank/new-session defaults.
+  void _resetCarryOverFields() {
+    _locationName = '';
+    _currency = 'CAD';
+    _country = null;
+    _tableSize = null;
+    _isCustomStake = false;
+    _selectedStake = kStakeOptions[0];
+    _customStakeCtrl.clear();
+    _buyInCtrl.clear();
   }
 
   Future<void> _selectLocation() async {
@@ -291,7 +322,12 @@ class _LiveSessionStartScreenState
               selected: {_gameType},
               onSelectionChanged: (v) => setState(() {
                 _gameType = v.first;
-                _applyDefaultsFor(_gameType);
+                // Re-default this type's fields from ITS last session so
+                // toggling never leaves the other type's buy-in/currency behind.
+                final sessions =
+                    ref.read(completedSessionsProvider).valueOrNull ??
+                        const <SessionModel>[];
+                _applyCarryOverDefaults(sessions, _gameType);
               }),
               style: const ButtonStyle(visualDensity: VisualDensity.compact),
             ),

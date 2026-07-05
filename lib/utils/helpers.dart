@@ -123,6 +123,53 @@ SessionModel? mostRecentSession(List<SessionModel> sessions) {
   return sessions.reduce((a, b) => a.date.compareTo(b.date) >= 0 ? a : b);
 }
 
+/// Venue/stakes/currency/etc. carried over into a NEW session form from the
+/// user's most recent completed session in the same cash/tournament family as
+/// [gameType]. Null when there is no prior session of that family. Shared by
+/// both the past-log form and the live-session start form so they never drift.
+class SessionDefaults {
+  final String? location;
+  final String currency;
+  final String? country;
+  final int? tableSize;
+
+  /// Raw stakes string from the prior session ('1/2', '3/6', 'N/A', '').
+  final String stakes;
+  final double buyIn;
+
+  const SessionDefaults({
+    required this.location,
+    required this.currency,
+    required this.country,
+    required this.tableSize,
+    required this.stakes,
+    required this.buyIn,
+  });
+}
+
+/// Resolve carry-over defaults for [gameType] ('cash' | 'tournament') from the
+/// most recent matching completed session in [sessions]. Uses the shared
+/// [isTournamentType] predicate + [mostRecentSession] so game-type matching
+/// and recency stay consistent with the rest of the app.
+SessionDefaults? sessionDefaultsFor(
+    List<SessionModel> sessions, String gameType) {
+  final wantTournament = isTournamentType(gameType);
+  final matching = [
+    for (final s in sessions)
+      if (isTournamentType(s.gameType) == wantTournament) s
+  ];
+  final last = mostRecentSession(matching);
+  if (last == null) return null;
+  return SessionDefaults(
+    location: last.location,
+    currency: last.currency,
+    country: last.country,
+    tableSize: last.tableSize,
+    stakes: last.stakes,
+    buyIn: last.buyIn,
+  );
+}
+
 /// A tournament session is ITM when either:
 /// - prizeWon is explicitly recorded and > 0, OR
 /// - prizeWon was not recorded (e.g. HUD imports) but profitLoss > 0,

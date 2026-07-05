@@ -297,14 +297,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ],
-                    if (_error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _error!,
-                        style: TextStyle(color: theme.colorScheme.error),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
                     const SizedBox(height: 16),
                     TextButton.icon(
                       onPressed: () => launchUrl(
@@ -351,6 +343,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Error sits WITH the button in the pinned footer so a
+                        // failed sign-in is visible even with the keyboard up
+                        // (it used to live in the scroll body, above the fold).
+                        if (_error != null) ...[
+                          Text(
+                            _error!,
+                            style: TextStyle(color: theme.colorScheme.error),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         FilledButton(
                           onPressed:
                               (_loading || _googleLoading) ? null : _submit,
