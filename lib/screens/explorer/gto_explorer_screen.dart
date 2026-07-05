@@ -207,9 +207,12 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             ? Stack(
                 children: [
                   Positioned.fill(child: SafeArea(child: body)),
+                  // Bottom-right (free in focus mode) so it never obscures the
+                  // strip; a solid, elevated, LABELLED Exit so it's obvious how
+                  // to get back.
                   Positioned(
-                    top: 6,
-                    right: 6,
+                    right: 12,
+                    bottom: 12,
                     child: SafeArea(child: _focusControls(context, setMax)),
                   ),
                 ],
@@ -219,31 +222,50 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
-  /// The floating controls shown in focus mode (settings + exit), since the app
-  /// bar is hidden. A translucent pill so it reads over the felt/strip.
+  /// The floating controls shown in focus mode (settings + a clear Exit),
+  /// since the app bar is hidden.
   Widget _focusControls(BuildContext context, void Function(bool) setMax) {
     final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.82),
-      borderRadius: BorderRadius.circular(24),
-      clipBehavior: Clip.antiAlias,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: scheme.surfaceContainerHighest,
+          shape: const CircleBorder(),
+          elevation: 4,
+          clipBehavior: Clip.antiAlias,
+          child: IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Study settings',
-            visualDensity: VisualDensity.compact,
             onPressed: () => _openStudySettings(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.fullscreen_exit),
-            tooltip: 'Exit focus mode',
-            visualDensity: VisualDensity.compact,
-            onPressed: () => setMax(false),
+        ),
+        const SizedBox(width: 10),
+        Material(
+          color: scheme.primaryContainer,
+          borderRadius: BorderRadius.circular(24),
+          elevation: 4,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => setMax(false),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.fullscreen_exit,
+                      size: 20, color: scheme.onPrimaryContainer),
+                  const SizedBox(width: 6),
+                  Text('Exit',
+                      style: TextStyle(
+                          color: scheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1247,44 +1269,40 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         );
       }),
     );
-    final rightPane = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-          child: SegmentedButton<int>(
-            showSelectedIcon: false,
-            style: SegmentedButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              textStyle: const TextStyle(fontSize: 11.5),
-            ),
-            segments: const [
-              ButtonSegment(value: 0, label: Text('Overview')),
-              ButtonSegment(value: 1, label: Text('Equity chart')),
-            ],
-            selected: {_rightTab},
-            onSelectionChanged: (s) => setState(() => _rightTab = s.first),
-          ),
+    final tabToggle = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: SegmentedButton<int>(
+        showSelectedIcon: false,
+        style: SegmentedButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          textStyle: const TextStyle(fontSize: 11.5),
         ),
-        Expanded(
-          // Both tabs render the Overview; the Equity-chart tab swaps the stat
-          // box for the equity chart above the actions.
-          child: OverviewPanel(
-            node: node,
-            summary: summary,
-            actorLabel: actor,
-            selectedAction: _actionFilter,
-            bbPerUnit: bbPerUnit(manifest.scenario, manifest.pot0),
-            comboNames: combos,
-            selectedCell: _selectedCellFor(cells),
-            headerChart:
-                _rightTab == 1 ? _equityPane(context, state, node) : null,
-            onActionTap: (a) => setState(
-                () => _actionFilter = _actionFilter == a ? null : a),
-          ),
-        ),
-      ],
+        segments: const [
+          ButtonSegment(value: 0, label: Text('Overview')),
+          ButtonSegment(value: 1, label: Text('Equity chart')),
+        ],
+        selected: {_rightTab},
+        onSelectionChanged: (s) => setState(() => _rightTab = s.first),
+      ),
     );
+
+    // Both tabs render the Overview; the Equity-chart tab swaps the stat box for
+    // the equity chart above the actions. [embedded] controls who owns the
+    // scroll (the wide pane scrolls itself; the narrow single-column doesn't).
+    OverviewPanel overview({required bool embedded}) => OverviewPanel(
+          node: node,
+          summary: summary,
+          actorLabel: actor,
+          selectedAction: _actionFilter,
+          bbPerUnit: bbPerUnit(manifest.scenario, manifest.pot0),
+          comboNames: combos,
+          selectedCell: _selectedCellFor(cells),
+          headerChart:
+              _rightTab == 1 ? _equityPane(context, state, node) : null,
+          embedded: embedded,
+          onActionTap: (a) => setState(
+              () => _actionFilter = _actionFilter == a ? null : a),
+        );
 
     return LayoutBuilder(builder: (context, constraints) {
       if (constraints.maxWidth >= 900) {
@@ -1293,16 +1311,24 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           children: [
             Expanded(flex: 11, child: grid),
             const VerticalDivider(width: 1),
-            Expanded(flex: 9, child: rightPane),
+            Expanded(
+              flex: 9,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [tabToggle, Expanded(child: overview(embedded: false))],
+              ),
+            ),
           ],
         );
       }
+      // Narrow: ONE outer scroll — the grid, the tab toggle, then the embedded
+      // (non-scrolling) Overview. Nesting the Overview's own ListView inside
+      // this one trapped the scroll gesture and stuck the user at the bottom.
       return ListView(
         children: [
           grid,
-          // Taller on narrow layouts so the compact actions + the Hands list
-          // are both reachable within the pane's own scroll.
-          SizedBox(height: 560, child: rightPane),
+          tabToggle,
+          overview(embedded: true),
         ],
       );
     });
