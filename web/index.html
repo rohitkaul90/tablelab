@@ -44,6 +44,33 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
 
+  <!-- Sitewide entity graph (Organization + WebSite). The app below is client-rendered,
+       so this static block gives crawlers and AI engines the brand entity without JS. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": { "@type": "ImageObject", "url": "https://tablelab.app/icons/Icon-512.png", "width": 512, "height": 512 },
+        "contactPoint": { "@type": "ContactPoint", "email": "support@tablelab.app", "contactType": "customer support" }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://tablelab.app/#website",
+        "url": "https://tablelab.app",
+        "name": "TableLab",
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      }
+    ]
+  }
+  </script>
+
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
