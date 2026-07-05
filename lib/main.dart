@@ -180,8 +180,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     // in debug builds). Prod users must never see a permanently dead tab —
     // today's only pack source is a local dev directory; hosted packs light it
     // up later. The calculators (Equity/ICM) now live in the drawer's Tools.
-    final showStudy =
-        kDebugMode || ref.watch(explorerProvider).spots.isNotEmpty;
+    // Watch only spot-DISCOVERY (not the whole explorer state) so the root
+    // Scaffold/NavigationBar doesn't rebuild on every cursor move / chunk load.
+    final showStudy = kDebugMode ||
+        ref.watch(explorerProvider.select((s) => s.spots.isNotEmpty));
     // Study focus mode hides the bottom nav for a full-window spot view.
     final maximized = ref.watch(studyMaximizedProvider);
 

@@ -79,8 +79,13 @@ class OverviewPanel extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              if (bbPerUnit != null && node.potBefore > 0)
-                _stat(context, 'Pot', _fmtBB(node.potBefore * bbPerUnit!)),
+              if (node.potBefore > 0)
+                _stat(
+                    context,
+                    'Pot',
+                    bbPerUnit != null
+                        ? _fmtBB(node.potBefore * bbPerUnit!)
+                        : node.potBefore.toStringAsFixed(1)),
               if (node.toCall > 0 && node.potBefore > 0)
                 _stat(
                     context,
@@ -103,18 +108,23 @@ class OverviewPanel extends StatelessWidget {
                 color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
         const SizedBox(height: 6),
         // All actions on ONE horizontal line — a box each (equal width), text
-        // scaled to fit however many actions there are.
-        SizedBox(
-          height: 92,
-          child: Row(
-            children: [
-              for (var a = 0; a < summary.actions.length; a++) ...[
-                if (a > 0) const SizedBox(width: 8),
-                Expanded(
-                    child:
-                        _actionBox(context, a, summary.actions[a], colors[a])),
+        // scaled to fit however many actions there are. Clamp text scaling (as
+        // the strip/nav do) so a large system font can't overflow the fixed
+        // height and clip the combos line.
+        MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.0,
+          child: SizedBox(
+            height: 92,
+            child: Row(
+              children: [
+                for (var a = 0; a < summary.actions.length; a++) ...[
+                  if (a > 0) const SizedBox(width: 8),
+                  Expanded(
+                      child: _actionBox(
+                          context, a, summary.actions[a], colors[a])),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -211,7 +221,9 @@ class OverviewPanel extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                     actionSizeLabel(agg.label,
-                        potBefore: node.potBefore, behind: node.behind),
+                        potBefore: node.potBefore,
+                        toCall: node.toCall,
+                        behind: node.behind),
                     maxLines: 1,
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.w700)),

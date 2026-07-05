@@ -101,7 +101,9 @@ class ComboStrategyList extends StatelessWidget {
                   Expanded(
                     child: Text(
                         actionSizeLabel(node.actions[a],
-                            potBefore: node.potBefore, behind: node.behind),
+                            potBefore: node.potBefore,
+                            toCall: node.toCall,
+                            behind: node.behind),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 13.5)),

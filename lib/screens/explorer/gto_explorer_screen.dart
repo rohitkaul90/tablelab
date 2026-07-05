@@ -303,7 +303,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                       segments: [
                         for (final e in depths.entries)
                           ButtonSegment(
-                              value: e.key, label: Text('~${e.value}bb')),
+                              value: e.key,
+                              label: Text(depthLabelBB(scenario!, e.key))),
                       ],
                       selected: {
                         if (currentDepth != null &&
@@ -339,20 +340,26 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   }
 
   /// Switch the loaded spot to [regime] on the SAME board (the settings depth
-  /// picker), and remember it so subsequent board picks use it.
+  /// picker), and remember it so subsequent board picks use it. Only commits
+  /// the preference when a pack actually exists for that board at that regime —
+  /// otherwise the depth control would desync from the data still on screen.
   void _setDepth(String regime) {
-    setState(() => _depthPref = regime);
     final st = ref.read(explorerProvider);
     final spot = st.spot;
-    if (spot == null) return;
-    final target = st.spots
-        .where((s) =>
-            s.scenario == spot.scenario &&
-            s.flop == spot.flop &&
-            s.spr == regime)
-        .toList();
-    if (target.isNotEmpty && !identical(target.first, spot)) {
-      setState(() => _preflopInspect = -1);
+    final target = spot == null
+        ? const []
+        : st.spots
+            .where((s) =>
+                s.scenario == spot.scenario &&
+                s.flop == spot.flop &&
+                s.spr == regime)
+            .toList();
+    if (target.isEmpty) return; // no solved pack at that depth for this board
+    setState(() {
+      _depthPref = regime;
+      _preflopInspect = -1;
+    });
+    if (!identical(target.first, spot)) {
       ref.read(explorerProvider.notifier).selectSpot(target.first);
     }
   }
@@ -757,13 +764,16 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final len = state.line.length;
     final scenarioChanged = scen != _lastStripScenario;
     final grew = len > _lastStripLineLen;
-    final shrank = len < _lastStripLineLen; // reset / edit-back
+    // Rewind to the LEFT only on a scenario switch or a full Reset (line
+    // emptied). A partial edit-back (line shortens but isn't empty) leaves the
+    // cursor on the edited box — don't yank it off-screen.
+    final rewound = scenarioChanged || (len == 0 && _lastStripLineLen > 0);
     _lastStripScenario = scen;
     _lastStripLineLen = len;
-    if (!scenarioChanged && !grew && !shrank) return;
+    if (!scenarioChanged && !grew && !rewound) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_stripCtrl.hasClients) return;
-      if (scenarioChanged || shrank) {
+      if (rewound) {
         _stripCtrl.jumpTo(0);
       } else if (grew && state.atLineEnd) {
         final max = _stripCtrl.position.maxScrollExtent;
@@ -1001,7 +1011,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       if (action.toUpperCase().startsWith('CALL')) {
         return n.toCall >= n.behind - 1e-6 ? 'Call · all-in' : 'Call';
       }
-      return actionSizeLabel(action, potBefore: n.potBefore, behind: n.behind);
+      return actionSizeLabel(action,
+          potBefore: n.potBefore, toCall: n.toCall, behind: n.behind);
     }
 
     void decisionRows(List<Widget> rows, PackNode n, int stepIndex,
