@@ -133,7 +133,11 @@ function analyze(rows) {
     all, w24, w7, w30, mtd,
     cacheShareAll: cacheShare(all),
     cacheShare7d: cacheShare(w7),
-    cacheBroken: all.calls > 5 && all.cacheRead === 0,
+    // 0 reads is only "broken" if there are also 0 WRITES: writes prove the
+    // cache is engaged; 0 reads with writes is just sparse traffic (the ~5min
+    // ephemeral TTL vs calls that never cluster within one window).
+    cacheEngaged: all.cacheWrite > 0,
+    cacheBroken: all.calls > 5 && all.cacheRead === 0 && all.cacheWrite === 0,
     byFunction: [...byFn.entries()].map(([k, v]) => ({ fn: k, ...v, cacheShare: cacheShare(v) }))
       .sort((a, b) => b.cost - a.cost),
     topUsers: [...byUser.entries()].map(([k, v]) => ({ user: k, ...v }))
@@ -166,8 +170,12 @@ function render(a) {
   L.push("");
   L.push("CACHE HEALTH");
   L.push(`  read share (all-time)  ${pct(a.cacheShareAll)}   read share (7d)  ${pct(a.cacheShare7d)}`);
-  if (a.cacheBroken) L.push("  ⚠ CACHE NOT WORKING — cache_read_tokens is 0 across all calls. Input cost is ~2× what it should be.");
-  else if (a.cacheShare7d < 0.3 && a.w7.calls > 5) L.push("  ⚠ Low cache hit-rate (7d) — investigate the ephemeral system-prompt cache.");
+  if (a.cacheBroken) L.push("  ⚠ CACHE NOT ENGAGED — 0 cache_read AND 0 cache_write across all calls. cache_control isn't applying; input cost is ~2×.");
+  else if (a.cacheShare7d < 0.3 && a.w7.calls > 5) {
+    L.push(a.cacheEngaged
+      ? "  ℹ Low cache reads (7d) — likely sparse traffic (calls > 5min apart); cache IS engaged (writes happening)."
+      : "  ⚠ Low cache hit-rate (7d) — investigate the ephemeral system-prompt cache.");
+  }
   L.push("");
   L.push("BY FUNCTION");
   for (const f of a.byFunction) {
