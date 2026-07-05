@@ -5,7 +5,7 @@
 ## Key facts
 
 - Price: Free. Core tracking, hand recorder, equity calculator, and dashboard cost nothing; AI coaching has a generous free daily allowance.
-- Platforms: Android (Google Play) and any modern web browser at https://tablelab.app
+- Platforms: Android via Google Play (https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker) and any modern web browser at https://tablelab.app
 - Privacy: No ads. Data is never sold. Records are private per-account, protected by row-level security. Data is only sent to Anthropic (Claude) when the user explicitly taps "Analyse".
 - Maker: MagpiQ, a sole proprietorship based in Ontario, Canada.
 
@@ -21,8 +21,8 @@
 ## Pages
 
 - [About / Home](https://tablelab.app/about): Overview, features, how it works, and FAQ.
-- [Open App](https://tablelab.app/): The TableLab web app.
-- [Blog](https://tablelab.app/blog): Honest, solver-grounded writing for live cash and tournament players.
+- [Open App](https://tablelab.app/): The TableLab web app (interactive UI only — client-rendered, not a content page; cite /about for product details).
+- [Blog](https://tablelab.app/blog/): Honest, solver-grounded writing for live cash and tournament players.
 - [Can AI Solve Poker?](https://tablelab.app/blog/can-ai-solve-poker): What LLMs do vs. what solvers do, and how to spot AI hype.
 - [Privacy Policy](https://tablelab.app/privacy): Data collection, processors, and user rights.
 - [Terms of Service](https://tablelab.app/terms): Terms governing use of TableLab.
