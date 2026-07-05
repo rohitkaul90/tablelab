@@ -114,14 +114,26 @@ async function aiStatus() {
   const rate7 = d7.cost / 7;
   const daysToCap = rate7 > 0 ? (CAP - mtd.cost) / rate7 : null;
 
-  const cacheBroken = d7.calls > 5 && d7.cacheRead === 0;
+  // Cache WRITES prove cache_control is applied (the prompt IS being cached).
+  // 0 READS alone is NOT "broken" at low volume: the ephemeral cache's ~5min TTL
+  // vs the smoke test's 1 deep call/day (24h apart) means no two calls land in
+  // the same cache window, so 0 reads is EXPECTED. Only 0 reads AND 0 writes with
+  // real volume means the cache is genuinely not engaged (the real failure —
+  // cache_control missing, or logUsage recording nothing).
+  const cacheEngaged = d7.cacheWrite > 0;
+  const cacheBroken = d7.calls > 5 && d7.cacheRead === 0 && !cacheEngaged;
   const lowCache = !cacheBroken && d7.calls > 5 && share(d7) < 0.3;
   const overCap = (mtd.cost / new Date(now).getDate()) * 30 >= CAP;
 
   let icon = "✅", warn = "";
-  if (cacheBroken) { icon = "🔴"; warn = " — CACHE BROKEN (0 cache reads, input cost ~2×)"; }
+  if (cacheBroken) { icon = "🔴"; warn = " — CACHE NOT ENGAGED (0 reads AND 0 writes over 7d)"; }
   else if (overCap) { icon = "🔴"; warn = ` — projected month ≥ $${CAP} cap`; }
-  else if (lowCache) { icon = "🟡"; warn = " — low cache hit-rate, check ephemeral cache"; }
+  else if (lowCache) {
+    icon = "🟡";
+    warn = cacheEngaged
+        ? " — low cache reads (likely sparse traffic; cache is engaged)"
+        : " — low cache hit-rate, check ephemeral cache";
+  }
 
   const line = `${icon} AI: ${d1.calls} calls / $${d1.cost.toFixed(2)} yesterday · cache ${(share(d7) * 100).toFixed(0)}% (7d) · ` +
     `$${mtd.cost.toFixed(2)} MTD` + (daysToCap == null ? "" : ` · ~${Math.max(0, daysToCap).toFixed(0)}d to $${CAP} cap`) + warn;
