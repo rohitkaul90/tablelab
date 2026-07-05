@@ -52,6 +52,11 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// opened directly.
   PreflopTrail _trail = const PreflopTrail();
 
+  /// Whether the one-time initial trail sync (from the first-loaded spot) has
+  /// happened — so it never re-fires and undoes a user's fold/reset of the
+  /// opener. See _body.
+  bool _trailInitSynced = false;
+
   /// Which PREFLOP decision the body inspects (0 open / 1 response / 2 vs
   /// 3-bet), or -1 when the body shows the postflop node at the cursor.
   int _preflopInspect = -1;
@@ -393,12 +398,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     // Release-mode gap in the ref.listen sync: the auto-selected spot can be
     // fully loaded BEFORE this screen ever mounts (ToolsScreen gates the child
     // on spots.isNotEmpty), so the change-only listener never fires and the
-    // trail stays empty — dead navigation. Sync lazily here instead: a direct
-    // field assignment during build is safe (the new value is used below).
+    // trail stays empty — dead navigation. Sync ONCE, lazily, when a spot first
+    // becomes available. Must NOT fire every build: otherwise folding the
+    // opener (which clears it) is instantly undone here, re-snapping the opener
+    // back to the loaded spot's representative — you could never fold/change it.
     final spot0 = state.spot;
-    if (spot0 != null && _trail.opener == null) {
-      final synced = trailForScenario(spot0.scenario);
-      if (synced.opener != null) _trail = synced;
+    if (!_trailInitSynced && spot0 != null) {
+      _trailInitSynced = true;
+      if (_trail.opener == null) {
+        final synced = trailForScenario(spot0.scenario);
+        if (synced.opener != null) _trail = synced;
+      }
     }
 
     if (state.scanning) {
