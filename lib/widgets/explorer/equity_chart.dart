@@ -94,11 +94,15 @@ class _EquityChartState extends State<EquityChart> {
               onHover: (e) => _setHover(toPlotX(e.localPosition)),
               onExit: (_) => _setHover(null),
               child: GestureDetector(
-                // Touch: press-drag scrubs the crosshair.
-                onPanDown: (d) => _setHover(toPlotX(d.localPosition)),
-                onPanUpdate: (d) => _setHover(toPlotX(d.localPosition)),
-                onPanEnd: (_) => _setHover(null),
-                onPanCancel: () => _setHover(null),
+                // Touch: HORIZONTAL press-drag scrubs the crosshair (the x-axis
+                // is the range percentile). Using horizontal — not pan — drag
+                // lets a VERTICAL drag fall through to the outer ListView so the
+                // chart isn't a scroll dead-zone when embedded on a phone.
+                onHorizontalDragDown: (d) => _setHover(toPlotX(d.localPosition)),
+                onHorizontalDragUpdate: (d) =>
+                    _setHover(toPlotX(d.localPosition)),
+                onHorizontalDragEnd: (_) => _setHover(null),
+                onHorizontalDragCancel: () => _setHover(null),
                 child: RepaintBoundary(
                   child: CustomPaint(
                     painter: _EquityChartPainter(

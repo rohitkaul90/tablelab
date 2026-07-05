@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 
 import '../../explorer/preflop_ranges.dart';
+import 'panel_layout.dart';
 import 'strategy_grid.dart';
 
 /// UI colors for the preflop action vocabulary (dark-calibrated, matching the
@@ -123,14 +124,7 @@ class _PreflopDecisionBodyState extends State<PreflopDecisionBody> {
             ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10.5),
       ),
     ];
-    if (embedded) {
-      return Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: children),
-      );
-    }
-    return ListView(padding: const EdgeInsets.all(12), children: children);
+    return explorerPanelBody(embedded: embedded, children: children);
   }
 
   Widget _actionCard(BuildContext context, int index, String label,

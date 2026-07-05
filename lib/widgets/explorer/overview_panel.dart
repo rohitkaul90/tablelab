@@ -10,6 +10,7 @@ import '../../explorer/grid_aggregation.dart';
 import '../../explorer/pack_codec.dart';
 import 'action_colors.dart';
 import 'combo_strategy_list.dart';
+import 'panel_layout.dart';
 
 class OverviewPanel extends StatelessWidget {
   final PackNode node;
@@ -175,16 +176,7 @@ class OverviewPanel extends StatelessWidget {
           ),
     ];
 
-    // Embedded → non-scrolling Column (the caller's ListView scrolls). Standalone
-    // → its own ListView (the wide layout's fixed-height Expanded pane).
-    if (embedded) {
-      return Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: children),
-      );
-    }
-    return ListView(padding: const EdgeInsets.all(12), children: children);
+    return explorerPanelBody(embedded: embedded, children: children);
   }
 
   Widget _stat(BuildContext context, String label, String value) {

@@ -211,7 +211,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         body: maximized
             ? Stack(
                 children: [
-                  Positioned.fill(child: SafeArea(child: body)),
+                  // Reserve a bottom band so the floating Exit controls never
+                  // cover (or intercept taps on) the last content — the narrow
+                  // ListView ends above the buttons instead of behind them.
+                  Positioned.fill(
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 72),
+                        child: body,
+                      ),
+                    ),
+                  ),
                   // Bottom-right (free in focus mode) so it never obscures the
                   // strip; a solid, elevated, LABELLED Exit so it's obvious how
                   // to get back.
@@ -1296,6 +1306,13 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       ),
     );
 
+    // Build the (potentially expensive) equity header ONCE here, above the
+    // LayoutBuilder — _equityPane calls equityCurve(node.combos), and building it
+    // inside the builder would recompute it on every constraint-driven rebuild
+    // (rotation/keyboard/resize). See the CLAUDE.md right-pane note.
+    final headerChart =
+        _rightTab == 1 ? _equityPane(context, state, node) : null;
+
     // Both tabs render the Overview; the Equity-chart tab swaps the stat box for
     // the equity chart above the actions. [embedded] controls who owns the
     // scroll (the wide pane scrolls itself; the narrow single-column doesn't).
@@ -1307,8 +1324,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           bbPerUnit: bbPerUnit(manifest.scenario, manifest.pot0),
           comboNames: combos,
           selectedCell: _selectedCellFor(cells),
-          headerChart:
-              _rightTab == 1 ? _equityPane(context, state, node) : null,
+          headerChart: headerChart,
           embedded: embedded,
           onActionTap: (a) => setState(
               () => _actionFilter = _actionFilter == a ? null : a),
