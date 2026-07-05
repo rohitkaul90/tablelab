@@ -142,13 +142,50 @@ class _LiveSessionStartScreenState
   bool _submitted = false;
   bool _saving = false;
 
+  /// Game types already pre-filled from the previous session this open (default
+  /// each type once; don't clobber edits on a toggle-back).
+  final Set<String> _defaultedTypes = <String>{};
+
   bool get _isTournament => _gameType == 'tournament';
+
+  @override
+  void initState() {
+    super.initState();
+    _applyDefaultsFor(_gameType);
+  }
 
   @override
   void dispose() {
     _customStakeCtrl.dispose();
     _buyInCtrl.dispose();
     super.dispose();
+  }
+
+  /// Carry venue/stakes/currency/table-size/buy-in over from the most recent
+  /// completed session of [gameType] — first time each type is picked this open.
+  void _applyDefaultsFor(String gameType) {
+    if (!_defaultedTypes.add(gameType)) return;
+    final sessions =
+        ref.read(completedSessionsProvider).valueOrNull ?? const <SessionModel>[];
+    String typeOf(String g) => g == 'sit_and_go' ? 'tournament' : g;
+    final matching = [
+      for (final s in sessions)
+        if (typeOf(s.gameType) == gameType) s
+    ]..sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
+    final last = matching.isEmpty ? null : matching.first;
+    if (last == null) return;
+
+    _locationName = last.location ?? '';
+    _currency = last.currency;
+    _country = last.country;
+    _tableSize = last.tableSize;
+    final stake = last.stakes;
+    if (stake.isNotEmpty && stake != 'N/A') {
+      _isCustomStake = !kStakeOptions.contains(stake);
+      _selectedStake = _isCustomStake ? kStakeOptions[0] : stake;
+      _customStakeCtrl.text = _isCustomStake ? stake : '';
+    }
+    _buyInCtrl.text = last.buyIn.toStringAsFixed(0);
   }
 
   Future<void> _selectLocation() async {
@@ -252,7 +289,10 @@ class _LiveSessionStartScreenState
                 ButtonSegment(value: 'tournament', label: Text('Tournament')),
               ],
               selected: {_gameType},
-              onSelectionChanged: (v) => setState(() => _gameType = v.first),
+              onSelectionChanged: (v) => setState(() {
+                _gameType = v.first;
+                _applyDefaultsFor(_gameType);
+              }),
               style: const ButtonStyle(visualDensity: VisualDensity.compact),
             ),
             const SizedBox(height: 16),

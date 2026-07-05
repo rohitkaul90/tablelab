@@ -61,6 +61,11 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   double? _livePL;
   late int _liveDuration;
 
+  /// Game types already pre-filled from the previous session this open — so
+  /// toggling cash↔tournament defaults each type ONCE and doesn't clobber the
+  /// user's edits when they toggle back.
+  final Set<String> _defaultedTypes = <String>{};
+
   bool get _isTournament => _gameType == 'tournament';
   bool get _isOnline =>
       _selectedRoom?.isOnline ?? isOnlineSession(_locationName);
@@ -121,6 +126,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       _liveDuration = 0;
       _currency = 'CAD';
       _handsPerHourCtrl.text = '25';
+      // Pre-fill location/country/currency/stakes/table-size/buy-in from the
+      // most recent completed session of this game type — logging is faster
+      // when the usual venue/stakes carry over.
+      _applyDefaultsFor(_gameType);
     }
     _buyInCtrl.addListener(_updateLive);
     _cashOutCtrl.addListener(_updateLive);
@@ -143,6 +152,36 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     _notesCtrl.dispose();
     _breakMinutesCtrl.dispose();
     super.dispose();
+  }
+
+  /// Carry venue/stakes/etc. over from the most recent completed session of
+  /// [gameType] — but only the FIRST time each type is selected this open, so a
+  /// cash↔tournament toggle-back doesn't overwrite the user's edits.
+  void _applyDefaultsFor(String gameType) {
+    if (!_defaultedTypes.add(gameType)) return; // already defaulted this type
+    final sessions =
+        ref.read(completedSessionsProvider).valueOrNull ?? const <SessionModel>[];
+    String typeOf(String g) => g == 'sit_and_go' ? 'tournament' : g;
+    final matching = [
+      for (final s in sessions)
+        if (typeOf(s.gameType) == gameType) s
+    ]..sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
+    final last = matching.isEmpty ? null : matching.first;
+    if (last == null) return;
+
+    _locationName = last.location ?? '';
+    _selectedRoom =
+        kPokerRooms.where((r) => r.storageKey == last.location).firstOrNull;
+    _currency = last.currency;
+    _country = last.country;
+    _tableSize = last.tableSize;
+    final stake = last.stakes;
+    if (stake.isNotEmpty && stake != 'N/A') {
+      _isCustomStake = !kStakeOptions.contains(stake);
+      _selectedStake = _isCustomStake ? kStakeOptions[0] : stake;
+      _customStakeCtrl.text = _isCustomStake ? stake : '';
+    }
+    _buyInCtrl.text = last.buyIn.toStringAsFixed(0);
   }
 
   double get _totalExpenses =>
@@ -399,6 +438,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               onSelectionChanged: (v) {
                 setState(() {
                   _gameType = v.first;
+                  // Default this type's fields from its last session (new logs
+                  // only; edit mode keeps the session's own values).
+                  if (widget.session == null) _applyDefaultsFor(_gameType);
                   _updateLive();
                 });
                 _fetchRakePreset();

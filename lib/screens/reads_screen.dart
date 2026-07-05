@@ -169,11 +169,11 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
         ],
       ),
       floatingActionButton: readsAsync.maybeWhen(
-        data: (reads) => FloatingActionButton.extended(
+        data: (reads) => FloatingActionButton(
           heroTag: 'fab_reads',
           onPressed: () => _openQuickAdd(reads),
-          icon: const Icon(Icons.person_add_outlined),
-          label: const Text('Add Read'),
+          tooltip: 'Add read',
+          child: const Icon(Icons.add),
         ),
         orElse: () => null,
       ),
