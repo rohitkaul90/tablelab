@@ -49,6 +49,30 @@ void main() {
         isEmpty);
   });
 
+  test('leading/trailing slashes in an index path are normalized (no //)',
+      () async {
+    Uri? readUrl;
+    final client = MockClient((req) async {
+      if (req.url.path.endsWith('index.json')) {
+        return http.Response(
+          jsonEncode({
+            'version': 1,
+            'spots': [
+              {'scenario': 's', 'flop': 'f', 'spr': 'p', 'path': '/scen/spot/'}
+            ]
+          }),
+          200,
+        );
+      }
+      readUrl = req.url;
+      return http.Response.bytes(Uint8List.fromList([1]), 200);
+    });
+    final spots =
+        await fetchHostedSpots('https://packs.example/', client: client);
+    await spots.single.source.read('manifest.json');
+    expect(readUrl.toString(), 'https://packs.example/scen/spot/manifest.json');
+  });
+
   test('HttpPackSource reads a chunk from base/relPath, throws on non-200',
       () async {
     final client = MockClient((req) async {

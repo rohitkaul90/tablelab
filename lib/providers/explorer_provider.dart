@@ -154,21 +154,27 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
 
   ExplorerPackClient? _client;
 
-  /// Discover browsable spots: the HOSTED index first (works in prod on every
-  /// platform), then the local `~/tlpacks` scan as a dev fallback (io only;
-  /// a no-op on web). Both are failure-tolerant → an empty list just hides the
+  /// Discover browsable spots from the hosted index and/or the local
+  /// `~/tlpacks` scan. In a DEBUG build local packs win (a dev iterating on
+  /// freshly-generated packs shouldn't be silently served the older hosted
+  /// set); in release, hosted wins (there are no local packs on web/mobile
+  /// anyway). Both sources are failure-tolerant → an empty list just hides the
   /// Study tab, never an error.
   Future<void> init() async {
     if (state.scanning || state.spots.isNotEmpty) return;
     state = state.copyWith(scanning: true, clearError: true);
-    var spots = const <ExplorerSpotRef>[];
-    if (kPacksBaseUrl.isNotEmpty) {
-      spots = await fetchHostedSpots(kPacksBaseUrl);
-    }
-    if (spots.isEmpty) {
+
+    Future<List<ExplorerSpotRef>> local() async {
       final root = defaultPacksRoot();
-      if (root != null) spots = await scanLocalPacks(root);
+      return root == null ? const [] : scanLocalPacks(root);
     }
+
+    Future<List<ExplorerSpotRef>> hosted() async =>
+        kPacksBaseUrl.isEmpty ? const [] : fetchHostedSpots(kPacksBaseUrl);
+
+    var spots = await (kDebugMode ? local() : hosted());
+    if (spots.isEmpty) spots = await (kDebugMode ? hosted() : local());
+
     state = state.copyWith(scanning: false, spots: spots);
     if (spots.isNotEmpty) await selectSpot(spots.first);
   }
