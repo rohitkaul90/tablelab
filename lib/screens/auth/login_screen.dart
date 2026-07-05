@@ -152,15 +152,18 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                     Image.asset(
                       'assets/icon/app_icon.png',
                       width: 80,
@@ -294,43 +297,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ],
-                    if (_error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _error!,
-                        style: TextStyle(color: theme.colorScheme.error),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: (_loading || _googleLoading) ? null : _submit,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: _loading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              _isRegister ? 'Create Account' : 'Sign In'),
-                    ),
                     const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => setState(() {
-                        _isRegister = !_isRegister;
-                        _error = null;
-                      }),
-                      child: Text(
-                        _isRegister
-                            ? 'Already have an account? Sign in'
-                            : "Don't have an account? Create one",
-                      ),
-                    ),
-                    const SizedBox(height: 4),
                     TextButton.icon(
                       onPressed: () => launchUrl(
                         Uri.parse('https://tablelab.app/about'),
@@ -364,8 +331,61 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-                  ],
-                ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Pinned action — stays above the keyboard so Sign In is
+                  // reachable while the user is typing email/password.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Error sits WITH the button in the pinned footer so a
+                        // failed sign-in is visible even with the keyboard up
+                        // (it used to live in the scroll body, above the fold).
+                        if (_error != null) ...[
+                          Text(
+                            _error!,
+                            style: TextStyle(color: theme.colorScheme.error),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        FilledButton(
+                          onPressed:
+                              (_loading || _googleLoading) ? null : _submit,
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
+                                )
+                              : Text(_isRegister
+                                  ? 'Create Account'
+                                  : 'Sign In'),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _isRegister = !_isRegister;
+                            _error = null;
+                          }),
+                          child: Text(
+                            _isRegister
+                                ? 'Already have an account? Sign in'
+                                : "Don't have an account? Create one",
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

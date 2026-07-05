@@ -50,11 +50,11 @@ class SessionHistoryScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         heroTag: 'fab_sessions',
         onPressed: () => showLogSessionChooser(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Log Session'),
+        tooltip: 'Log session',
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [

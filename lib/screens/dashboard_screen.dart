@@ -153,11 +153,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
       ),
       floatingActionButton: showFab
-          ? FloatingActionButton.extended(
+          ? FloatingActionButton(
               heroTag: 'fab_dashboard',
               onPressed: () => showLogSessionChooser(context, ref),
-              icon: const Icon(Icons.add),
-              label: const Text('Log Session'),
+              tooltip: 'Log session',
+              child: const Icon(Icons.add),
             )
           : null,
       body: TabBarView(

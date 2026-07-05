@@ -3,6 +3,88 @@ import 'package:tablelab/utils/helpers.dart';
 import 'package:tablelab/models/session_model.dart';
 
 void main() {
+  // ── sessionDefaultsFor ───────────────────────────────────────────────────────
+
+  group('sessionDefaultsFor', () {
+    SessionModel s({
+      required String date,
+      required String gameType,
+      String stakes = '1/2',
+      double buyIn = 200,
+      String currency = 'USD',
+      String? location = 'Bellagio',
+      String? country = 'USA',
+      int? tableSize = 9,
+    }) {
+      return SessionModel(
+        id: date,
+        date: date,
+        stakes: stakes,
+        gameType: gameType,
+        buyIn: buyIn,
+        cashOut: buyIn,
+        profitLoss: 0,
+        startTime: '18:00',
+        endTime: '22:00',
+        durationMinutes: 240,
+        createdAt: '${date}T18:00:00Z',
+        currency: currency,
+        location: location,
+        country: country,
+        tableSize: tableSize,
+      );
+    }
+
+    test('returns null when no session of that family exists', () {
+      final sessions = [s(date: '2026-01-01', gameType: 'cash')];
+      expect(sessionDefaultsFor(sessions, 'tournament'), isNull);
+      expect(sessionDefaultsFor(const [], 'cash'), isNull);
+    });
+
+    test('picks the most recent matching session, not the newest overall', () {
+      final sessions = [
+        s(date: '2026-01-01', gameType: 'cash', currency: 'CAD', buyIn: 300),
+        s(date: '2026-03-01', gameType: 'tournament', currency: 'EUR'),
+        s(date: '2026-02-01', gameType: 'cash', currency: 'GBP', buyIn: 500),
+      ];
+      final d = sessionDefaultsFor(sessions, 'cash')!;
+      // Feb cash (GBP/500) is the latest CASH one — the March tournament is newer
+      // overall but the wrong family.
+      expect(d.currency, 'GBP');
+      expect(d.buyIn, 500);
+    });
+
+    test('sit_and_go counts as the tournament family', () {
+      final sessions = [
+        s(date: '2026-01-01', gameType: 'sit_and_go', currency: 'AUD'),
+      ];
+      final d = sessionDefaultsFor(sessions, 'tournament')!;
+      expect(d.currency, 'AUD');
+    });
+
+    test('carries every field over', () {
+      final sessions = [
+        s(
+          date: '2026-01-01',
+          gameType: 'cash',
+          stakes: '3/6',
+          buyIn: 400,
+          currency: 'INR',
+          location: 'Aria',
+          country: 'USA',
+          tableSize: 6,
+        ),
+      ];
+      final d = sessionDefaultsFor(sessions, 'cash')!;
+      expect(d.stakes, '3/6');
+      expect(d.buyIn, 400);
+      expect(d.currency, 'INR');
+      expect(d.location, 'Aria');
+      expect(d.country, 'USA');
+      expect(d.tableSize, 6);
+    });
+  });
+
   // ── playedMinutes ────────────────────────────────────────────────────────────
 
   group('playedMinutes', () {
