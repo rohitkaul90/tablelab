@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 
 import '../../explorer/preflop_ranges.dart';
+import 'panel_layout.dart';
 import 'strategy_grid.dart';
 
 /// UI colors for the preflop action vocabulary (dark-calibrated, matching the
@@ -47,7 +48,6 @@ class _PreflopDecisionBodyState extends State<PreflopDecisionBody> {
   Widget build(BuildContext context) {
     final d = widget.decision;
     final grid = _grid(context, d);
-    final panel = _actionPanel(context, d);
     return LayoutBuilder(builder: (context, constraints) {
       if (constraints.maxWidth >= 900) {
         return Row(
@@ -55,11 +55,14 @@ class _PreflopDecisionBodyState extends State<PreflopDecisionBody> {
           children: [
             Expanded(flex: 11, child: grid),
             const VerticalDivider(width: 1),
-            Expanded(flex: 9, child: panel),
+            Expanded(flex: 9, child: _actionPanel(context, d)),
           ],
         );
       }
-      return ListView(children: [grid, SizedBox(height: 380, child: panel)]);
+      // ONE outer scroll — the panel renders as a Column here so its own
+      // ListView can't trap the gesture (the nested-scroll stuck-at-bottom bug).
+      return ListView(
+          children: [grid, _actionPanel(context, d, embedded: true)]);
     });
   }
 
@@ -91,38 +94,37 @@ class _PreflopDecisionBodyState extends State<PreflopDecisionBody> {
     );
   }
 
-  Widget _actionPanel(BuildContext context, PreflopDecision d) {
+  Widget _actionPanel(BuildContext context, PreflopDecision d,
+      {bool embedded = false}) {
     final scheme = Theme.of(context).colorScheme;
     final shares = d.shares;
     final combos = d.comboCounts;
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        Text('${d.actorLabel} — ${widget.subtitle}',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 10),
-        Text('ACTIONS · % of hands · tap to filter the grid',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
-        const SizedBox(height: 6),
-        for (var a = 0; a < d.actions.length; a++)
-          _actionCard(context, a, d.actions[a],
-              kPreflopActionColors[d.actions[a]] ?? Colors.grey, shares[a],
-              combos[a]),
-        const SizedBox(height: 8),
-        Text(
-          'Preset ranges — a hand is in or out; percentages are each '
-          'action\'s share of hands, not mixed frequencies.',
+    final children = <Widget>[
+      Text('${d.actorLabel} — ${widget.subtitle}',
           style: Theme.of(context)
               .textTheme
-              .bodySmall
-              ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10.5),
-        ),
-      ],
-    );
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 10),
+      Text('ACTIONS · % of hands · tap to filter the grid',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
+      const SizedBox(height: 6),
+      for (var a = 0; a < d.actions.length; a++)
+        _actionCard(context, a, d.actions[a],
+            kPreflopActionColors[d.actions[a]] ?? Colors.grey, shares[a],
+            combos[a]),
+      const SizedBox(height: 8),
+      Text(
+        'Preset ranges — a hand is in or out; percentages are each '
+        'action\'s share of hands, not mixed frequencies.',
+        style: Theme.of(context)
+            .textTheme
+            .bodySmall
+            ?.copyWith(color: scheme.onSurfaceVariant, fontSize: 10.5),
+      ),
+    ];
+    return explorerPanelBody(embedded: embedded, children: children);
   }
 
   Widget _actionCard(BuildContext context, int index, String label,

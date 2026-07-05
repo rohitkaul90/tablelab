@@ -10,6 +10,7 @@ import '../../explorer/grid_aggregation.dart';
 import '../../explorer/pack_codec.dart';
 import 'action_colors.dart';
 import 'combo_strategy_list.dart';
+import 'panel_layout.dart';
 
 class OverviewPanel extends StatelessWidget {
   final PackNode node;
@@ -34,6 +35,12 @@ class OverviewPanel extends StatelessWidget {
   /// above the actions — the Equity-chart tab is the Overview with the chart in
   /// place of the stats.
   final Widget? headerChart;
+
+  /// When true, render as a non-scrolling Column (the caller supplies the
+  /// scroll — the narrow layout puts this inside one outer ListView, so a
+  /// second inner ListView would trap the scroll gesture). When false (wide
+  /// layout), it scrolls itself inside an Expanded.
+  final bool embedded;
   const OverviewPanel({
     super.key,
     required this.node,
@@ -45,6 +52,7 @@ class OverviewPanel extends StatelessWidget {
     this.bbPerUnit,
     this.selectedCell,
     this.headerChart,
+    this.embedded = false,
   });
 
   static String _fmtBB(double v) {
@@ -57,9 +65,7 @@ class OverviewPanel extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final colors = actionColors(node.actions);
 
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
+    final children = <Widget>[
         Text(
           '$actorLabel to act · ${node.actorIsOop ? 'OOP' : 'IP'}',
           style: Theme.of(context)
@@ -168,8 +174,9 @@ class OverviewPanel extends StatelessWidget {
             node: node,
             comboNames: comboNames,
           ),
-      ],
-    );
+    ];
+
+    return explorerPanelBody(embedded: embedded, children: children);
   }
 
   Widget _stat(BuildContext context, String label, String value) {

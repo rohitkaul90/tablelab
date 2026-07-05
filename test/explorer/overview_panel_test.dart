@@ -88,4 +88,33 @@ void main() {
     expect(find.text('SPR'), findsNothing); // stat box hidden
     expect(find.text('Check'), findsWidgets); // actions still present
   });
+
+  testWidgets('embedded mode adds no scrollable of its own (single scroll)',
+      (tester) async {
+    // The narrow layout wraps the embedded panel in ONE outer ListView; the
+    // panel must NOT add a second (that nesting stuck the user at the bottom).
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          width: 380,
+          child: ListView(children: [
+            OverviewPanel(
+              node: node,
+              summary: summary,
+              actorLabel: 'BB',
+              selectedAction: null,
+              onActionTap: (_) {},
+              comboNames: const ['As3s', 'Ah3h'],
+              selectedCell: cell,
+              bbPerUnit: 0.55,
+              embedded: true,
+            ),
+          ]),
+        ),
+      ),
+    ));
+    expect(tester.takeException(), isNull);
+    expect(find.byType(Scrollable), findsOneWidget); // only the outer ListView
+    expect(find.text('Check'), findsWidgets);
+  });
 }
