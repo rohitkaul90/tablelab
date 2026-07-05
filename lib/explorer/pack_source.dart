@@ -31,3 +31,9 @@ class ExplorerSpotRef {
 
   String get label => '$flop · $spr';
 }
+
+/// The stable spot ordering key — ONE definition so the hosted index, the local
+/// scan, and the generator all sort identically (init() auto-selects
+/// spots.first, so divergent orders would pick different default spots).
+String spotSortKey(String scenario, String flop, String spr) =>
+    '$scenario|$flop|$spr';

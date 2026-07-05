@@ -15,8 +15,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/explorer_config.dart';
 import '../equity/card.dart';
 import '../explorer/explorer_client.dart';
+import '../explorer/http_packs.dart';
 import '../explorer/pack_codec.dart';
 import '../explorer/pack_manifest.dart';
 import '../explorer/pack_source.dart';
@@ -152,13 +154,27 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
 
   ExplorerPackClient? _client;
 
-  /// Discover browsable spots (local packs dir in dev; hosted index later).
+  /// Discover browsable spots from the hosted index and/or the local
+  /// `~/tlpacks` scan. In a DEBUG build local packs win (a dev iterating on
+  /// freshly-generated packs shouldn't be silently served the older hosted
+  /// set); in release, hosted wins (there are no local packs on web/mobile
+  /// anyway). Both sources are failure-tolerant → an empty list just hides the
+  /// Study tab, never an error.
   Future<void> init() async {
     if (state.scanning || state.spots.isNotEmpty) return;
     state = state.copyWith(scanning: true, clearError: true);
-    final root = defaultPacksRoot();
-    final spots =
-        root == null ? const <ExplorerSpotRef>[] : await scanLocalPacks(root);
+
+    Future<List<ExplorerSpotRef>> local() async {
+      final root = defaultPacksRoot();
+      return root == null ? const [] : scanLocalPacks(root);
+    }
+
+    Future<List<ExplorerSpotRef>> hosted() async =>
+        kPacksBaseUrl.isEmpty ? const [] : fetchHostedSpots(kPacksBaseUrl);
+
+    var spots = await (kDebugMode ? local() : hosted());
+    if (spots.isEmpty) spots = await (kDebugMode ? hosted() : local());
+
     state = state.copyWith(scanning: false, spots: spots);
     if (spots.isNotEmpty) await selectSpot(spots.first);
   }

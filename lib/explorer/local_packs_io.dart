@@ -72,7 +72,7 @@ Future<List<ExplorerSpotRef>> scanLocalPacks(String root) async {
       await tryAdd(sub);
     }
   }
-  out.sort((a, b) => ('${a.scenario}|${a.flop}|${a.spr}')
-      .compareTo('${b.scenario}|${b.flop}|${b.spr}'));
+  out.sort((a, b) => spotSortKey(a.scenario, a.flop, a.spr)
+      .compareTo(spotSortKey(b.scenario, b.flop, b.spr)));
   return out;
 }
