@@ -15,8 +15,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/explorer_config.dart';
 import '../equity/card.dart';
 import '../explorer/explorer_client.dart';
+import '../explorer/http_packs.dart';
 import '../explorer/pack_codec.dart';
 import '../explorer/pack_manifest.dart';
 import '../explorer/pack_source.dart';
@@ -152,13 +154,21 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
 
   ExplorerPackClient? _client;
 
-  /// Discover browsable spots (local packs dir in dev; hosted index later).
+  /// Discover browsable spots: the HOSTED index first (works in prod on every
+  /// platform), then the local `~/tlpacks` scan as a dev fallback (io only;
+  /// a no-op on web). Both are failure-tolerant → an empty list just hides the
+  /// Study tab, never an error.
   Future<void> init() async {
     if (state.scanning || state.spots.isNotEmpty) return;
     state = state.copyWith(scanning: true, clearError: true);
-    final root = defaultPacksRoot();
-    final spots =
-        root == null ? const <ExplorerSpotRef>[] : await scanLocalPacks(root);
+    var spots = const <ExplorerSpotRef>[];
+    if (kPacksBaseUrl.isNotEmpty) {
+      spots = await fetchHostedSpots(kPacksBaseUrl);
+    }
+    if (spots.isEmpty) {
+      final root = defaultPacksRoot();
+      if (root != null) spots = await scanLocalPacks(root);
+    }
     state = state.copyWith(scanning: false, spots: spots);
     if (spots.isNotEmpty) await selectSpot(spots.first);
   }
