@@ -24,6 +24,7 @@
 - [Open App](https://tablelab.app/): The TableLab web app (interactive UI only — client-rendered, not a content page; cite /about for product details).
 - [Blog](https://tablelab.app/blog/): Honest, solver-grounded writing for live cash and tournament players.
 - [Can AI Solve Poker?](https://tablelab.app/blog/can-ai-solve-poker): What LLMs do vs. what solvers do, and how to spot AI hype.
+- [Poker Bankroll Management](https://tablelab.app/blog/poker-bankroll-management): How many buy-ins you need for live cash and tournaments, the risk-of-ruin math, and why live differs from online.
 - [Privacy Policy](https://tablelab.app/privacy): Data collection, processors, and user rights.
 - [Terms of Service](https://tablelab.app/terms): Terms governing use of TableLab.
 

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poker Bankroll Management: How Many Buy-Ins Do You Need? — TableLab</title>
+  <meta name="description" content="How many buy-ins do you need? At least 50 for cash, 100+ for tournaments — a grounded guide to poker bankroll management with the risk-of-ruin math.">
+  <link rel="canonical" href="https://tablelab.app/blog/poker-bankroll-management">
+  <meta property="og:title" content="Poker Bankroll Management: How Many Buy-Ins Do You Need?">
+  <meta property="og:description" content="A solver-minded, honest guide to poker bankroll management for live cash and tournaments — with the risk-of-ruin math and real variance numbers.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://tablelab.app/blog/poker-bankroll-management">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Poker Bankroll Management: How Many Buy-Ins Do You Need?">
+  <meta name="twitter:description" content="At least 50 buy-ins for cash, 100+ for tournaments — and the risk-of-ruin math behind why.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:modified_time" content="2026-07-05">
+  <meta name="author" content="Rohit Kaul">
+  <link rel="stylesheet" href="/site.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://tablelab.app/blog/poker-bankroll-management#article",
+        "headline": "Poker Bankroll Management: How Many Buy-Ins Do You Actually Need?",
+        "description": "A grounded guide to poker bankroll management for live cash and tournaments: how many buy-ins the authorities recommend, the risk-of-ruin math, real variance numbers, and why live differs from online.",
+        "datePublished": "2026-07-05",
+        "dateModified": "2026-07-05",
+        "author": { "@id": "https://tablelab.app/#rohit" },
+        "publisher": { "@id": "https://tablelab.app/#organization" },
+        "image": { "@id": "https://tablelab.app/blog/poker-bankroll-management#primaryimage" },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://tablelab.app/blog/poker-bankroll-management" },
+        "isPartOf": { "@id": "https://tablelab.app/blog#blog" },
+        "wordCount": 2200,
+        "keywords": ["poker bankroll management", "how many buy-ins", "risk of ruin", "poker variance", "bankroll for live cash", "tournament bankroll"],
+        "articleSection": "Bankroll & Variance"
+      },
+      {
+        "@type": "Blog",
+        "@id": "https://tablelab.app/blog#blog",
+        "name": "The TableLab Blog",
+        "url": "https://tablelab.app/blog/",
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://tablelab.app/#rohit",
+        "name": "Rohit Kaul",
+        "givenName": "Rohit",
+        "description": "Live cash-game poker player and data-analytics professional; maker of TableLab. Around 20 years playing poker, focused on live cash as a winning player, with over a decade building quantitative models in Python.",
+        "jobTitle": "Founder",
+        "worksFor": { "@id": "https://tablelab.app/#organization" },
+        "knowsAbout": ["Poker strategy", "Cash game poker", "Game theory optimal (GTO) poker", "Poker bankroll management", "Data analytics", "Quantitative modeling"],
+        "alumniOf": [
+          { "@type": "CollegeOrUniversity", "name": "Purdue University" },
+          { "@type": "CollegeOrUniversity", "name": "University of Mumbai" }
+        ],
+        "sameAs": [
+          "https://www.linkedin.com/in/rohit-kaul-a761171a2",
+          "https://www.youtube.com/@rohitkaul1990",
+          "https://pokerdb.thehendonmob.com/player.php?a=r&n=877305"
+        ]
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://tablelab.app/blog/poker-bankroll-management#primaryimage",
+        "url": "https://tablelab.app/og-cover.png",
+        "width": 2400,
+        "height": 1260
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/blog/poker-bankroll-management#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tablelab.app" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://tablelab.app/blog/" },
+          { "@type": "ListItem", "position": 3, "name": "Poker Bankroll Management", "item": "https://tablelab.app/blog/poker-bankroll-management" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/blog/poker-bankroll-management#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "How many buy-ins do I need for live cash games?", "acceptedAnswer": { "@type": "Answer", "text": "Most authorities land between 20 and 50 buy-ins. Upswing Poker recommends at least 50 for cash, while many live regulars run 20 to 30 because live poker deals only about 25 to 30 hands per hour. A 1% risk of ruin at a 3 bb/100 win rate needs roughly 56 buy-ins (Upswing; Primedope)." } },
+          { "@type": "Question", "name": "What bankroll do I need to play $1/$2 No-Limit?", "acceptedAnswer": { "@type": "Answer", "text": "Using Upswing's 50-buy-in cash guideline at a $200 max buy-in, that is about $10,000. A player wanting a 1% risk of ruin at a 3 bb/100 win rate and 85 bb/100 standard deviation needs roughly 56 buy-ins, about $11,200 (Upswing; Primedope)." } },
+          { "@type": "Question", "name": "How many buy-ins do I need for tournaments (MTTs)?", "acceptedAnswer": { "@type": "Answer", "text": "At least 100 buy-ins is the widely cited minimum, not a comfortable target (PokerNews). Conservative or large-field players hold 200 to 500, because tournament variance dwarfs cash: a winning 30% ROI player can run 200-plus tournaments without a significant cash (Primedope)." } },
+          { "@type": "Question", "name": "Why do tournaments need so many more buy-ins than cash?", "acceptedAnswer": { "@type": "Answer", "text": "Because payouts are top-heavy: only about 10 to 20% of the field cashes and prizes concentrate at the top. Per-tournament standard deviation runs roughly 5 to 10 times a comparable cash session, so a 100-plus buy-in bankroll is standard for MTTs versus 20 to 50 for cash (Primedope)." } },
+          { "@type": "Question", "name": "How big a downswing should a winning poker player expect?", "acceptedAnswer": { "@type": "Answer", "text": "Bigger and longer than most assume. In tournaments, a solid 30% ROI player can run 200-plus events without a major cash (Primedope). In cash, break-even stretches of tens of thousands of hands are normal even for clear winners. Run your win rate and standard deviation through a Monte Carlo variance calculator to see your own distribution." } }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/about">About</a>
+      <a class="link" href="/privacy">Privacy</a>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Poker Bankroll Management</div>
+
+      <h1>Poker Bankroll Management: How Many Buy-Ins Do You Actually Need?</h1>
+      <p class="byline">By Rohit Kaul · July 5, 2026 · 10 min read</p>
+
+      <div class="hero-banner">
+        <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How many buy-ins? Enough to survive variance. 50 for cash, 100-plus for tournaments.">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0d130d"/>
+              <stop offset="1" stop-color="#16201a"/>
+            </linearGradient>
+          </defs>
+          <rect width="1200" height="380" fill="url(#bg)"/>
+          <rect x="0" y="0" width="6" height="380" fill="#4CAF50"/>
+          <text x="70" y="86" fill="#81C784" font-size="22" letter-spacing="3" font-family="sans-serif">BANKROLL &amp; VARIANCE</text>
+          <text x="68" y="170" fill="#ffffff" font-size="60" font-weight="700" font-family="sans-serif">How many buy-ins?</text>
+          <text x="68" y="242" fill="#ffffff" font-size="60" font-weight="700" font-family="sans-serif">Enough to survive.</text>
+          <text x="70" y="300" fill="#b0bec5" font-size="26" font-family="sans-serif">50 for cash. 100+ for tournaments. Here's the math.</text>
+          <rect x="70" y="324" width="470" height="40" rx="8" fill="rgba(76,175,80,0.14)" stroke="#4CAF50" stroke-opacity="0.5"/>
+          <text x="86" y="351" fill="#eceff1" font-size="20" font-family="sans-serif"><tspan fill="#81C784" font-weight="700">Risk of ruin</tspan>  falls as your bankroll grows</text>
+        </svg>
+      </div>
+
+      <p>Everyone has heard the rules of thumb. Twenty buy-ins. Fifty. A hundred for tournaments. But almost nobody can tell you <em>why</em> those numbers, or what actually changes if you ignore them. Bankroll management isn't superstition or discipline for its own sake. It's a specific piece of math with a specific job: keeping a genuine winner from going broke before their edge shows up.</p>
+
+      <p>So how many buy-ins do you actually need? The short answer is at least 50 for cash and at least 100 for tournaments. The honest answer depends on three numbers you have probably never measured. Here's what the guidelines really say, the risk-of-ruin math underneath them, and why a live grinder and an online grinder need very different cushions.</p>
+
+      <div class="tldr">
+        <p><strong>TL;DR:</strong> Bankroll management is risk-of-ruin math, not a vibe. Upswing Poker recommends <strong>at least 50 buy-ins for cash</strong>; PokerNews puts the tournament minimum at <strong>100+</strong> (<a href="https://upswingpoker.com/glossary/bankroll-management/">Upswing</a>; <a href="https://www.pokernews.com/strategy/10-mtts-tips-bankroll-management-26294.htm">PokerNews</a>). The formula says a 3&nbsp;bb/100 winner with 85&nbsp;bb/100 standard deviation needs roughly <strong>36 buy-ins for a 5% risk of ruin, ~56 for 1%</strong> (<a href="https://www.primedope.com/poker-risk-of-ruin-formula/">Primedope</a>). Tournaments need far more because their variance is <strong>5&ndash;10&times; a cash session</strong> (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>). And all of it assumes you're actually a winner &mdash; which most players aren't (<a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1908161">Fiedler, 2012</a>).</p>
+      </div>
+
+      <h2>How many buy-ins do you actually need?</h2>
+
+      <p>Published guidance clusters around two numbers: <strong>at least 50 buy-ins for cash games</strong> and <strong>at least 100 for tournaments</strong>. Upswing Poker's worked example is concrete: at $1/$2 with a $200 max buy-in, "50 buy-ins" means keeping a $10,000 roll dedicated to poker (<a href="https://upswingpoker.com/glossary/bankroll-management/">Upswing Poker, "Bankroll Management"</a>). For multi-table tournaments, PokerNews frames 100 buy-ins as a <em>minimum</em>, with conservative and large-field players holding 200 to 500 (<a href="https://www.pokernews.com/strategy/10-mtts-tips-bankroll-management-26294.htm">PokerNews, "10 MTT Tips," 2016</a>).</p>
+
+      <p>Those are ceilings of caution, not laws. Many live cash regulars run leaner &mdash; 20 to 30 buy-ins &mdash; because live poker deals far fewer hands per hour, so swings arrive more slowly. That's a personal risk choice, not a rule handed down from the authorities, and it only works if you're a clear winner who can reload. The safe way to read the landscape is a range with named endpoints.</p>
+
+      <figure>
+        <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Recommended bankroll by format: live cash 20 to 50 buy-ins, online cash 50 to 100, tournaments 100 to 300 or more." style="max-width:100%;height:auto">
+          <text x="20" y="28" fill="#eceff1" font-size="14">Typical bankroll by format (buy-ins)</text>
+          <line x1="150" y1="50" x2="150" y2="205" stroke="#455a64" stroke-width="1"/>
+          <!-- Live cash -->
+          <text x="140" y="86" fill="#cfd8dc" font-size="13" text-anchor="end">Live cash</text>
+          <rect x="150" y="72" width="66" height="26" fill="#4CAF50"/>
+          <text x="224" y="90" fill="#eceff1" font-size="12">20&ndash;50</text>
+          <!-- Online cash -->
+          <text x="140" y="128" fill="#cfd8dc" font-size="13" text-anchor="end">Online cash</text>
+          <rect x="150" y="114" width="133" height="26" fill="#66BB6A"/>
+          <text x="291" y="132" fill="#eceff1" font-size="12">50&ndash;100</text>
+          <!-- Tournaments -->
+          <text x="140" y="170" fill="#cfd8dc" font-size="13" text-anchor="end">Tournaments</text>
+          <rect x="150" y="156" width="400" height="26" fill="#81C784"/>
+          <text x="150" y="174" fill="#0d130d" font-size="12" font-weight="700" dx="8">100&ndash;300+</text>
+          <text x="150" y="228" fill="#90a4ae" font-size="11">Sources: Upswing (cash &#8805; 50); PokerNews (MTT &#8805; 100). Leaner live figures are a personal risk choice.</text>
+        </svg>
+        <figcaption>Bankroll guidelines converge on 50 buy-ins for cash and 100+ for tournaments; the rest is your risk tolerance.</figcaption>
+      </figure>
+
+      <h2>Why think in buy-ins, not dollars?</h2>
+
+      <p>A bankroll measured in dollars tells you nothing until you divide by the stake. "I have $8,000" is meaningless; "I have 40 buy-ins at $1/$2, or 8 at $5/$10" is a decision. Counting in buy-ins is what lets you move down when you're running bad and move up when the roll can absorb the bigger swings, without redoing the math each time.</p>
+
+      <p>It also reframes a downswing correctly. Losing "$2,000" feels like a disaster; losing "10 buy-ins" is a Tuesday. Buy-ins are the natural unit of poker variance, which is exactly why every serious guideline is written in them &mdash; and why the risk-of-ruin math below is too.</p>
+
+      <h2>What does the risk-of-ruin math actually say?</h2>
+
+      <p>Bankroll rules aren't folklore; they're a shortcut for one equation. Risk of ruin &mdash; the probability you lose your entire bankroll before your edge compounds &mdash; can be estimated with a formula popularized by Mason Malmuth and derived rigorously in Bill Chen and Jerrod Ankenman's <em>The Mathematics of Poker</em> (<a href="https://www.primedope.com/poker-risk-of-ruin-formula/">Primedope</a>; Chen &amp; Ankenman, 2006):</p>
+
+      <div class="callout"><p><strong>Risk of ruin</strong> = <em>e</em><sup>&#8722;2 &middot; WR &middot; BR / SD&sup2;</sup>, where WR is your win rate (bb/100), BR is your bankroll (in big blinds), and SD is your standard deviation (bb/100).</p></div>
+
+      <p>You don't need to compute it by hand &mdash; the point is what it implies. Plug in a realistic profile: a 3&nbsp;bb/100 winner with an 85&nbsp;bb/100 standard deviation, which is Primedope's own worked example. The bankroll required then falls fast as you accept a little more risk. About <strong>36 buy-ins gets you to a 5% risk of ruin, 48 to 2%, and 56 to roughly 1%</strong> (<a href="https://www.primedope.com/poker-risk-of-ruin-formula/">Primedope, "Poker Risk of Ruin Formula"</a>).</p>
+
+      <figure>
+        <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Risk of ruin falls as bankroll grows: 36 buy-ins gives 5 percent, 48 gives 2 percent, 56 gives 1 percent, for a 3 bb per 100 winner." style="max-width:100%;height:auto">
+          <text x="20" y="26" fill="#eceff1" font-size="14">Risk of ruin vs. bankroll (3 bb/100 winner, 85 SD)</text>
+          <!-- axes -->
+          <line x1="70" y1="60" x2="70" y2="200" stroke="#455a64" stroke-width="1"/>
+          <line x1="70" y1="200" x2="520" y2="200" stroke="#455a64" stroke-width="1"/>
+          <text x="60" y="72" fill="#90a4ae" font-size="11" text-anchor="end">5%</text>
+          <text x="60" y="140" fill="#90a4ae" font-size="11" text-anchor="end">2%</text>
+          <text x="60" y="200" fill="#90a4ae" font-size="11" text-anchor="end">1%</text>
+          <text x="120" y="220" fill="#cfd8dc" font-size="12" text-anchor="middle">36 BI</text>
+          <text x="300" y="220" fill="#cfd8dc" font-size="12" text-anchor="middle">48 BI</text>
+          <text x="480" y="220" fill="#cfd8dc" font-size="12" text-anchor="middle">56 BI</text>
+          <!-- curve: (120,68) 5%, (300,140) 2%, (480,192) 1% -->
+          <polyline points="120,68 300,140 480,192" fill="none" stroke="#4CAF50" stroke-width="3"/>
+          <circle cx="120" cy="68" r="6" fill="#ef9a9a"/>
+          <circle cx="300" cy="140" r="6" fill="#ffd54f"/>
+          <circle cx="480" cy="192" r="6" fill="#4CAF50"/>
+          <text x="234" y="248" fill="#90a4ae" font-size="11" text-anchor="middle">More buy-ins &#8594; lower chance of going broke. Source: Primedope.</text>
+        </svg>
+        <figcaption>The three levers: a higher win rate or lower standard deviation cuts the bankroll you need; a bigger standard deviation or a demand for near-zero risk raises it.</figcaption>
+      </figure>
+
+      <p>Read the equation and three levers pop out. Win more per 100 hands and you need fewer buy-ins. Swing harder (a higher standard deviation) and you need more. Demand a lower chance of ever going broke and you need more again. Bankroll size isn't one number &mdash; it's the price of the risk tolerance you choose.</p>
+
+      <h2>Why do tournaments need 100+ buy-ins?</h2>
+
+      <p>Because the payout structure is brutal by design. Only about 10 to 20% of a tournament field cashes, and the prize pool concentrates at the very top, so you lose small most of the time and win big rarely. That top-heaviness makes per-tournament standard deviation roughly <strong>5 to 10 times</strong> a comparable cash session (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope, "Tournament Variance Calculator"</a>). Same edge, far wilder ride.</p>
+
+      <p>Concretely: a genuinely winning tournament player with a healthy 30% return on investment can run <strong>200 or more tournaments without a significant cash</strong> and still be a long-term winner (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>). At one or two big fields a week, that's a year-long drought that means nothing about your skill. A 100-buy-in minimum isn't caution; it's the floor that lets you survive a normal cold streak.</p>
+
+      <h2>How big a downswing should a winning player expect?</h2>
+
+      <p>Bigger and longer than almost anyone plans for. The tournament number above &mdash; 200+ events without a real score &mdash; is the headline, but cash grinders aren't spared. Break-even and losing stretches of <em>tens of thousands</em> of hands are a normal feature of a winning cash game, not a sign that your game fell apart.</p>
+
+      <div class="callout"><p><strong>Our take:</strong> a downswing that fits inside the math is not a leak. Panic-changing your game during a statistically normal cold run is how a winner turns into a loser.</p></div>
+
+      <p>Rather than trust a rule of thumb, generate your own distribution. Free Monte Carlo variance calculators from <a href="https://www.primedope.com/poker-variance-calculator/">Primedope</a> and <a href="https://www.philgalfond.com/variance">Phil Galfond</a> take your win rate and standard deviation and output both the minimum bankroll for a given risk of ruin and the size of downswing you should expect. The catch: those two inputs have to be <em>your</em> real numbers, not optimistic guesses &mdash; which is the whole problem, and the next section.</p>
+
+      <h2>Why is live bankroll management different from online?</h2>
+
+      <p>Volume. A live nine-handed game deals only about <strong>25 to 30 hands per hour</strong>, while a single online table runs 60 to 100, and multi-tabling pushes into the hundreds (<a href="https://upswingpoker.com/hands-per-hour-live-poker-vs-online/">Upswing Poker, "Hands Per Hour," 2020</a>). Online can be ten times the hands of live in the same clock hour.</p>
+
+      <p>That cuts two ways. Fewer hands per hour means your buy-in swings arrive more slowly, so a smaller live roll can feel stable session to session &mdash; part of why live regulars run leaner. But it also means your downswings last <em>far longer in calendar time</em>: a break-even stretch that an online player clears in a week can take a live player months. Rake and dealer tips quietly compound the need too. A 20% pre-fee return can net closer to 10% once the house takes its cut, halving your realized edge and raising the reserve you need (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>). Softer live fields lift your win rate, but slow pace and tipping give some of it back.</p>
+
+      <h2>Bankroll management only matters if you're a winner</h2>
+
+      <p>Here's the uncomfortable part. Every formula above takes your win rate as an input, and for most players that number is negative. In a University of Hamburg study of online play, <strong>91% of all rake came from the most active 10% of players</strong> &mdash; a concentration that only makes sense if the large casual majority are net losers (<a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1908161">Fiedler, 2012</a>). A separate peer-reviewed analysis of 51,761 players confirmed poker is skill-predominant, but found results only start reflecting skill after roughly <strong>1,000 hands</strong> (<a href="https://www.liebertpub.com/doi/10.1089/glre.2008.13106">Fiedler &amp; Rock, 2009</a>).</p>
+
+      <p>So the honest sequence is: first find out whether you're actually a winner, and at what rate, and with how much variance &mdash; then size the bankroll. You can't do the second step without real data for the first, and memory is a terrible logbook. That means tracking every session: buy-in, cash-out, hours, and stake, so your win rate (in bb/100) and standard deviation are measured, not guessed. It's exactly why we built the <a href="/about#features">TableLab dashboard</a> the way we did: log your sessions and it computes the win rate, BB/100, and variance trends you'd otherwise have to estimate. The bankroll math is only as good as the numbers you feed it.</p>
+
+      <h2>The bottom line</h2>
+
+      <ul>
+        <li><strong>Cash:</strong> at least <strong>50 buy-ins</strong> is the standard (Upswing); running 20&ndash;30 is a personal risk call for confident live winners, not a rule.</li>
+        <li><strong>Tournaments:</strong> <strong>100 buy-ins minimum</strong> (PokerNews), 200&ndash;500 if you play big fields, because MTT variance is 5&ndash;10&times; cash.</li>
+        <li>It's <strong>risk-of-ruin math</strong>: higher standard deviation or a lower win rate means you need more buy-ins; ~56 buy-ins buys a ~1% risk of ruin for a solid cash winner (Primedope).</li>
+        <li><strong>Downswings are bigger than you think:</strong> 200+ tournaments or tens of thousands of cash hands below expectation are normal for real winners.</li>
+        <li>The math needs <strong>your</strong> measured win rate and standard deviation &mdash; track your sessions, or you're guessing.</li>
+      </ul>
+
+      <p>Bankroll management isn't about playing scared. It's the boring insurance that keeps a genuine edge alive long enough to matter. Get the buy-in count right, <a href="/">measure your real numbers</a>, and let variance do what variance does. For more on keeping the numbers honest, see <a href="/blog/can-ai-solve-poker">Can AI solve poker?</a></p>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>How many buy-ins do I need for live cash games?</summary>
+          <p>Most authorities land between 20 and 50 buy-ins. Upswing Poker recommends at least 50 for cash, while many live regulars run 20 to 30 because live poker deals only about 25 to 30 hands per hour. A 1% risk of ruin at a 3 bb/100 win rate needs roughly 56 buy-ins (<a href="https://upswingpoker.com/glossary/bankroll-management/">Upswing</a>; <a href="https://www.primedope.com/poker-risk-of-ruin-formula/">Primedope</a>).</p>
+        </details>
+        <details>
+          <summary>What bankroll do I need to play $1/$2 No-Limit?</summary>
+          <p>Using Upswing's 50-buy-in cash guideline at a $200 max buy-in, that's about $10,000. A player wanting a 1% risk of ruin at a 3 bb/100 win rate and 85 bb/100 standard deviation needs roughly 56 buy-ins, about $11,200 (<a href="https://www.primedope.com/poker-risk-of-ruin-formula/">Primedope</a>).</p>
+        </details>
+        <details>
+          <summary>How many buy-ins do I need for tournaments (MTTs)?</summary>
+          <p>At least 100 buy-ins is the widely cited minimum, not a comfortable target (<a href="https://www.pokernews.com/strategy/10-mtts-tips-bankroll-management-26294.htm">PokerNews</a>). Conservative or large-field players hold 200 to 500, because tournament variance dwarfs cash: a winning 30% ROI player can run 200-plus tournaments without a significant cash (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>).</p>
+        </details>
+        <details>
+          <summary>Why do tournaments need so many more buy-ins than cash?</summary>
+          <p>Payouts are top-heavy: only about 10 to 20% of the field cashes and prizes concentrate at the top. Per-tournament standard deviation runs roughly 5 to 10 times a comparable cash session, so a 100-plus buy-in bankroll is standard for MTTs versus 20 to 50 for cash (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>).</p>
+        </details>
+        <details>
+          <summary>How big a downswing should a winning player expect?</summary>
+          <p>Bigger and longer than most assume. In tournaments, a solid 30% ROI player can run 200-plus events without a major cash (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>). In cash, break-even stretches of tens of thousands of hands are normal even for clear winners &mdash; run your numbers through a variance calculator to see your own distribution.</p>
+        </details>
+      </section>
+
+      <h3>Sources</h3>
+      <ul class="sources">
+        <li>Upswing Poker, "What is Bankroll Management in Poker?", retrieved 2026-07-05, <a href="https://upswingpoker.com/glossary/bankroll-management/">upswingpoker.com</a></li>
+        <li>Upswing Poker, "Hands Per Hour: Live Poker vs Online" (Geoffrey Fisk), 2020, <a href="https://upswingpoker.com/hands-per-hour-live-poker-vs-online/">upswingpoker.com</a></li>
+        <li>PokerNews, "10 MTT Tips: Bankroll Management," 2016, <a href="https://www.pokernews.com/strategy/10-mtts-tips-bankroll-management-26294.htm">pokernews.com</a></li>
+        <li>Primedope, "Poker Risk of Ruin Formula," retrieved 2026-07-05, <a href="https://www.primedope.com/poker-risk-of-ruin-formula/">primedope.com</a></li>
+        <li>Primedope, "Tournament Variance Calculator," retrieved 2026-07-05, <a href="https://www.primedope.com/tournament-variance-calculator/">primedope.com</a></li>
+        <li>Primedope, "Poker Variance Calculator," retrieved 2026-07-05, <a href="https://www.primedope.com/poker-variance-calculator/">primedope.com</a></li>
+        <li>The Poker Bank, "Standard Deviation Explained," retrieved 2026-07-05, <a href="https://www.thepokerbank.com/articles/software/standard-deviation/">thepokerbank.com</a></li>
+        <li>Phil Galfond, "Variance Calculator," retrieved 2026-07-05, <a href="https://www.philgalfond.com/variance">philgalfond.com</a></li>
+        <li>Fiedler, I. &amp; Rock, J-P., "Quantifying Skill in Games," <em>Gaming Law Review and Economics</em>, 2009, <a href="https://www.liebertpub.com/doi/10.1089/glre.2008.13106">liebertpub.com</a></li>
+        <li>Fiedler, I., "The Gambling Habits of Online Poker Players," SSRN, 2012, <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1908161">papers.ssrn.com</a></li>
+        <li>Chen, B. &amp; Ankenman, J., <em>The Mathematics of Poker</em>, ConJelCo, 2006 (canonical derivation of risk of ruin)</li>
+      </ul>
+
+      <p class="disclaimer-line">Bankroll guidelines are risk math, not guarantees &mdash; they assume a real, measured win rate and standard deviation. Track your results so the numbers you plug in are yours, not a guess.</p>
+
+      <aside class="author-box">
+        <h3>About the author</h3>
+        <p><strong>Rohit Kaul</strong> is a winning live cash-game player and a data-analytics
+        professional (Master's in Business Analytics, Purdue) who builds the quantitative models behind
+        TableLab &mdash; profitable every year since 2023, across roughly 3,200 hours of tracked live cash.
+        Find him on
+        <a href="https://www.linkedin.com/in/rohit-kaul-a761171a2" rel="me noopener" target="_blank">LinkedIn</a>,
+        <a href="https://www.youtube.com/@rohitkaul1990" rel="me noopener" target="_blank">YouTube</a>, and
+        <a href="https://pokerdb.thehendonmob.com/player.php?a=r&amp;n=877305" rel="me noopener" target="_blank">The Hendon Mob</a>.</p>
+      </aside>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+</body>
+</html>
