@@ -6,4 +6,4 @@
 // public URL once packs are uploaded (see tool/explorer/PACK_HOSTING.md), or
 // override at build time with --dart-define=TLPACKS_URL=…
 const String kPacksBaseUrl =
-    String.fromEnvironment('TLPACKS_URL', defaultValue: '');
+    String.fromEnvironment('TLPACKS_URL', defaultValue: 'https://packs.tablelab.app');
