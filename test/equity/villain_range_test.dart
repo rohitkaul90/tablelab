@@ -1043,7 +1043,7 @@ void main() {
       expect(flop.heroFacing, 'first_to_act');
     });
 
-    test('3-bet pot → scenarioKey null', () async {
+    test('3-bet pot (BTN open, BB 3-bet, BTN call) → 3bp_bb_v_btn', () async {
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
           const StreetData(street: Street.preflop, actions: [
@@ -1056,10 +1056,62 @@ void main() {
         iterations: 500,
         seed: 1,
       );
+      expect(check!.scenarioKey, '3bp_bb_v_btn');
+    });
+
+    test('3bp maps from the CALLER side too (hero = BTN)', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.raise, amount: 18),
+            HandAction(seat: 0, type: ActionType.call, amount: 18),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, '3bp_bb_v_btn');
+    });
+
+    test('4-bet pot → scenarioKey null', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.raise, amount: 18),
+            HandAction(seat: 0, type: ActionType.raise, amount: 44),
+            HandAction(seat: 2, type: ActionType.call, amount: 44),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
       expect(check!.scenarioKey, isNull);
     });
 
-    test('non-late opener (CO) → scenarioKey null', () async {
+    test('SB 3-bettor (not the BB) → scenarioKey null', () async {
+      // BTN opens, SB 3-bets, BTN calls — a 3-bet pot, but the 3-bettor is the
+      // SB: different range AND the solved BB-OOP orientation doesn't hold.
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 1, heroCards: ['As', 'Ah'], villainSeat: 0, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 1, type: ActionType.post, amount: 1),
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5),
+            HandAction(seat: 1, type: ActionType.raise, amount: 18),
+            HandAction(seat: 0, type: ActionType.call, amount: 18),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, isNull);
+    });
+
+    test('middle-bucket opener (CO) → srp_middle_v_bb', () async {
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 5, streets: [
           const StreetData(street: Street.preflop, actions: [
@@ -1071,7 +1123,22 @@ void main() {
         iterations: 500,
         seed: 1,
       );
-      expect(check!.scenarioKey, isNull);
+      expect(check!.scenarioKey, 'srp_middle_v_bb');
+    });
+
+    test('early-bucket opener (UTG) → srp_early_v_bb', () async {
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 3, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 2, type: ActionType.post, amount: 2),
+            HandAction(seat: 3, type: ActionType.raise, amount: 5),
+            HandAction(seat: 2, type: ActionType.call, amount: 5),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, 'srp_early_v_bb');
     });
 
     test('multiway (two villains to the flop) → scenarioKey null', () async {
@@ -1174,19 +1241,23 @@ void main() {
 
     test('out-of-scenario hand → no GTO frequency FACT even with a library',
         () async {
+      // SB opener: the one SRP shape excluded by design (opens OOP — the
+      // position-keyed cells would invert). CO/UTG openers map to their own
+      // scenarios since Cycle B, so they no longer test the negative path.
       final check = await computeHandEquityCheck(
-        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 5, streets: [
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 1, streets: [
           const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 1, type: ActionType.post, amount: 1), // SB
             HandAction(seat: 2, type: ActionType.post, amount: 2),
-            HandAction(seat: 5, type: ActionType.raise, amount: 5), // CO (not late)
+            HandAction(seat: 1, type: ActionType.raise, amount: 5), // SB opens
             HandAction(seat: 2, type: ActionType.call, amount: 5),
           ]),
           const StreetData(
               street: Street.flop,
               communityCards: ['Ks', '9h', '4c'],
               actions: [
-                HandAction(seat: 2, type: ActionType.check),
-                HandAction(seat: 5, type: ActionType.raise, amount: 4),
+                // SB is OOP postflop and leads; the BB hero calls.
+                HandAction(seat: 1, type: ActionType.raise, amount: 4),
                 HandAction(seat: 2, type: ActionType.call, amount: 4),
               ]),
         ]),

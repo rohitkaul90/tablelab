@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'equity_calculator_screen.dart';
 import 'icm_calculator_screen.dart';
-import '../widgets/app_drawer.dart';
 
-class ToolsScreen extends StatefulWidget {
+/// The Tools screen — the Equity and ICM calculators behind a pill toggle.
+/// Reached from the drawer's APP section (the GTO Study explorer graduated to
+/// its own bottom-nav tab). Pushed as a route, so its AppBar shows the default
+/// back button.
+class ToolsScreen extends ConsumerStatefulWidget {
   const ToolsScreen({super.key});
 
   @override
-  State<ToolsScreen> createState() => _ToolsScreenState();
+  ConsumerState<ToolsScreen> createState() => _ToolsScreenState();
 }
 
-class _ToolsScreenState extends State<ToolsScreen> {
+class _ToolsScreenState extends ConsumerState<ToolsScreen> {
   int _selected = 0;
 
   @override
@@ -18,10 +22,6 @@ class _ToolsScreenState extends State<ToolsScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
-        ),
         title: const Text('Tools'),
       ),
       body: Column(
@@ -29,11 +29,12 @@ class _ToolsScreenState extends State<ToolsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: SegmentedButton<int>(
-              // Label-only — the icon + multi-word label risked wrapping on
-              // narrow / large-font screens.
+              // Label-only + no selected checkmark (the SegmentedButton gotcha
+              // in CLAUDE.md — the M3 checkmark can wrap the row on phones).
+              showSelectedIcon: false,
               segments: const [
-                ButtonSegment(value: 0, label: Text('Equity Calculator')),
-                ButtonSegment(value: 1, label: Text('ICM Calculator')),
+                ButtonSegment(value: 0, label: Text('Equity')),
+                ButtonSegment(value: 1, label: Text('ICM')),
               ],
               selected: {_selected},
               onSelectionChanged: (s) => setState(() => _selected = s.first),

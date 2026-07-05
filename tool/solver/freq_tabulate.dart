@@ -193,7 +193,11 @@ class _CellAcc {
 /// what the live `villain_range` path computes (effStack ÷ pot-at-street-start),
 /// NOT the flop spot's regime. (Storing every cell under the flop regime made
 /// turn cells mismatch the live shallower turn SPR → systematic lookup misses.)
-class _SprState {
+///
+/// PUBLIC (not `_SprState`): explorer_pack.dart walks the same dumps and reuses
+/// this verified chip accounting (street "to"-totals, all-in amounts, pot
+/// reconstruction) for its per-node pot/toCall/behind fields — one copy, no fork.
+class SprState {
   /// Effective stack behind at the FLOP (constant for the whole spot).
   final double effStack;
 
@@ -210,7 +214,7 @@ class _SprState {
   /// Cached SprBucket.name for the current street (computed once at street entry).
   final String bucket;
 
-  _SprState({
+  SprState({
     required this.effStack,
     required this.potStreetStart,
     required this.committedPrior,
@@ -223,7 +227,7 @@ class _SprState {
       pot <= 0 ? 'medium' : sprBucket((effStack - committedPrior) / pot).name;
 
   /// Root state for the flop: nothing committed yet, pot = the flop pot.
-  factory _SprState.flop(double pot0, double effStack) => _SprState(
+  factory SprState.flop(double pot0, double effStack) => SprState(
         effStack: effStack,
         potStreetStart: pot0,
         committedPrior: 0,
@@ -235,13 +239,13 @@ class _SprState {
   /// matched contribution (each player's chips) = min of the two street contribs
   /// — equal on a properly-closed street (bet→call or check→check). The new pot
   /// folds in BOTH players' chips; committedPrior advances by the matched amount.
-  _SprState nextStreet() {
+  SprState nextStreet() {
     final oop = streetContrib['oop'] ?? 0;
     final ip = streetContrib['ip'] ?? 0;
     final matched = oop < ip ? oop : ip;
     final newPot = potStreetStart + oop + ip;
     final newPrior = committedPrior + matched;
-    return _SprState(
+    return SprState(
       effStack: effStack,
       potStreetStart: newPot,
       committedPrior: newPrior,
@@ -252,7 +256,7 @@ class _SprState {
 
   /// State after [position] takes [rawAction] (updates that player's within-street
   /// "to"-total; TexasSolver action amounts are street totals, not increments).
-  _SprState afterAction(String position, String rawAction) {
+  SprState afterAction(String position, String rawAction) {
     final other = position == 'oop' ? 'ip' : 'oop';
     final mine = streetContrib[position] ?? 0;
     final theirs = streetContrib[other] ?? 0;
@@ -279,7 +283,7 @@ class _SprState {
       }
       to = parsed ?? mine;
     }
-    return _SprState(
+    return SprState(
       effStack: effStack,
       potStreetStart: potStreetStart,
       committedPrior: committedPrior,
@@ -292,8 +296,25 @@ class _SprState {
 /// Tabulate one solved spot's dump [root] into library cells. [board] is the flop
 /// (parsed ints). [pot0]/[effStack] are the spot's flop pot + effective stack —
 /// the SPR bucket is re-derived per street from these as the pot grows (see
-/// [_SprState]). [maxBoardLen] caps the depth walked (5 = river; pass 4 to stop
+/// [SprState]). [maxBoardLen] caps the depth walked (5 = river; pass 4 to stop
 /// at the turn for tractability on huge dumps).
+/// Read a solver dump JSON file at [path] and tabulate it. The file-based entry
+/// point so the WHOLE heavy step (read + jsonDecode + tree walk) can run in a
+/// separate PROCESS (tool/solver/tabulate_one.dart) — the multi-GB String + Map
+/// stay local to that process's own heap and are freed when it exits, off the
+/// caller's heap/GC. Returns the same cells as [tabulateSpot] on the parsed root.
+List<FreqCell> tabulateDumpFile(
+  String path, {
+  required List<int> board,
+  required double pot0,
+  required double effStack,
+  int maxBoardLen = 5,
+}) {
+  final root = jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+  return tabulateSpot(root,
+      board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
+}
+
 List<FreqCell> tabulateSpot(
   Map<String, dynamic> root, {
   required List<int> board,
@@ -303,7 +324,7 @@ List<FreqCell> tabulateSpot(
 }) {
   final acc = <String, _CellAcc>{};
   _walk(root, board, <String, Map<String, double>>{}, 'oop', 'first_to_act', acc,
-      _SprState.flop(pot0, effStack), maxBoardLen);
+      SprState.flop(pot0, effStack), maxBoardLen);
 
   final out = <FreqCell>[];
   acc.forEach((key, ca) {
@@ -333,7 +354,7 @@ void _walk(
   String position, // 'oop' | 'ip' — derived STRUCTURALLY, not from node['player']
   String facing,
   Map<String, _CellAcc> acc,
-  _SprState spr,
+  SprState spr,
   int maxBoardLen,
 ) {
   final type = node['node_type'] as String?;
@@ -454,26 +475,47 @@ void _walk(
     // betSizeBucket) can find the cell. canonicalActionLabels ranks bet sizes
     // RELATIVE to the node, so a single-size tree yields a bare 'bet' that no
     // live faced-bet key ever matches — bucket the faced bet by ABSOLUTE
-    // pot-fraction instead. Non-bet actions keep their canonical label.
-    // KNOWN GAP (code-review 2026-06-29): an all-in faced action is labelled
-    // 'facing_allin' here, but the live lookup (_heroFacing in villain_range)
-    // maps a villain shove to facing_bet_<bucket> (opening) or facing_raise — so
-    // 'facing_allin' cells are currently UNREACHABLE and hero-faces-shove spots
-    // miss the GTO FACT. Fix = label an all-in like the live path; it needs a
-    // re-solve to take effect, so it's deferred to the next solve cycle.
-    final facingAct = canon[ai].startsWith('bet')
-        ? 'bet_${betSizeBucket(_betFrac(actions[ai], position, spr))}'
-        : canon[ai];
+    // pot-fraction instead. An ALL-IN likewise gets the live labels (an
+    // opening shove is a bet, a shove over a wager is a raise — see
+    // _facingActLabel); a bare 'facing_allin' would be unreachable (the live
+    // _heroFacing never emits it). Non-bet actions keep their canonical label.
+    final facingAct = _facingActLabel(canon[ai], actions[ai], position, spr);
     _walk(child, board, nextReach, other, 'facing_$facingAct', acc,
         spr.afterAction(position, actions[ai]), maxBoardLen);
   }
+}
+
+/// The live-lookup-compatible facing label for a taken action: bets bucket by
+/// absolute pot-fraction; an all-in mirrors villain_range._heroFacing — with NO
+/// prior aggression this street it's an opening BET (bucketed by fraction,
+/// virtually always 'big'), over a wager it's a RAISE. Prior aggression this
+/// street ⟺ either player already has street chips (a call can't exist without
+/// a bet, and the same player can't bet twice consecutively), which the
+/// SprState street contribs encode.
+String _facingActLabel(
+    String canonLabel, String rawAction, String actorPos, SprState spr) {
+  if (canonLabel.startsWith('bet')) {
+    return 'bet_${betSizeBucket(_betFrac(rawAction, actorPos, spr))}';
+  }
+  if (canonLabel == 'allin') {
+    final other = actorPos == 'oop' ? 'ip' : 'oop';
+    final mine = spr.streetContrib[actorPos] ?? 0;
+    final theirs = spr.streetContrib[other] ?? 0;
+    if (mine > 0 || theirs > 0) return 'raise';
+    // Opening shove: to-total = everything behind; pot has no street chips yet.
+    final to = spr.effStack - spr.committedPrior;
+    final frac =
+        spr.potStreetStart > 0 ? (to / spr.potStreetStart) : null;
+    return 'bet_${betSizeBucket(frac)}';
+  }
+  return canonLabel;
 }
 
 /// The pot-fraction of a BET action: (its street "to"-total − the actor's chips
 /// already in this street) ÷ the pot before the bet. Used to bucket a faced bet
 /// into the shared small/mid/big labels. Null (→ 'mid') if the amount or pot is
 /// unrecoverable. Matches the live `_betSizeFrac`/`betSizeBucket` pairing.
-double? _betFrac(String rawAction, String actorPos, _SprState spr) {
+double? _betFrac(String rawAction, String actorPos, SprState spr) {
   final m = RegExp(r'([0-9]+\.?[0-9]*)').firstMatch(rawAction);
   final to = m == null ? null : double.tryParse(m.group(1)!);
   if (to == null) return null;

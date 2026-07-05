@@ -1,0 +1,84 @@
+{
+  "id": "gto-m-oop-fbet-wdraw-md",
+  "userId": "eval",
+  "playedAt": "2026-06-28T00:00:00.000",
+  "tableSetup": {
+    "numSeats": 6,
+    "buttonSeat": 0,
+    "heroSeat": 2,
+    "smallBlind": 1,
+    "bigBlind": 2
+  },
+  "players": [
+    {
+      "seat": 2,
+      "name": "Hero",
+      "stack": 50,
+      "isHero": true,
+      "holeCards": [
+        "Tc",
+        "4d"
+      ]
+    },
+    {
+      "seat": 5,
+      "name": "Villain",
+      "stack": 50,
+      "isHero": false
+    }
+  ],
+  "streets": [
+    {
+      "street": "preflop",
+      "communityCards": [],
+      "actions": [
+        {
+          "seat": 2,
+          "type": "post",
+          "amount": 2,
+          "allIn": false
+        },
+        {
+          "seat": 5,
+          "type": "raise",
+          "amount": 5,
+          "allIn": false
+        },
+        {
+          "seat": 2,
+          "type": "call",
+          "amount": 5,
+          "allIn": false
+        }
+      ]
+    },
+    {
+      "street": "flop",
+      "communityCards": [
+        "9s",
+        "8d",
+        "6c"
+      ],
+      "actions": [
+        {
+          "seat": 2,
+          "type": "check",
+          "allIn": false
+        },
+        {
+          "seat": 5,
+          "type": "raise",
+          "amount": 4,
+          "allIn": false
+        },
+        {
+          "seat": 2,
+          "type": "call",
+          "amount": 4,
+          "allIn": false
+        }
+      ]
+    }
+  ],
+  "isTournament": false
+}

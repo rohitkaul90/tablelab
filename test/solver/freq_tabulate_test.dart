@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/equity/card.dart';
 
@@ -315,5 +318,304 @@ void main() {
       expect(faced.map((c) => c.facing), contains('facing_bet_mid'));
       expect(faced.map((c) => c.facing), isNot(contains('facing_bet')));
     });
+  });
+
+  // A faced ALL-IN must carry the LIVE lookup's labels: villain_range._heroFacing
+  // maps a shove to facing_bet_<bucket> (opening aggression) or facing_raise
+  // (aggression over a wager) — it NEVER emits 'facing_allin', so a tabulator
+  // that labels shoves that way bakes unreachable cells (the pre-2026-07 gap).
+  group('tabulateSpot faced all-in labels', () {
+    // OOP open-shoves the flop (no prior street chips) → IP faces a BET, sized
+    // by pot fraction: eff 45 into pot 10 = 450% → 'big'. In the CHECK line IP
+    // shoves over OOP's check (still opening aggression → bet), and OOP's
+    // response node to a bet-then-shove line faces a RAISE.
+    Map<String, dynamic> allinDump() => {
+          'node_type': 'action_node',
+          'player': 0, // OOP flop
+          'strategy': {
+            'actions': ['CHECK', 'BET 5', 'ALLIN'],
+            'strategy': {
+              'Qc Qd': [0.5, 0.3, 0.2],
+            },
+          },
+          'childrens': {
+            'ALLIN': {
+              'node_type': 'action_node',
+              'player': 1, // IP facing OOP's OPEN-shove
+              'strategy': {
+                'actions': ['FOLD', 'CALL'],
+                'strategy': {
+                  'Ad Ah': [0.1, 0.9],
+                },
+              },
+              'childrens': {
+                'FOLD': {'node_type': 'terminal_node'},
+                'CALL': {'node_type': 'terminal_node'},
+              },
+            },
+            'BET 5': {
+              'node_type': 'action_node',
+              'player': 1, // IP facing a 50% bet
+              'strategy': {
+                'actions': ['FOLD', 'CALL', 'ALLIN'],
+                'strategy': {
+                  'Ad Ah': [0.1, 0.5, 0.4],
+                },
+              },
+              'childrens': {
+                'FOLD': {'node_type': 'terminal_node'},
+                'CALL': {'node_type': 'terminal_node'},
+                'ALLIN': {
+                  'node_type': 'action_node',
+                  'player': 0, // OOP facing IP's shove OVER a bet
+                  'strategy': {
+                    'actions': ['FOLD', 'CALL'],
+                    'strategy': {
+                      'Qc Qd': [0.6, 0.4],
+                    },
+                  },
+                  'childrens': {
+                    'FOLD': {'node_type': 'terminal_node'},
+                    'CALL': {'node_type': 'terminal_node'},
+                  },
+                },
+              },
+            },
+            'CHECK': {'node_type': 'terminal_node'},
+          },
+        };
+
+    final cells =
+        tabulateSpot(allinDump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+
+    test('an opening shove is faced as facing_bet_big, never facing_allin', () {
+      final ipFacings =
+          cells.where((c) => c.position == 'ip').map((c) => c.facing).toSet();
+      expect(ipFacings, contains('facing_bet_big'));
+      expect(cells.map((c) => c.facing), isNot(contains('facing_allin')));
+    });
+
+    test('a shove over a bet is faced as facing_raise', () {
+      final oopFacings =
+          cells.where((c) => c.position == 'oop').map((c) => c.facing).toSet();
+      expect(oopFacings, contains('facing_raise'));
+    });
+  });
+
+  // A flop→turn→river line (both early streets check through) must produce RIVER
+  // cells: the tabulator walks the SECOND chance node and re-buckets the board to
+  // a 5-card texture. Locks the river capability — only `maxBoardLen` gated it off
+  // (the grid now passes kDumpRounds+2 = 5 for the river cycle).
+  group('tabulateSpot river', () {
+    Map<String, dynamic> riverDump() => {
+          'node_type': 'action_node',
+          'player': 0, // OOP flop
+          'strategy': {
+            'actions': ['CHECK', 'BET 5'],
+            'strategy': {'Kc Qd': [1.0, 0.0]}, // top pair → marginalMade
+          },
+          'childrens': {
+            'BET 5': {'node_type': 'terminal_node'},
+            'CHECK': {
+              'node_type': 'action_node',
+              'player': 1, // IP flop facing check
+              'strategy': {
+                'actions': ['CHECK', 'BET 5'],
+                'strategy': {'Ad Ah': [1.0, 0.0]},
+              },
+              'childrens': {
+                'BET 5': {'node_type': 'terminal_node'},
+                'CHECK': {
+                  'node_type': 'chance_node',
+                  'dealcards': {
+                    '2s': {
+                      'node_type': 'action_node',
+                      'player': 0, // OOP turn
+                      'strategy': {
+                        'actions': ['CHECK', 'BET 6'],
+                        'strategy': {'Kc Qd': [1.0, 0.0]},
+                      },
+                      'childrens': {
+                        'BET 6': {'node_type': 'terminal_node'},
+                        'CHECK': {
+                          'node_type': 'action_node',
+                          'player': 1, // IP turn facing check
+                          'strategy': {
+                            'actions': ['CHECK', 'BET 6'],
+                            'strategy': {'Ad Ah': [1.0, 0.0]},
+                          },
+                          'childrens': {
+                            'BET 6': {'node_type': 'terminal_node'},
+                            'CHECK': {
+                              'node_type': 'chance_node',
+                              'dealcards': {
+                                '3d': {
+                                  'node_type': 'action_node',
+                                  'player': 0, // OOP river, first to act
+                                  'strategy': {
+                                    'actions': ['CHECK', 'BET 7'],
+                                    'strategy': {'Kc Qd': [0.6, 0.4]},
+                                  },
+                                  'childrens': {
+                                    'CHECK': {'node_type': 'terminal_node'},
+                                    'BET 7': {'node_type': 'terminal_node'},
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
+
+    // pot0 10, effStack 45 → flop SPR 4.5 'medium'; every street checks through
+    // (no chips), so the turn and river stay 'medium'.
+    final cells =
+        tabulateSpot(riverDump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+
+    test('produces a river OOP first_to_act cell at medium SPR', () {
+      final river = cells.where((c) =>
+          c.street == 'river' &&
+          c.position == 'oop' &&
+          c.facing == 'first_to_act');
+      expect(river, isNotEmpty);
+      final r = river.first;
+      expect(r.sprBucket, 'medium'); // checked through → flop SPR preserved
+      expect(r.freqs['check'], closeTo(0.6, 1e-9));
+      expect(r.freqs['bet'], closeTo(0.4, 1e-9));
+      expect(r.reachWeight, closeTo(1.0, 1e-9));
+    });
+
+    test('river texture is the recomputed 5-card board (not the flop)', () {
+      final r = cells.firstWhere((c) => c.street == 'river');
+      final flop = cells.firstWhere((c) => c.street == 'flop');
+      expect(r.texture, isNot(equals(flop.texture)));
+    });
+
+    test('maxBoardLen 4 (turn) caps the walk before the river', () {
+      final turnOnly = tabulateSpot(riverDump(),
+          board: _b('Ks 9h 4c'), pot0: 10, effStack: 45, maxBoardLen: 4);
+      expect(turnOnly.any((c) => c.street == 'river'), isFalse);
+      expect(turnOnly.any((c) => c.street == 'turn'), isTrue);
+    });
+  });
+
+  // The grid runs this file-based entry point inside a worker isolate (so the heavy
+  // read + jsonDecode + walk run off the main isolate). It must produce the SAME
+  // cells as parsing the dump in-process — it only reads + decodes the file first.
+  group('tabulateDumpFile (the tabulator entry point)', () {
+    test('matches tabulateSpot on the same dump, via a file', () {
+      final tmp = Directory.systemTemp.createTempSync('tabfile_');
+      try {
+        final path = '${tmp.path}/dump.json';
+        File(path).writeAsStringSync(jsonEncode(_dump()));
+        final fromFile = tabulateDumpFile(path,
+            board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+        final direct =
+            tabulateSpot(_dump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+        expect(fromFile.length, direct.length);
+        final f = _cell(fromFile,
+            street: 'turn',
+            position: 'oop',
+            facing: 'first_to_act',
+            handClass: 'marginalMade');
+        final d = _cell(direct,
+            street: 'turn',
+            position: 'oop',
+            facing: 'first_to_act',
+            handClass: 'marginalMade');
+        expect(f.freqs['check'], closeTo(d.freqs['check']!, 1e-12));
+        expect(f.reachWeight, closeTo(d.reachWeight, 1e-12));
+      } finally {
+        tmp.deleteSync(recursive: true);
+      }
+    });
+
+    // Mirrors the grid worker's new handoff (which replaced Isolate.run — isolates
+    // in a group share one heap+GC, so N concurrent deep-river parses thrashed a
+    // single GC; a subprocess per spot gives each its own heap). tabulate_one.dart
+    // writes the cell JSON to a file (its own process); the grid reads it back.
+    // Locks that the toJson → jsonEncode → file → jsonDecode round-trip is faithful.
+    test('cell JSON round-trips through a file (the subprocess handoff)', () {
+      final tmp = Directory.systemTemp.createTempSync('tabfile2_');
+      try {
+        final path = '${tmp.path}/dump.json';
+        File(path).writeAsStringSync(jsonEncode(_dump()));
+        final board = _b('Ks 9h 4c');
+        final direct =
+            tabulateSpot(_dump(), board: board, pot0: 10, effStack: 45);
+        // What tabulate_one.dart writes:
+        final outPath = '${tmp.path}/cells.json';
+        final cells =
+            tabulateDumpFile(path, board: board, pot0: 10, effStack: 45);
+        File(outPath)
+            .writeAsStringSync(jsonEncode([for (final c in cells) c.toJson()]));
+        // What freq_grid.dart reads back:
+        final readBack =
+            jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;
+        expect(readBack, isNotEmpty);
+        expect(readBack.length, direct.length);
+        expect((readBack.first as Map).keys,
+            containsAll(['street', 'spr_bucket', 'facing', 'hand_class', 'freqs']));
+      } finally {
+        tmp.deleteSync(recursive: true);
+      }
+    });
+
+    // Runs the REAL tabulate_one.dart as a subprocess (what the grid does), exactly
+    // to catch arg-order / flop-parse regressions cheaply — a bug here otherwise
+    // only surfaces on the (expensive, cloud) solve run. Skips if `dart` isn't on
+    // PATH; asserts a bug (non-zero exit) rather than masking it.
+    test('tabulate_one.dart subprocess writes matching cells', () async {
+      final tmp = Directory.systemTemp.createTempSync('tabproc_');
+      try {
+        final path = '${tmp.path}/dump.json';
+        File(path).writeAsStringSync(jsonEncode(_dump()));
+        final outPath = '${tmp.path}/cells.json';
+        final direct =
+            tabulateSpot(_dump(), board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
+        ProcessResult res;
+        final packDir = '${tmp.path}/pack';
+        try {
+          // Exercise the --emit-pack path too (the grid's one-parse-two-outputs
+          // handoff): cells file + explorer pack from the same subprocess.
+          res = await Process.run('dart', [
+            'run',
+            'tool/solver/tabulate_one.dart',
+            path,
+            outPath,
+            'Ks9h4c',
+            '10',
+            '45',
+            '5',
+            '--emit-pack',
+            packDir,
+            'srp_late_v_bb',
+            'medium',
+          ]);
+        } on ProcessException {
+          markTestSkipped('dart not on PATH — skipping subprocess test');
+          return;
+        }
+        expect(res.exitCode, 0, reason: 'tabulate_one stderr: ${res.stderr}');
+        final cells =
+            jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;
+        expect(cells.length, direct.length);
+        expect((cells.first as Map).keys,
+            containsAll(['street', 'spr_bucket', 'facing', 'hand_class', 'freqs']));
+        // The pack landed beside the cells: manifest + at least the flop chunk.
+        expect(File('$packDir/manifest.json').existsSync(), isTrue,
+            reason: '--emit-pack wrote no manifest');
+        expect(File('$packDir/flop.bin.gz').existsSync(), isTrue);
+      } finally {
+        tmp.deleteSync(recursive: true);
+      }
+    }, timeout: const Timeout(Duration(minutes: 2)));
   });
 }

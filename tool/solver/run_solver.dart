@@ -134,7 +134,7 @@ _SolveConfig _config() {
   // 'single' is the default: multi-bet OOMs on deep (SPR 15-20) spots; single
   // converges to ~0.5% within the tree's action space. Use 'multi' for shallow spots.
   var bets = (e['TLSOLVE_BETS'] ?? 'single').toLowerCase();
-  const known = {'single', 'multi', 'vol', 'turn'};
+  const known = {'single', 'multi', 'vol', 'turn', 'river'};
   if (!known.contains(bets)) bets = 'single';
   final timeoutS = posInt('TLSOLVE_TIMEOUT_S', 900);
   // Worker threads. Default 16; lower (e.g. 8) to cut PEAK MEMORY / avoid the
@@ -157,10 +157,16 @@ String solverConfigTag() => _config().tag;
 /// turn's GTO frequencies are FAITHFUL — without a turn raise the solver can't
 /// check-raise and compensates by donk-leading the turn ~80% (the same distortion
 /// 'vol' has on the flop), which would poison a turn frequency library. The RIVER
-/// stays single-size + allin (cheap) — river cells aren't tabulated this phase
-/// (dump_rounds 2), so the deepest/branchiest layer is kept lean to bound the
-/// tree. Costs more than 'multi' (the turn raise widens the tree); OOM risk at
+/// stays single-size + allin (cheap) — river cells aren't tabulated under this
+/// profile (dump_rounds 2), so the deepest/branchiest layer is kept lean to bound
+/// the tree. Costs more than 'multi' (the turn raise widens the tree); OOM risk at
 /// medium SPR is measured by a calibration solve before the full grid.
+/// 'river': the FREQUENCY-LIBRARY river-cell profile (DCE Q1 phase 2c). Same as
+/// 'turn' on the flop+turn, but the RIVER ALSO gets a raise (+ allin) so river
+/// frequencies are FAITHFUL — without a river raise the solver can't check-raise
+/// the river and donk-leads it, the same distortion the lean river suffers. This
+/// is the DEEPEST/branchiest tree (every street can check-raise) → solve it on a
+/// big-RAM box; pair with dump_rounds 3 to tabulate the river street.
 /// 'vol': board-VOLATILITY/sizing calibration — several bet sizes per street so
 /// the GTO size CHOICE (vs texture) is observable, but NO raise/allin so the tree
 /// stays tractable at deep single-raised SPR (~15) where 'multi' OOMs. 'single'
@@ -180,6 +186,15 @@ String _betSizes(String profile) {
     b.writeln('set_bet_sizes $pos,$street,allin');
   }
 
+  // A street with ONE bet size + a raise (+ allin) → check-raise exists, so the
+  // street's GTO frequencies are FAITHFUL. The single bet size (not two) keeps the
+  // tree tractable; calibration showed a second size tripled cost / timed out.
+  void raiseStreet(StringBuffer b, String pos, String street) {
+    b.writeln('set_bet_sizes $pos,$street,bet,66');
+    b.writeln('set_bet_sizes $pos,$street,raise,60');
+    b.writeln('set_bet_sizes $pos,$street,allin');
+  }
+
   final b = StringBuffer();
   for (final pos in ['oop', 'ip']) {
     if (profile == 'single') {
@@ -193,13 +208,12 @@ String _betSizes(String profile) {
       b.writeln('set_bet_sizes $pos,river,bet,75');
     } else if (profile == 'turn') {
       flopTiered(b, pos);
-      // Turn: ONE bet size + a raise (→ check-raise exists). The raise is what
-      // makes turn frequencies faithful; a second turn size tripled tree cost and
-      // timed out at medium SPR in calibration, so it's dropped (single size).
-      b.writeln('set_bet_sizes $pos,turn,bet,66');
-      b.writeln('set_bet_sizes $pos,turn,raise,60');
-      b.writeln('set_bet_sizes $pos,turn,allin');
-      leanStreet(b, pos, 'river'); // river not tabulated in phase 2b
+      raiseStreet(b, pos, 'turn'); // faithful turn (check-raise exists)
+      leanStreet(b, pos, 'river'); // river not tabulated under 'turn'
+    } else if (profile == 'river') {
+      flopTiered(b, pos);
+      raiseStreet(b, pos, 'turn'); // faithful turn
+      raiseStreet(b, pos, 'river'); // faithful river (the deepest layer)
     } else {
       // 'multi': flop tiered; turn + river lean (no turn raise — v1).
       flopTiered(b, pos);
@@ -283,8 +297,36 @@ class _RawSolve {
 /// wall time. Shared by [solve] (hero-node walk, dumpRounds 1) and [solveRoot]
 /// (whole tree, dumpRounds 2). [dumpRounds] = 1 dumps the flop only, 2 adds the
 /// turn nodes (needed to read the turn chance node's per-card children).
-Future<_RawSolve> _invokeSolver(
-    SolverSpot spot, int dumpRounds, bool verbose,
+/// A solved dump left ON DISK for parsing elsewhere (typically a worker isolate,
+/// so the heavy jsonDecode + tabulate runs off the main isolate). The caller OWNS
+/// the temp dir and MUST call [cleanup] — it holds a multi-MB-to-multi-GB dump.
+class DumpSolve {
+  final String dumpPath;
+  final double? exploitability;
+  final int wallMs;
+  final Directory _tmp;
+  DumpSolve(this.dumpPath, this.exploitability, this.wallMs, this._tmp);
+  void cleanup() {
+    try {
+      _tmp.deleteSync(recursive: true);
+    } catch (_) {}
+  }
+}
+
+class _DumpRun {
+  final String dumpPath;
+  final String out; // captured solver stdout (for exploitability + verbose tail)
+  final int wallMs;
+  final Directory tmp;
+  _DumpRun(this.dumpPath, this.out, this.wallMs, this.tmp);
+}
+
+/// Run the solver on [spot], leaving the dump ON DISK (no parse here). On ANY
+/// failure the temp dir is removed and a StateError thrown; on SUCCESS the caller
+/// owns [_DumpRun.tmp] and must delete it. The single source of the solver
+/// invocation — both the parse-inline path ([_invokeSolver]) and the
+/// parse-in-isolate path ([solveToFile]) build on it.
+Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
     {String? betProfile}) async {
   final dir = _sourceDir();
   final bin = _solverBin(dir);
@@ -292,14 +334,15 @@ Future<_RawSolve> _invokeSolver(
     throw StateError('console_solver not found at $bin — build it first.');
   }
   // Log the resolved binary ONCE per run. _solverBin honors a TEXASSOLVER_BIN
-  // override verbatim (needed for the Linux build path), so a stale env var
-  // could point at an older solver and silently bake wrong frequencies into the
-  // shipped library — surface the path so a wrong binary is visible in the log.
+  // override verbatim (needed for the Linux build path), so a stale env var could
+  // point at an older solver and silently bake wrong frequencies into the shipped
+  // library — surface the path so a wrong binary is visible in the log.
   if (!_loggedBin) {
     _loggedBin = true;
     stderr.writeln('[solver] using binary: $bin');
   }
   final tmp = Directory.systemTemp.createTempSync('tlsolve_');
+  var keep = false; // hand tmp to the caller only on success
   try {
     final inputPath = '${tmp.path}/input.txt';
     final dumpPath = '${tmp.path}/out.json';
@@ -322,24 +365,39 @@ Future<_RawSolve> _invokeSolver(
     final out = await outF;
     final err = await errF;
     sw.stop();
-    if (verbose) {
-      stdout.writeln(out.split('\n').takeLast(4).join('\n'));
-    }
     if (exitCode != 0) {
       throw StateError('solver exit $exitCode\n$err\n$out');
     }
-    final outFile = File(dumpPath);
-    if (!outFile.existsSync()) {
+    if (!File(dumpPath).existsSync()) {
       throw StateError('solver produced no output_result\n$out');
     }
-    final root = jsonDecode(outFile.readAsStringSync()) as Map<String, dynamic>;
-    return _RawSolve(root, _parseExploitability(out), sw.elapsedMilliseconds);
+    keep = true;
+    return _DumpRun(dumpPath, out, sw.elapsedMilliseconds, tmp);
   } finally {
-    // Reclaim the per-solve temp dir (input.txt + a multi-MB JSON dump) on every
-    // path, including the StateError early-exits — a long batch would otherwise
-    // accumulate them in %TEMP%.
+    // Reclaim the temp dir on every FAILURE path (success hands it to the caller,
+    // who deletes it). A long batch would otherwise accumulate dumps in %TEMP%.
+    if (!keep) {
+      try {
+        tmp.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }
+}
+
+Future<_RawSolve> _invokeSolver(
+    SolverSpot spot, int dumpRounds, bool verbose,
+    {String? betProfile}) async {
+  final run = await _runSolverToDump(spot, dumpRounds, betProfile: betProfile);
+  try {
+    if (verbose) {
+      stdout.writeln(run.out.split('\n').takeLast(4).join('\n'));
+    }
+    final root =
+        jsonDecode(File(run.dumpPath).readAsStringSync()) as Map<String, dynamic>;
+    return _RawSolve(root, _parseExploitability(run.out), run.wallMs);
+  } finally {
     try {
-      tmp.deleteSync(recursive: true);
+      run.tmp.deleteSync(recursive: true);
     } catch (_) {}
   }
 }
@@ -386,6 +444,18 @@ Future<TreeSolveResult> solveRoot(SolverSpot spot,
     {int dumpRounds = 2, bool verbose = false, String? betProfile}) async {
   final raw = await _invokeSolver(spot, dumpRounds, verbose, betProfile: betProfile);
   return TreeSolveResult(raw.root, raw.exploitability, raw.wallMs);
+}
+
+/// Solve [spot] and leave the dump ON DISK without parsing it — for callers that
+/// run the heavy parse + tabulate in a worker isolate (`tabulateDumpFile`), so the
+/// big jsonDecode + tree walk don't block the main isolate. On river dumps that
+/// walk dominates wall time and serialized on the single isolate; this lets
+/// `--parallel` workers tabulate on separate cores. The caller MUST call
+/// [DumpSolve.cleanup] once it has tabulated (or on failure).
+Future<DumpSolve> solveToFile(SolverSpot spot,
+    {int dumpRounds = 2, String? betProfile}) async {
+  final run = await _runSolverToDump(spot, dumpRounds, betProfile: betProfile);
+  return DumpSolve(run.dumpPath, _parseExploitability(run.out), run.wallMs, run.tmp);
 }
 
 /// Follow a sequence of child keys from [node] — case- and "BET x"-prefix-

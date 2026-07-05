@@ -34,6 +34,12 @@ const String _spotsPath = 'tool/eval/spots.json';
 /// or bet/call), and [turnAct] produces hero's facing-node on the turn. The
 /// turn-street SPR re-buckets from the flop line (a flop bet/call shrinks it),
 /// so pair stacks with flop action to land committed/shallow/medium.
+///
+/// When [river] (the single river card) is set, the spot is a RIVER-decision
+/// spot: [flop] AND [turnAct] must both fully resolve, and [riverAct] produces
+/// hero's facing-node on the river. River cells exist only after the river solve
+/// (TLSOLVE_PROFILE=river dump_rounds 3) — until then these report ✗ and --write
+/// skips them; tune the river card / hand class against the solved library.
 class _Spec {
   final String id;
   final List<String> board;
@@ -44,9 +50,25 @@ class _Spec {
   final String note;
   final String? turn;
   final List<HandAction> turnAct;
+  final String? river;
+  final List<HandAction> riverAct;
+
+  /// 3-bet-pot spot (scenario 3bp_bb_v_btn): preflop becomes BTN open 5 →
+  /// BB 3-bet 18 → BTN call (pot 36 at the flop). [stack] then sets the 3bp
+  /// SPR regime: 52 → committed (~0.94), 90 → shallow (2.0), 160 → medium (~3.9).
+  final bool threeBet;
+
+  /// Which seat opens (single-raised specs): 0 = BTN (srp_late_v_bb),
+  /// 3 = UTG (srp_early_v_bb), 5 = CO (srp_middle_v_bb) — 6-max, buttonSeat 0.
+  final int openerSeat;
   const _Spec(this.id, this.board, this.hero, this.heroSeat, this.stack,
       this.flop, this.note,
-      {this.turn, this.turnAct = const []});
+      {this.turn,
+      this.turnAct = const [],
+      this.river,
+      this.riverAct = const [],
+      this.threeBet = false,
+      this.openerSeat = 0});
 }
 
 // Action shorthands.
@@ -139,9 +161,127 @@ final List<_Spec> _specs = [
       [_bet(2, 5), _call(0, 5)],
       'TURN OOP facing_raise, sevens-full (strongMade), shallow',
       turn: 'Kd', turnAct: [_bet(2, 6), _bet(0, 16), _call(2, 16)]),
+
+  // ── RIVER-decision spots (phase 2c) — TEMPLATES. These exercise river cells,
+  // which only exist after the river solve (TLSOLVE_PROFILE=river → dump_rounds 3).
+  // Until then gen_gto_spots reports them ✗ and --write skips them. After the
+  // solve, tune the river card / hand class to a POPULATED cell, then --write.
+  // Flop + turn both check through (full board, river SPR ≈ flop SPR). Spread
+  // across the three texture classes (A rainbow-ace / B middling-connected /
+  // C twotone-broadway) so river coverage isn't confined to one board.
+  _Spec('gto-r-ip-fcheck-strong-md', _boardA, ['7s', '7c'], 0, 50,
+      [_chk(2), _chk(0)], 'RIVER IP facing_check, sevens-full (strongMade), medium',
+      turn: '2c', turnAct: [_chk(2), _chk(0)],
+      river: '2d', riverAct: [_chk(2), _bet(0, 8)]),
+  _Spec('gto-r-oop-fta-marg-md', _boardC, ['Qc', 'Jd'], 2, 50,
+      [_chk(2), _chk(0)], 'RIVER OOP first_to_act (lead), top pair Q (marginalMade), medium',
+      turn: '2s', turnAct: [_chk(2), _chk(0)],
+      river: '3d', riverAct: [_bet(2, 8), _call(0, 8)]),
+  _Spec('gto-r-oop-fbet-marg-sh', _boardB, ['9h', 'Tc'], 2, 30,
+      [_chk(2), _chk(0)], 'RIVER OOP facing_bet (bluff-catch), top pair 9, shallow',
+      turn: '2s', turnAct: [_chk(2), _chk(0)],
+      river: '3d', riverAct: [_chk(2), _bet(0, 6), _call(2, 6)]),
+  _Spec('gto-r-ip-fbet-strong-md', _boardB, ['6h', '6d'], 0, 50,
+      [_chk(2), _chk(0)], 'RIVER IP facing_bet, set of sixes (strongMade), medium',
+      turn: '2s', turnAct: [_chk(2), _chk(0)],
+      river: '3d', riverAct: [_bet(2, 8), _call(0, 8)]),
+
+  // ── 3-BET-POT spots (scenario 3bp_bb_v_btn — SOLVED 2026-07-02, Cycle A;
+  // all 7 fire ✓ and are written). Preflop: BTN opens 5, BB 3-bets to 18, BTN
+  // calls → pot 36 at the flop; the aggressor (BB) is OOP. Stacks 52/90/160
+  // land committed/shallow/medium (see _Spec.threeBet). Spread hero position ×
+  // facing × hand class × SPR regime + one turn + one river decision.
+  // ⚠️ REMEMBER: --write emits samples/ + spots.json only — the eval scorer
+  // reads tool/eval/fixtures/, so new spots MUST also be BAKED
+  // (dart run tool/eval/bake_fixtures.dart) or the eval never exercises them.
+  _Spec('gto-3bp-oop-cbet-strong-sh', _boardA, ['Ah', 'Kc'], 2, 90,
+      [_bet(2, 24), _call(0, 24)],
+      '3BP OOP first_to_act (c-bet), top two (strongMade), shallow',
+      threeBet: true),
+  _Spec('gto-3bp-oop-fta-marg-md', _boardA, ['Qc', 'Qd'], 2, 160,
+      [_chk(2), _chk(0)],
+      '3BP OOP first_to_act (check), QQ under the ace (marginalMade), medium',
+      threeBet: true),
+  _Spec('gto-3bp-ip-fcheck-marg-co', _boardA, ['Ac', 'Qd'], 0, 52,
+      [_chk(2), _bet(0, 16)],
+      '3BP IP facing_check, top pair (marginalMade), committed',
+      threeBet: true),
+  // Faced-bet sizes must land in the flop tree's NATIVE buckets (33% → small,
+  // 75% → big; there is no native flop 'mid' — 50–67% sizings miss the cell).
+  _Spec('gto-3bp-ip-fbet-strong-md', _boardB, ['9h', '9c'], 0, 160,
+      [_bet(2, 27), _call(0, 27)],
+      '3BP IP facing_bet (75% c-bet), top set (strongMade), medium',
+      threeBet: true),
+  _Spec('gto-3bp-oop-fbet-air-sh', _boardC, ['Ac', '4d'], 2, 90,
+      [_chk(2), _bet(0, 12), _call(2, 12)],
+      '3BP OOP facing_bet (33%), ace-high (air), shallow',
+      threeBet: true),
+  _Spec('gto-3bp-t-ip-fbet-marg-sh', _boardA, ['Ac', 'Qd'], 0, 90,
+      [_chk(2), _chk(0)],
+      '3BP TURN IP facing_bet (BB delays), top pair (marginalMade), shallow',
+      threeBet: true, turn: '2c', turnAct: [_bet(2, 20), _call(0, 20)]),
+  _Spec('gto-3bp-r-oop-fta-strong-md', _boardA, ['Ah', 'Kc'], 2, 160,
+      [_chk(2), _chk(0)],
+      '3BP RIVER OOP first_to_act (lead), top two (strongMade), medium',
+      threeBet: true, turn: '2c', turnAct: [_chk(2), _chk(0)],
+      river: '3d', riverAct: [_bet(2, 24), _call(0, 24)]),
+
+  // ── EARLY-opener SRP spots (scenario srp_early_v_bb, UTG = seat 3 —
+  // Cycle B) — TEMPLATES until solved; ✗ / skipped by --write until then.
+  // Same pot shape as srp-late (open 5, BB call → pot 10; stacks 30/50 →
+  // shallow/medium). Faced flop bets use native-leaning sizes (4 = 40% →
+  // small, 8 = 80% → big); turn/river 6 = 60% → mid (native 66%).
+  _Spec('gto-e-ip-fcheck-marg-sh', _boardA, ['Ac', 'Qd'], 3, 30,
+      [_chk(2), _bet(3, 4)],
+      'EARLY IP facing_check, top pair (marginalMade), shallow',
+      openerSeat: 3),
+  _Spec('gto-e-oop-fbet-marg-md', _boardA, ['Ac', 'Qd'], 2, 50,
+      [_chk(2), _bet(3, 8), _call(2, 8)],
+      'EARLY OOP facing_bet (big), top pair, medium',
+      openerSeat: 3),
+  _Spec('gto-e-oop-fta-strong-md', _boardA, ['7s', '7c'], 2, 50,
+      [_bet(2, 4), _call(3, 4)],
+      'EARLY OOP first_to_act (lead), set (strongMade), medium',
+      openerSeat: 3),
+  _Spec('gto-e-t-ip-fcheck-strong-md', _boardA, ['7s', '7c'], 3, 50,
+      [_chk(2), _chk(3)],
+      'EARLY TURN IP facing_check, set (strongMade), medium',
+      openerSeat: 3, turn: 'Ks', turnAct: [_chk(2), _bet(3, 6)]),
+  _Spec('gto-e-r-oop-fbet-marg-sh', _boardB, ['9h', 'Tc'], 2, 30,
+      [_chk(2), _chk(3)],
+      'EARLY RIVER OOP facing_bet (bluff-catch), top pair 9, shallow',
+      openerSeat: 3, turn: '2s', turnAct: [_chk(2), _chk(3)],
+      river: '3d', riverAct: [_chk(2), _bet(3, 6), _call(2, 6)]),
+
+  // ── MIDDLE-opener SRP spots (scenario srp_middle_v_bb, CO = seat 5 —
+  // Cycle B) — TEMPLATES until solved.
+  _Spec('gto-m-ip-fcheck-air-sh', _boardA, ['9c', '4d'], 5, 30,
+      [_chk(2), _bet(5, 4)], 'MIDDLE IP facing_check, air, shallow',
+      openerSeat: 5),
+  _Spec('gto-m-oop-fbet-wdraw-md', _boardB, ['Tc', '4d'], 2, 50,
+      [_chk(2), _bet(5, 4), _call(2, 4)],
+      'MIDDLE OOP facing_bet (small), gutshot (weakDraw), medium',
+      openerSeat: 5),
+  _Spec('gto-m-oop-fta-marg-sh', _boardA, ['Ac', 'Qd'], 2, 30,
+      [_chk(2), _chk(5)],
+      'MIDDLE OOP first_to_act (check-through), top pair, shallow',
+      openerSeat: 5),
+  _Spec('gto-m-t-oop-fbet-marg-sh', _boardA, ['Ac', 'Qd'], 2, 30,
+      [_chk(2), _chk(5)],
+      'MIDDLE TURN OOP facing_bet (mid), top pair, shallow',
+      openerSeat: 5, turn: '4s',
+      turnAct: [_chk(2), _bet(5, 6), _call(2, 6)]),
+  _Spec('gto-m-r-ip-fbet-strong-md', _boardB, ['6h', '6d'], 5, 50,
+      [_chk(2), _chk(5)],
+      'MIDDLE RIVER IP facing_bet, set of sixes (strongMade), medium',
+      openerSeat: 5, turn: '2s', turnAct: [_chk(2), _chk(5)],
+      river: '3d', riverAct: [_bet(2, 6), _call(5, 6)]),
 ];
 
 PokerHand _buildHand(_Spec s) {
+  // Villain = the other player in the heads-up pot: the opener when hero is
+  // the BB, the BB when hero is the opener.
+  final villainSeat = s.heroSeat == 2 ? s.openerSeat : 2;
   return PokerHand(
     id: s.id,
     userId: 'eval',
@@ -162,18 +302,32 @@ PokerHand _buildHand(_Spec s) {
         holeCards: s.hero,
       ),
       HandPlayer(
-        seatIndex: s.heroSeat == 0 ? 2 : 0,
+        seatIndex: villainSeat,
         name: 'Villain',
         startingStack: s.stack,
       ),
     ],
     streets: [
-      // BTN (seat 0) opens to 5, BB (seat 2) calls — single-raised, heads-up.
-      const StreetData(street: Street.preflop, actions: [
-        HandAction(seat: 2, type: ActionType.post, amount: 2),
-        HandAction(seat: 0, type: ActionType.raise, amount: 5),
-        HandAction(seat: 2, type: ActionType.call, amount: 5),
-      ]),
+      // Single-raised: [openerSeat] opens to 5, BB (seat 2) calls — the
+      // opener's seat picks the SRP scenario (BTN/UTG/CO → late/early/middle).
+      // 3-bet (threeBet): BTN opens 5, BB 3-bets to 18, BTN calls — the
+      // 3bp_bb_v_btn shape (BB aggressor, OOP; pot 36 at the flop).
+      StreetData(
+          street: Street.preflop,
+          actions: s.threeBet
+              ? const [
+                  HandAction(seat: 2, type: ActionType.post, amount: 2),
+                  HandAction(seat: 0, type: ActionType.raise, amount: 5),
+                  HandAction(seat: 2, type: ActionType.raise, amount: 18),
+                  HandAction(seat: 0, type: ActionType.call, amount: 18),
+                ]
+              : [
+                  const HandAction(seat: 2, type: ActionType.post, amount: 2),
+                  HandAction(
+                      seat: s.openerSeat, type: ActionType.raise, amount: 5),
+                  const HandAction(
+                      seat: 2, type: ActionType.call, amount: 5),
+                ]),
       StreetData(
           street: Street.flop, communityCards: s.board, actions: s.flop),
       // Per-street communityCards are INCREMENTAL: each street holds only its
@@ -183,6 +337,11 @@ PokerHand _buildHand(_Spec s) {
       if (s.turn != null)
         StreetData(
             street: Street.turn, communityCards: [s.turn!], actions: s.turnAct),
+      if (s.river != null)
+        StreetData(
+            street: Street.river,
+            communityCards: [s.river!],
+            actions: s.riverAct),
     ],
     isTournament: false,
   );
@@ -199,16 +358,21 @@ Future<void> main(List<String> args) async {
     final check = await computeHandEquityCheck(hand, seed: 1234, iterations: 4000);
     final facts = check == null ? const <String>[] : equityCheckFacts(check, library: lib);
     final gto = facts.where((f) => f.contains('[HEURISTIC — GTO frequency')).toList();
-    final ok = gto.isNotEmpty;
+    // Verify the FACT covers the spec's TARGET street, not merely that SOME GTO
+    // FACT fired: a river spec's flop/turn nodes fire off the existing flop/turn
+    // cells even when NO river cells exist, which would mask missing river
+    // coverage. Requiring a `<street> (` segment makes a river spec read ✗ until
+    // the river solve populates river cells (then ✓), so the set self-verifies.
+    final street =
+        s.river != null ? 'river' : (s.turn != null ? 'turn' : 'flop');
+    final ok = gto.any((f) => f.contains('$street ('));
     if (ok) fired.add(s);
     stdout.writeln('${ok ? '✓' : '✗'} ${s.id}  scenario=${check?.scenarioKey}  '
         '— ${s.note}');
     if (ok) {
       // Show the rendered mix so we can eyeball the class/facing it resolved to.
-      // Prefer the turn line for turn spots; fall back to flop. Match the "(…)"
-      // descriptor lazily — the air hand class renders a NESTED paren
-      // ("air (no real equity)"), so [^)]* would stop at the inner ")".
-      final street = s.turn != null ? 'turn' : 'flop';
+      // Match the "(…)" descriptor lazily — the air hand class renders a NESTED
+      // paren ("air (no real equity)"), so [^)]* would stop at the inner ")".
       final m = RegExp('$street \\((.*?)\\): ([^;.\\]]*)').firstMatch(gto.first);
       if (m != null) stdout.writeln('      ${m.group(1)} → ${m.group(2)?.trim()}');
     }

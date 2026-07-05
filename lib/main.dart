@@ -17,7 +17,8 @@ import 'screens/dashboard_screen.dart';
 import 'screens/hands_screen.dart';
 import 'screens/reads_screen.dart';
 import 'screens/session_history_screen.dart';
-import 'screens/tools_screen.dart';
+import 'screens/explorer/gto_explorer_screen.dart';
+import 'providers/explorer_provider.dart';
 import 'widgets/app_drawer.dart';
 
 /// Expected, recoverable auth failures that should not be reported as fatal
@@ -37,8 +38,15 @@ bool _isRecoverableAuthError(Object error) {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase/Crashlytics is Android/iOS only — skip entirely on web.
-  if (!kIsWeb) {
+  // Firebase/Crashlytics is Android/iOS only — skip on web AND desktop.
+  // firebase_crashlytics has no Windows/Linux/macOS implementation: on those,
+  // the awaited setCrashlyticsCollectionEnabled throws a platform-interface
+  // assertion INSIDE main(), which aborts startup before runApp — the app
+  // process runs but no window ever appears (hit on `flutter run -d windows`).
+  final crashlyticsSupported = !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+  if (crashlyticsSupported) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     // Don't report crashes from debug builds (e.g. `flutter run` on a device) —
     // they pollute the production Crashlytics view with debug-only asserts that
@@ -145,66 +153,95 @@ class PokerTrackerApp extends ConsumerWidget {
   }
 }
 
-class MainNavigation extends StatefulWidget {
+class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({super.key});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  ConsumerState<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _currentIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Resolve the Study tab's visibility up front (a cheap local pack-dir scan;
+    // a no-op on web until hosted packs land) so the tab can appear without the
+    // Study screen ever mounting.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(explorerProvider.notifier).init();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Study is a real bottom tab, but only when there is something to study (or
+    // in debug builds). Prod users must never see a permanently dead tab —
+    // today's only pack source is a local dev directory; hosted packs light it
+    // up later. The calculators (Equity/ICM) now live in the drawer's Tools.
+    // Watch only spot-DISCOVERY (not the whole explorer state) so the root
+    // Scaffold/NavigationBar doesn't rebuild on every cursor move / chunk load.
+    final showStudy = kDebugMode ||
+        ref.watch(explorerProvider.select((s) => s.spots.isNotEmpty));
+    // Study focus mode hides the bottom nav for a full-window spot view.
+    final maximized = ref.watch(studyMaximizedProvider);
+
+    final tabs = <Widget>[
+      const DashboardScreen(),
+      const SessionHistoryScreen(),
+      const HandsScreen(),
+      const ReadsScreen(),
+      if (showStudy) const GtoExplorerScreen(),
+    ];
+    // Keep the selection in range if Study disappears while it was selected.
+    final index = _currentIndex.clamp(0, tabs.length - 1);
+
     return Scaffold(
       key: mainScaffoldKey,
       drawer: const AppDrawer(),
       body: IndexedStack(
-        index: _currentIndex,
-        children: const [
-          DashboardScreen(),
-          SessionHistoryScreen(),
-          HandsScreen(),
-          ReadsScreen(),
-          ToolsScreen(),
-        ],
+        index: index,
+        children: tabs,
       ),
       // Cap text scaling for the bottom bar so its labels stay single-line. On a
       // large system font setting (e.g. Samsung "Large" font / screen zoom) the
       // longest label wrapped to two lines within its equal-width slot. Clamping
-      // to 1.0 keeps all five labels on one line.
-      bottomNavigationBar: MediaQuery.withClampedTextScaling(
+      // to 1.0 keeps all labels on one line. Hidden in Study focus mode.
+      bottomNavigationBar: maximized
+          ? null
+          : MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.0,
         child: NavigationBar(
-          selectedIndex: _currentIndex,
+          selectedIndex: index,
           onDestinationSelected: (i) => setState(() => _currentIndex = i),
-          destinations: const [
-            NavigationDestination(
+          destinations: [
+            const NavigationDestination(
               icon: Icon(Icons.dashboard_outlined),
               selectedIcon: Icon(Icons.dashboard),
               label: 'Stats',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.list_outlined),
               selectedIcon: Icon(Icons.list),
               label: 'Sessions',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.style_outlined),
               selectedIcon: Icon(Icons.style),
               label: 'Hands',
             ),
-            NavigationDestination(
+            const NavigationDestination(
               icon: Icon(Icons.psychology_outlined),
               selectedIcon: Icon(Icons.psychology),
               label: 'Reads',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.construction_outlined),
-              selectedIcon: Icon(Icons.construction),
-              label: 'Tools',
-            ),
+            if (showStudy)
+              const NavigationDestination(
+                icon: Icon(Icons.school_outlined),
+                selectedIcon: Icon(Icons.school),
+                label: 'Study',
+              ),
           ],
         ),
       ),
