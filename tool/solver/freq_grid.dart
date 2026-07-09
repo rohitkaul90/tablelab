@@ -763,18 +763,45 @@ Future<void> main(List<String> args) async {
         'skipped as too big for this box (solve them on a bigger one).');
   }
 
-  // LPT (longest-processing-time-first): deep spots start FIRST so their long
-  // tails overlap the shallow backfill — the observed "one deep spot runs
-  // alone at the end" idle is exactly what this removes. Stable within a class
-  // (original flop order preserved by the sort's tie-break on nothing — Dart's
-  // sort is not stable, so tie-break explicitly on the original index).
+  // Ordering: LPT within a footprint class, then INTERLEAVED round-robin
+  // across classes (largest class first in each round). Strict LPT alone puts
+  // every deep spot first — on a RAM-tight box only ~2-4 deep claims fit, so
+  // all workers block on deep admissions while the shallow work that could
+  // fill the idle cores sits queued BEHIND hundreds of deep spots (~50% CPU
+  // idle through the whole deep phase). Interleaving keeps deep spots
+  // saturating the RAM budget from the start (their long tails still overlap
+  // the backfill — the original LPT motivation) while medium/shallow flow
+  // around them and keep the cores busy. Stable within a class (explicit
+  // original-index tie-break — Dart's sort is not stable).
   final origIdx = {for (var i = 0; i < pending.length; i++) pending[i]: i};
-  pending.sort((a, b) {
-    final ea = spotFootprint(a.sprVal, dumpFmt: dumpFmtEnv).estMinutes;
-    final eb = spotFootprint(b.sprVal, dumpFmt: dumpFmtEnv).estMinutes;
-    final c = eb.compareTo(ea);
-    return c != 0 ? c : origIdx[a]!.compareTo(origIdx[b]!);
-  });
+  final byClass = <double, List<({String flop, String spr, double sprVal})>>{};
+  for (final s in pending) {
+    byClass
+        .putIfAbsent(
+            spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv).solveGb, () => [])
+        .add(s);
+  }
+  final classOrder = byClass.keys.toList()..sort((a, b) => b.compareTo(a));
+  for (final g in classOrder) {
+    byClass[g]!.sort((a, b) {
+      final ea = spotFootprint(a.sprVal, dumpFmt: dumpFmtEnv).estMinutes;
+      final eb = spotFootprint(b.sprVal, dumpFmt: dumpFmtEnv).estMinutes;
+      final c = eb.compareTo(ea);
+      return c != 0 ? c : origIdx[a]!.compareTo(origIdx[b]!);
+    });
+  }
+  pending.clear();
+  var remaining = true;
+  while (remaining) {
+    remaining = false;
+    for (final g in classOrder) {
+      final list = byClass[g]!;
+      if (list.isNotEmpty) {
+        pending.add(list.removeAt(0));
+        remaining = remaining || list.isNotEmpty;
+      }
+    }
+  }
 
   // Admission budget: workers still cap at --parallel, but each phase's
   // (RAM, threads) claim must ALSO fit the box budget — so a high --parallel
