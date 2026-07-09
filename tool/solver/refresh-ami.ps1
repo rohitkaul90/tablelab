@@ -101,15 +101,22 @@ $tag = 'ResourceType=instance,Tags=[{Key=Name,Value=tablelab-ami-refresh}]'
 $iid = $null
 foreach ($type in (@($InstanceType) + $Fallbacks)) {
   Write-Host "Launching $type (on-demand)..."
-  $out = aws ec2 run-instances --region $Region --image-id $AmiId `
-    --instance-type $type --key-name $KeyName --security-group-ids $sg `
-    --tag-specifications $tag --count 1 `
-    --query 'Instances[0].InstanceId' --output text
+  # try/catch + 2>&1: a failed run-instances writes stderr, which under
+  # -EAP Stop terminates the script in some hosts instead of falling through
+  # to the next type (see vcpu-solve.ps1).
+  $out = $null
+  try {
+    $out = aws ec2 run-instances --region $Region --image-id $AmiId `
+      --instance-type $type --key-name $KeyName --security-group-ids $sg `
+      --tag-specifications $tag --count 1 `
+      --query 'Instances[0].InstanceId' --output text 2>&1 | Out-String
+  } catch { $out = "$_" }
   $newId = $null
   if ($LASTEXITCODE -eq 0) {
     $newId = ("$out" -split "`r?`n" | ForEach-Object { $_.Trim() } |
       Where-Object { $_ -match '^i-[0-9a-f]+$' } | Select-Object -First 1)
   }
+  $global:LASTEXITCODE = 0
   if ($newId) { $iid = $newId; $itype = $type; break }
   Write-Host "  $type unavailable - trying next"
 }

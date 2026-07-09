@@ -161,7 +161,13 @@ foreach ($type in (@($InstanceType) + $Fallbacks)) {
       "DeviceName=/dev/sda1,Ebs={VolumeSize=$RootGB,VolumeType=gp3}")
   }
   Write-Host "Launching $type ($(if ($Spot) {'spot'} else {'on-demand'}))..."
-  $out = aws @a
+  # try/catch + 2>&1: a FAILED run-instances (spot quota / capacity) writes to
+  # stderr, which under -EAP Stop is a terminating NativeCommandError in some
+  # hosts - it aborted the whole launcher instead of falling through to the
+  # next type (hit on the first spot-quota-blocked launch). Merging stderr
+  # into $out also surfaces the AWS reason in the log line below.
+  $out = $null
+  try { $out = aws @a 2>&1 | Out-String } catch { $out = "$_" }
   # Pull the i-... id out of stdout robustly - an AWS CLI notice line alongside the
   # queried InstanceId must NOT make a real launch look like a capacity failure
   # (which would launch a fallback and orphan this running instance).
@@ -170,8 +176,14 @@ foreach ($type in (@($InstanceType) + $Fallbacks)) {
     $newId = ("$out" -split "`r?`n" | ForEach-Object { $_.Trim() } |
       Where-Object { $_ -match '^i-[0-9a-f]+$' } | Select-Object -First 1)
   }
+  $global:LASTEXITCODE = 0
   if ($newId) { $iid = $newId; $itype = $type; break }
-  Write-Host "  $type unavailable - trying next"
+  $reason = ("$out" -split "`r?`n" | Where-Object { $_ -match 'error|Error|exceeded|capacity' } | Select-Object -First 1)
+  if ($reason) {
+    Write-Host "  $type unavailable - trying next ($($reason.Trim()))"
+  } else {
+    Write-Host "  $type unavailable - trying next"
+  }
 }
 if (-not $iid) { throw "No capacity on any of: $InstanceType $($Fallbacks -join ' ')" }
 Write-Host "Instance $iid ($itype) launching; waiting for running..."
