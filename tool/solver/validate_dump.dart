@@ -1,15 +1,20 @@
 // TLSD ⇄ JSON dual-dump equivalence harness (WS1c of the full-density plan).
 //
 // Feeds the SAME converged solve's JSON dump and TLSD binary dump through the
-// tabulator and asserts the resulting library cells agree:
-//   - identical cell KEY sets (texture/spr/street/position/facing/hand-class)
-//   - per-cell |freq diff| ≤ 0.001 (the u16 quantization bound, ε≈1.5e-5,
-//     compounded through reach products — see the TLSD format notes)
-//   - per-cell |reachWeight diff| ≤ 0.1% relative OR ≤ 0.001 absolute mass —
-//     the absolute escape covers near-zero-mass cells where a deep line's
-//     compounded quantization error is relatively large but 4 orders of
-//     magnitude below the library's 8.0 eligibility threshold (observed:
-//     0.108% rel on a 0.045-mass turn facing_raise cell)
+// tabulator and asserts the resulting library cells agree. The gate is
+// MASS-AWARE: the library only ever serves cells with reachWeight >= 8.0
+// (kServeMass — the live lookup's minMass), so:
+//   - SERVABLE cells (mass >= 8.0): STRICT — identical presence, per-cell
+//     |freq diff| ≤ 0.001 (the u16 quantization bound, ε≈1.5e-5, compounded
+//     through reach products), |reachWeight diff| ≤ 0.1% rel or 0.001 abs.
+//   - sub-threshold cells: reported (count + worst offenders with their
+//     masses) but NEVER fail the gate. Rationale: u16 quantization makes
+//     combos whose freq rounds to 0 drop out of reach products down long
+//     lines, so near-zero-mass corner cells (e.g. a committed-turn weakDraw
+//     facing a small bet — observed on the srp medium spot) can diverge or
+//     vanish; those cells are suppressed at lookup time and carry no product
+//     surface. A divergence on a SERVABLE cell is a real bug/precision
+//     problem and fails hard.
 //
 // Produce the input pair with one solve via TLSOLVE_DUMP_FMT=both (the solver
 // emits dump.json + dump.json.tlsd from one converged strategy), or pass any
@@ -38,6 +43,11 @@ import 'run_solver.dart';
 
 const _freqTol = 0.001;
 const _reachRelTol = 0.001;
+
+/// The live lookup's minMass — cells below this are never served. Keep in
+/// sync with lib/equity/gto_frequency_library.dart (and the coverage doc's
+/// snapshot script, MIN=8.0).
+const kServeMass = 8.0;
 
 Future<void> main(List<String> args) async {
   if (args.isNotEmpty && args[0] == '--solve') {
@@ -134,28 +144,61 @@ void _comparePair(
   final j = {for (final c in jsonCells) key(c): c};
   final t = {for (final c in tlsdCells) key(c): c};
 
-  var bad = 0;
-  void flag(String msg) {
-    bad++;
-    stderr.writeln('  ✗ $msg');
+  // Mass-aware gate: a divergence on a SERVABLE cell (mass >= kServeMass in
+  // EITHER path) fails hard; sub-threshold divergences are reported but never
+  // gate (they're lookup-suppressed — see the header comment).
+  var bad = 0, sub = 0;
+  var maxSubDiff = 0.0;
+  String? worstSub;
+  void flag(bool servable, String msg, double diffForWorst) {
+    if (servable) {
+      bad++;
+      stderr.writeln('  ✗ SERVABLE $msg');
+    } else {
+      sub++;
+      if (diffForWorst > maxSubDiff) {
+        maxSubDiff = diffForWorst;
+        worstSub = msg;
+      }
+    }
+  }
+
+  double massOf(String k) {
+    final mj = j[k]?.reachWeight ?? 0.0;
+    final mt = t[k]?.reachWeight ?? 0.0;
+    return mj > mt ? mj : mt;
   }
 
   for (final k in j.keys) {
-    if (!t.containsKey(k)) flag('cell only in JSON: $k');
+    if (!t.containsKey(k)) {
+      final m = massOf(k);
+      flag(m >= kServeMass,
+          'cell only in JSON (mass ${m.toStringAsFixed(3)}): $k', m);
+    }
   }
   for (final k in t.keys) {
-    if (!j.containsKey(k)) flag('cell only in TLSD: $k');
+    if (!j.containsKey(k)) {
+      final m = massOf(k);
+      flag(m >= kServeMass,
+          'cell only in TLSD (mass ${m.toStringAsFixed(3)}): $k', m);
+    }
   }
-  var maxFreqDiff = 0.0, maxReachRel = 0.0;
+  var maxFreqDiff = 0.0, maxServedFreqDiff = 0.0, maxReachRel = 0.0;
   for (final k in j.keys) {
     final cj = j[k], ct = t[k];
     if (ct == null) continue;
+    final servable = massOf(k) >= kServeMass;
     final actions = {...cj!.freqs.keys, ...ct.freqs.keys};
     for (final a in actions) {
       final d = ((cj.freqs[a] ?? 0.0) - (ct.freqs[a] ?? 0.0)).abs();
       if (d > maxFreqDiff) maxFreqDiff = d;
+      if (servable && d > maxServedFreqDiff) maxServedFreqDiff = d;
       if (d > _freqTol) {
-        flag('$k action $a: json=${cj.freqs[a]} tlsd=${ct.freqs[a]} (Δ$d)');
+        flag(
+            servable,
+            '$k (mass ${massOf(k).toStringAsFixed(3)}) action $a: '
+            'json=${cj.freqs[a]} tlsd=${ct.freqs[a]} (Δ$d)',
+            d);
       }
     }
     final base = cj.reachWeight.abs() < 1e-12 ? 1e-12 : cj.reachWeight.abs();
@@ -163,28 +206,41 @@ void _comparePair(
     final rel = abs / base;
     if (rel > maxReachRel) maxReachRel = rel;
     if (rel > _reachRelTol && abs > 0.001) {
-      flag('$k reach: json=${cj.reachWeight} tlsd=${ct.reachWeight} '
-          '(rel Δ${(rel * 100).toStringAsFixed(3)}%, abs Δ$abs)');
+      flag(
+          servable,
+          '$k reach: json=${cj.reachWeight} tlsd=${ct.reachWeight} '
+          '(rel Δ${(rel * 100).toStringAsFixed(3)}%, abs Δ$abs)',
+          rel);
     }
   }
 
+  final servedJson = jsonCells.where((c) => c.reachWeight >= kServeMass).length;
   final sizeJ = File(jsonPath).lengthSync();
   final sizeT = File(tlsdPath).lengthSync();
   stdout.writeln(jsonEncode({
     'cells_json': jsonCells.length,
     'cells_tlsd': tlsdCells.length,
-    'max_freq_diff': double.parse(maxFreqDiff.toStringAsExponential(2)),
+    'servable_cells': servedJson,
+    'max_freq_diff_any': double.parse(maxFreqDiff.toStringAsExponential(2)),
+    'max_freq_diff_servable':
+        double.parse(maxServedFreqDiff.toStringAsExponential(2)),
     'max_reach_rel_diff': double.parse(maxReachRel.toStringAsExponential(2)),
     'tabulate_ms_json': swJ.elapsedMilliseconds,
     'tabulate_ms_tlsd': swT.elapsedMilliseconds,
     'dump_bytes_json': sizeJ,
     'dump_bytes_tlsd': sizeT,
     'size_ratio': double.parse((sizeJ / sizeT).toStringAsFixed(1)),
-    'mismatches': bad,
+    'servable_mismatches': bad,
+    'subthreshold_diffs': sub,
   }));
+  if (sub > 0) {
+    stdout.writeln('note: $sub sub-threshold (mass < $kServeMass, never '
+        'served) divergence(s) — expected u16-quantization tail; worst: '
+        '$worstSub');
+  }
   if (bad > 0) {
-    stderr.writeln('FAIL: $bad mismatch(es)');
+    stderr.writeln('FAIL: $bad SERVABLE-cell mismatch(es)');
     exit(1);
   }
-  stdout.writeln('OK: cells equivalent within tolerance');
+  stdout.writeln('OK: all servable cells equivalent within tolerance');
 }
