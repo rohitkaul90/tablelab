@@ -58,6 +58,7 @@ import 'flop_enum.dart';
 import 'freq_tabulate.dart';
 import 'run_solver.dart';
 import 'solver_input.dart';
+import 'spot_sched.dart';
 
 /// One solvable scenario: a preflop range pair + the SPR regimes it's solved
 /// at. The grid solves ONE scenario per run (TLSOLVE_SCENARIO); the library
@@ -714,21 +715,65 @@ Future<void> main(List<String> args) async {
 
   // Spots still needing a solve (cached ones skipped), capped to --limit if set.
   // Each pending spot is claimed and solved exactly once by exactly one worker.
+  // TLSOLVE_MAX_SPOT_GB skips (never fails) spots whose predicted solve RAM
+  // exceeds it — a small-RAM box grinds the shallow/medium classes while a big
+  // box takes deep (the split is pure env policy; see spot_sched.dart).
+  final maxSpotGb =
+      double.tryParse(Platform.environment['TLSOLVE_MAX_SPOT_GB'] ?? '');
   final pending = <({String flop, String spr, double sprVal})>[];
-  var skipped = 0;
+  var skipped = 0, skippedTooBig = 0;
   for (final s in spots) {
     if (_isCached(results, s.flop, s.spr)) {
       skipped++;
+    } else if (maxSpotGb != null &&
+        spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv).solveGb > maxSpotGb) {
+      skippedTooBig++;
     } else if (limit == null || pending.length < limit) {
       pending.add(s);
     }
   }
+  if (skippedTooBig > 0) {
+    stdout.writeln('⚠ TLSOLVE_MAX_SPOT_GB=$maxSpotGb: $skippedTooBig spot(s) '
+        'skipped as too big for this box (solve them on a bigger one).');
+  }
+
+  // LPT (longest-processing-time-first): deep spots start FIRST so their long
+  // tails overlap the shallow backfill — the observed "one deep spot runs
+  // alone at the end" idle is exactly what this removes. Stable within a class
+  // (original flop order preserved by the sort's tie-break on nothing — Dart's
+  // sort is not stable, so tie-break explicitly on the original index).
+  final origIdx = {for (var i = 0; i < pending.length; i++) pending[i]: i};
+  pending.sort((a, b) {
+    final ea = spotFootprint(a.sprVal, dumpFmt: dumpFmtEnv).estMinutes;
+    final eb = spotFootprint(b.sprVal, dumpFmt: dumpFmtEnv).estMinutes;
+    final c = eb.compareTo(ea);
+    return c != 0 ? c : origIdx[a]!.compareTo(origIdx[b]!);
+  });
+
+  // Admission budget: workers still cap at --parallel, but each phase's
+  // (RAM, threads) claim must ALSO fit the box budget — so a high --parallel
+  // is safe (deep spots' 100 GB claims throttle actual concurrency) and cores
+  // stop idling behind a worst-case cap. See spot_sched.dart.
+  final budget = ResourceBudget.fromEnv();
+  final solverThreads =
+      int.tryParse(Platform.environment['TLSOLVE_THREADS'] ?? '') ?? 8;
 
   var solved = 0, failed = 0, started = 0, next = 0;
   final total = pending.length;
   final sw = Stopwatch()..start();
-  stdout.writeln('Solving $total spot(s) — $parallel at a time, '
-      '$skipped cached/skipped.');
+  stdout.writeln('Solving $total spot(s) — up to $parallel workers, budget '
+      '${budget.totalGb.toStringAsFixed(0)} GB / ${budget.totalThreads} '
+      'threads (${solverThreads}t per solve), $skipped cached/skipped.');
+
+  if (args.contains('--sched-dry-run')) {
+    stdout.writeln('sched dry run — planned order (LPT):');
+    for (final s in pending) {
+      final fp = spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv);
+      stdout.writeln('  ${s.flop} ${s.spr}: solve ${fp.solveGb} GB/'
+          '${solverThreads}t ~${fp.estMinutes}min, parse ${fp.parseGb} GB/1t');
+    }
+    return;
+  }
   if (emitPackRoot != null && skipped > 0) {
     stdout.writeln('⚠ --emit-pack: $skipped cached spot(s) will NOT get packs '
         '(only newly-solved spots do) — delete their results.json entries to '
@@ -752,14 +797,33 @@ Future<void> main(List<String> args) async {
       if (i >= total) break;
       next++;
       final s = pending[i];
-      final n = ++started;
       final key = _spotKey(s.flop, s.spr);
-      stdout.writeln('[$n/$total] solving ${s.flop} SPR ${s.spr} …');
+      final fp = spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv);
       DumpSolve? ds;
+      // Phase claims: solve holds (solveGb, solver threads); tabulate swaps
+      // down to (parseGb, 1 thread). Track what we hold so the finally can
+      // release exactly once whatever phase failed.
+      var heldGb = 0.0;
+      var heldThreads = 0;
       try {
+        await budget.acquire(fp.solveGb, solverThreads);
+        heldGb = fp.solveGb;
+        heldThreads = solverThreads;
+        final n = ++started;
+        stdout.writeln('[$n/$total] solving ${s.flop} SPR ${s.spr} '
+            '(${fp.solveGb.toStringAsFixed(0)} GB claim) …');
         final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
         ds = await solveToFile(spot,
             dumpRounds: kDumpRounds, betProfile: kBetProfile);
+        // Solve finished — swap the claim down to the parse footprint before
+        // the tabulate subprocess (frees ~most of a deep spot's RAM for the
+        // next admission the moment the solver exits).
+        budget.release(heldGb, heldThreads);
+        heldGb = 0;
+        heldThreads = 0;
+        await budget.acquire(fp.parseGb, 1);
+        heldGb = fp.parseGb;
+        heldThreads = 1;
         // Capture the scalars BEFORE the Process.run await (avoids relying on
         // null-promotion of `ds` surviving the await).
         final dumpPath = ds.dumpPath;
@@ -841,6 +905,7 @@ Future<void> main(List<String> args) async {
         failed++;
         stdout.writeln('    ✗ [${s.flop} ${s.spr}] $e');
       } finally {
+        if (heldGb > 0 || heldThreads > 0) budget.release(heldGb, heldThreads);
         ds?.cleanup(); // remove the dump temp dir (after tabulating, or on failure)
       }
     }
