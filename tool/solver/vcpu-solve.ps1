@@ -75,7 +75,24 @@ param(
   [string]$SgName = 'tablelab-solver-sg',
   # Wait for the solve to finish, then pull the library + cache and terminate.
   # FULL solves only - it refuses to auto-pull a --limit partial.
-  [switch]$PullAndTerminate
+  [switch]$PullAndTerminate,
+  # -- Spot-resilience (full-density plan WS3). All three only act under
+  # -PullAndTerminate (that is where the launcher is watching the box). --
+  # Pull the checkpoint shards (freq_grid_results.*.jsonl + .json) into
+  # tool\solver\.remote-staging\ every N minutes while polling, so a spot
+  # reclaim loses at most N minutes of solved spots. 0 disables.
+  [int]$SyncEveryMin = 10,
+  # On a detected SPOT RECLAIM (not a crash): promote the freshest staged
+  # shards into the repo and relaunch this script with the same params, up to
+  # -RelaunchBudget times; the last attempt drops -Spot (on-demand). A crash
+  # still leaves the box up for triage - only reclaims relaunch.
+  [switch]$AutoRelaunch,
+  [int]$RelaunchBudget = 3,
+  # Optional box-side rescue: on the 2-minute IMDS interruption notice the box
+  # copies its shards to this S3 URI (needs an instance role / creds on the
+  # box - absent by default, so this is opt-in extra belt-and-braces; the
+  # launcher-side periodic pull is the primary net).
+  [string]$SyncS3Uri = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -214,6 +231,15 @@ if (Test-Path $cache) {
   if ($LASTEXITCODE -ne 0) { throw "scp freq_grid_results.json (cache seed) failed" }
   Write-Host "Seeded solve cache from local freq_grid_results.json."
 }
+# Per-scenario JSONL checkpoint shards (WS2) are part of the cache too - a
+# relaunch after a spot reclaim resumes from them (they hold the spots solved
+# since the last --compact).
+$shards = Get-ChildItem (Join-Path $repo 'tool\solver') -Filter 'freq_grid_results.*.jsonl' -ErrorAction SilentlyContinue
+foreach ($sh in @($shards)) {
+  scp -i $key $sh.FullName "ubuntu@${pubip}:~/poker_tracker/tool/solver/$($sh.Name)"
+  if ($LASTEXITCODE -ne 0) { throw "scp $($sh.Name) (shard seed) failed" }
+  Write-Host "Seeded shard $($sh.Name)."
+}
 
 # -- 5. Start the solve in a detached tmux session ----------------------------
 # Build a run-solve.sh locally (LF endings) and scp it, to avoid nested PS->ssh->bash
@@ -237,11 +263,33 @@ export TEXASSOLVER_BIN=`$HOME/texassolver-source/build/console_solver
 export TMPDIR=/dev/shm
 sudo sysctl -w vm.max_map_count=2000000 >/dev/null 2>&1 || true
 rm -rf /dev/shm/tlsolve_* /mnt/scratch/tlsolve_* 2>/dev/null || true
+# Spot-interruption watcher (WS3): poll IMDSv2 for the 2-minute reclaim notice.
+# On notice: stamp a marker (the launcher reads it to distinguish reclaim from
+# crash) and, if an S3 rescue URI was configured AND the box has credentials,
+# copy the checkpoint shards out. The launcher's periodic shard pull is the
+# primary safety net - this is box-side belt-and-braces.
+(
+  while true; do
+    TOK=`$(curl -sS -m 2 -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' 2>/dev/null)
+    ACT=`$(curl -sS -m 2 -H "X-aws-ec2-metadata-token: `$TOK" http://169.254.169.254/latest/meta-data/spot/instance-action 2>/dev/null)
+    if [ -n "`$ACT" ] && ! echo "`$ACT" | grep -q '404'; then
+      echo "SPOT RECLAIM NOTICE: `$ACT" | tee ~/SPOT_RECLAIM_NOTICE >> ~/solve.log
+      if [ -n "$SyncS3Uri" ]; then
+        aws s3 cp ~/poker_tracker/tool/solver/ "$SyncS3Uri/" --recursive --exclude '*' --include 'freq_grid_results*' >> ~/solve.log 2>&1 || true
+      fi
+      break
+    fi
+    sleep 5
+  done
+) &
 {
 for SC in $scenarioList; do
   echo "=== SCENARIO `$SC ==="
   TLSOLVE_SCENARIO=`$SC TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs || echo "SCENARIO `$SC FAILED"
 done
+# Fold the per-scenario JSONL shards into freq_grid_results.json so the
+# launcher's single-file cache pull captures every solved spot (WS2 shards).
+dart run tool/solver/freq_grid.dart --compact || echo "COMPACT FAILED"
 echo "BATCH DONE"
 } 2>&1 | tee ~/solve.log
 "@
@@ -282,9 +330,64 @@ if ($PullAndTerminate) {
   # ssh is killed and retried (this exact wedge ate a finished Cycle A run -
   # the solve completed but the launcher never noticed). Only give up after
   # many CONSECUTIVE failures (box unreachable ~7 min), never on one blip.
+  # WS3 spot-resilience plumbing: a staging dir for the periodic shard pulls
+  # (never written into the repo copies mid-run - promoted only on a reclaim
+  # relaunch), a reclaim-vs-crash classifier, and the relaunch itself.
+  $staging = Join-Path $repo 'tool\solver\.remote-staging'
+
+  function Test-SpotReclaimed {
+    # True iff the instance is gone/going BECAUSE EC2 reclaimed the spot
+    # capacity (StateReason Server.SpotInstanceTermination) - a crash or a
+    # manual terminate must NOT auto-relaunch.
+    $st = aws ec2 describe-instances --region $Region --instance-ids $iid `
+      --query 'Reservations[0].Instances[0].[State.Name,StateReason.Code]' --output text 2>$null
+    if ($LASTEXITCODE -ne 0) { $global:LASTEXITCODE = 0; return $false }
+    $parts = ("$st" -split '\s+') | Where-Object { $_ }
+    return ($parts.Count -ge 2 -and
+      @('shutting-down', 'terminated', 'stopping', 'stopped') -contains $parts[0] -and
+      $parts[1] -match 'Spot')
+  }
+
+  function Invoke-Relaunch {
+    # Promote the freshest staged shards into the repo (the relaunch seeds the
+    # new box from them - only in-flight spots since the last sync re-solve),
+    # then re-invoke this script with the same parameters. The LAST attempt in
+    # the budget drops -Spot and runs on-demand.
+    if (Test-Path $staging) {
+      Get-ChildItem $staging -Filter 'freq_grid_results.*' -ErrorAction SilentlyContinue |
+        ForEach-Object {
+          Copy-Item $_.FullName (Join-Path (Join-Path $repo 'tool\solver') $_.Name) -Force
+          Write-Host "  promoted staged $($_.Name) into the repo cache."
+        }
+    }
+    if ($RelaunchBudget -le 0) {
+      Write-Warning "Relaunch budget exhausted - not relaunching. Resume manually."
+      return
+    }
+    $params = @{} + $PSBoundParameters
+    $params['RelaunchBudget'] = $RelaunchBudget - 1
+    if ($RelaunchBudget -le 1 -and $params.ContainsKey('Spot')) {
+      $params.Remove('Spot') | Out-Null
+      Write-Warning "Final relaunch attempt: falling back to ON-DEMAND."
+    }
+    Write-Host "Spot reclaimed - relaunching (attempts left after this: $($RelaunchBudget - 1))..."
+    & $PSCommandPath @params
+  }
+
   $failures = 0
+  $lastSync = Get-Date
   do {
     Start-Sleep 30
+    # Periodic checkpoint staging (WS3): pull the results shards every
+    # -SyncEveryMin so a reclaim loses at most that window of solved spots.
+    # Non-fatal - a failed sync is just a staler stage.
+    if ($SyncEveryMin -gt 0 -and ((Get-Date) - $lastSync).TotalMinutes -ge $SyncEveryMin) {
+      $lastSync = Get-Date
+      New-Item -ItemType Directory -Force $staging | Out-Null
+      try { scp -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*" $staging 2>$null } catch { }
+      if ($LASTEXITCODE -eq 0) { Write-Host "  [sync] staged checkpoint shards" }
+      $global:LASTEXITCODE = 0
+    }
     $r = Invoke-SshTimed "if grep -q 'BATCH DONE' ~/solve.log 2>/dev/null; then echo wrote; elif tmux has-session -t solve 2>/dev/null; then echo running; else echo dead; fi"
     if ($r -and $r.Code -eq 0 -and "$($r.Out)".Trim()) {
       $failures = 0
@@ -297,6 +400,10 @@ if ($PullAndTerminate) {
   } while ($state -eq 'running')
 
   if ($state -eq 'unreachable') {
+    if ($AutoRelaunch -and (Test-SpotReclaimed)) {
+      Invoke-Relaunch
+      return
+    }
     Write-Warning "Lost contact with the box (12 consecutive failed polls). Instance $iid is"
     Write-Warning "LEFT RUNNING - check it over SSH, pull manually, then terminate:"
     Write-Warning "  aws ec2 terminate-instances --region $Region --instance-ids $iid"
@@ -304,6 +411,15 @@ if ($PullAndTerminate) {
   }
 
   if ($state -ne 'wrote') {
+    # A reclaim can also land here (tmux died in the 2-min notice window while
+    # SSH was still up) - the box-side watcher stamps ~/SPOT_RECLAIM_NOTICE.
+    if ($AutoRelaunch) {
+      $notice = Invoke-SshTimed 'test -f ~/SPOT_RECLAIM_NOTICE && echo yes || echo no' -TimeoutSec 20
+      if ((Test-SpotReclaimed) -or ($notice -and "$($notice.Out)".Trim() -eq 'yes')) {
+        Invoke-Relaunch
+        return
+      }
+    }
     $r = Invoke-SshTimed "tail -n 30 ~/solve.log" -TimeoutSec 60
     if ($r) { Write-Host $r.Out }
     Write-Warning "Solve ended WITHOUT writing the library (crash / OOM / all spots failed /"
@@ -392,5 +508,9 @@ if ($PullAndTerminate) {
   }
   Write-Host "Terminating $iid..."
   Invoke-Aws ec2 terminate-instances --region $Region --instance-ids $iid | Out-Null
+  # The final pull captured everything (the box --compact'ed its shards into
+  # freq_grid_results.json before BATCH DONE) - the staging copies are now
+  # redundant snapshots.
+  if (Test-Path $staging) { Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue }
   Write-Host "Done. Library pulled (review 'git diff', then 'git add -f' it)$(if ($EmitPack) { ", packs in $PackDest" }) + instance terminated."
 }
