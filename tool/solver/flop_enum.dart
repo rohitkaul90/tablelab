@@ -1,0 +1,62 @@
+// Canonical suit-isomorphic flop enumeration (full-density cost plan WS2).
+//
+// There are C(52,3) = 22,100 raw flops; under suit relabeling they collapse to
+// exactly 1,755 equivalence classes (1,430 unpaired-distinct-rank × 5 suit
+// patterns + 312 paired × 2 + 13 trips). The solve grid's full-density mode
+// (`TLSOLVE_FLOPS=all1755`) solves one representative per class — solving two
+// isomorphic flops would be paying twice for the same GTO solution.
+//
+// Canonicalization: for each raw flop, take the lexicographically-smallest
+// serialization over all 24 suit permutations (cards sorted rank-desc,
+// suit-asc within rank). Brute force over 22,100 × 24 is instant and immune to
+// the classic within-rank-ordering pitfalls of first-appearance relabeling.
+
+import 'package:tablelab/equity/card.dart';
+
+/// All 1,755 canonical flops as "As Kd 7h"-style strings (the grid's flop
+/// format), deterministic order (sorted).
+List<String> allIsoFlops() {
+  final seen = <String>{};
+  for (var a = 0; a < 52; a++) {
+    for (var b = a + 1; b < 52; b++) {
+      for (var c = b + 1; c < 52; c++) {
+        seen.add(canonicalFlop([a, b, c]));
+      }
+    }
+  }
+  final out = seen.toList()..sort();
+  return out;
+}
+
+/// The canonical representative of [flop]'s suit-isomorphism class, as a
+/// "Rr Rr Rr" string. Deterministic: minimum serialization over all 24 suit
+/// permutations.
+String canonicalFlop(List<int> flop) {
+  String? best;
+  for (final perm in _kSuitPerms) {
+    final mapped = [
+      for (final c in flop) cardIndex(cardRank(c), perm[cardSuit(c)])
+    ]..sort((x, y) {
+        final r = cardRank(y).compareTo(cardRank(x)); // rank desc
+        return r != 0 ? r : cardSuit(x).compareTo(cardSuit(y)); // suit asc
+      });
+    final s = mapped.map(cardName).join(' ');
+    if (best == null || s.compareTo(best) < 0) best = s;
+  }
+  return best!;
+}
+
+/// All 24 permutations of the 4 suits, computed once.
+final List<List<int>> _kSuitPerms = _perms([0, 1, 2, 3]);
+
+List<List<int>> _perms(List<int> xs) {
+  if (xs.length <= 1) return [xs];
+  final out = <List<int>>[];
+  for (var i = 0; i < xs.length; i++) {
+    final rest = [...xs]..removeAt(i);
+    for (final p in _perms(rest)) {
+      out.add([xs[i], ...p]);
+    }
+  }
+  return out;
+}
