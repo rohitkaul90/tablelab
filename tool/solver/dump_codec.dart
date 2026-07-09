@@ -478,8 +478,11 @@ class JsonNodeView implements DumpNodeView {
   double freq(int comboIdx, int actionIdx) {
     final vec = _combos[comboIdx].value;
     if (vec is! List || actionIdx >= vec.length) return 0.0;
-    final v = vec[actionIdx];
-    return v is num ? v.toDouble() : 0.0;
+    // Hard cast, NOT a silent 0.0 coercion (review finding): the pre-refactor
+    // walk did `(vec[i] as num).toDouble()`, so a corrupted strategy element
+    // (null/string from a truncated dump) crashed the spot LOUDLY instead of
+    // under-counting frequencies into the shipped library. Keep that.
+    return (vec[actionIdx] as num).toDouble();
   }
 
   @override

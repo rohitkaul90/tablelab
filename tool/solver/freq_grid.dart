@@ -355,21 +355,44 @@ void _appendResult(String key, Map<String, dynamic> entry) {
 /// `--compact`: fold every shard into the legacy JSON and delete the shards —
 /// run before seeding a box (the launcher scp's the single results file) or to
 /// keep the shard set tidy between cycles.
+///
+/// CONCURRENCY GUARD (review finding): a grid run may be appending to a shard
+/// WHILE compact runs. Deleting such a shard would permanently destroy the
+/// spots appended after our snapshot read (paid solves, silently re-solved
+/// later). So each shard's byte length is captured BEFORE the read, and a
+/// shard is deleted only if its length is unchanged afterwards; a grown shard
+/// is kept intact — its already-folded lines re-fold harmlessly on the next
+/// load (later-wins with identical values), and the new lines survive.
 void _compactResults() {
-  final merged = _loadResults();
-  File(kResultsPath)
-      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(merged));
+  final lengthsAtRead = <String, int>{};
   final dir = Directory('tool/solver');
   if (dir.existsSync()) {
     for (final e in dir.listSync().whereType<File>()) {
       final p = e.path.replaceAll('\\', '/');
       if (p.contains('/freq_grid_results.') && p.endsWith('.jsonl')) {
-        e.deleteSync();
+        lengthsAtRead[e.path] = e.lengthSync();
       }
     }
   }
+  final merged = _loadResults();
+  File(kResultsPath)
+      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(merged));
+  var removed = 0, kept = 0;
+  lengthsAtRead.forEach((path, len) {
+    final f = File(path);
+    if (!f.existsSync()) return;
+    if (f.lengthSync() == len) {
+      f.deleteSync();
+      removed++;
+    } else {
+      kept++;
+      stderr.writeln('WARN --compact: $path grew during compaction (a grid '
+          'run is appending to it?) — kept intact; its lines re-fold next '
+          'load. Re-run --compact after that run finishes.');
+    }
+  });
   stdout.writeln('compacted ${merged.length} results into $kResultsPath '
-      '(shards removed)');
+      '($removed shard(s) removed${kept > 0 ? ', $kept kept (in use)' : ''})');
 }
 
 /// Merge FreqCells sharing a key (texture×spr×street×pos×facing×class) by
@@ -702,16 +725,19 @@ Future<void> main(List<String> args) async {
   }
   // Pack emission walks the JSON dump (explorer_pack is not TLSD-adapted —
   // packs are only emitted on curated 26-flop runs, never the full-density
-  // bulk). Fail the whole run up front rather than letting every spot's
-  // tabulate_one exit 64 after a paid solve.
-  final dumpFmtEnv =
-      (Platform.environment['TLSOLVE_DUMP_FMT'] ?? 'json').toLowerCase();
-  if (emitPackRoot != null && dumpFmtEnv == 'bin') {
+  // bulk). An EXPLICIT bin + packs is an intent conflict → fail fast; with
+  // packs on, the solve below forces JSON regardless of the format default
+  // (forceJsonDump), so a flipped default can't silently break pack runs.
+  if (emitPackRoot != null && solverDumpFmt() == 'bin' &&
+      (Platform.environment['TLSOLVE_DUMP_FMT'] ?? '').isNotEmpty) {
     stderr.writeln('--emit-pack requires the JSON dump: unset '
         'TLSOLVE_DUMP_FMT=bin (use json or both) when emitting packs.');
     exitCode = 64;
     return;
   }
+  // The effective format of THIS run's dumps — drives the parse footprints
+  // (JSON parses need the giant heap; TLSD a few GB).
+  final dumpFmtEnv = emitPackRoot != null ? 'json' : solverDumpFmt();
 
   // Spots still needing a solve (cached ones skipped), capped to --limit if set.
   // Each pending spot is claimed and solved exactly once by exactly one worker.
@@ -813,8 +839,12 @@ Future<void> main(List<String> args) async {
         stdout.writeln('[$n/$total] solving ${s.flop} SPR ${s.spr} '
             '(${fp.solveGb.toStringAsFixed(0)} GB claim) …');
         final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
+        // Pack runs force JSON (explorer_pack walks the Map tree) no matter
+        // what TLSOLVE_DUMP_FMT/its default says.
         ds = await solveToFile(spot,
-            dumpRounds: kDumpRounds, betProfile: kBetProfile);
+            dumpRounds: kDumpRounds,
+            betProfile: kBetProfile,
+            forceJsonDump: emitPackRoot != null);
         // Solve finished — swap the claim down to the parse footprint before
         // the tabulate subprocess (frees ~most of a deep spot's RAM for the
         // next admission the moment the solver exits).

@@ -57,6 +57,17 @@ param(
   [int]$Threads = 8,
   # Per-spot solver wall cap (s).
   [int]$TimeoutS = 7200,
+  # -- WS1/WS2 knobs (full-density plan). Empty = inherit the code defaults. --
+  # Dump format: bin (TLSD - ~10x smaller, small-heap parse) | json (oracle;
+  # required by -EmitPack) | both (validation). See run_solver.dart.
+  [ValidateSet('', 'bin', 'json', 'both')]
+  [string]$DumpFmt = '',
+  # Flop set: rep (26 curated) | all1755 (full density) | file:<path-on-box>.
+  [string]$Flops = '',
+  # RAM budget (GB) for the admission scheduler; empty = MemTotal x 0.85.
+  [string]$RamBudgetGB = '',
+  # Skip spots predicted above this solve RAM (GB) - small-box policy.
+  [string]$MaxSpotGB = '',
   # Root EBS size (GB). The AMI snapshot is ~193 GB; grow it for pack-emitting
   # batches (packs + their pull-time tar both land on the root volume - a
   # 3-scenario river batch produces ~60-70 GB of packs). gp3 costs ~cents/day.
@@ -96,6 +107,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Snapshot the script's OWN bound parameters NOW: inside a function,
+# $PSBoundParameters reflects that function's (empty) bindings — reading it in
+# Invoke-Relaunch relaunched with every parameter reset to defaults (wrong
+# scenario/profile/args on a fresh paid box, never pulled or terminated).
+$script:LaunchParams = @{} + $PSBoundParameters
 $key = Join-Path $HOME ".ssh\$KeyName.pem"
 if (-not (Test-Path $key)) { throw "SSH key not found: $key" }
 $repo = & git rev-parse --show-toplevel 2>$null
@@ -251,6 +267,15 @@ $packArgs = if ($EmitPack) { ' --emit-pack /home/ubuntu/packs' } else { '' }
 # keys on the final 'BATCH DONE' sentinel, NOT on '^Wrote ' (each scenario's
 # grid run writes the library, so 'Wrote' fires after the FIRST scenario).
 $scenarioList = $Scenario -replace ',', ' '
+# Optional WS1/WS2 env (empty params emit nothing -> code defaults apply).
+$extraEnv = ''
+if ($DumpFmt) { $extraEnv += "TLSOLVE_DUMP_FMT=$DumpFmt " }
+if ($Flops) { $extraEnv += "TLSOLVE_FLOPS=$Flops " }
+if ($RamBudgetGB) { $extraEnv += "TLSOLVE_RAM_BUDGET_GB=$RamBudgetGB " }
+if ($MaxSpotGB) { $extraEnv += "TLSOLVE_MAX_SPOT_GB=$MaxSpotGB " }
+if ($EmitPack -and $DumpFmt -eq 'bin') {
+  throw "-EmitPack requires the JSON dump (packs walk the JSON tree) - use -DumpFmt json/both or drop it."
+}
 $solveSh = @"
 #!/usr/bin/env bash
 cd ~/poker_tracker
@@ -271,8 +296,14 @@ rm -rf /dev/shm/tlsolve_* /mnt/scratch/tlsolve_* 2>/dev/null || true
 (
   while true; do
     TOK=`$(curl -sS -m 2 -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' 2>/dev/null)
+    # Only trust a REAL instance-action document: it is JSON with an "action"
+    # key ({"action":"terminate","time":...}). A failed/timed-out token PUT
+    # makes the GET return a '401 - Unauthorized' body, which a loose
+    # not-404 check misread as a reclaim notice (stale-marker false positive
+    # that later misclassified a genuine crash as a reclaim).
+    if [ -z "`$TOK" ]; then sleep 5; continue; fi
     ACT=`$(curl -sS -m 2 -H "X-aws-ec2-metadata-token: `$TOK" http://169.254.169.254/latest/meta-data/spot/instance-action 2>/dev/null)
-    if [ -n "`$ACT" ] && ! echo "`$ACT" | grep -q '404'; then
+    if [ -n "`$ACT" ] && echo "`$ACT" | grep -q '"action"'; then
       echo "SPOT RECLAIM NOTICE: `$ACT" | tee ~/SPOT_RECLAIM_NOTICE >> ~/solve.log
       if [ -n "$SyncS3Uri" ]; then
         aws s3 cp ~/poker_tracker/tool/solver/ "$SyncS3Uri/" --recursive --exclude '*' --include 'freq_grid_results*' >> ~/solve.log 2>&1 || true
@@ -285,7 +316,7 @@ rm -rf /dev/shm/tlsolve_* /mnt/scratch/tlsolve_* 2>/dev/null || true
 {
 for SC in $scenarioList; do
   echo "=== SCENARIO `$SC ==="
-  TLSOLVE_SCENARIO=`$SC TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs || echo "SCENARIO `$SC FAILED"
+  TLSOLVE_SCENARIO=`$SC TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB $extraEnv dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs || echo "SCENARIO `$SC FAILED"
 done
 # Fold the per-scenario JSONL shards into freq_grid_results.json so the
 # launcher's single-file cache pull captures every solved spot (WS2 shards).
@@ -339,9 +370,16 @@ if ($PullAndTerminate) {
     # True iff the instance is gone/going BECAUSE EC2 reclaimed the spot
     # capacity (StateReason Server.SpotInstanceTermination) - a crash or a
     # manual terminate must NOT auto-relaunch.
-    $st = aws ec2 describe-instances --region $Region --instance-ids $iid `
-      --query 'Reservations[0].Instances[0].[State.Name,StateReason.Code]' --output text 2>$null
-    if ($LASTEXITCODE -ne 0) { $global:LASTEXITCODE = 0; return $false }
+    # try/catch, NOT a bare 2>$null: under -EAP Stop a redirected native
+    # stderr line (aws throttling notice, aged-out instance id) becomes a
+    # terminating NativeCommandError and would kill the launcher at exactly
+    # the reclaim-detection moment (review finding).
+    $st = $null
+    try {
+      $st = aws ec2 describe-instances --region $Region --instance-ids $iid `
+        --query 'Reservations[0].Instances[0].[State.Name,StateReason.Code]' --output text 2>$null
+    } catch { }
+    if ($LASTEXITCODE -ne 0 -or -not $st) { $global:LASTEXITCODE = 0; return $false }
     $parts = ("$st" -split '\s+') | Where-Object { $_ }
     return ($parts.Count -ge 2 -and
       @('shutting-down', 'terminated', 'stopping', 'stopped') -contains $parts[0] -and
@@ -364,7 +402,9 @@ if ($PullAndTerminate) {
       Write-Warning "Relaunch budget exhausted - not relaunching. Resume manually."
       return
     }
-    $params = @{} + $PSBoundParameters
+    # Use the SCRIPT-scope snapshot, not $PSBoundParameters (empty inside a
+    # function - see the capture at the top of the script).
+    $params = @{} + $script:LaunchParams
     $params['RelaunchBudget'] = $RelaunchBudget - 1
     if ($RelaunchBudget -le 1 -and $params.ContainsKey('Spot')) {
       $params.Remove('Spot') | Out-Null
@@ -380,12 +420,27 @@ if ($PullAndTerminate) {
     Start-Sleep 30
     # Periodic checkpoint staging (WS3): pull the results shards every
     # -SyncEveryMin so a reclaim loses at most that window of solved spots.
-    # Non-fatal - a failed sync is just a staler stage.
+    # Non-fatal - a failed sync is just a staler stage. The scp runs in a
+    # TIMED JOB, never a raw blocking call: an ssh-family hang inside this
+    # poll loop is exactly the wedge Invoke-SshTimed exists to prevent (a
+    # stuck ssh once ate a finished Cycle A run - review finding).
     if ($SyncEveryMin -gt 0 -and ((Get-Date) - $lastSync).TotalMinutes -ge $SyncEveryMin) {
       $lastSync = Get-Date
       New-Item -ItemType Directory -Force $staging | Out-Null
-      try { scp -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*" $staging 2>$null } catch { }
-      if ($LASTEXITCODE -eq 0) { Write-Host "  [sync] staged checkpoint shards" }
+      $sj = Start-Job -ScriptBlock {
+        param($k, $ip, $dest)
+        scp -i $k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes `
+          "ubuntu@${ip}:~/poker_tracker/tool/solver/freq_grid_results.*" $dest 2>$null
+        $LASTEXITCODE
+      } -ArgumentList $key, $pubip, $staging
+      if (Wait-Job $sj -Timeout 120) {
+        $code = Receive-Job $sj | Select-Object -Last 1
+        if ($code -eq 0) { Write-Host "  [sync] staged checkpoint shards" }
+      } else {
+        Stop-Job $sj
+        Write-Host "  [sync] shard pull timed out - will retry next interval"
+      }
+      Remove-Job $sj -Force -ErrorAction SilentlyContinue
       $global:LASTEXITCODE = 0
     }
     $r = Invoke-SshTimed "if grep -q 'BATCH DONE' ~/solve.log 2>/dev/null; then echo wrote; elif tmux has-session -t solve 2>/dev/null; then echo running; else echo dead; fi"
@@ -431,14 +486,25 @@ if ($PullAndTerminate) {
 
   # Batch health: the sentinel fires even if individual scenarios failed (a
   # guard abort in one must not strand the others' results). Require at least
-  # ONE library write, and surface per-scenario failures loudly.
-  $chk = Invoke-SshTimed "grep -c '^Wrote ' ~/solve.log; grep -c 'SCENARIO .* FAILED' ~/solve.log" -TimeoutSec 60
+  # ONE library write, and surface per-scenario failures loudly. Also detect a
+  # failed box-side --compact: the run's spots then live ONLY in the .jsonl
+  # shards (the .json is pre-run stale) — the final pull below fetches the
+  # shards regardless, so nothing is lost, but say so (review finding: the
+  # old single-file pull + staging cleanup silently destroyed those results).
+  $chk = Invoke-SshTimed "grep -c '^Wrote ' ~/solve.log; grep -c 'SCENARIO .* FAILED' ~/solve.log; grep -c 'COMPACT FAILED' ~/solve.log" -TimeoutSec 60
   $wroteCount = 0
   $scenarioFails = 0
+  $compactFails = 0
   if ($chk) {
     $nums = @("$($chk.Out)" -split "`r?`n" | Where-Object { $_ -match '^\d+$' })
     if ($nums.Count -ge 1) { $wroteCount = [int]$nums[0] }
     if ($nums.Count -ge 2) { $scenarioFails = [int]$nums[1] }
+    if ($nums.Count -ge 3) { $compactFails = [int]$nums[2] }
+  }
+  if ($compactFails -gt 0) {
+    Write-Warning "Box-side --compact FAILED: freq_grid_results.json on the box is STALE;"
+    Write-Warning "this run's solved spots live in the .jsonl shards (pulled below). Run"
+    Write-Warning "'dart run tool/solver/freq_grid.dart --compact' locally after the pull."
   }
   if ($wroteCount -eq 0) {
     $r = Invoke-SshTimed "tail -n 30 ~/solve.log" -TimeoutSec 60
@@ -465,7 +531,10 @@ if ($PullAndTerminate) {
   try {
     scp -i $key "ubuntu@${pubip}:~/poker_tracker/assets/gto_freq_library.json" 'assets/gto_freq_library.json'
     $okLib = ($LASTEXITCODE -eq 0)
-    scp -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.json" 'tool/solver/freq_grid_results.json'
+    # Pull the compacted json AND any .jsonl shards in one glob: if the
+    # box-side --compact failed, the shards ARE the run's results — a
+    # json-only pull would discard them at terminate (review finding).
+    scp -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*" 'tool/solver/'
     $okCache = ($LASTEXITCODE -eq 0)
   } finally { Pop-Location }
   $okPacks = $true

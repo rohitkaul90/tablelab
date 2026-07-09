@@ -139,10 +139,15 @@ _SolveConfig _config() {
   const known = {'single', 'multi', 'vol', 'turn', 'river'};
   if (!known.contains(bets)) bets = 'single';
   final timeoutS = posInt('TLSOLVE_TIMEOUT_S', 900);
-  // Worker threads. Default 16; lower (e.g. 8) to cut PEAK MEMORY / avoid the
-  // concurrency-race access violation (exit -1073741819) on the branchiest
-  // turn-raise trees. Result is identical (not in the cache tag).
-  final threads = posInt('TLSOLVE_THREADS', 16);
+  // Worker threads. Default 8 — the STABLE max: 16 crashed ~48% of the
+  // branchiest turn-raise trees with a concurrency-race access violation
+  // (exit -1073741819), and measured thread scaling past 8 is ~1.2× anyway
+  // (memory-bandwidth-bound). The old default of 16 was a landmine every
+  // launch path had to remember to override; it also disagreed with the
+  // admission scheduler's per-solve thread budget (review finding). Raise
+  // explicitly only for single-spot latency experiments. Result is identical
+  // either way (not in the cache tag).
+  final threads = posInt('TLSOLVE_THREADS', 8);
   // Dump format: 'bin' = TLSD binary (dump_result_bin — ~10× smaller, parses
   // in a fraction of the JSON heap; needs the patched console_solver);
   // 'json' = the legacy JSON dump (the validation oracle; REQUIRED when
@@ -157,6 +162,11 @@ _SolveConfig _config() {
 
 /// The current solve-config tag (for batch.dart's cache signature).
 String solverConfigTag() => _config().tag;
+
+/// The EFFECTIVE dump format this process would solve with (env + default) —
+/// callers must use this, not re-read the env with their own default, or a
+/// future default flip desyncs them (review finding).
+String solverDumpFmt() => _config().dumpFmt;
 
 /// Bet-size block.
 /// 'single': one 50%-pot bet + all-in per street — fast, low branching (POC).
@@ -347,7 +357,7 @@ class _DumpRun {
 /// invocation — both the parse-inline path ([_invokeSolver]) and the
 /// parse-in-isolate path ([solveToFile]) build on it.
 Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
-    {String? betProfile}) async {
+    {String? betProfile, bool forceJsonDump = false}) async {
   final dir = _sourceDir();
   final bin = _solverBin(dir);
   if (!File(bin).existsSync()) {
@@ -365,7 +375,15 @@ Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
   var keep = false; // hand tmp to the caller only on success
   try {
     final inputPath = '${tmp.path}/input.txt';
-    final cfg = _config();
+    var cfg = _config();
+    // The parse-inline callers (solve()/solveRoot() → the calibration tools,
+    // pack_spike) jsonDecode the dump directly and NEED the JSON tree — a
+    // leftover TLSOLVE_DUMP_FMT=bin from a bulk-run shell (or the flipped
+    // default) must not make their paid solve unparseable (review finding).
+    if (forceJsonDump && cfg.dumpFmt != 'json') {
+      cfg = _SolveConfig(cfg.accuracy, cfg.maxIter, cfg.betProfile,
+          cfg.timeoutS, cfg.threads, 'json');
+    }
     // 'bin' writes only the TLSD file; 'json'/'both' keep the JSON as the
     // primary dumpPath ('both' adds the .tlsd sibling — see _buildInput).
     final dumpPath =
@@ -414,7 +432,9 @@ Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
 Future<_RawSolve> _invokeSolver(
     SolverSpot spot, int dumpRounds, bool verbose,
     {String? betProfile}) async {
-  final run = await _runSolverToDump(spot, dumpRounds, betProfile: betProfile);
+  // forceJsonDump: this path jsonDecodes the dump inline — see _runSolverToDump.
+  final run = await _runSolverToDump(spot, dumpRounds,
+      betProfile: betProfile, forceJsonDump: true);
   try {
     if (verbose) {
       stdout.writeln(run.out.split('\n').takeLast(4).join('\n'));
@@ -480,8 +500,11 @@ Future<TreeSolveResult> solveRoot(SolverSpot spot,
 /// `--parallel` workers tabulate on separate cores. The caller MUST call
 /// [DumpSolve.cleanup] once it has tabulated (or on failure).
 Future<DumpSolve> solveToFile(SolverSpot spot,
-    {int dumpRounds = 2, String? betProfile}) async {
-  final run = await _runSolverToDump(spot, dumpRounds, betProfile: betProfile);
+    {int dumpRounds = 2, String? betProfile, bool forceJsonDump = false}) async {
+  // forceJsonDump: for callers that jsonDecode the dump themselves (e.g.
+  // pack_spike) — declares the format need instead of trusting the env/default.
+  final run = await _runSolverToDump(spot, dumpRounds,
+      betProfile: betProfile, forceJsonDump: forceJsonDump);
   return DumpSolve(run.dumpPath, _parseExploitability(run.out), run.wallMs, run.tmp);
 }
 

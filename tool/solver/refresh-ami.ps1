@@ -307,8 +307,15 @@ Write-Host "New AMI: $newAmi - waiting for 'available' (a ~193 GB snapshot takes
 $deadline = (Get-Date).AddMinutes(45)
 do {
   Start-Sleep 60
-  $imgState = (aws ec2 describe-images --region $Region --image-ids $newAmi `
-      --query 'Images[0].State' --output text 2>$null)
+  # try/catch, not a bare 2>$null: under -EAP Stop a redirected native stderr
+  # line (aws throttling notice) becomes a terminating error and would kill
+  # the refresh mid-poll with the box still running (review finding).
+  $imgState = ''
+  try {
+    $imgState = (aws ec2 describe-images --region $Region --image-ids $newAmi `
+        --query 'Images[0].State' --output text 2>$null)
+  } catch { }
+  $global:LASTEXITCODE = 0
   Write-Host "  AMI state: $imgState"
 } while ($imgState -ne 'available' -and (Get-Date) -lt $deadline)
 if ($imgState -ne 'available') {
