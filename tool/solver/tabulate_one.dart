@@ -29,6 +29,7 @@ import 'dart:io';
 
 import 'package:tablelab/equity/card.dart';
 
+import 'dump_codec.dart';
 import 'explorer_pack.dart';
 import 'freq_tabulate.dart';
 
@@ -61,6 +62,24 @@ void main(List<String> args) {
     stderr.writeln('tabulate_one: --emit-pack needs <packOutDir> <scenario> '
         '<sprName>');
     exit(64);
+  }
+  // Dispatch on the dump's magic bytes: a TLSD binary dump (dump_result_bin)
+  // decodes into a compact typed tree — a fraction of the JSON path's heap —
+  // and goes straight to tabulation. Pack emission still requires the JSON
+  // dump (explorer_pack walks the Map tree; packs are only emitted on curated
+  // 26-flop runs, never the full-density bulk), so a TLSD dump + --emit-pack
+  // is a wiring error, not a fallback.
+  if (looksLikeTlsd(dumpPath)) {
+    if (packIdx >= 0) {
+      stderr.writeln('tabulate_one: --emit-pack requires a JSON dump '
+          '(TLSOLVE_DUMP_FMT=json when packs are on); got a TLSD dump.');
+      exit(64);
+    }
+    final cells = tabulateDumpFile(dumpPath,
+        board: flop, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
+    File(outPath)
+        .writeAsStringSync(jsonEncode([for (final c in cells) c.toJson()]));
+    return;
   }
   // Parse ONCE (the multi-GB decode is the expensive step), then walk twice.
   final root =

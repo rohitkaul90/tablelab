@@ -108,14 +108,16 @@ class _SolveConfig {
   final String betProfile; // 'multi' (tiered, realistic) | 'single' (fast POC)
   final int timeoutS; // per-spot wall-clock cap
   final int threads; // solver worker threads (peak memory scales with this)
+  final String dumpFmt; // 'json' | 'bin' (TLSD) | 'both' (validation runs)
 
-  _SolveConfig(
-      this.accuracy, this.maxIter, this.betProfile, this.timeoutS, this.threads);
+  _SolveConfig(this.accuracy, this.maxIter, this.betProfile, this.timeoutS,
+      this.threads, this.dumpFmt);
 
   /// Compact descriptor — folded into the batch cache signature so a settings
   /// change invalidates cached solves (they'd otherwise be served stale). Thread
-  /// count is intentionally EXCLUDED — it changes solve speed/peak memory, not
-  /// the GTO result, so it must not invalidate cached solves.
+  /// count and dump FORMAT are intentionally EXCLUDED — they change solve
+  /// speed/peak memory/artifact encoding, not the GTO result, so they must not
+  /// invalidate cached solves.
   String get tag => 'acc$accuracy|it$maxIter|$betProfile';
 }
 
@@ -141,7 +143,16 @@ _SolveConfig _config() {
   // concurrency-race access violation (exit -1073741819) on the branchiest
   // turn-raise trees. Result is identical (not in the cache tag).
   final threads = posInt('TLSOLVE_THREADS', 16);
-  return _SolveConfig(accuracy, maxIter, bets, timeoutS, threads);
+  // Dump format: 'bin' = TLSD binary (dump_result_bin — ~10× smaller, parses
+  // in a fraction of the JSON heap; needs the patched console_solver);
+  // 'json' = the legacy JSON dump (the validation oracle; REQUIRED when
+  // --emit-pack is on — explorer_pack still walks the JSON tree);
+  // 'both' = one solve, both dumps (the WS1c equivalence harness).
+  // Default 'json' until the dual-dump validation gate passes; flip to 'bin'
+  // after (see the full-density cost plan, WS1c).
+  var dumpFmt = (e['TLSOLVE_DUMP_FMT'] ?? 'json').toLowerCase();
+  if (!const {'json', 'bin', 'both'}.contains(dumpFmt)) dumpFmt = 'json';
+  return _SolveConfig(accuracy, maxIter, bets, timeoutS, threads, dumpFmt);
 }
 
 /// The current solve-config tag (for batch.dart's cache signature).
@@ -227,6 +238,15 @@ String _betSizes(String profile) {
 String _buildInput(SolverSpot spot, String dumpPath, _SolveConfig cfg,
     {int dumpRounds = 1, String? betProfile}) {
   final profile = betProfile ?? cfg.betProfile;
+  // Dump command(s) by format: 'both' emits the JSON and the TLSD binary from
+  // the SAME converged strategy in one process — the WS1c equivalence harness
+  // relies on this (two dumps of one solve, byte-comparable cells). The TLSD
+  // sibling path is always "<jsonPath>.tlsd" by convention.
+  final dumpCmds = switch (cfg.dumpFmt) {
+    'bin' => 'dump_result_bin $dumpPath',
+    'both' => 'dump_result $dumpPath\ndump_result_bin $dumpPath.tlsd',
+    _ => 'dump_result $dumpPath',
+  };
   return '''
 set_pot ${spot.pot}
 set_effective_stack ${spot.effStack}
@@ -242,7 +262,7 @@ set_print_interval 10
 set_use_isomorphism 1
 start_solve
 set_dump_rounds $dumpRounds
-dump_result $dumpPath
+$dumpCmds
 ''';
 }
 
@@ -345,8 +365,11 @@ Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
   var keep = false; // hand tmp to the caller only on success
   try {
     final inputPath = '${tmp.path}/input.txt';
-    final dumpPath = '${tmp.path}/out.json';
     final cfg = _config();
+    // 'bin' writes only the TLSD file; 'json'/'both' keep the JSON as the
+    // primary dumpPath ('both' adds the .tlsd sibling — see _buildInput).
+    final dumpPath =
+        cfg.dumpFmt == 'bin' ? '${tmp.path}/out.tlsd' : '${tmp.path}/out.json';
     File(inputPath).writeAsStringSync(_buildInput(spot, dumpPath, cfg,
         dumpRounds: dumpRounds, betProfile: betProfile));
 
@@ -370,6 +393,10 @@ Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
     }
     if (!File(dumpPath).existsSync()) {
       throw StateError('solver produced no output_result\n$out');
+    }
+    if (cfg.dumpFmt == 'both' && !File('$dumpPath.tlsd').existsSync()) {
+      throw StateError('solver produced no TLSD sibling dump '
+          '(dump_result_bin unsupported by this binary? rebuild it)\n$out');
     }
     keep = true;
     return _DumpRun(dumpPath, out, sw.elapsedMilliseconds, tmp);

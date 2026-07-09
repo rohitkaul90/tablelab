@@ -587,6 +587,18 @@ Future<void> main(List<String> args) async {
     exitCode = 64;
     return;
   }
+  // Pack emission walks the JSON dump (explorer_pack is not TLSD-adapted —
+  // packs are only emitted on curated 26-flop runs, never the full-density
+  // bulk). Fail the whole run up front rather than letting every spot's
+  // tabulate_one exit 64 after a paid solve.
+  final dumpFmtEnv =
+      (Platform.environment['TLSOLVE_DUMP_FMT'] ?? 'json').toLowerCase();
+  if (emitPackRoot != null && dumpFmtEnv == 'bin') {
+    stderr.writeln('--emit-pack requires the JSON dump: unset '
+        'TLSOLVE_DUMP_FMT=bin (use json or both) when emitting packs.');
+    exitCode = 64;
+    return;
+  }
 
   // Spots still needing a solve (cached ones skipped), capped to --limit if set.
   // Each pending spot is claimed and solved exactly once by exactly one worker.

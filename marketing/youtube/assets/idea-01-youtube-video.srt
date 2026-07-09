@@ -1,0 +1,594 @@
+1
+00:00:00,310 --> 00:00:05,631
+You can be a genuinely winning poker
+player — and still go broke.
+
+2
+00:00:05,691 --> 00:00:08,605
+For one boring, completely avoidable
+reason.
+
+3
+00:00:08,665 --> 00:00:13,694
+In the next few minutes I'll give you the
+exact number of buy-ins you need —
+
+4
+00:00:13,754 --> 00:00:18,650
+cash and tournaments — plus the simple
+math the rules of thumb are hiding.
+
+5
+00:00:18,710 --> 00:00:23,474
+Get it wrong and variance eats your roll
+before your edge ever pays off.
+
+6
+00:00:23,534 --> 00:00:29,041
+Get it right, and a losing month stops
+being a crisis and becomes… a non-event.
+
+7
+00:00:29,101 --> 00:00:30,957
+Let's get your number right.
+
+8
+00:00:31,017 --> 00:00:33,187
+Everyone's heard the rules.
+
+9
+00:00:33,247 --> 00:00:34,244
+Twenty buy-ins.
+
+10
+00:00:34,304 --> 00:00:35,204
+Fifty.
+
+11
+00:00:35,224 --> 00:00:37,412
+A hundred for tournaments.
+
+12
+00:00:37,472 --> 00:00:43,395
+Almost nobody can tell you why — or what
+actually breaks if you ignore them.
+
+13
+00:00:43,455 --> 00:00:46,038
+Bankroll management isn't superstition,
+
+14
+00:00:46,098 --> 00:00:48,814
+and it isn't discipline for its own sake.
+
+15
+00:00:48,874 --> 00:00:53,432
+It's one specific piece of math with one
+specific job:
+
+16
+00:00:53,492 --> 00:00:58,226
+keeping a real winner alive long enough
+for their edge to show up.
+
+17
+00:00:58,286 --> 00:01:02,535
+By the end you'll know the two anchor
+numbers,
+
+18
+00:01:02,595 --> 00:01:04,895
+the single equation underneath them,
+
+19
+00:01:04,955 --> 00:01:08,819
+and the three inputs that push your number
+up or down.
+
+20
+00:01:08,879 --> 00:01:10,867
+Start with the headline.
+
+21
+00:01:10,927 --> 00:01:14,039
+Published guidance clusters around two
+numbers.
+
+22
+00:01:14,099 --> 00:01:16,219
+At least fifty buy-ins for cash.
+
+23
+00:01:16,279 --> 00:01:18,598
+At least a hundred for tournaments.
+
+24
+00:01:18,658 --> 00:01:24,845
+Upswing's example is concrete: a
+dollar-two game, two-hundred max —
+
+25
+00:01:24,905 --> 00:01:29,424
+fifty buy-ins is a ten-thousand-dollar
+roll dedicated to poker.
+
+26
+00:01:29,484 --> 00:01:33,790
+For tournaments, PokerNews calls a hundred
+buy-ins a minimum —
+
+27
+00:01:33,850 --> 00:01:36,689
+big-field players hold two to five
+hundred.
+
+28
+00:01:36,749 --> 00:01:42,673
+But here's what nobody says out loud:
+those are ceilings of caution, not laws.
+
+29
+00:01:42,733 --> 00:01:47,660
+Plenty of live regs run leaner — twenty to
+thirty buy-ins —
+
+30
+00:01:47,720 --> 00:01:53,651
+because live poker deals so few hands an
+hour the swings arrive in slow motion.
+
+31
+00:01:53,711 --> 00:01:57,011
+That's a personal risk choice,
+
+32
+00:01:57,071 --> 00:02:00,980
+and it only works if you're a clear winner
+who can reload.
+
+33
+00:02:01,040 --> 00:02:03,764
+So the real question isn't the rule.
+
+34
+00:02:03,824 --> 00:02:09,495
+It's why those numbers… and that starts
+with counting the right way.
+
+35
+00:02:09,555 --> 00:02:13,887
+Quick one: if "measure it" beats "guess
+it" to you, subscribe —
+
+36
+00:02:13,947 --> 00:02:17,921
+I break down the math behind poker like
+this every week.
+
+37
+00:02:17,981 --> 00:02:21,400
+Okay — back to your number.
+
+38
+00:02:21,460 --> 00:02:24,623
+Rule one: stop counting your bankroll in
+dollars.
+
+39
+00:02:24,683 --> 00:02:29,699
+"I have eight grand" tells you nothing
+until you divide by the stake.
+
+40
+00:02:29,759 --> 00:02:35,298
+"I have forty buy-ins at one-two — or
+eight at five-ten" — that's a decision.
+
+41
+00:02:35,358 --> 00:02:40,115
+Counting in buy-ins is what lets you drop
+down when you're
+
+42
+00:02:40,175 --> 00:02:45,004
+running bad and move up when your roll can
+take the heat —
+
+43
+00:02:45,064 --> 00:02:46,722
+without redoing any math.
+
+44
+00:02:46,782 --> 00:02:48,308
+And it fixes your head.
+
+45
+00:02:48,368 --> 00:02:52,338
+Losing "two thousand dollars" feels like a
+disaster.
+
+46
+00:02:52,398 --> 00:02:54,717
+Losing "ten buy-ins"… is a Tuesday.
+
+47
+00:02:54,777 --> 00:02:57,559
+Buy-ins are the natural unit of variance —
+
+48
+00:02:57,619 --> 00:03:00,599
+which is exactly why every serious
+guideline,
+
+49
+00:03:00,659 --> 00:03:04,564
+and the formula we're about to look at, is
+written in them.
+
+50
+00:03:04,624 --> 00:03:09,611
+And that formula is where the fifty and
+the hundred actually come from.
+
+51
+00:03:09,671 --> 00:03:12,322
+Bankroll rules aren't folklore —
+
+52
+00:03:12,382 --> 00:03:16,001
+they're a shortcut for one equation: risk
+of ruin.
+
+53
+00:03:16,061 --> 00:03:20,297
+The chance you lose your entire roll
+before your edge compounds.
+
+54
+00:03:20,357 --> 00:03:22,279
+Popularized by Mason Malmuth,
+
+55
+00:03:22,339 --> 00:03:26,681
+derived properly in Chen and Ankenman's
+Mathematics of Poker.
+
+56
+00:03:26,741 --> 00:03:31,541
+You will never compute this at the table —
+and you don't need to.
+
+57
+00:03:31,601 --> 00:03:34,857
+What matters is what it implies.
+
+58
+00:03:34,917 --> 00:03:39,157
+Plug in a realistic winner: three big
+blinds per hundred hands,
+
+59
+00:03:39,217 --> 00:03:44,173
+eighty-five standard deviation —
+Primedope's own example.
+
+60
+00:03:44,233 --> 00:03:49,568
+Now watch how fast the required roll drops
+as you accept a little more risk.
+
+61
+00:03:49,628 --> 00:03:53,660
+Thirty-six buy-ins gets you a five-percent
+risk of ruin.
+
+62
+00:03:53,720 --> 00:03:55,907
+Forty-eight gets you two percent.
+
+63
+00:03:55,967 --> 00:04:02,510
+Fifty-six — call it eleven grand at
+one-two — gets you to roughly one percent.
+
+64
+00:04:02,570 --> 00:04:03,470
+That's it.
+
+65
+00:04:03,490 --> 00:04:06,491
+That's where "fifty buy-ins" comes from —
+
+66
+00:04:06,551 --> 00:04:09,711
+it's not a tradition, it's a risk setting.
+
+67
+00:04:09,771 --> 00:04:15,604
+And the equation hands you three levers:
+win more per hundred, you need fewer.
+
+68
+00:04:15,664 --> 00:04:19,437
+Swing harder — higher standard deviation —
+you need more.
+
+69
+00:04:19,497 --> 00:04:24,462
+Demand a lower chance of ever going broke,
+you need more again.
+
+70
+00:04:24,522 --> 00:04:26,975
+Your bankroll isn't one number.
+
+71
+00:04:27,035 --> 00:04:30,767
+It's the price of the risk tolerance you
+pick.
+
+72
+00:04:30,827 --> 00:04:35,354
+Which finally explains the number that
+scares people —
+
+73
+00:04:35,414 --> 00:04:38,540
+the hundred-plus for tournaments.
+
+74
+00:04:38,600 --> 00:04:44,462
+Now — if you only play cash, you might
+think the rest doesn't apply to you.
+
+75
+00:04:44,522 --> 00:04:45,453
+Stick with me.
+
+76
+00:04:45,513 --> 00:04:49,564
+The next two parts are the ones that
+actually save your bankroll:
+
+77
+00:04:49,624 --> 00:04:52,856
+why tournaments are a different animal,
+
+78
+00:04:52,916 --> 00:04:57,780
+and the one assumption every number so far
+quietly depends on.
+
+79
+00:04:57,840 --> 00:05:00,952
+Tournaments need a hundred-plus buy-ins
+because
+
+80
+00:05:01,012 --> 00:05:03,728
+the payout structure is brutal by design.
+
+81
+00:05:03,788 --> 00:05:06,900
+Only ten to twenty percent of the field
+cashes,
+
+82
+00:05:06,960 --> 00:05:09,543
+and the money piles up at the very top.
+
+83
+00:05:09,603 --> 00:05:13,769
+So you lose small, over and over… and win
+big, rarely.
+
+84
+00:05:13,829 --> 00:05:17,936
+That top-heaviness makes per-tournament
+standard deviation
+
+85
+00:05:17,996 --> 00:05:21,804
+roughly five to ten times a comparable
+cash session.
+
+86
+00:05:21,864 --> 00:05:24,725
+Same skill edge — far wilder ride.
+
+87
+00:05:24,785 --> 00:05:27,264
+Here's the number that reframes it:
+
+88
+00:05:27,324 --> 00:05:31,617
+a genuinely winning tournament player —
+thirty percent ROI —
+
+89
+00:05:31,677 --> 00:05:34,922
+can run two hundred or more tournaments
+without a
+
+90
+00:05:34,982 --> 00:05:38,622
+single meaningful cash and still be a
+long-term winner.
+
+91
+00:05:38,682 --> 00:05:40,869
+At a couple of big fields a week,
+
+92
+00:05:40,929 --> 00:05:45,032
+that's a year-long drought that says
+nothing about your skill.
+
+93
+00:05:45,092 --> 00:05:47,299
+A hundred buy-ins isn't caution.
+
+94
+00:05:47,359 --> 00:05:51,505
+It's the floor that lets you survive a
+normal cold streak.
+
+95
+00:05:51,565 --> 00:05:56,858
+But every number in this video — cash and
+tournaments — leans on one assumption.
+
+96
+00:05:56,918 --> 00:05:59,105
+And for most players, it's false.
+
+97
+00:05:59,165 --> 00:06:01,153
+Here's the uncomfortable part.
+
+98
+00:06:01,213 --> 00:06:05,521
+Every formula we just used takes your win
+rate as an input.
+
+99
+00:06:05,581 --> 00:06:08,627
+And for most players, that number is
+negative.
+
+100
+00:06:08,687 --> 00:06:12,407
+In a University of Hamburg study of online
+play,
+
+101
+00:06:12,467 --> 00:06:16,471
+ninety-one percent of all the rake came
+from
+
+102
+00:06:16,531 --> 00:06:19,301
+the most active ten percent of players.
+
+103
+00:06:19,361 --> 00:06:24,150
+That only makes sense if the big casual
+majority are net losers.
+
+104
+00:06:24,210 --> 00:06:27,628
+And a peer-reviewed study of over fifty
+thousand
+
+105
+00:06:27,688 --> 00:06:31,002
+players confirmed poker is
+skill-predominant —
+
+106
+00:06:31,062 --> 00:06:35,879
+but results only start reflecting skill
+after about a thousand hands.
+
+107
+00:06:35,939 --> 00:06:37,862
+So the honest sequence flips.
+
+108
+00:06:37,922 --> 00:06:41,939
+First find out whether you're actually a
+winner —
+
+109
+00:06:41,999 --> 00:06:46,518
+at what rate, with how much variance —
+then size the bankroll.
+
+110
+00:06:46,578 --> 00:06:51,101
+You can't do step two without real data
+from step one.
+
+111
+00:06:51,161 --> 00:06:53,348
+And memory is a terrible logbook.
+
+112
+00:06:53,408 --> 00:06:57,907
+That means tracking every session —
+buy-in, cash-out, hours, stake —
+
+113
+00:06:57,967 --> 00:07:02,335
+so your win rate and standard deviation
+are measured, not guessed.
+
+114
+00:07:02,395 --> 00:07:05,980
+The math is only ever as good as the
+numbers you feed it.
+
+115
+00:07:06,040 --> 00:07:11,858
+So here's your move: don't pick a bankroll
+off a rule of thumb.
+
+116
+00:07:11,918 --> 00:07:15,148
+Track your next twenty or thirty sessions,
+
+117
+00:07:15,208 --> 00:07:18,769
+get your real win rate and standard
+deviation,
+
+118
+00:07:18,829 --> 00:07:22,770
+and let the risk-of-ruin math hand you
+your number.
+
+119
+00:07:22,830 --> 00:07:27,591
+Get the buy-in count right, measure your
+real numbers,
+
+120
+00:07:27,651 --> 00:07:30,480
+and let variance do what variance does.
+
+121
+00:07:30,540 --> 00:07:38,152
+Now — if a tool can compute your win rate,
+it can also help you study.
+
+122
+00:07:38,212 --> 00:07:41,992
+And that's exactly where the AI hype gets
+loudest.
+
+123
+00:07:42,052 --> 00:07:44,775
+So can AI actually solve poker?
+
+124
+00:07:44,835 --> 00:07:50,666
+I answer that one right here — and it's
+not what the ads are selling.
+
+125
+00:07:50,726 --> 00:07:57,519
+Short version: AI already beat the world's
+best players — and it wasn't ChatGPT.
+
+126
+00:07:57,579 --> 00:08:00,911
+The full story's in that video.
+
+127
+00:08:00,971 --> 00:08:03,695
+Measure your numbers first.
+
+128
+00:08:03,755 --> 00:08:04,744
+Then go watch it.
+
