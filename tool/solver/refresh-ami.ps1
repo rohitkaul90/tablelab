@@ -187,7 +187,11 @@ if cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release && mak
 else
   echo 'REFRESH FAILED (build)'; exit 1
 fi
-if strings ~/texassolver-source/build/console_solver | grep -q dump_result_bin; then
+# NOT grep -q: this script runs under `set -o pipefail`, and grep -q exits on
+# the FIRST match — strings then dies with SIGPIPE (141) and pipefail fails
+# the pipeline precisely when the check SUCCEEDS (burned run #1 of this
+# script). Plain grep >/dev/null consumes all input; no early exit.
+if strings ~/texassolver-source/build/console_solver | grep dump_result_bin >/dev/null; then
   echo 'PATCH PRESENT'
 else
   echo 'REFRESH FAILED (dump_result_bin missing from binary - wrong source synced?)'; exit 1
