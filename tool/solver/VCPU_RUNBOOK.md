@@ -262,11 +262,15 @@ This cycle = **deep-SPR** (`kSprReps` gained `'deep': 15.0`; same BTN-vs-BB scen
 
 ### Golden AMI + refresh
 
-**Golden AMI:** `ami-04c312a0a89b077c2` (us-east-2) bakes the toolchain + built
-`console_solver` + flutter deps — launch from it to skip §2 + §4 entirely; just
-`git archive` the branch over the baked-in repo for code changes.
+**Golden AMI:** `ami-0f3cf3bc4ef5c1255` (`tablelab-solver-tlsd-20260709`, us-east-2) bakes
+the toolchain + the **TLSD-patched** `console_solver` + flutter deps — launch from it to
+skip §2 + §4 entirely; just `git archive` the branch over the baked-in repo for code
+changes. Baked 2026-07-09 after the deep dual-dump gate passed (15.1 GB JSON vs 1.58 GB
+TLSD, 2,123 servable cells, 0 mismatches); `TLSOLVE_DUMP_FMT` defaults to `bin` from the
+same date. Predecessor `ami-04c312a0a89b077c2` (pre-TLSD) — deregister + delete its
+snapshot after the first successful solve on the new AMI.
 
-**⚠️ The baked binary predates the TLSD patch** (`dump_result_bin`). Refresh the AMI with
+Refresh the AMI (future solver-source changes) with
 **`tool/solver/refresh-ami.ps1`** (WS1c cloud step): it launches a 256 GB box from the
 current golden AMI, syncs the patched solver source (git archive from the LOCAL-ONLY source
 repo — vsbuild/ is gitignored so the archive is clean), rebuilds `console_solver` on Linux
@@ -277,9 +281,10 @@ for; ~60–90 min). Passing bakes `tablelab-solver-tlsd-<date>` and terminates t
 failure leaves the box up for triage (`~/ami-validate.log`). ~$6 all-in.
 
 After a successful refresh (manual, deliberate): update the `-AmiId` defaults
-(vcpu-solve.ps1 + refresh-ami.ps1), **flip `TLSOLVE_DUMP_FMT` default `json`→`bin` in
-run_solver.dart** (the deep gate is the WS1c criterion), and keep the OLD AMI until the
-first successful solve on the new one, then deregister it + delete its snapshot.
+(vcpu-solve.ps1 + refresh-ami.ps1) and keep the OLD AMI until the first successful solve
+on the new one, then deregister it + delete its snapshot. (The one-time
+`TLSOLVE_DUMP_FMT` json→bin default flip happened with the 2026-07-09 refresh — the WS1c
+deep gate was its criterion.)
 | **New scenario** (3-bet / other openers / BvB) | Parameterize `scenarioRanges()` beyond hardcoded BTN-vs-BB; thread a scenario key through the spot/library | Biggest gap (1 of ~8 scenarios); largest code change |
 | **`facing_allin` relabel** | Relabel all-ins like the live `facing_bet_*`/`facing_raise` path so shove cells are reachable | Cheap; bundle with any solve |
 | **Asymmetric per-street SPR** | Match the live asymmetric-stack lookup against the symmetric offline solve | Pre-existing latent miss (flop too) |

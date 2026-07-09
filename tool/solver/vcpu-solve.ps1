@@ -80,7 +80,11 @@ param(
   # Branch to sync onto the box; empty = the CURRENT branch (so a launcher run
   # from a feature branch solves that branch's code, not a stale hardcode).
   [string]$Branch = '',
-  [string]$AmiId = 'ami-04c312a0a89b077c2',
+  # Golden AMI with the TLSD-patched console_solver baked in (refreshed
+  # 2026-07-09 via refresh-ami.ps1 after the deep dual-dump gate passed).
+  # Predecessor ami-04c312a0a89b077c2 (pre-TLSD) - deregister after the first
+  # successful solve on this one.
+  [string]$AmiId = 'ami-0f3cf3bc4ef5c1255',
   [string]$Region = 'us-east-2',
   [string]$KeyName = 'tablelab-solver',
   [string]$SgName = 'tablelab-solver-sg',

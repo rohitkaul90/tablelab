@@ -34,8 +34,9 @@
   .\tool\solver\refresh-ami.ps1 -SkipDeepValidate -KeepBox
 #>
 param(
-  # Current golden AMI to refresh FROM (us-east-2).
-  [string]$AmiId = 'ami-04c312a0a89b077c2',
+  # Current golden AMI to refresh FROM (us-east-2). tlsd-20260709: TLSD patch
+  # baked, deep gate passed (predecessor: ami-04c312a0a89b077c2, pre-TLSD).
+  [string]$AmiId = 'ami-0f3cf3bc4ef5c1255',
   [string]$Region = 'us-east-2',
   # 256 GB class: enough for one deep solve (~89 GB) and the deep JSON-side
   # tabulate (~150 GB heap) run SEQUENTIALLY by validate_dump.

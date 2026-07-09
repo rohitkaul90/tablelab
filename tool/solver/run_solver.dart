@@ -151,12 +151,15 @@ _SolveConfig _config() {
   // Dump format: 'bin' = TLSD binary (dump_result_bin — ~10× smaller, parses
   // in a fraction of the JSON heap; needs the patched console_solver);
   // 'json' = the legacy JSON dump (the validation oracle; REQUIRED when
-  // --emit-pack is on — explorer_pack still walks the JSON tree);
-  // 'both' = one solve, both dumps (the WS1c equivalence harness).
-  // Default 'json' until the dual-dump validation gate passes; flip to 'bin'
-  // after (see the full-density cost plan, WS1c).
-  var dumpFmt = (e['TLSOLVE_DUMP_FMT'] ?? 'json').toLowerCase();
-  if (!const {'json', 'bin', 'both'}.contains(dumpFmt)) dumpFmt = 'json';
+  // --emit-pack is on — explorer_pack still walks the JSON tree; the
+  // parse-inline callers force it via forceJsonDump regardless);
+  // 'both' = one solve, both dumps (the validate_dump.dart harness).
+  // DEFAULT 'bin' since 2026-07-09: the WS1c dual-dump equivalence gate
+  // passed on all four spot classes — smoke (Windows+Linux), 3bp committed,
+  // srp medium, and the deep gate on the cloud box (15.1 GB JSON vs 1.58 GB
+  // TLSD, 2,123 servable cells, 0 mismatches, max diff 1.6e-5).
+  var dumpFmt = (e['TLSOLVE_DUMP_FMT'] ?? 'bin').toLowerCase();
+  if (!const {'json', 'bin', 'both'}.contains(dumpFmt)) dumpFmt = 'bin';
   return _SolveConfig(accuracy, maxIter, bets, timeoutS, threads, dumpFmt);
 }
 
