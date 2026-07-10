@@ -8,7 +8,6 @@ import '../models/stats_filter.dart';
 import '../utils/helpers.dart';
 import '../widgets/ai_coaching_card.dart';
 import '../widgets/game_type_filter.dart' show gameTypeChipLabel;
-import '../widgets/approx_currency_chip.dart';
 import 'import_source_screen.dart';
 import 'live_session_screen.dart';
 import 'metric_chart_screen.dart';
@@ -419,13 +418,8 @@ class AnalyticsSummaryTab extends ConsumerWidget {
               ),
             ),
           ),
-        // One tappable marker for the whole summary when totals span
-        // multiple currencies (they're FX-converted to displayCurrency).
-        if (isMultiCurrency(filtered))
-          Align(
-            alignment: Alignment.centerRight,
-            child: ApproxCurrencyChip(currency: d.displayCurrency),
-          ),
+        // (The converted-totals marker lives in the Stats AppBar — an
+        // in-body line here cost a full row of screen space.)
         // Combined view: cash and tournament metrics don't blend meaningfully
         // (a $/hr pooled across both answers no real question) — with both
         // types in view, show the side-by-side per-type comparison instead of

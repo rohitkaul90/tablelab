@@ -173,6 +173,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           title: const Text('Stats'),
           actions: [
+            // Compact converted-totals marker — replaces the old full-width
+            // "≈ converted" line above the Summary card, and covers EVERY
+            // tab (factor tabs show converted numbers too).
+            if (isMultiCurrency(data.filtered))
+              TextButton(
+                onPressed: () =>
+                    showApproxCurrencyInfo(context, data.displayCurrency),
+                style: TextButton.styleFrom(
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onSurfaceVariant,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 40),
+                ),
+                child: Text(
+                  '≈ ${currencySymbol(data.displayCurrency)}',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
             IconButton(
               icon: Badge(
                 isLabelVisible: _filter.isActive,
