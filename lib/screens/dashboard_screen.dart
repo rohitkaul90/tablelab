@@ -24,6 +24,11 @@ import 'profile_screen.dart';
 /// Summary tab). Flip to `true` to restore the tab; the implementation below
 /// (`_OverviewTab` and friends) is kept intact and referenced through this
 /// flag so the analyzer never sees dead code.
+///
+/// DELIBERATELY DROPPED with Overview (user decision, 2026-07-10 review):
+/// the bankroll figure/CTA, the W/L and ITM-count chart entry points, and
+/// any blended combined total in the two-type view (per-type columns only).
+/// Don't re-flag these as regressions.
 const bool kShowOverviewTab = false;
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -94,29 +99,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  // ONE AppBar definition for the loading/error/data scaffolds.
+  AppBar _statsAppBar({List<Widget>? actions, PreferredSizeWidget? bottom}) {
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
+      ),
+      title: const Text('Stats'),
+      actions: actions,
+      bottom: bottom,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final sessionsAsync = ref.watch(completedSessionsProvider);
 
     return sessionsAsync.when(
       loading: () => Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
-          ),
-          title: const Text('Stats'),
-        ),
+        appBar: _statsAppBar(),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
-          ),
-          title: const Text('Stats'),
-        ),
+        appBar: _statsAppBar(),
         body: Center(child: Text('Error: $e')),
       ),
       data: (sessions) => _buildTabs(context, sessions),
@@ -141,7 +147,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (kShowOverviewTab)
         _OverviewTab(
           gameTypes: _gameTypes,
-          filter: _filter,
+          // Strip the sheet's game-type dimension — Overview's own pills own
+          // game type; passing both would AND them (permanently-empty stats
+          // on the flag-restore path) and double the chart's type chip.
+          filter: _filter.withGameTypes(const {}),
           onGameTypesChanged: (v) => setState(() => _gameTypes = v),
         ),
       AnalyticsSummaryTab(
@@ -160,18 +169,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       AnalyticsTipsTab(data: data),
     ];
 
-    // NOTE: DefaultTabController resets to the first tab when the tab COUNT
-    // changes (e.g. a filter hides a factor) — acceptable; factor
-    // availability rarely changes mid-session.
+    // The ValueKey rebuilds the controller whenever the tab SET changes (a
+    // filter regates a factor), resetting to Summary. Without it Flutter
+    // KEEPS an in-range numeric index — the user silently lands on (or has
+    // their current tab's content swapped to) a DIFFERENT factor.
     return DefaultTabController(
+      key: ValueKey(tabs.map((t) => t.text).join('|')),
       length: tabs.length,
       child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
-          ),
-          title: const Text('Stats'),
+        appBar: _statsAppBar(
           actions: [
             // Compact converted-totals marker — replaces the old full-width
             // "≈ converted" line above the Summary card, and covers EVERY

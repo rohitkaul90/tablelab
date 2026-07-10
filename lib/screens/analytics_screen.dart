@@ -30,6 +30,15 @@ const kTournSdInfo =
     'UNDERSTATES the real swings. Shown once you have at least 10 '
     'tournaments with a buy-in.';
 
+/// Tab-body padding shared by every Stats tab: 16px on phones, centered at a
+/// 960px max content width on wide screens (web/desktop) — the old
+/// _AnalyticsBody invariant, restored after the restructure dropped it.
+EdgeInsets statsTabPadding(BuildContext context, {double top = 12}) {
+  final w = MediaQuery.of(context).size.width;
+  final h = w > 800 ? math.max(16.0, (w - 960) / 2) : 16.0;
+  return EdgeInsets.fromLTRB(h, top, h, 96);
+}
+
 /// Everything the Stats tabs need, computed ONCE per build from the raw
 /// session list + the screen's shared [StatsFilter]. There is deliberately no
 /// game-type filter any more: the Summary tab shows the side-by-side
@@ -49,6 +58,15 @@ class AnalyticsData {
   final List<SummaryItem> summaryItems;
   final List<String> activeFilters;
 
+  // Per-type derived metrics, computed ONCE here — the comparison card must
+  // consume these, not re-derive them (two implementations drift).
+  final double? cashBB100;
+  final double? cashBB100StdDev;
+  final double? cashHourlyStdDev;
+  final double? tournStdDevBuyIns;
+  final double? tournROI;
+  final int? tournItmPct;
+
   AnalyticsData._({
     required this.sessions,
     required this.filtered,
@@ -62,6 +80,12 @@ class AnalyticsData {
     required this.tSessions,
     required this.summaryItems,
     required this.activeFilters,
+    required this.cashBB100,
+    required this.cashBB100StdDev,
+    required this.cashHourlyStdDev,
+    required this.tournStdDevBuyIns,
+    required this.tournROI,
+    required this.tournItmPct,
   });
 
   factory AnalyticsData.compute(
@@ -218,6 +242,12 @@ class AnalyticsData {
       tSessions: tSessions,
       summaryItems: summaryItems,
       activeFilters: [...filter.labels(), displayCurrency],
+      cashBB100: bb100,
+      cashBB100StdDev: bb100StdDev,
+      cashHourlyStdDev: hourlyStdDev,
+      tournStdDevBuyIns: tournStdDev,
+      tournROI: tournamentROI,
+      tournItmPct: itmPct,
     );
   }
 }
@@ -400,7 +430,7 @@ class AnalyticsSummaryTab extends ConsumerWidget {
     final filtered = d.filtered;
     final typeLabel = gameTypeChipLabel(gameTypes);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+      padding: statsTabPadding(context),
       children: [
         const LiveSessionCard(),
         // Back-to-combined affordance whenever a game-type filter narrows
@@ -427,10 +457,7 @@ class AnalyticsSummaryTab extends ConsumerWidget {
         // redundant with this card and were removed.)
         if (d.showingCash && d.showingTournaments)
           _TypeComparisonCard(
-            cash: d.cashSessions,
-            tournaments: d.tSessions,
-            displayCurrency: d.displayCurrency,
-            activeFilters: d.activeFilters,
+            data: d,
             onSelectType: (t) => onGameTypesChanged(t),
           )
         else
@@ -445,11 +472,7 @@ class AnalyticsSummaryTab extends ConsumerWidget {
         // both carried over from the retired Overview tab.
         const SizedBox(height: 20),
         if (d.sessions.isNotEmpty)
-          AiCoachingCard(
-            session:
-                ([...d.sessions]..sort((a, b) => b.date.compareTo(a.date)))
-                    .first,
-          )
+          AiCoachingCard(session: mostRecentSession(d.sessions)!)
         else ...[
           Text(
             'No sessions yet — log your first to fill these in.',
@@ -524,7 +547,7 @@ class AnalyticsFactorTab extends StatelessWidget {
     final theme = Theme.of(context);
     final t = factor.isTournament;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      padding: statsTabPadding(context, top: 8),
       children: [
         Row(
           children: [
@@ -593,7 +616,7 @@ class AnalyticsTipsTab extends StatelessWidget {
     final d = data;
     final filtered = d.filtered;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+      padding: statsTabPadding(context),
       children: [
         if (d.showingCash && d.showingTournaments) ...[
           _RecommendationsCard(
@@ -783,10 +806,7 @@ class _MetricSummaryList extends StatelessWidget {
 /// no game-type filter on the chart itself, so the scoping happens here and
 /// is disclosed via the chart's filter chips).
 class _TypeComparisonCard extends StatelessWidget {
-  final List<SessionModel> cash;
-  final List<SessionModel> tournaments;
-  final String displayCurrency;
-  final List<String> activeFilters;
+  final AnalyticsData data;
 
   /// Tapping a column HEADER narrows the Stats screen to that game type
   /// ({'cash'} / {'tournament'}) — the headers render in the primary color
@@ -794,10 +814,7 @@ class _TypeComparisonCard extends StatelessWidget {
   final ValueChanged<Set<String>> onSelectType;
 
   const _TypeComparisonCard({
-    required this.cash,
-    required this.tournaments,
-    required this.displayCurrency,
-    required this.activeFilters,
+    required this.data,
     required this.onSelectType,
   });
 
@@ -809,8 +826,8 @@ class _TypeComparisonCard extends StatelessWidget {
         builder: (_) => MetricChartScreen(
           metric: metric,
           sessions: sessions,
-          displayCurrency: displayCurrency,
-          activeFilters: [...activeFilters, typeLabel],
+          displayCurrency: data.displayCurrency,
+          activeFilters: [...data.activeFilters, typeLabel],
         ),
       ),
     );
@@ -819,6 +836,9 @@ class _TypeComparisonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cash = data.cashSessions;
+    final tournaments = data.tSessions;
+    final displayCurrency = data.displayCurrency;
     double toD(double amount, String from) =>
         convertCurrency(amount, from, displayCurrency);
     double pl(List<SessionModel> l) =>
@@ -832,12 +852,16 @@ class _TypeComparisonCard extends StatelessWidget {
     final cashPL = pl(cash);
     final cashHours = hrs(cash);
     final cashRate = cashHours > 0 ? cashPL / cashHours : 0.0;
-    final bb100 = calcBB100(cash);
-
     final tPL = pl(tournaments);
-    final tBuyIn =
-        tournaments.fold(0.0, (a, s) => a + toD(s.buyIn, s.currency));
-    final tROI = tBuyIn > 0 ? tPL / tBuyIn * 100 : 0.0;
+
+    // Derived metrics (BB/100, ROI, ITM%, std devs) come from AnalyticsData —
+    // ONE implementation; this card only does the cheap per-type folds.
+    final bb100 = data.cashBB100;
+    final tROI = data.tournROI ?? 0.0;
+    final itm = data.tournItmPct ?? 0;
+    final bb100StdDev = data.cashBB100StdDev;
+    final hourlyStdDev = data.cashHourlyStdDev;
+    final tournStdDev = data.tournStdDevBuyIns;
 
     // Per-type extras — everything the summary shows lives IN the two
     // columns (nothing renders below the card in combined view).
@@ -847,9 +871,6 @@ class _TypeComparisonCard extends StatelessWidget {
     final tExp = exp(tournaments);
     final hasExpenses = cashExp > 0 || tExp > 0;
     final sym = currencySymbol(displayCurrency);
-    final bb100StdDev = calcBB100StdDev(cash);
-    final hourlyStdDev = calcHourlyStdDev(cash, displayCurrency);
-    final tournStdDev = calcTournamentStdDevBuyIns(tournaments);
     // The $/hr SD has no cell of its own here — fold it into the cash SD
     // dialog so the combined view loses no information vs the type lists.
     final cashSdInfo = hourlyStdDev == null
@@ -857,14 +878,6 @@ class _TypeComparisonCard extends StatelessWidget {
         : 'In money terms: about '
             '${formatAmount(hourlyStdDev, displayCurrency)} per hour.'
             '\n\n$kCashSdInfo';
-    final itm = tournaments.isEmpty
-        ? 0
-        : (tournaments
-                    .where((s) => isSessionItm(s.prizeWon, s.profitLoss))
-                    .length /
-                tournaments.length *
-                100)
-            .round();
 
     Color? signColor(double v) => v >= 0 ? Colors.green : Colors.red;
 
@@ -1771,8 +1784,11 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
             Text('Display Options', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
 
-            // ── Game Type (only if both types exist) ────────────────────────
-            if (widget.hasCash && widget.hasTournaments)
+            // ── Game Type — both types exist, OR a game-type filter is
+            // already set (else a lingering filter over vanished data blanks
+            // every tab with no visible control to clear it) ─────────────────
+            if ((widget.hasCash && widget.hasTournaments) ||
+                _gameTypes.isNotEmpty)
               _section(
                 title: 'Game Type',
                 summary: gameTypeChipLabel(_gameTypes) ?? 'All game types',

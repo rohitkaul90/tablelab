@@ -449,12 +449,28 @@ class _VarianceCalculatorScreenState
                   (dx / constraints.maxWidth).clamp(0.0, 1.0));
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTapDown: (d) => setScrub(d.localPosition.dx),
+                // onTapUp, NOT onTapDown: a touch that turns into a page
+                // scroll cancels the tap and must not arm the crosshair.
+                // Tapping near the existing crosshair dismisses it.
+                onTapUp: (d) {
+                  final f = _scrubFrac;
+                  if (f != null &&
+                      (d.localPosition.dx - f * constraints.maxWidth)
+                              .abs() <
+                          16) {
+                    setState(() => _scrubFrac = null);
+                  } else {
+                    setScrub(d.localPosition.dx);
+                  }
+                },
                 // Horizontal-only drag: a vertical drag must fall through to
                 // the page scroll (equity_chart.dart lesson, PR #41).
                 onHorizontalDragStart: (d) => setScrub(d.localPosition.dx),
                 onHorizontalDragUpdate: (d) => setScrub(d.localPosition.dx),
-                child: CustomPaint(
+                // Clip: on very narrow charts the tooltip box can exceed the
+                // chart width and would otherwise paint over neighboring UI.
+                child: ClipRect(
+                    child: CustomPaint(
                   painter: _VariancePathsPainter(
                     paths: _paths!,
                     ev: r.ev,
@@ -471,7 +487,7 @@ class _VarianceCalculatorScreenState
                     xMax: xMax.toDouble(),
                   ),
                   child: const SizedBox.expand(),
-                ),
+                )),
               );
             },
           ),
@@ -481,7 +497,7 @@ class _VarianceCalculatorScreenState
           child: Text(
             '0 → ${_ThousandsFormatter._fmt.format(xMax.round())} $xLabel · '
             'shaded: 70% and 95% of outcomes · lines: 20 simulated runs · '
-            'tap or drag the chart to inspect a point',
+            'tap or drag the chart to inspect a point (tap the line to hide)',
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.outline),
           ),
