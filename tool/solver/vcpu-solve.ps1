@@ -68,6 +68,12 @@ param(
   [string]$RamBudgetGB = '',
   # Skip spots predicted above this solve RAM (GB) - small-box policy.
   [string]$MaxSpotGB = '',
+  # CPU-oversubscription multiplier on cores for the admission scheduler
+  # (TLSOLVE_CPU_OVERSUB): solves CLAIM 8 threads but drive ~4-5, so 1.5-2.0
+  # packs more concurrent solves. Empty = 1.0. See spot_sched.dart.
+  [string]$CpuOversub = '',
+  # Absolute thread budget (TLSOLVE_CPU_BUDGET); overrides -CpuOversub.
+  [string]$CpuBudget = '',
   # Root EBS size (GB). The AMI snapshot is ~193 GB; grow it for pack-emitting
   # batches (packs + their pull-time tar both land on the root volume - a
   # 3-scenario river batch produces ~60-70 GB of packs). gp3 costs ~cents/day.
@@ -289,6 +295,8 @@ if ($DumpFmt) { $extraEnv += "TLSOLVE_DUMP_FMT=$DumpFmt " }
 if ($Flops) { $extraEnv += "TLSOLVE_FLOPS=$Flops " }
 if ($RamBudgetGB) { $extraEnv += "TLSOLVE_RAM_BUDGET_GB=$RamBudgetGB " }
 if ($MaxSpotGB) { $extraEnv += "TLSOLVE_MAX_SPOT_GB=$MaxSpotGB " }
+if ($CpuOversub) { $extraEnv += "TLSOLVE_CPU_OVERSUB=$CpuOversub " }
+if ($CpuBudget) { $extraEnv += "TLSOLVE_CPU_BUDGET=$CpuBudget " }
 if ($EmitPack -and $DumpFmt -eq 'bin') {
   throw "-EmitPack requires the JSON dump (packs walk the JSON tree) - use -DumpFmt json/both or drop it."
 }
@@ -467,6 +475,14 @@ if ($PullAndTerminate) {
       $failures++
       $state = 'running' # transient hang/blip - keep polling
       if ($failures -ge 12) { $state = 'unreachable' }
+    }
+    # CPU-utilization telemetry for the oversubscription tune: 1-min load
+    # average vs core count (a cheap busy-thread proxy; sampled per poll).
+    if ($state -eq 'running') {
+      $la = Invoke-SshTimed 'echo "$(cut -d" " -f1 /proc/loadavg) load / $(nproc) cores"' -TimeoutSec 20
+      if ($la -and $la.Code -eq 0 -and "$($la.Out)".Trim()) {
+        Write-Host "  [cpu] $("$($la.Out)".Trim())"
+      }
     }
   } while ($state -eq 'running')
 

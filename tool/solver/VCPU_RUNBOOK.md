@@ -37,6 +37,14 @@ per-spot subprocesses, `-TabulateHeapMB`), `-Branch`, `-AmiId` (default the gold
 script prints ready-to-paste watch / tail / RAM / pull / terminate commands. The manual
 runbook below is the fallback when there's no golden AMI yet, or for debugging a launch.
 
+**CPU oversubscription (`-CpuOversub`, 2026-07-10):** solves CLAIM 8 threads but drive only
+~4-5 (calibration measured ~50-55% CPU util on both box classes), so the admission budget
+can oversubscribe cores: `-CpuOversub 1.6` sets `TLSOLVE_CPU_OVERSUB` (a multiplier on
+nproc; `-CpuBudget` is the absolute override). Size `--parallel` above `cores×oversub/8`
+so the scheduler — not the worker pool — is the binding cap. The `-PullAndTerminate` poll
+prints a `[cpu] <load> / <cores>` line each interval; load/cores nearing ~0.8-0.9 (from
+~0.5) = the tune is working. RAM claims still gate the deep class.
+
 **Spot resilience (WS3, 2026-07-09):** under `-PullAndTerminate` the launcher stages the
 checkpoint shards locally every `-SyncEveryMin` (default 10) into
 `tool\solver\.remote-staging\`, and `-AutoRelaunch` relaunches on a CONFIRMED spot reclaim

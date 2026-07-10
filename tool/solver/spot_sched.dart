@@ -17,7 +17,14 @@
 //   TLSOLVE_RAM_BUDGET_GB — default: MemTotal × 0.85 (/proc/meminfo, Linux
 //     boxes); 48 GB fallback where meminfo is unavailable (Windows dev runs).
 //     The 15% margin also covers dump bytes on a /dev/shm TMPDIR.
-//   TLSOLVE_CPU_BUDGET   — default: Platform.numberOfProcessors.
+//   TLSOLVE_CPU_BUDGET   — default: Platform.numberOfProcessors ×
+//     TLSOLVE_CPU_OVERSUB.
+//   TLSOLVE_CPU_OVERSUB  — core-count multiplier (default 1.0), ignored when
+//     TLSOLVE_CPU_BUDGET is set explicitly. The solver CLAIMS 8 threads but
+//     effectively drives ~4-5 (calibration measured ~50-55% CPU util on both
+//     box classes), so 1.5-2.0 packs more concurrent solves onto the same
+//     cores. RAM claims still gate the deep class, so oversubscription mainly
+//     lets shallow/medium backfill harder.
 //   TLSOLVE_MAX_SPOT_GB  — SKIP (not fail) spots whose predicted solve RAM
 //     exceeds it: lets a small-RAM box (e.g. a 256 GB Hetzner) grind the
 //     shallow/medium classes while a big box handles deep — pure env policy.
@@ -88,8 +95,10 @@ class ResourceBudget {
     final env = Platform.environment;
     final gb = double.tryParse(env['TLSOLVE_RAM_BUDGET_GB'] ?? '') ??
         _autoRamBudgetGb();
+    final oversub =
+        double.tryParse(env['TLSOLVE_CPU_OVERSUB'] ?? '') ?? 1.0;
     final threads = int.tryParse(env['TLSOLVE_CPU_BUDGET'] ?? '') ??
-        Platform.numberOfProcessors;
+        (Platform.numberOfProcessors * oversub).round();
     return ResourceBudget(totalGb: gb, totalThreads: threads);
   }
 
