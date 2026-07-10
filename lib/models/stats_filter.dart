@@ -34,6 +34,19 @@ class StatsFilter {
     this.dateRange,
   });
 
+  /// Same filter with only the game-type dimension replaced — used by the
+  /// Summary tab's in-body type shortcuts (comparison-card headers / the
+  /// back-to-combined chip) so they never clobber the sheet's other filters.
+  StatsFilter withGameTypes(Set<String> types) => StatsFilter(
+        gameTypes: types,
+        displayCurrency: displayCurrency,
+        country: country,
+        venue: venue,
+        location: location,
+        datePreset: datePreset,
+        dateRange: dateRange,
+      );
+
   /// True when anything at all is set (drives the AppBar filter badge).
   bool get isActive =>
       gameTypes.isNotEmpty ||

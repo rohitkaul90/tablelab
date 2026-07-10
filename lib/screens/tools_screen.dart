@@ -34,6 +34,9 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
               // Label-only + no selected checkmark (the SegmentedButton gotcha
               // in CLAUDE.md — the M3 checkmark can wrap the row on phones).
               showSelectedIcon: false,
+              // Stretch to the full padded width — the intrinsic pill left
+              // dead space either side on phones.
+              expandedInsets: EdgeInsets.zero,
               segments: const [
                 ButtonSegment(value: 0, label: Text('Equity')),
                 ButtonSegment(value: 1, label: Text('ICM')),

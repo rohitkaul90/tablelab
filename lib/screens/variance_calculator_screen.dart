@@ -300,6 +300,7 @@ class _VarianceCalculatorScreenState
       children: [
         SegmentedButton<int>(
           showSelectedIcon: false,
+          expandedInsets: EdgeInsets.zero,
           segments: const [
             ButtonSegment(value: 0, label: Text('Cash')),
             ButtonSegment(value: 1, label: Text('Tournament')),

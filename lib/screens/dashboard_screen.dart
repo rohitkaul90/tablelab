@@ -144,7 +144,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           filter: _filter,
           onGameTypesChanged: (v) => setState(() => _gameTypes = v),
         ),
-      AnalyticsSummaryTab(data: data),
+      AnalyticsSummaryTab(
+        data: data,
+        gameTypes: _filter.gameTypes,
+        onGameTypesChanged: (t) =>
+            setState(() => _filter = _filter.withGameTypes(t)),
+      ),
       for (final f in factors)
         AnalyticsFactorTab(
           data: data,

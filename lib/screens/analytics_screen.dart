@@ -379,18 +379,46 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
 /// First Stats tab: Live-now card, the metric summary (side-by-side
 /// Cash|Tournament comparison when both types are in view), the AI coaching
 /// CTA, and the first-session empty state.
+///
+/// In-body game-type shortcuts: the comparison card's Cash/Tournament column
+/// HEADERS narrow the whole screen to that type (via [onGameTypesChanged]),
+/// and a dismissible chip appears in any single-type view to jump back to
+/// combined.
 class AnalyticsSummaryTab extends ConsumerWidget {
   final AnalyticsData data;
-  const AnalyticsSummaryTab({super.key, required this.data});
+  final Set<String> gameTypes; // the shared filter's current game-type set
+  final ValueChanged<Set<String>> onGameTypesChanged;
+  const AnalyticsSummaryTab({
+    super.key,
+    required this.data,
+    required this.gameTypes,
+    required this.onGameTypesChanged,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final d = data;
     final filtered = d.filtered;
+    final typeLabel = gameTypeChipLabel(gameTypes);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       children: [
         const LiveSessionCard(),
+        // Back-to-combined affordance whenever a game-type filter narrows
+        // the view (set here via a column header OR via the sheet).
+        if (typeLabel != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InputChip(
+                avatar: const Icon(Icons.filter_alt_outlined, size: 18),
+                label: Text('$typeLabel only'),
+                deleteButtonTooltipMessage: 'Show all game types',
+                onDeleted: () => onGameTypesChanged(const {}),
+              ),
+            ),
+          ),
         // One tappable marker for the whole summary when totals span
         // multiple currencies (they're FX-converted to displayCurrency).
         if (isMultiCurrency(filtered))
@@ -409,6 +437,7 @@ class AnalyticsSummaryTab extends ConsumerWidget {
             tournaments: d.tSessions,
             displayCurrency: d.displayCurrency,
             activeFilters: d.activeFilters,
+            onSelectType: (t) => onGameTypesChanged(t),
           )
         else
           _MetricSummaryList(
@@ -765,11 +794,17 @@ class _TypeComparisonCard extends StatelessWidget {
   final String displayCurrency;
   final List<String> activeFilters;
 
+  /// Tapping a column HEADER narrows the Stats screen to that game type
+  /// ({'cash'} / {'tournament'}) — the headers render in the primary color
+  /// as the tappable affordance.
+  final ValueChanged<Set<String>> onSelectType;
+
   const _TypeComparisonCard({
     required this.cash,
     required this.tournaments,
     required this.displayCurrency,
     required this.activeFilters,
+    required this.onSelectType,
   });
 
   void _open(BuildContext context, StatMetric metric,
@@ -839,13 +874,20 @@ class _TypeComparisonCard extends StatelessWidget {
 
     Color? signColor(double v) => v >= 0 ? Colors.green : Colors.red;
 
-    Widget header(String t) => Expanded(
+    Widget header(String t, Set<String> types) => Expanded(
           flex: 3,
-          child: Text(t,
-              textAlign: TextAlign.right,
-              style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.bold)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => onSelectType(types),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(t,
+                  textAlign: TextAlign.right,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ),
         );
 
     Widget cell(String text, StatMetric metric, List<SessionModel> sessions,
@@ -925,8 +967,8 @@ class _TypeComparisonCard extends StatelessWidget {
           children: [
             Row(children: [
               const Expanded(flex: 2, child: SizedBox()),
-              header('Cash'),
-              header('Tournament'),
+              header('Cash', const {'cash'}),
+              header('Tournament', const {'tournament'}),
             ]),
             const SizedBox(height: 4),
             row(
@@ -948,6 +990,15 @@ class _TypeComparisonCard extends StatelessWidget {
               cell('${formatROI(tROI)} ROI', StatMetric.roi, tournaments,
                   'Tournaments',
                   color: signColor(tROI)),
+            ),
+            // Session COUNT for both types (the hours-only Volume row hid
+            // the cash count in combined view). Tournaments deliberately
+            // repeat the number in Volume below.
+            row(
+              'Sessions',
+              cell('${cash.length}', StatMetric.sessions, cash, 'Cash'),
+              cell('${tournaments.length}', StatMetric.sessions, tournaments,
+                  'Tournaments'),
             ),
             row(
               'Volume',
