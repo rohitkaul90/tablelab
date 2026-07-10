@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
@@ -6,10 +7,29 @@ import '../models/session_model.dart';
 import '../models/stats_filter.dart';
 import '../utils/helpers.dart';
 import '../widgets/ai_coaching_card.dart';
+import '../widgets/game_type_filter.dart' show gameTypeChipLabel;
 import '../widgets/approx_currency_chip.dart';
 import 'import_source_screen.dart';
 import 'live_session_screen.dart';
 import 'metric_chart_screen.dart';
+
+/// Std-dev explainer texts — ONE copy each, shown by both the single-type
+/// summary list and the combined comparison card's info dialogs.
+const kCashSdInfo =
+    'How swingy your cash game is, in big blinds per 100 hands. '
+    'Estimated from your per-session results and durations (hands '
+    'assumed at 25 per hour unless a session records its own pace). '
+    'Typical live no-limit hold\'em runs roughly 70–100.\n\n'
+    'Shown once you have at least 10 qualifying cash sessions '
+    '(cash game with parseable blinds and a duration).';
+
+const kTournSdInfo =
+    'How swingy your tournament results are, measured in buy-ins per '
+    'tournament (each result divided by its buy-in, so mixed buy-in '
+    'levels stay comparable).\n\nTournament results are heavily '
+    'skewed by rare big scores — with few tournaments logged this '
+    'UNDERSTATES the real swings. Shown once you have at least 10 '
+    'tournaments with a buy-in.';
 
 /// Everything the Stats tabs need, computed ONCE per build from the raw
 /// session list + the screen's shared [StatsFilter]. There is deliberately no
@@ -28,7 +48,6 @@ class AnalyticsData {
   final List<SessionModel> cashSessions;
   final List<SessionModel> tSessions;
   final List<SummaryItem> summaryItems;
-  final List<SummaryItem> combinedExtraItems;
   final List<String> activeFilters;
 
   AnalyticsData._({
@@ -43,7 +62,6 @@ class AnalyticsData {
     required this.cashSessions,
     required this.tSessions,
     required this.summaryItems,
-    required this.combinedExtraItems,
     required this.activeFilters,
   });
 
@@ -154,12 +172,7 @@ class AnalyticsData {
           bb100StdDev == null ? '—' : formatWholeNum(bb100StdDev),
           null,
           null,
-          'How swingy your cash game is, in big blinds per 100 hands. '
-          'Estimated from your per-session results and durations (hands '
-          'assumed at 25 per hour unless a session records its own pace). '
-          'Typical live no-limit hold\'em runs roughly 70–100.\n\n'
-          'Shown once you have at least 10 qualifying cash sessions '
-          '(cash game with parseable blinds and a duration).',
+          kCashSdInfo,
         ),
       if (showingCash && cashSessions.isNotEmpty)
         SummaryItem(
@@ -189,35 +202,8 @@ class AnalyticsData {
           tournStdDev == null ? '—' : tournStdDev.toStringAsFixed(1),
           null,
           null,
-          'How swingy your tournament results are, measured in buy-ins per '
-          'tournament (each result divided by its buy-in, so mixed buy-in '
-          'levels stay comparable).\n\nTournament results are heavily '
-          'skewed by rare big scores — with few tournaments logged this '
-          'UNDERSTATES the real swings. Shown once you have at least 10 '
-          'tournaments with a buy-in.',
+          kTournSdInfo,
         ),
-    ];
-
-    // The extras shown UNDER the side-by-side comparison in combined view —
-    // metrics that don't fit the two-column card (expense totals span both
-    // types; SD rows are type-specific but info-only). The SD labels gain an
-    // explicit game-type prefix here: unqualified "Std Dev ($/hr)" in a view
-    // showing BOTH types silently reads as an all-sessions figure when it is
-    // cash-only (review finding).
-    final combinedExtraItems = <SummaryItem>[
-      for (final it in summaryItems)
-        if (it.label == 'Expenses' || it.label == 'Net Profit')
-          it
-        else if (it.label.startsWith('Std Dev'))
-          SummaryItem(
-            it.label == 'Std Dev (buy-ins)'
-                ? 'Tourn. ${it.label}'
-                : 'Cash ${it.label}',
-            it.value,
-            it.color,
-            it.metric,
-            it.info,
-          ),
     ];
 
     return AnalyticsData._(
@@ -232,7 +218,6 @@ class AnalyticsData {
       cashSessions: cashSessions,
       tSessions: tSessions,
       summaryItems: summaryItems,
-      combinedExtraItems: combinedExtraItems,
       activeFilters: [...filter.labels(), displayCurrency],
     );
   }
@@ -418,23 +403,14 @@ class AnalyticsSummaryTab extends ConsumerWidget {
         // types in view, show the side-by-side per-type comparison instead of
         // a blended list. (The old game-type pills + "Combined" line were
         // redundant with this card and were removed.)
-        if (d.showingCash && d.showingTournaments) ...[
+        if (d.showingCash && d.showingTournaments)
           _TypeComparisonCard(
             cash: d.cashSessions,
             tournaments: d.tSessions,
             displayCurrency: d.displayCurrency,
             activeFilters: d.activeFilters,
-          ),
-          if (d.combinedExtraItems.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _MetricSummaryList(
-              items: d.combinedExtraItems,
-              sessions: filtered,
-              displayCurrency: d.displayCurrency,
-              activeFilters: d.activeFilters,
-            ),
-          ],
-        ] else
+          )
+        else
           _MetricSummaryList(
             items: d.summaryItems,
             sessions: filtered,
@@ -833,6 +809,25 @@ class _TypeComparisonCard extends StatelessWidget {
     final tBuyIn =
         tournaments.fold(0.0, (a, s) => a + toD(s.buyIn, s.currency));
     final tROI = tBuyIn > 0 ? tPL / tBuyIn * 100 : 0.0;
+
+    // Per-type extras — everything the summary shows lives IN the two
+    // columns (nothing renders below the card in combined view).
+    double exp(List<SessionModel> l) =>
+        l.fold(0.0, (a, s) => a + toD(s.totalExpenses, s.currency));
+    final cashExp = exp(cash);
+    final tExp = exp(tournaments);
+    final hasExpenses = cashExp > 0 || tExp > 0;
+    final sym = currencySymbol(displayCurrency);
+    final bb100StdDev = calcBB100StdDev(cash);
+    final hourlyStdDev = calcHourlyStdDev(cash, displayCurrency);
+    final tournStdDev = calcTournamentStdDevBuyIns(tournaments);
+    // The $/hr SD has no cell of its own here — fold it into the cash SD
+    // dialog so the combined view loses no information vs the type lists.
+    final cashSdInfo = hourlyStdDev == null
+        ? kCashSdInfo
+        : 'In money terms: about '
+            '${formatAmount(hourlyStdDev, displayCurrency)} per hour.'
+            '\n\n$kCashSdInfo';
     final itm = tournaments.isEmpty
         ? 0
         : (tournaments
@@ -884,6 +879,40 @@ class _TypeComparisonCard extends StatelessWidget {
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         );
+
+    // Info-dialog cell for metrics with no trend chart (the SD cells) —
+    // mirrors _MetricSummaryList's info rows.
+    Widget infoCell(String text, String title, String info) {
+      return Expanded(
+        flex: 3,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(title),
+              content: Text(info),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Got it')),
+              ],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(text,
+                  maxLines: 1,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ),
+      );
+    }
 
     Widget row(String name, Widget cashCell, Widget tournCell) => Row(
           children: [label(name), cashCell, tournCell],
@@ -943,6 +972,45 @@ class _TypeComparisonCard extends StatelessWidget {
                       cash, 'Cash',
                       color: signColor(bb100)),
               cell('$itm% ITM', StatMetric.itmPct, tournaments, 'Tournaments'),
+            ),
+            if (hasExpenses) ...[
+              row(
+                'Expenses',
+                cashExp > 0
+                    ? cell('-$sym${cashExp.toStringAsFixed(0)}',
+                        StatMetric.expenses, cash, 'Cash')
+                    : cell('—', StatMetric.expenses, const [], 'Cash'),
+                tExp > 0
+                    ? cell('-$sym${tExp.toStringAsFixed(0)}',
+                        StatMetric.expenses, tournaments, 'Tournaments')
+                    : cell('—', StatMetric.expenses, const [], 'Tournaments'),
+              ),
+              row(
+                'Net Profit',
+                cell(formatPL(cashPL - cashExp, ''),
+                    StatMetric.netAfterExpenses, cash, 'Cash',
+                    color: signColor(cashPL - cashExp)),
+                cell(formatPL(tPL - tExp, ''), StatMetric.netAfterExpenses,
+                    tournaments, 'Tournaments',
+                    color: signColor(tPL - tExp)),
+              ),
+            ],
+            // Std dev per type (info dialogs, no trend chart). '—' until the
+            // 10-qualifying-session threshold — the dialog explains it.
+            row(
+              'Std Dev',
+              infoCell(
+                  bb100StdDev == null
+                      ? '—'
+                      : '${formatWholeNum(bb100StdDev)} BB/100',
+                  'Cash Std Dev (BB/100)',
+                  cashSdInfo),
+              infoCell(
+                  tournStdDev == null
+                      ? '—'
+                      : '${tournStdDev.toStringAsFixed(1)} buy-ins',
+                  'Tournament Std Dev (buy-ins)',
+                  kTournSdInfo),
             ),
           ],
         ),
@@ -1538,6 +1606,8 @@ class StatsFilterSheet extends StatefulWidget {
   final bool hasMultipleCountries;
   final bool hasOnline;
   final bool hasLive;
+  final bool hasCash;
+  final bool hasTournaments;
   final List<String> allLocations;
   final ValueChanged<StatsFilter> onApply;
   final VoidCallback onReset;
@@ -1550,6 +1620,8 @@ class StatsFilterSheet extends StatefulWidget {
     required this.hasMultipleCountries,
     required this.hasOnline,
     required this.hasLive,
+    required this.hasCash,
+    required this.hasTournaments,
     required this.allLocations,
     required this.onApply,
     required this.onReset,
@@ -1560,6 +1632,7 @@ class StatsFilterSheet extends StatefulWidget {
 }
 
 class _StatsFilterSheetState extends State<StatsFilterSheet> {
+  late Set<String> _gameTypes;
   late String _currency;
   late Set<String> _country;
   late String? _venue;
@@ -1570,6 +1643,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
   @override
   void initState() {
     super.initState();
+    _gameTypes = {...widget.filter.gameTypes};
     _currency = widget.filter.displayCurrency ?? widget.effectiveCurrency;
     _country = {...widget.filter.country};
     _venue = widget.filter.venue;
@@ -1651,6 +1725,31 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
             ),
             Text('Display Options', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
+
+            // ── Game Type (only if both types exist) ────────────────────────
+            if (widget.hasCash && widget.hasTournaments)
+              _section(
+                title: 'Game Type',
+                summary: gameTypeChipLabel(_gameTypes) ?? 'All game types',
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final entry in [
+                        (const <String>{}, 'All Games'),
+                        (const {'cash'}, 'Cash'),
+                        (const {'tournament'}, 'Tournament'),
+                      ])
+                        ChoiceChip(
+                          label: Text(entry.$2),
+                          selected: setEquals(_gameTypes, entry.$1),
+                          onSelected: (_) =>
+                              setState(() => _gameTypes = entry.$1),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
 
             // ── Date Range (presets + custom range) ─────────────────────────
             _section(
@@ -1820,6 +1919,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
                   child: FilledButton(
                     onPressed: () {
                       widget.onApply(StatsFilter(
+                        gameTypes: _gameTypes,
                         displayCurrency: _currency,
                         country: _country,
                         venue: _venue,

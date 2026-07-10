@@ -2,18 +2,21 @@ import 'package:flutter/material.dart' show DateTimeRange;
 import 'session_model.dart';
 import '../data/poker_rooms.dart' show isOnlineSession;
 import '../utils/helpers.dart' show mostRecentSession;
+import '../widgets/game_type_filter.dart'
+    show filterByGameTypes, gameTypeChipLabel;
 
 const _monthAbbr = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-/// The shared Stats-tab "Display Options" filter — used by BOTH the Overview and
-/// Analytics tabs (each keeps its own independent instance). Game type is NOT
-/// part of this (it's the in-body pill); this covers the AppBar filter sheet:
-/// currency, date range (preset or a custom [dateRange]), country, venue,
-/// location.
+/// The shared Stats-screen "Display Options" filter — ONE instance covers
+/// every Stats tab. Covers the AppBar filter sheet: game type, currency, date
+/// range (preset or a custom [dateRange]), country, venue, location. (Game
+/// type moved INTO the sheet when the in-body pills were removed — the tabbed
+/// factor pages have no body pill any more.)
 class StatsFilter {
+  final Set<String> gameTypes; // {'cash'} | {'tournament'} | {} = all
   final String? displayCurrency;
   final Set<String> country;
   final String? venue; // 'live' | 'online' | null
@@ -22,6 +25,7 @@ class StatsFilter {
   final DateTimeRange? dateRange; // custom range; takes precedence over preset
 
   const StatsFilter({
+    this.gameTypes = const {},
     this.displayCurrency,
     this.country = const {},
     this.venue,
@@ -32,6 +36,7 @@ class StatsFilter {
 
   /// True when anything at all is set (drives the AppBar filter badge).
   bool get isActive =>
+      gameTypes.isNotEmpty ||
       displayCurrency != null ||
       country.isNotEmpty ||
       venue != null ||
@@ -43,6 +48,7 @@ class StatsFilter {
   /// which only converts). Used to decide when an all-time figure (e.g. the
   /// bankroll line) would be misleading.
   bool get narrowsSessions =>
+      gameTypes.isNotEmpty ||
       country.isNotEmpty ||
       venue != null ||
       location.isNotEmpty ||
@@ -59,9 +65,10 @@ class StatsFilter {
     return mostRecentSession(sessions)?.currency ?? 'CAD';
   }
 
-  /// Applies every dimension except game type to [sessions].
+  /// Applies every dimension to [sessions].
   List<SessionModel> apply(List<SessionModel> sessions) {
-    var r = sessions;
+    // Shared predicate with the (flag-gated) Overview pills — never re-fork.
+    var r = filterByGameTypes(sessions, gameTypes);
 
     if (dateRange != null) {
       final start = DateTime(
@@ -133,8 +140,10 @@ class StatsFilter {
   }
 
   /// Read-only chips for the metric chart screen (sheet filters only — the
-  /// caller prepends the game type and currency as needed).
+  /// caller appends the currency, and a per-type card cell its own type
+  /// label, as needed).
   List<String> labels() => [
+        if (gameTypeChipLabel(gameTypes) != null) gameTypeChipLabel(gameTypes)!,
         if (dateLabel != null) dateLabel!,
         if (country.length == 1)
           country.first

@@ -85,6 +85,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         hasMultipleCountries: allCountries.length > 1,
         hasOnline: sessions.any((s) => isOnlineSession(s.location)),
         hasLive: sessions.any((s) => !isOnlineSession(s.location)),
+        hasCash: sessions.any((s) => !isTournamentType(s.gameType)),
+        hasTournaments: sessions.any((s) => isTournamentType(s.gameType)),
         allLocations: allLocations,
         onApply: onApply,
         onReset: onReset,

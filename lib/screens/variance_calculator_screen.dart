@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui show TextDirection;
 
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
@@ -242,6 +243,11 @@ class _VarianceCalculatorScreenState
   ({int mode, double mean, double sd, double count, double? bankroll})?
       _lastInputs;
 
+  /// Scrub position on the results chart as a 0..1 fraction of the x-axis,
+  /// or null (no crosshair). Set by tap/horizontal drag; cleared on a new
+  /// calculation or reroll.
+  double? _scrubFrac;
+
   Future<void> _run() async {
     final it = _lastInputs!;
     // Deterministic per input set (the app's seeded-visual convention) so the
@@ -251,6 +257,7 @@ class _VarianceCalculatorScreenState
     setState(() {
       _error = null;
       _running = true;
+      _scrubFrac = null;
       _result = computeVariance(
           meanPerUnit: it.mean,
           sdPerUnit: it.sd,
@@ -435,24 +442,45 @@ class _VarianceCalculatorScreenState
         // ── Chart ───────────────────────────────────────────────────────────
         SizedBox(
           height: 220,
-          child: CustomPaint(
-            painter: _VariancePathsPainter(
-              paths: _paths!,
-              ev: r.ev,
-              sdPerUnit: _sdPerUnit!,
-              units: _units!,
-              primary: theme.colorScheme.primary,
-              onSurface: theme.colorScheme.onSurface,
-              outline: theme.colorScheme.outline,
-            ),
-            child: const SizedBox.expand(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              void setScrub(double dx) => setState(() => _scrubFrac =
+                  (dx / constraints.maxWidth).clamp(0.0, 1.0));
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (d) => setScrub(d.localPosition.dx),
+                // Horizontal-only drag: a vertical drag must fall through to
+                // the page scroll (equity_chart.dart lesson, PR #41).
+                onHorizontalDragStart: (d) => setScrub(d.localPosition.dx),
+                onHorizontalDragUpdate: (d) => setScrub(d.localPosition.dx),
+                child: CustomPaint(
+                  painter: _VariancePathsPainter(
+                    paths: _paths!,
+                    ev: r.ev,
+                    sdPerUnit: _sdPerUnit!,
+                    units: _units!,
+                    primary: theme.colorScheme.primary,
+                    onSurface: theme.colorScheme.onSurface,
+                    outline: theme.colorScheme.outline,
+                    surface: theme.colorScheme.surface,
+                    scrubFrac: _scrubFrac,
+                    fmtValue: (v) => '${fmt(v, dp: dp)} $unit',
+                    fmtX: (v) =>
+                        '${_ThousandsFormatter._fmt.format(v.round())} $xLabel',
+                    xMax: xMax.toDouble(),
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              );
+            },
           ),
         ),
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             '0 → ${_ThousandsFormatter._fmt.format(xMax.round())} $xLabel · '
-            'shaded: 70% and 95% of outcomes · lines: 20 simulated runs',
+            'shaded: 70% and 95% of outcomes · lines: 20 simulated runs · '
+            'tap or drag the chart to inspect a point',
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.outline),
           ),
@@ -542,6 +570,15 @@ class _VariancePathsPainter extends CustomPainter {
   final Color primary;
   final Color onSurface;
   final Color outline;
+  final Color surface;
+
+  /// Crosshair scrub position (0..1 fraction of the x-axis) or null. The
+  /// tooltip shows the ANALYTIC values at that point (EV + 70%/95% bands),
+  /// not the individual sample paths.
+  final double? scrubFrac;
+  final String Function(double) fmtValue;
+  final String Function(double) fmtX;
+  final double xMax;
 
   _VariancePathsPainter({
     required this.paths,
@@ -551,6 +588,11 @@ class _VariancePathsPainter extends CustomPainter {
     required this.primary,
     required this.onSurface,
     required this.outline,
+    required this.surface,
+    required this.scrubFrac,
+    required this.fmtValue,
+    required this.fmtX,
+    required this.xMax,
   });
 
   @override
@@ -627,6 +669,74 @@ class _VariancePathsPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawLine(Offset(0, y(0)), Offset(size.width, y(ev)), evPaint);
+
+    _paintScrub(canvas, size, y);
+  }
+
+  /// Crosshair + tooltip at [scrubFrac]: vertical line, a dot on the EV
+  /// line, and a boxed readout of x / expected / 70% / 95% at that point.
+  /// The box flips to the left of the line when it would overflow the right
+  /// edge and is clamped inside the chart on both axes.
+  void _paintScrub(Canvas canvas, Size size, double Function(double) y) {
+    final f = scrubFrac;
+    if (f == null) return;
+    final t = units * f;
+    final sd = sdPerUnit * _sqrt(t);
+    final mid = ev * f;
+    final lx = size.width * f;
+
+    canvas.drawLine(
+        Offset(lx, 0),
+        Offset(lx, size.height),
+        Paint()
+          ..color = onSurface.withValues(alpha: 0.45)
+          ..strokeWidth = 1);
+    canvas.drawCircle(Offset(lx, y(mid)), 3.5, Paint()..color = primary);
+
+    final bold = TextStyle(
+        fontSize: 11,
+        height: 1.4,
+        color: onSurface,
+        fontWeight: FontWeight.bold);
+    // intl (NumberFormat) exports its own TextDirection — qualify dart:ui's.
+    final text = TextPainter(
+      textDirection: ui.TextDirection.ltr,
+      text: TextSpan(
+        style: TextStyle(fontSize: 11, height: 1.4, color: onSurface),
+        children: [
+          TextSpan(text: '${fmtX(xMax * f)}\n', style: bold),
+          TextSpan(
+              text: 'Expected ${fmtValue(mid)}\n',
+              style: bold.copyWith(
+                  color: mid >= 0 ? Colors.green : Colors.red)),
+          TextSpan(
+              text: '70%: ${fmtValue(mid - z70 * sd)} to '
+                  '${fmtValue(mid + z70 * sd)}\n'),
+          TextSpan(
+              text: '95%: ${fmtValue(mid - z95 * sd)} to '
+                  '${fmtValue(mid + z95 * sd)}'),
+        ],
+      ),
+    )..layout();
+
+    const padH = 8.0, padV = 6.0;
+    final w = text.width + padH * 2;
+    final h = text.height + padV * 2;
+    var bx = lx + 10;
+    if (bx + w > size.width - 2) bx = lx - 10 - w;
+    bx = bx.clamp(2.0, _max(2.0, size.width - w - 2));
+    final by = (y(mid) - h / 2).clamp(2.0, _max(2.0, size.height - h - 2));
+
+    final box = RRect.fromRectAndRadius(
+        Rect.fromLTWH(bx, by, w, h), const Radius.circular(6));
+    canvas.drawRRect(box, Paint()..color = surface.withValues(alpha: 0.94));
+    canvas.drawRRect(
+        box,
+        Paint()
+          ..color = outline.withValues(alpha: 0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1);
+    text.paint(canvas, Offset(bx + padH, by + padV));
   }
 
   static double _min(double a, double b) => a < b ? a : b;
@@ -639,5 +749,6 @@ class _VariancePathsPainter extends CustomPainter {
       old.ev != ev ||
       old.sdPerUnit != sdPerUnit ||
       old.units != units ||
-      old.primary != primary;
+      old.primary != primary ||
+      old.scrubFrac != scrubFrac;
 }
