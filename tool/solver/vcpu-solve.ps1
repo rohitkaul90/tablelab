@@ -478,10 +478,17 @@ if ($PullAndTerminate) {
     }
     # CPU-utilization telemetry for the oversubscription tune: 1-min load
     # average vs core count (a cheap busy-thread proxy; sampled per poll).
+    # QUOTE-FREE remote command — Windows ssh.exe mangles nested double
+    # quotes (an embedded "$(cut -d" " ...)" reached bash with the delimiter
+    # quotes stripped and printed an EMPTY load); parse locally instead.
     if ($state -eq 'running') {
-      $la = Invoke-SshTimed 'echo "$(cut -d" " -f1 /proc/loadavg) load / $(nproc) cores"' -TimeoutSec 20
+      $la = Invoke-SshTimed 'cat /proc/loadavg && nproc' -TimeoutSec 20
       if ($la -and $la.Code -eq 0 -and "$($la.Out)".Trim()) {
-        Write-Host "  [cpu] $("$($la.Out)".Trim())"
+        $laLines = @("$($la.Out)".Trim() -split "`n")
+        if ($laLines.Count -ge 2) {
+          $load1 = ($laLines[0].Trim() -split ' ')[0]
+          Write-Host "  [cpu] $load1 load / $($laLines[1].Trim()) cores"
+        }
       }
     }
   } while ($state -eq 'running')
