@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'equity_calculator_screen.dart';
 import 'icm_calculator_screen.dart';
+import 'variance_calculator_screen.dart';
 
-/// The Tools screen — the Equity and ICM calculators behind a pill toggle.
+/// The Tools screen — the Equity, ICM and Variance calculators behind a pill
+/// toggle.
 /// Reached from the drawer's APP section (the GTO Study explorer graduated to
 /// its own bottom-nav tab). Pushed as a route, so its AppBar shows the default
 /// back button.
@@ -35,6 +37,7 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
               segments: const [
                 ButtonSegment(value: 0, label: Text('Equity')),
                 ButtonSegment(value: 1, label: Text('ICM')),
+                ButtonSegment(value: 2, label: Text('Variance')),
               ],
               selected: {_selected},
               onSelectionChanged: (s) => setState(() => _selected = s.first),
@@ -52,6 +55,7 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
               children: const [
                 EquityCalculatorScreen(showScaffold: false),
                 IcmCalculatorScreen(showScaffold: false),
+                VarianceCalculatorScreen(showScaffold: false),
               ],
             ),
           ),
