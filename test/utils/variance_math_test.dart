@@ -143,7 +143,7 @@ void main() {
       expect(a.medianMaxDrawdown, b.medianMaxDrawdown);
       expect(a.p95MaxDrawdown, greaterThanOrEqualTo(a.medianMaxDrawdown));
       expect(a.medianMaxDrawdown, greaterThanOrEqualTo(0));
-      expect(a.pDrawdownExceedsBankroll, isNull);
+      expect(a.pBustDuringHorizon, isNull);
     });
 
     test('zero SD → zero drawdown for a winner', () {
@@ -165,8 +165,8 @@ void main() {
           bankroll: 1500,
           trials: 1000,
           seed: 5));
-      expect(s.pDrawdownExceedsBankroll, isNotNull);
-      expect(s.pDrawdownExceedsBankroll!, inInclusiveRange(0, 1));
+      expect(s.pBustDuringHorizon, isNotNull);
+      expect(s.pBustDuringHorizon!, inInclusiveRange(0, 1));
       // A tiny bankroll must bust more often than a huge one.
       final tiny = simulateDownswings(const DownswingParams(
           meanPerUnit: 5,
@@ -175,8 +175,24 @@ void main() {
           bankroll: 100,
           trials: 1000,
           seed: 5));
-      expect(tiny.pDrawdownExceedsBankroll!,
-          greaterThan(s.pDrawdownExceedsBankroll!));
+      expect(tiny.pBustDuringHorizon!, greaterThan(s.pBustDuringHorizon!));
+    });
+
+    test('ruin is NET-position ruin, not peak-to-trough drawdown', () {
+      // Winner over a huge horizon (WR 5 / SD 90 / 2M hands, 4,000 bb roll):
+      // >5% of trials swing ≥4,000 bb off a PEAK (p95 max drawdown ≈ 4,900),
+      // but those peaks sit far above zero — true in-horizon ruin is rare
+      // (closed-form RoR ≈ 0.7%). The old drawdown-based counting reported
+      // the former as "went broke"; assert the fixed semantics.
+      final s = simulateDownswings(const DownswingParams(
+          meanPerUnit: 5,
+          sdPerUnit: 90,
+          units: 20000,
+          bankroll: 4000,
+          trials: 400,
+          seed: 9));
+      expect(s.p95MaxDrawdown, greaterThan(4000)); // old counting → ≥5% "bust"
+      expect(s.pBustDuringHorizon!, lessThan(0.02)); // true ruin stays rare
     });
   });
 }

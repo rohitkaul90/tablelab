@@ -423,6 +423,9 @@
       $('mode-tournament').classList.toggle('active', m === 'tournament');
       $('fields-cash').style.display = m === 'cash' ? '' : 'none';
       $('fields-tournament').style.display = m === 'tournament' ? '' : 'none';
+      // Clear a mode-specific validation error too — it would otherwise
+      // hover over the OTHER mode's (untouched, likely valid) form.
+      $('calc-error').style.display = 'none';
       hideResults();
     }
 
@@ -560,8 +563,18 @@
       var iw = w - padL - padR, ih = h - padT - padB;
 
       var r = last.result;
-      // y-range: cover the 95% envelope and every sample path.
-      var yMin = Math.min(0, r.ci95Low), yMax = Math.max(0, r.ci95High);
+      // y-range: cover the 95% envelope AT EVERY STEP plus every sample
+      // path. The horizon endpoints alone miss the band's interior minimum
+      // (for a winner the lower envelope dips to −z²σ²/4μ mid-chart before
+      // drift pulls it back up), which clipped the shaded band off-canvas.
+      var yMin = 0, yMax = 0;
+      for (var ke = 0; ke <= STEPS; ke++) {
+        var te = last.units * ke / STEPS;
+        var sde = last.sdPerUnit * Math.sqrt(te);
+        var mide = r.ev * ke / STEPS;
+        if (mide - Z95 * sde < yMin) yMin = mide - Z95 * sde;
+        if (mide + Z95 * sde > yMax) yMax = mide + Z95 * sde;
+      }
       last.paths.forEach(function (p) {
         p.forEach(function (v) {
           if (v < yMin) yMin = v;

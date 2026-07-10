@@ -230,12 +230,24 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
 
     // The extras shown UNDER the side-by-side comparison in combined view —
     // metrics that don't fit the two-column card (expense totals span both
-    // types; SD rows are type-specific but info-only).
+    // types; SD rows are type-specific but info-only). The SD labels gain an
+    // explicit game-type prefix here: unqualified "Std Dev ($/hr)" in a view
+    // showing BOTH types silently reads as an all-sessions figure when it is
+    // cash-only (review finding).
     final combinedExtraItems = <_SummaryItem>[
       for (final it in summaryItems)
-        if (it.label == 'Expenses' ||
-            it.label == 'Net Profit' ||
-            it.label.startsWith('Std Dev')) it,
+        if (it.label == 'Expenses' || it.label == 'Net Profit')
+          it
+        else if (it.label.startsWith('Std Dev'))
+          _SummaryItem(
+            it.label == 'Std Dev (buy-ins)'
+                ? 'Tourn. ${it.label}'
+                : 'Cash ${it.label}',
+            it.value,
+            it.color,
+            it.metric,
+            it.info,
+          ),
     ];
 
     return CustomScrollView(

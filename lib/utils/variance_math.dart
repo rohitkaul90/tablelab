@@ -185,18 +185,22 @@ class DownswingParams {
 
 class DownswingStats {
   /// Median / 95th-percentile MAXIMUM DRAWDOWN (peak-to-trough) over the
-  /// horizon, in units' result terms (bb or buy-ins).
+  /// horizon, in units' result terms (bb or buy-ins). A drawdown is measured
+  /// from the running PEAK — it describes swing severity, not ruin.
   final double medianMaxDrawdown;
   final double p95MaxDrawdown;
 
-  /// Fraction of trials whose max drawdown reached the bankroll (i.e. would
-  /// have gone broke DURING the horizon). Null when no bankroll given.
-  final double? pDrawdownExceedsBankroll;
+  /// Fraction of trials whose CUMULATIVE result ever fell to −bankroll —
+  /// true in-horizon ruin. (NOT peak-to-trough ≥ bankroll: a 2,500-unit
+  /// swing off a +5,000 peak never busts a starting bankroll of 2,000 —
+  /// counting it did, made this row contradict the closed-form risk-of-ruin
+  /// beside it. Review finding.) Null when no bankroll given.
+  final double? pBustDuringHorizon;
 
   const DownswingStats({
     required this.medianMaxDrawdown,
     required this.p95MaxDrawdown,
-    this.pDrawdownExceedsBankroll,
+    this.pBustDuringHorizon,
   });
 }
 
@@ -212,14 +216,16 @@ DownswingStats simulateDownswings(DownswingParams p) {
   var busts = 0;
   for (var t = 0; t < p.trials; t++) {
     var x = 0.0, peak = 0.0, maxDd = 0.0;
+    var busted = false;
     for (var k = 0; k < p.steps; k++) {
       x += drift + vol * _gauss(rng);
       if (x > peak) peak = x;
       final dd = peak - x;
       if (dd > maxDd) maxDd = dd;
+      if (p.bankroll != null && x <= -p.bankroll!) busted = true;
     }
     maxDrawdowns[t] = maxDd;
-    if (p.bankroll != null && maxDd >= p.bankroll!) busts++;
+    if (busted) busts++;
   }
   maxDrawdowns.sort();
   double q(double frac) =>
@@ -227,7 +233,6 @@ DownswingStats simulateDownswings(DownswingParams p) {
   return DownswingStats(
     medianMaxDrawdown: q(0.5),
     p95MaxDrawdown: q(0.95),
-    pDrawdownExceedsBankroll:
-        p.bankroll == null ? null : busts / p.trials,
+    pBustDuringHorizon: p.bankroll == null ? null : busts / p.trials,
   );
 }

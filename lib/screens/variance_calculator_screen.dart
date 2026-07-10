@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
 import '../services/analytics_service.dart';
 import '../utils/helpers.dart';
@@ -41,6 +42,10 @@ class _ThousandsFormatter extends TextInputFormatter {
       TextEditingValue oldValue, TextEditingValue newValue) {
     final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.isEmpty) return const TextEditingValue(text: '');
+    // int.parse throws past 19 digits on native 64-bit platforms (a long
+    // paste would crash the input pipeline) — no poker sample needs more
+    // than 12 digits; keep the previous value instead.
+    if (digits.length > 12) return oldValue;
     final formatted = _fmt.format(int.parse(digits));
     return TextEditingValue(
       text: formatted,
@@ -89,8 +94,25 @@ class _VarianceCalculatorScreenState
     super.dispose();
   }
 
-  double? _num(TextEditingController c) =>
-      double.tryParse(c.text.replaceAll(',', '').trim());
+  /// Parse a field, handling BOTH comma roles: "2,500" is a thousands
+  /// separator, "2,5" is an EU-keyboard decimal comma (many Android numeric
+  /// keyboards offer ',' not '.' — stripping it silently read 2,5 as 25, a
+  /// 10× error feeding every output). Heuristic: a single comma NOT followed
+  /// by exactly three digits is a decimal point; anything else is grouping.
+  double? _num(TextEditingController c) {
+    var t = c.text.trim();
+    if (t.contains(',') && !t.contains('.')) {
+      final commas = ','.allMatches(t).length;
+      if (commas == 1 && !RegExp(r',\d{3}$').hasMatch(t)) {
+        t = t.replaceAll(',', '.');
+      } else {
+        t = t.replaceAll(',', '');
+      }
+    } else {
+      t = t.replaceAll(',', '');
+    }
+    return double.tryParse(t);
+  }
 
   /// Prefill from the user's own sessions (needs ≥10 qualifying sessions for
   /// the SD estimators — see helpers.dart).
@@ -120,8 +142,16 @@ class _VarianceCalculatorScreenState
     } else {
       final t =
           sessions.where((s) => isTournamentType(s.gameType)).toList();
-      final buyIn = t.fold(0.0, (a, s) => a + s.buyIn);
-      final pl = t.fold(0.0, (a, s) => a + s.profitLoss);
+      // Pooled ROI needs ONE common currency — raw sums across mixed-currency
+      // logs blend rupees with dollars (review finding). Convert per session
+      // into the profile's display currency (the target cancels out of the
+      // ratio; it just has to be consistent).
+      final cur =
+          ref.read(profileProvider).valueOrNull?.displayCurrency ?? 'USD';
+      final buyIn = t.fold(
+          0.0, (a, s) => a + convertCurrency(s.buyIn, s.currency, cur));
+      final pl = t.fold(
+          0.0, (a, s) => a + convertCurrency(s.profitLoss, s.currency, cur));
       final sd = calcTournamentStdDevBuyIns(t);
       if (t.isEmpty || buyIn <= 0) {
         missing = 'Need logged tournaments with buy-ins to estimate an ROI.';
@@ -143,16 +173,12 @@ class _VarianceCalculatorScreenState
     }
   }
 
-  Future<void> _calculate({bool reroll = false}) async {
+  Future<void> _calculate() async {
     if (_running) return;
-    if (reroll) {
-      _seedOffset++;
-    } else {
-      _seedOffset = 0;
-    }
 
+    final int mode = _mode;
     final double? mean, sd, count, bankroll;
-    if (_mode == 0) {
+    if (mode == 0) {
       mean = _num(_cashWr);
       sd = _num(_cashSd);
       final hands = _num(_cashHands);
@@ -166,49 +192,89 @@ class _VarianceCalculatorScreenState
       bankroll = _num(_tBankroll);
     }
 
+    // On any validation failure, CLEAR stale results — an error banner over
+    // the previous inputs' chart reads as if the figures were current
+    // (review finding).
+    void fail(String msg) => setState(() {
+          _error = msg;
+          _result = null;
+          _paths = null;
+          _downswings = null;
+          _lastInputs = null;
+        });
+
     if (mean == null || sd == null || count == null) {
-      setState(() => _error = 'Enter a winrate, standard deviation and '
-          'sample size (numbers only).');
+      fail('Enter a winrate, standard deviation and sample size '
+          '(numbers only).');
       return;
     }
-    if (sd < 0 || count <= 0) {
-      setState(() => _error = _mode == 0
-          ? 'Hands must be positive and standard deviation can\'t be negative.'
-          : 'Tournaments must be positive and standard deviation can\'t be '
-              'negative.');
+    if (sd <= 0 || count <= 0) {
+      fail(mode == 0
+          ? 'Hands and standard deviation must both be above zero.'
+          : 'Tournaments and standard deviation must both be above zero.');
       return;
+    }
+    if (_mode == 0 ? _cashBankroll.text.isNotEmpty : _tBankroll.text.isNotEmpty) {
+      if (bankroll == null || bankroll <= 0) {
+        fail('Bankroll must be a positive number (or leave it empty).');
+        return;
+      }
     }
 
+    _seedOffset = 0;
+    _lastInputs =
+        (mode: mode, mean: mean, sd: sd, count: count, bankroll: bankroll);
+    AnalyticsService.varianceCalculatorUsed(
+        mode: mode == 0 ? 'cash' : 'tournament');
+    await _run();
+  }
+
+  /// Re-simulate the sample runs for the DISPLAYED result — uses the captured
+  /// inputs, not the live fields (the user may have switched modes or edited
+  /// fields since; a reroll must never silently recompute — review finding).
+  /// Also does not re-fire the analytics event.
+  Future<void> _reroll() async {
+    if (_running || _lastInputs == null) return;
+    _seedOffset++;
+    await _run();
+  }
+
+  ({int mode, double mean, double sd, double count, double? bankroll})?
+      _lastInputs;
+
+  Future<void> _run() async {
+    final it = _lastInputs!;
     // Deterministic per input set (the app's seeded-visual convention) so the
     // same numbers always draw the same curves; "reroll" bumps the offset.
-    final seed = Object.hash(_mode, mean, sd, count, _seedOffset);
+    final seed = Object.hash(it.mode, it.mean, it.sd, it.count, _seedOffset);
 
     setState(() {
       _error = null;
       _running = true;
       _result = computeVariance(
-          meanPerUnit: mean!,
-          sdPerUnit: sd!,
-          units: count!,
-          bankroll: bankroll);
+          meanPerUnit: it.mean,
+          sdPerUnit: it.sd,
+          units: it.count,
+          bankroll: it.bankroll);
       _paths = simulatePaths(
-          meanPerUnit: mean, sdPerUnit: sd, units: count, seed: seed);
-      _units = count;
-      _sdPerUnit = sd;
-      _resultMode = _mode;
+          meanPerUnit: it.mean,
+          sdPerUnit: it.sd,
+          units: it.count,
+          seed: seed);
+      _units = it.count;
+      _sdPerUnit = it.sd;
+      _resultMode = it.mode;
       _downswings = null;
     });
-    AnalyticsService.varianceCalculatorUsed(
-        mode: _mode == 0 ? 'cash' : 'tournament');
 
     // The downswing Monte Carlo (2,000 trials) runs off the UI thread.
     final ds = await compute(
         simulateDownswings,
         DownswingParams(
-            meanPerUnit: mean,
-            sdPerUnit: sd,
-            units: count,
-            bankroll: bankroll,
+            meanPerUnit: it.mean,
+            sdPerUnit: it.sd,
+            units: it.count,
+            bankroll: it.bankroll,
             seed: seed));
     if (!mounted) return;
     setState(() {
@@ -232,7 +298,13 @@ class _VarianceCalculatorScreenState
             ButtonSegment(value: 1, label: Text('Tournament')),
           ],
           selected: {_mode},
-          onSelectionChanged: (s) => setState(() => _mode = s.first),
+          // Clear any validation error on mode switch — a cash-specific
+          // message hovering over the tournament form (or vice versa) reads
+          // as a live problem with inputs it never examined (review finding).
+          onSelectionChanged: (s) => setState(() {
+            _mode = s.first;
+            _error = null;
+          }),
           style: SegmentedButton.styleFrom(
             selectedBackgroundColor: theme.colorScheme.primary,
             selectedForegroundColor: theme.colorScheme.onPrimary,
@@ -354,7 +426,7 @@ class _VarianceCalculatorScreenState
             IconButton(
               tooltip: 'Reroll sample runs',
               icon: const Icon(Icons.casino_outlined),
-              onPressed: _running ? null : () => _calculate(reroll: true),
+              onPressed: _running ? null : _reroll,
             ),
           ],
         ),
@@ -406,9 +478,9 @@ class _VarianceCalculatorScreenState
               '${_ThousandsFormatter._fmt.format(_downswings!.medianMaxDrawdown.round())} $unit'),
           _row(theme, 'Bad-run downswing (95th pct)',
               '${_ThousandsFormatter._fmt.format(_downswings!.p95MaxDrawdown.round())} $unit'),
-          if (_downswings!.pDrawdownExceedsBankroll != null)
-            _row(theme, 'Chance a downswing eats the bankroll',
-                _pct(_downswings!.pDrawdownExceedsBankroll!)),
+          if (_downswings!.pBustDuringHorizon != null)
+            _row(theme, 'Chance of going broke during this sample',
+                _pct(_downswings!.pBustDuringHorizon!)),
         ] else if (_running)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
