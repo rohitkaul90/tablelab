@@ -172,16 +172,18 @@ State explicitly which branch you took and why.
 
 ---
 
-## STEP 6 — Store copy / listing sync check
+## STEP 6 — Store copy / listing sync: UPDATE the description, don't just flag it
 
-A release often *should* change the store listing, and the listing copy has a canonical source **in the repo** to keep in sync:
+A release often *should* change the store listing. The listing copy has a canonical source **in the repo**: `launch/STORE_LISTING.md` (short + long description; applied to the Console by hand). **This step OWNS keeping it current** (owner decision 2026-07-10) — when the release ships a headline feature, update the copy, don't just report staleness:
 
-- **Marketing site = source of truth for tone/claims:** `web/about.html` (the `/about` landing page) and `web/privacy.html` / `web/terms.html`. If this release adds or changes a headline feature (e.g. AI trust pack, themes, new calculators), check whether `about.html`'s feature/FAQ copy still matches, and whether the **Play Store long description** (lives in the Console, not the repo) is now stale. Flag specific lines.
-- **Screenshots:** if the UI in a shipped screen changed materially (new tab, redesigned Hands/Reads, theme), the Play screenshots (8 phone + 8×7" + 8×10" tablet) may now misrepresent the app. Flag which screens, but don't regenerate — that's a `/ux-designer` + `/growth` job.
-- **Data safety / permissions:** if the release added a permission, SDK, or data collection (new analytics event, new third-party SDK), the **Play Data Safety form** must be updated before rollout — this is a compliance gate, not optional. Check the diff for new packages in `pubspec.yaml` or new `AndroidManifest.xml` permissions.
-- **What changed legally?** New data flows → ping `/legal-compliance`. New store claims ("AI coach") must stay truthful and within Google Play gambling-policy scope (TableLab is a tracker, not real-money gambling — keep copy on the right side of that line).
+1. **Diff the features against the copy.** Read `launch/STORE_LISTING.md` and `web/about.html`. If this release adds/changes a headline feature (Study/GTO explorer, calculators, Stats redesign, AI trust pack, themes…), the long description is stale.
+2. **Draft the update.** Edit `launch/STORE_LISTING.md` directly: work the new feature(s) into the long description (and short description if positioning changed), in TableLab's voice — plain, player-facing, "Profit" never "P&L", no internal jargon, and **within Google Play gambling-policy framing** (tracker/analytics language, never real-money-gambling language). For deeper ASO craft (keyword balance, feature ordering), delegate to `/mobile-specialist` (store-listing craft is in its charter) or `/growth` (ASO) and fold their output back into the file.
+3. **Hand the owner a paste-ready block** — the exact new long description (Console limit 4,000 chars; short description 80 chars) plus the path: Play Console → Grow → Store presence → **Main store listing**. Listing edits go through a short Google review and can be submitted alongside the rollout.
+4. **Screenshots:** if the UI in a shipped screen changed materially (new tab, redesigned Hands/Reads, theme), the Play screenshots (8 phone + 8×7" + 8×10" tablet) may now misrepresent the app. Flag which screens, but don't regenerate — that's a `/ux-designer` + `/growth` job.
+5. **Data safety / permissions:** if the release added a permission, SDK, or data collection (new analytics event, new third-party SDK), the **Play Data Safety form** must be updated before rollout — this is a compliance gate, not optional. Check the diff for new packages in `pubspec.yaml` or new `AndroidManifest.xml` permissions.
+6. **What changed legally?** New data flows → ping `/legal-compliance`. New store claims ("AI coach") must stay truthful and within Google Play gambling-policy scope (TableLab is a tracker, not real-money gambling — keep copy on the right side of that line).
 
-Output a short **"Listing actions"** list: each item = what to change + where (Console field / repo file) + whether it blocks rollout. If nothing changed, say "Listing unchanged — no action."
+Output a short **"Listing actions"** list: each item = what changed + the paste-ready copy (or Console field / repo file) + whether it blocks rollout. If nothing changed, say "Listing unchanged — no action." Offer to commit the `launch/STORE_LISTING.md` update alongside the release-notes file.
 
 ---
 
