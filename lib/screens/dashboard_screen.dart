@@ -9,15 +9,27 @@ import '../utils/helpers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/approx_currency_chip.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/ai_usage_pill.dart';
+import '../widgets/ai_coaching_card.dart';
 import '../widgets/game_type_filter.dart';
 import 'live_session_screen.dart';
 import 'import_source_screen.dart';
 import 'analytics_screen.dart';
 import 'metric_chart_screen.dart';
-import 'ai_analysis/session_analysis_screen.dart';
 import '../providers/profile_provider.dart';
 import 'profile_screen.dart';
+
+/// Legacy Overview tab kill-switch. The Overview duplicated the Summary tab's
+/// metrics (device-review decision 2026-07-10: retired; its unique pieces —
+/// AI coaching card, Live-now card, first-session CTA — moved into the
+/// Summary tab). Flip to `true` to restore the tab; the implementation below
+/// (`_OverviewTab` and friends) is kept intact and referenced through this
+/// flag so the analyzer never sees dead code.
+///
+/// DELIBERATELY DROPPED with Overview (user decision, 2026-07-10 review):
+/// the bankroll figure/CTA, the W/L and ITM-count chart entry points, and
+/// any blended combined total in the two-type view (per-type columns only).
+/// Don't re-flag these as regressions.
+const bool kShowOverviewTab = false;
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -26,31 +38,18 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  // Overview game-type pills. null = not yet initialised (defaults to the
-  // last-played game type once sessions load).
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  // Overview game-type pills (legacy, flag-gated). null = not yet initialised
+  // (defaults to the last-played game type once sessions load).
   Set<String>? _gameTypes;
 
-  // The AppBar "Display Options" filter — same options on both tabs, but each
-  // tab keeps its own independent selection.
-  StatsFilter _overviewFilter = const StatsFilter();
-  StatsFilter _analyticsFilter = const StatsFilter();
+  // ONE "Display Options" filter for the whole Stats screen — every tab
+  // (Summary, factor tabs, Tips) reads the same selection. (The old
+  // per-tab filter pair was an unsynced-state wart.)
+  StatsFilter _filter = const StatsFilter();
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  // Ordering applied to every factor tab's breakdown card.
+  InsightSort _insightSort = InsightSort.rate;
 
   // Opens the shared Display Options sheet for whichever tab is active.
   void _openFilterSheet(
@@ -91,6 +90,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         hasMultipleCountries: allCountries.length > 1,
         hasOnline: sessions.any((s) => isOnlineSession(s.location)),
         hasLive: sessions.any((s) => !isOnlineSession(s.location)),
+        hasCash: sessions.any((s) => !isTournamentType(s.gameType)),
+        hasTournaments: sessions.any((s) => isTournamentType(s.gameType)),
         allLocations: allLocations,
         onApply: onApply,
         onReset: onReset,
@@ -98,78 +99,130 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
+  // ONE AppBar definition for the loading/error/data scaffolds.
+  AppBar _statsAppBar({List<Widget>? actions, PreferredSizeWidget? bottom}) {
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
+      ),
+      title: const Text('Stats'),
+      actions: actions,
+      bottom: bottom,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final sessionsAsync = ref.watch(completedSessionsProvider);
-    final showFab = _tabController.index == 0;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
-        ),
-        title: const Text('Stats'),
-        actions: [
-          sessionsAsync.maybeWhen(
-            data: (sessions) {
-              final isOverview = _tabController.index == 0;
-              final filter = isOverview ? _overviewFilter : _analyticsFilter;
-              return IconButton(
-                icon: Badge(
-                  isLabelVisible: filter.isActive,
-                  child: const Icon(Icons.tune),
-                ),
-                tooltip: 'Display options',
-                onPressed: () => _openFilterSheet(
-                  sessions,
-                  filter,
-                  (f) => setState(() {
-                    if (isOverview) {
-                      _overviewFilter = f;
-                    } else {
-                      _analyticsFilter = f;
-                    }
-                  }),
-                  () => setState(() {
-                    if (isOverview) {
-                      _overviewFilter = const StatsFilter();
-                    } else {
-                      _analyticsFilter = const StatsFilter();
-                    }
-                  }),
-                ),
-              );
-            },
-            orElse: () => const SizedBox.shrink(),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Analytics'),
-          ],
-        ),
+    return sessionsAsync.when(
+      loading: () => Scaffold(
+        appBar: _statsAppBar(),
+        body: const Center(child: CircularProgressIndicator()),
       ),
-      floatingActionButton: showFab
-          ? FloatingActionButton(
-              heroTag: 'fab_dashboard',
-              onPressed: () => showLogSessionChooser(context, ref),
-              tooltip: 'Log session',
-              child: const Icon(Icons.add),
-            )
-          : null,
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _OverviewTab(
-            gameTypes: _gameTypes,
-            filter: _overviewFilter,
-            onGameTypesChanged: (v) => setState(() => _gameTypes = v),
-          ),
-          AnalyticsScreen(filter: _analyticsFilter),
-        ],
+      error: (e, _) => Scaffold(
+        appBar: _statsAppBar(),
+        body: Center(child: Text('Error: $e')),
+      ),
+      data: (sessions) => _buildTabs(context, sessions),
+    );
+  }
+
+  Widget _buildTabs(BuildContext context, List<SessionModel> sessions) {
+    // Everything the tabs render is computed ONCE per build; the factor list
+    // is data-gated, so the tab strip only shows breakdowns that exist.
+    final homeCurrency =
+        ref.watch(profileProvider).valueOrNull?.displayCurrency;
+    final data = AnalyticsData.compute(sessions, _filter, homeCurrency);
+    final factors = analyticsFactors(data);
+
+    final tabs = <Tab>[
+      if (kShowOverviewTab) const Tab(text: 'Overview'),
+      const Tab(text: 'Summary'),
+      for (final f in factors) Tab(text: f.tabLabel),
+      const Tab(text: 'Tips'),
+    ];
+    final views = <Widget>[
+      if (kShowOverviewTab)
+        _OverviewTab(
+          gameTypes: _gameTypes,
+          // Strip the sheet's game-type dimension — Overview's own pills own
+          // game type; passing both would AND them (permanently-empty stats
+          // on the flag-restore path) and double the chart's type chip.
+          filter: _filter.withGameTypes(const {}),
+          onGameTypesChanged: (v) => setState(() => _gameTypes = v),
+        ),
+      AnalyticsSummaryTab(
+        data: data,
+        gameTypes: _filter.gameTypes,
+        onGameTypesChanged: (t) =>
+            setState(() => _filter = _filter.withGameTypes(t)),
+      ),
+      for (final f in factors)
+        AnalyticsFactorTab(
+          data: data,
+          factor: f,
+          sort: _insightSort,
+          onSortChanged: (v) => setState(() => _insightSort = v),
+        ),
+      AnalyticsTipsTab(data: data),
+    ];
+
+    // The ValueKey rebuilds the controller whenever the tab SET changes (a
+    // filter regates a factor), resetting to Summary. Without it Flutter
+    // KEEPS an in-range numeric index — the user silently lands on (or has
+    // their current tab's content swapped to) a DIFFERENT factor.
+    return DefaultTabController(
+      key: ValueKey(tabs.map((t) => t.text).join('|')),
+      length: tabs.length,
+      child: Scaffold(
+        appBar: _statsAppBar(
+          actions: [
+            // Compact converted-totals marker — replaces the old full-width
+            // "≈ converted" line above the Summary card, and covers EVERY
+            // tab (factor tabs show converted numbers too).
+            if (isMultiCurrency(data.filtered))
+              TextButton(
+                onPressed: () =>
+                    showApproxCurrencyInfo(context, data.displayCurrency),
+                style: TextButton.styleFrom(
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onSurfaceVariant,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 40),
+                ),
+                child: Text(
+                  '≈ ${currencySymbol(data.displayCurrency)}',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+            IconButton(
+              icon: Badge(
+                isLabelVisible: _filter.isActive,
+                child: const Icon(Icons.tune),
+              ),
+              tooltip: 'Display options',
+              onPressed: () => _openFilterSheet(
+                sessions,
+                _filter,
+                (f) => setState(() => _filter = f),
+                () => setState(() => _filter = const StatsFilter()),
+              ),
+            ),
+          ],
+          bottom: TabBar(isScrollable: true, tabs: tabs),
+        ),
+        floatingActionButton: FloatingActionButton(
+          heroTag: 'fab_dashboard',
+          onPressed: () => showLogSessionChooser(context, ref),
+          tooltip: 'Log session',
+          child: const Icon(Icons.add),
+        ),
+        body: TabBarView(children: views),
       ),
     );
   }
@@ -395,7 +448,7 @@ class _OverviewBody extends ConsumerWidget {
 
         // ── AI coaching (sessions logged) or a compact first-session CTA ───
         if (sessions.isNotEmpty)
-          _AiCoachingCard(
+          AiCoachingCard(
             session: ([...sessions]..sort((a, b) => b.date.compareTo(a.date)))
                 .first,
           )
@@ -494,68 +547,6 @@ class _InlineBankroll extends StatelessWidget {
       child: Text(
         'Bankroll ${formatAmount(current, currency)}$growthStr',
         style: theme.textTheme.bodySmall?.copyWith(color: subtle),
-      ),
-    );
-  }
-}
-
-// ── AI Coaching card ──────────────────────────────────────────────────────────
-
-class _AiCoachingCard extends StatelessWidget {
-  final SessionModel session;
-  const _AiCoachingCard({required this.session});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => SessionAnalysisScreen(session: session)),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                scheme.primaryContainer.withValues(alpha: 0.6),
-                scheme.surface,
-              ],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(Icons.auto_awesome,
-                  color: scheme.primary, size: 28),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Get AI coaching',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleSmall
-                            ?.copyWith(color: scheme.primary)),
-                    const SizedBox(height: 2),
-                    Text('Analyse your latest session for leaks & insights.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.7),
-                            )),
-                    const SizedBox(height: 4),
-                    const AiUsagePill(kind: AiAnalysisKind.session),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.4)),
-            ],
-          ),
-        ),
       ),
     );
   }

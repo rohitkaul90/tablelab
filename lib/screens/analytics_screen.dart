@@ -1,93 +1,108 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
 import '../models/session_model.dart';
 import '../models/stats_filter.dart';
-import '../providers/profile_provider.dart';
-import '../providers/providers.dart';
 import '../utils/helpers.dart';
-import '../widgets/approx_currency_chip.dart';
-import '../widgets/game_type_filter.dart';
+import '../widgets/ai_coaching_card.dart';
+import '../widgets/game_type_filter.dart' show gameTypeChipLabel;
+import 'import_source_screen.dart';
+import 'live_session_screen.dart';
 import 'metric_chart_screen.dart';
 
-class AnalyticsScreen extends ConsumerWidget {
-  final StatsFilter filter;
+/// Std-dev explainer texts — ONE copy each, shown by both the single-type
+/// summary list and the combined comparison card's info dialogs.
+const kCashSdInfo =
+    'How swingy your cash game is, in big blinds per 100 hands. '
+    'Estimated from your per-session results and durations (hands '
+    'assumed at 25 per hour unless a session records its own pace). '
+    'Typical live no-limit hold\'em runs roughly 70–100.\n\n'
+    'Shown once you have at least 10 qualifying cash sessions '
+    '(cash game with parseable blinds and a duration).';
 
-  const AnalyticsScreen({super.key, this.filter = const StatsFilter()});
+const kTournSdInfo =
+    'How swingy your tournament results are, measured in buy-ins per '
+    'tournament (each result divided by its buy-in, so mixed buy-in '
+    'levels stay comparable).\n\nTournament results are heavily '
+    'skewed by rare big scores — with few tournaments logged this '
+    'UNDERSTATES the real swings. Shown once you have at least 10 '
+    'tournaments with a buy-in.';
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sessionsAsync = ref.watch(completedSessionsProvider);
-    return sessionsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      // The body shows the game-type pills + summary metrics even with no
-      // sessions (zeros), so new users see structure rather than a blank page.
-      data: (sessions) => _AnalyticsBody(
-        sessions: sessions,
-        filter: filter,
-        homeCurrency: ref.watch(profileProvider).valueOrNull?.displayCurrency,
-      ),
-    );
-  }
+/// Tab-body padding shared by every Stats tab: 16px on phones, centered at a
+/// 960px max content width on wide screens (web/desktop) — the old
+/// _AnalyticsBody invariant, restored after the restructure dropped it.
+EdgeInsets statsTabPadding(BuildContext context, {double top = 12}) {
+  final w = MediaQuery.of(context).size.width;
+  final h = w > 800 ? math.max(16.0, (w - 960) / 2) : 16.0;
+  return EdgeInsets.fromLTRB(h, top, h, 96);
 }
 
-class _AnalyticsBody extends StatefulWidget {
-  final List<SessionModel> sessions;
-  final StatsFilter filter;
+/// Everything the Stats tabs need, computed ONCE per build from the raw
+/// session list + the screen's shared [StatsFilter]. There is deliberately no
+/// game-type filter any more: the Summary tab shows the side-by-side
+/// Cash|Tournament comparison when both types exist, and each factor tab
+/// scopes its own sessions — the old pills were redundant with that.
+class AnalyticsData {
+  final List<SessionModel> sessions; // unfiltered (for empty-state wording)
+  final List<SessionModel> filtered;
+  final String displayCurrency;
+  final String sym;
+  final bool showingCash;
+  final bool showingTournaments;
+  final bool hasLiveInView;
+  final bool hasOnlineInView;
+  final List<SessionModel> cashSessions;
+  final List<SessionModel> tSessions;
+  final List<SummaryItem> summaryItems;
+  final List<String> activeFilters;
 
-  /// The user's home/display currency (profile preference); null = Auto.
-  final String? homeCurrency;
+  // Per-type derived metrics, computed ONCE here — the comparison card must
+  // consume these, not re-derive them (two implementations drift).
+  final double? cashBB100;
+  final double? cashBB100StdDev;
+  final double? cashHourlyStdDev;
+  final double? tournStdDevBuyIns;
+  final double? tournROI;
+  final int? tournItmPct;
 
-  const _AnalyticsBody({
+  AnalyticsData._({
     required this.sessions,
-    required this.filter,
-    required this.homeCurrency,
+    required this.filtered,
+    required this.displayCurrency,
+    required this.sym,
+    required this.showingCash,
+    required this.showingTournaments,
+    required this.hasLiveInView,
+    required this.hasOnlineInView,
+    required this.cashSessions,
+    required this.tSessions,
+    required this.summaryItems,
+    required this.activeFilters,
+    required this.cashBB100,
+    required this.cashBB100StdDev,
+    required this.cashHourlyStdDev,
+    required this.tournStdDevBuyIns,
+    required this.tournROI,
+    required this.tournItmPct,
   });
 
-  @override
-  State<_AnalyticsBody> createState() => _AnalyticsBodyState();
-}
-
-class _AnalyticsBodyState extends State<_AnalyticsBody> {
-  // null = not yet chosen (defaults to the last-played game type). An empty
-  // set means "all game types".
-  Set<String>? _gameTypes;
-
-  Set<String> get _effectiveTypes =>
-      _gameTypes ?? defaultGameTypes(widget.sessions);
-
-  // Read-only labels describing the active filters, shown on each chart screen.
-  List<String> _activeFilterLabels(String displayCurrency) {
-    final gt = gameTypeChipLabel(_effectiveTypes);
-    return [
-      if (gt != null) gt,
-      ...widget.filter.labels(),
-      displayCurrency,
-    ];
-  }
-
-  String get _effectiveCurrency => widget.filter
-      .effectiveCurrency(widget.sessions, homeCurrency: widget.homeCurrency);
-
-  List<SessionModel> get _filtered =>
-      filterByGameTypes(widget.filter.apply(widget.sessions), _effectiveTypes);
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isWide = screenWidth > 800;
-    final hPad = isWide ? math.max(16.0, (screenWidth - 960.0) / 2) : 16.0;
-    final filtered = _filtered;
-    final displayCurrency = _effectiveCurrency;
-    final showingTournaments = filtered.any((s) => isTournamentType(s.gameType));
+  factory AnalyticsData.compute(
+    List<SessionModel> sessions,
+    StatsFilter filter,
+    String? homeCurrency,
+  ) {
+    final filtered = filter.apply(sessions);
+    final displayCurrency =
+        filter.effectiveCurrency(sessions, homeCurrency: homeCurrency);
+    final showingTournaments =
+        filtered.any((s) => isTournamentType(s.gameType));
     final showingCash = filtered.any((s) => s.gameType == 'cash');
-    // Use filtered counts for insight-card visibility (not all-time counts).
+    // Use filtered counts for factor-tab visibility (not all-time counts).
     final hasLiveInView = filtered.any((s) => !isOnlineSession(s.location));
     final hasOnlineInView = filtered.any((s) => isOnlineSession(s.location));
 
-    // ── Summary stats for pinned header ──────────────────────────────────────
     double toD(double amount, String from) =>
         convertCurrency(amount, from, displayCurrency);
     final sym = currencySymbol(displayCurrency);
@@ -107,9 +122,9 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     final tSessions =
         filtered.where((s) => isTournamentType(s.gameType)).toList();
     final hasTournaments = tSessions.isNotEmpty;
-    // Pooled ROI (total profit / total buy-in) — matches the Overview ROI tile
-    // and the metric chart; a per-session average would overweight small
-    // buy-ins and disagree with the chart it drills into.
+    // Pooled ROI (total profit / total buy-in) — matches the metric chart;
+    // a per-session average would overweight small buy-ins and disagree with
+    // the chart it drills into.
     final tournamentBuyIn =
         tSessions.fold(0.0, (sum, s) => sum + toD(s.buyIn, s.currency));
     final tournamentPL =
@@ -125,359 +140,568 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     final itmPct = (itmCount != null && tSessions.isNotEmpty)
         ? (itmCount / tSessions.length * 100).round()
         : null;
-    final rateSign = hourlyRate >= 0 ? '+' : '-';
     final cashSessions = filtered.where((s) => s.gameType == 'cash').toList();
     final bb100 = calcBB100(cashSessions);
+    // Standard deviations (null under 10 qualifying sessions → '—' rows).
+    final bb100StdDev = calcBB100StdDev(cashSessions);
+    final hourlyStdDev = calcHourlyStdDev(cashSessions, displayCurrency);
+    final tournStdDev = calcTournamentStdDevBuyIns(tSessions);
 
-    final summaryItems = <_SummaryItem>[
-      _SummaryItem('Sessions', '${filtered.length}', null, StatMetric.sessions),
-      _SummaryItem('Hours', formatHours(totalHours), null, StatMetric.hours),
-      _SummaryItem(
+    final summaryItems = <SummaryItem>[
+      SummaryItem('Sessions', '${filtered.length}', null, StatMetric.sessions),
+      SummaryItem('Hours', formatHours(totalHours), null, StatMetric.hours),
+      SummaryItem(
         'Win Rate',
-        '$rateSign$sym${hourlyRate.abs().toStringAsFixed(0)}/hr',
+        '${formatPLWithCurrency(hourlyRate, displayCurrency)}/hr',
         rateColor,
         StatMetric.winRate,
       ),
-      _SummaryItem(
+      SummaryItem(
         'Total Profit',
         formatPLWithCurrency(totalPL, displayCurrency),
         plColor,
         StatMetric.profit,
       ),
-      _SummaryItem(
-          'Buy-In', formatAmount(totalBuyIn, displayCurrency), null,
-          StatMetric.buyIn),
+      // AVERAGE buy-in per session — how much the user actually puts on the
+      // table, not a volume total. ROI denominators stay pooled totals.
+      if (filtered.isNotEmpty)
+        SummaryItem(
+            'Avg Buy-In',
+            formatAmount(totalBuyIn / filtered.length, displayCurrency),
+            null,
+            StatMetric.buyIn),
       if (hasExpenses)
-        _SummaryItem('Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}',
+        SummaryItem('Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}',
             null, StatMetric.expenses),
       if (hasExpenses)
-        _SummaryItem(
+        SummaryItem(
           'Net Profit',
           formatPLWithCurrency(netAfterExpenses, displayCurrency),
           netAfterExpenses >= 0 ? Colors.green : Colors.red,
           StatMetric.netAfterExpenses,
         ),
       if (bb100 != null)
-        _SummaryItem(
+        SummaryItem(
           'BB/100',
           formatBB100(bb100),
           bb100 >= 0 ? Colors.green : Colors.red,
           StatMetric.bb100,
         ),
+      // Standard-deviation rows: session-estimated (Malmuth), info dialog
+      // instead of a trend chart (an SD time series isn't meaningful).
+      if (showingCash && cashSessions.isNotEmpty)
+        SummaryItem(
+          'Std Dev (BB/100)',
+          bb100StdDev == null ? '—' : formatWholeNum(bb100StdDev),
+          null,
+          null,
+          kCashSdInfo,
+        ),
+      if (showingCash && cashSessions.isNotEmpty)
+        SummaryItem(
+          'Std Dev ($sym/hr)',
+          hourlyStdDev == null
+              ? '—'
+              : formatAmount(hourlyStdDev, displayCurrency),
+          null,
+          null,
+          'How much a typical hour deviates from your average hourly rate, '
+          'in $displayCurrency. Estimated from per-session results and '
+          'durations.\n\nShown once you have at least 10 cash sessions with '
+          'a recorded duration.',
+        ),
       if (tournamentROI != null)
-        _SummaryItem(
+        SummaryItem(
           'Tourn. ROI',
           formatROI(tournamentROI),
           tournamentROI >= 0 ? Colors.green : Colors.red,
           StatMetric.roi,
         ),
       if (itmPct != null)
-        _SummaryItem('ITM', '$itmPct%', null, StatMetric.itmPct),
+        SummaryItem('ITM', '$itmPct%', null, StatMetric.itmPct),
+      if (showingTournaments && hasTournaments)
+        SummaryItem(
+          'Std Dev (buy-ins)',
+          tournStdDev == null ? '—' : tournStdDev.toStringAsFixed(1),
+          null,
+          null,
+          kTournSdInfo,
+        ),
     ];
 
-    return CustomScrollView(
-      slivers: [
-        // ── Game-type filter pills (always shown) ─────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 4),
-            child: GameTypeFilterChips(
-              selected: _effectiveTypes,
-              onChanged: (v) => setState(() => _gameTypes = v),
+    return AnalyticsData._(
+      sessions: sessions,
+      filtered: filtered,
+      displayCurrency: displayCurrency,
+      sym: sym,
+      showingCash: showingCash,
+      showingTournaments: showingTournaments,
+      hasLiveInView: hasLiveInView,
+      hasOnlineInView: hasOnlineInView,
+      cashSessions: cashSessions,
+      tSessions: tSessions,
+      summaryItems: summaryItems,
+      activeFilters: [...filter.labels(), displayCurrency],
+      cashBB100: bb100,
+      cashBB100StdDev: bb100StdDev,
+      cashHourlyStdDev: hourlyStdDev,
+      tournStdDevBuyIns: tournStdDev,
+      tournROI: tournamentROI,
+      tournItmPct: itmPct,
+    );
+  }
+}
+
+// ─── Factor configuration (one table drives the tab list AND the pages) ───────
+
+/// One "What's Affecting Your Win Rate" breakdown, as data: the Stats screen
+/// builds a TAB per factor from this list, so adding a factor here adds its
+/// tab automatically.
+class AnalyticsFactor {
+  final String tabLabel; // short — the Tab text
+  final String title; // the card title
+  final List<SessionModel> sessions;
+  final String Function(SessionModel) keyFn;
+  final List<String>? orderedKeys;
+  final bool isTournament;
+  final int Function(String, String)? naturalCompare;
+
+  const AnalyticsFactor({
+    required this.tabLabel,
+    required this.title,
+    required this.sessions,
+    required this.keyFn,
+    this.orderedKeys,
+    this.isTournament = false,
+    this.naturalCompare,
+  });
+}
+
+/// The available factors for the current data — each entry mirrors the old
+/// single-scroll card's gate condition exactly.
+List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
+  final filtered = d.filtered;
+  if (filtered.isEmpty) return const [];
+  final mixedTournament = d.showingTournaments && !d.showingCash;
+  return [
+    if (d.showingCash)
+      AnalyticsFactor(
+        tabLabel: 'Stakes',
+        title: 'By Stakes',
+        sessions: d.cashSessions,
+        keyFn: (s) => s.stakes,
+        // Natural order for stakes = by blind size, small→big; unparseable
+        // stakes sort last, then alphabetical.
+        naturalCompare: (a, b) {
+          final ba = parseBBFromStakes(a);
+          final bb = parseBBFromStakes(b);
+          if (ba != null && bb != null) {
+            final c = ba.compareTo(bb);
+            return c != 0 ? c : a.compareTo(b);
+          }
+          if (ba != null) return -1;
+          if (bb != null) return 1;
+          return a.compareTo(b);
+        },
+      ),
+    if (d.showingTournaments)
+      AnalyticsFactor(
+        tabLabel: 'Buy-ins',
+        title: 'By Buy-in Level',
+        sessions: d.tSessions,
+        keyFn: (s) => tournamentBuyInBucket(s.buyIn),
+        orderedKeys: const [
+          '< \$50',
+          '\$50–\$100',
+          '\$100–\$200',
+          '\$200–\$500',
+          '> \$500'
+        ],
+        isTournament: true,
+      ),
+    // Field size — only when enough sessions have entrant counts.
+    if (d.showingTournaments &&
+        d.tSessions.where((s) => (s.totalEntrants ?? 0) > 0).length >= 2)
+      AnalyticsFactor(
+        tabLabel: 'Field Size',
+        title: 'By Field Size',
+        sessions:
+            d.tSessions.where((s) => (s.totalEntrants ?? 0) > 0).toList(),
+        keyFn: (s) => fieldSizeBucket(s.totalEntrants),
+        orderedKeys: const [
+          'Small (<50)',
+          'Medium (50–200)',
+          'Large (200–500)',
+          'Massive (500+)',
+        ],
+        isTournament: true,
+      ),
+    if (d.showingCash && d.showingTournaments)
+      AnalyticsFactor(
+        tabLabel: 'Game Type',
+        title: 'By Game Type',
+        sessions: filtered,
+        keyFn: (s) => gameTypeLabel(s.gameType),
+      ),
+    AnalyticsFactor(
+      tabLabel: 'Day',
+      title: 'By Day of Week',
+      sessions: filtered,
+      keyFn: (s) => dayOfWeekLabel(s.date),
+      orderedKeys: const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      isTournament: mixedTournament,
+    ),
+    // Time of Day — cash only; less actionable for tournaments.
+    if (d.showingCash)
+      AnalyticsFactor(
+        tabLabel: 'Time',
+        title: 'By Time of Day',
+        sessions: d.cashSessions,
+        keyFn: (s) => timeOfDayBucket(s.startTime),
+      ),
+    // Session Length — cash only (tournament duration = finish depth).
+    if (d.showingCash)
+      AnalyticsFactor(
+        tabLabel: 'Length',
+        title: 'By Session Length',
+        sessions: d.cashSessions,
+        keyFn: (s) => sessionLengthBucket(s.durationMinutes),
+        orderedKeys: const [
+          '< 2 hours', '2–4 hours', '4–6 hours', '> 6 hours' //
+        ],
+      ),
+    // Table Quality — cash only, when any session is rated.
+    if (d.showingCash && d.cashSessions.any((s) => s.tableQuality != null))
+      AnalyticsFactor(
+        tabLabel: 'Table',
+        title: 'By Table Quality',
+        sessions:
+            d.cashSessions.where((s) => s.tableQuality != null).toList(),
+        keyFn: (s) =>
+            '${s.tableQuality}★ ${tableQualityLabel(s.tableQuality)}',
+        orderedKeys:
+            List.generate(5, (i) => '${i + 1}★ ${tableQualityLabel(i + 1)}'),
+      ),
+    if (_hasMultipleLocations(filtered))
+      AnalyticsFactor(
+        tabLabel: 'Location',
+        title: 'By Location',
+        sessions:
+            filtered.where((s) => s.location?.isNotEmpty == true).toList(),
+        keyFn: (s) => s.location!,
+        isTournament: mixedTournament,
+      ),
+    if (d.hasLiveInView && d.hasOnlineInView)
+      AnalyticsFactor(
+        tabLabel: 'Live/Online',
+        title: 'Live vs Online',
+        sessions: filtered,
+        keyFn: (s) => isOnlineSession(s.location) ? 'Online' : 'Live',
+        orderedKeys: const ['Live', 'Online'],
+        isTournament: mixedTournament,
+      ),
+  ];
+}
+
+// ─── Summary tab ──────────────────────────────────────────────────────────────
+
+/// First Stats tab: Live-now card, the metric summary (side-by-side
+/// Cash|Tournament comparison when both types are in view), the AI coaching
+/// CTA, and the first-session empty state.
+///
+/// In-body game-type shortcuts: the comparison card's Cash/Tournament column
+/// HEADERS narrow the whole screen to that type (via [onGameTypesChanged]),
+/// and a dismissible chip appears in any single-type view to jump back to
+/// combined.
+class AnalyticsSummaryTab extends ConsumerWidget {
+  final AnalyticsData data;
+  final Set<String> gameTypes; // the shared filter's current game-type set
+  final ValueChanged<Set<String>> onGameTypesChanged;
+  const AnalyticsSummaryTab({
+    super.key,
+    required this.data,
+    required this.gameTypes,
+    required this.onGameTypesChanged,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final d = data;
+    final filtered = d.filtered;
+    final typeLabel = gameTypeChipLabel(gameTypes);
+    return ListView(
+      padding: statsTabPadding(context),
+      children: [
+        const LiveSessionCard(),
+        // Back-to-combined affordance whenever a game-type filter narrows
+        // the view (set here via a column header OR via the sheet).
+        if (typeLabel != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InputChip(
+                avatar: const Icon(Icons.filter_alt_outlined, size: 18),
+                label: Text('$typeLabel only'),
+                deleteButtonTooltipMessage: 'Show all game types',
+                onDeleted: () => onGameTypesChanged(const {}),
+              ),
             ),
           ),
-        ),
+        // (The converted-totals marker lives in the Stats AppBar — an
+        // in-body line here cost a full row of screen space.)
+        // Combined view: cash and tournament metrics don't blend meaningfully
+        // (a $/hr pooled across both answers no real question) — with both
+        // types in view, show the side-by-side per-type comparison instead of
+        // a blended list. (The old game-type pills + "Combined" line were
+        // redundant with this card and were removed.)
+        if (d.showingCash && d.showingTournaments)
+          _TypeComparisonCard(
+            data: d,
+            onSelectType: (t) => onGameTypesChanged(t),
+          )
+        else
+          _MetricSummaryList(
+            items: d.summaryItems,
+            sessions: filtered,
+            displayCurrency: d.displayCurrency,
+            activeFilters: d.activeFilters,
+          ),
 
-        // ── Metric summary (always) + data-dependent breakdowns ───────────
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 88),
-          sliver: SliverList.list(
+        // AI coaching CTA (latest session) or the first-session empty state —
+        // both carried over from the retired Overview tab.
+        const SizedBox(height: 20),
+        if (d.sessions.isNotEmpty)
+          AiCoachingCard(session: mostRecentSession(d.sessions)!)
+        else ...[
+          Text(
+            'No sessions yet — log your first to fill these in.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // One tappable marker for the whole summary when totals span
-              // multiple currencies (they're FX-converted to displayCurrency).
-              if (isMultiCurrency(filtered))
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ApproxCurrencyChip(currency: displayCurrency),
-                ),
-              _MetricSummaryList(
-                items: summaryItems,
-                sessions: filtered,
-                displayCurrency: displayCurrency,
-                activeFilters: _activeFilterLabels(displayCurrency),
+              FilledButton.icon(
+                onPressed: () => showLogSessionChooser(context, ref),
+                icon: const Icon(Icons.add),
+                label: const Text('Log Session'),
               ),
-              if (filtered.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 32),
-                  child: Center(
-                    child: Text(
-                      // Distinguish "you have no data yet" from "your filters
-                      // hid everything" — otherwise an established user who
-                      // filters to an empty range is wrongly told to log a
-                      // session.
-                      widget.sessions.isEmpty
-                          ? 'Log a session to unlock breakdowns and trends.'
-                          : 'No sessions match these filters.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                    ),
-                  ),
-                )
-              else ...[
-                const SizedBox(height: 20),
-
-                // Section header changes based on the primary game type in view.
-                _sectionHeader(
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () => Navigator.push(
                   context,
-                  (showingTournaments && !showingCash)
-                      ? "What's Affecting Your ROI"
-                      : "What's Affecting Your Win Rate",
+                  MaterialPageRoute(
+                      builder: (_) => const ImportSourceScreen()),
                 ),
-                Text(
-                  (showingTournaments && !showingCash)
-                      ? 'entries  ·  ROI  ·  Profit'
-                      : 'hrs  ·  $sym/hr  ·  Profit',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                ),
-                const SizedBox(height: 8),
-
-                // ── Cash-only insight cards ──────────────────────────────────
-                if (showingCash) ...[
-                  _InsightCard(
-                    title: 'By Stakes',
-                    sessions: filtered
-                        .where((s) => s.gameType == 'cash')
-                        .toList(),
-                    keyFn: (s) => s.stakes,
-                    displayCurrency: displayCurrency,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                // ── Tournament insight cards ─────────────────────────────────
-                if (showingTournaments) ...[
-                  _InsightCard(
-                    title: 'By Buy-in Level',
-                    sessions: filtered
-                        .where((s) => isTournamentType(s.gameType))
-                        .toList(),
-                    keyFn: (s) => tournamentBuyInBucket(s.buyIn),
-                    orderedKeys: const [
-                      '< \$50',
-                      '\$50–\$100',
-                      '\$100–\$200',
-                      '\$200–\$500',
-                      '> \$500'
-                    ],
-                    displayCurrency: displayCurrency,
-                    isTournament: true,
-                  ),
-                  const SizedBox(height: 8),
-                  // Field size — only shown when enough sessions have entrant counts
-                  if (filtered
-                          .where((s) =>
-                              isTournamentType(s.gameType) &&
-                              (s.totalEntrants ?? 0) > 0)
-                          .length >=
-                      2) ...[
-                    _InsightCard(
-                      title: 'By Field Size',
-                      sessions: filtered
-                          .where((s) =>
-                              isTournamentType(s.gameType) &&
-                              (s.totalEntrants ?? 0) > 0)
-                          .toList(),
-                      keyFn: (s) => fieldSizeBucket(s.totalEntrants),
-                      orderedKeys: const [
-                        'Small (<50)',
-                        'Medium (50–200)',
-                        'Large (200–500)',
-                        'Massive (500+)',
-                      ],
-                      displayCurrency: displayCurrency,
-                      isTournament: true,
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ],
-
-                // ── Mixed game-type card (shown when both are in view) ───────
-                if (showingCash && showingTournaments) ...[
-                  _InsightCard(
-                    title: 'By Game Type',
-                    sessions: filtered,
-                    keyFn: (s) => gameTypeLabel(s.gameType),
-                    displayCurrency: displayCurrency,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                // ── Shared insight cards ─────────────────────────────────────
-                _InsightCard(
-                  title: 'By Day of Week',
-                  sessions: filtered,
-                  keyFn: (s) => dayOfWeekLabel(s.date),
-                  orderedKeys: const [
-                    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
-                  ],
-                  displayCurrency: displayCurrency,
-                  isTournament: showingTournaments && !showingCash,
-                ),
-                const SizedBox(height: 8),
-
-                // Time of Day — cash or mixed only; less actionable for tournaments
-                if (showingCash) ...[
-                  _InsightCard(
-                    title: 'By Time of Day',
-                    sessions: filtered
-                        .where((s) => s.gameType == 'cash')
-                        .toList(),
-                    keyFn: (s) => timeOfDayBucket(s.startTime),
-                    displayCurrency: displayCurrency,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                // Session Length — cash only (for tournaments duration = finish depth, not actionable input)
-                if (showingCash) ...[
-                  _InsightCard(
-                    title: 'By Session Length',
-                    sessions: filtered
-                        .where((s) => s.gameType == 'cash')
-                        .toList(),
-                    keyFn: (s) => sessionLengthBucket(s.durationMinutes),
-                    orderedKeys: const [
-                      '< 2 hours', '2–4 hours', '4–6 hours', '> 6 hours'
-                    ],
-                    displayCurrency: displayCurrency,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                // Table Quality — cash only
-                if (showingCash &&
-                    filtered.any((s) =>
-                        s.tableQuality != null &&
-                        s.gameType == 'cash')) ...[
-                  _InsightCard(
-                    title: 'By Table Quality',
-                    sessions: filtered
-                        .where((s) =>
-                            s.tableQuality != null &&
-                            s.gameType == 'cash')
-                        .toList(),
-                    keyFn: (s) =>
-                        '${s.tableQuality}★ ${tableQualityLabel(s.tableQuality)}',
-                    orderedKeys: List.generate(
-                        5, (i) => '${i + 1}★ ${tableQualityLabel(i + 1)}'),
-                    displayCurrency: displayCurrency,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                if (_hasMultipleLocations(filtered)) ...[
-                  _InsightCard(
-                    title: 'By Location',
-                    sessions: filtered
-                        .where((s) => s.location?.isNotEmpty == true)
-                        .toList(),
-                    keyFn: (s) => s.location!,
-                    displayCurrency: displayCurrency,
-                    isTournament: showingTournaments && !showingCash,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                if (hasLiveInView && hasOnlineInView) ...[
-                  _InsightCard(
-                    title: 'Live vs Online',
-                    sessions: filtered,
-                    keyFn: (s) =>
-                        isOnlineSession(s.location) ? 'Online' : 'Live',
-                    orderedKeys: const ['Live', 'Online'],
-                    displayCurrency: displayCurrency,
-                    isTournament: showingTournaments && !showingCash,
-                  ),
-                ],
-
-                // ── Recommendations (the takeaway drawn from the breakdowns
-                //    above — lives at the bottom as a conclusion). ──────────
-                const SizedBox(height: 20),
-                _sectionHeader(context, 'Recommendations'),
-                const SizedBox(height: 8),
-                if (showingCash && showingTournaments) ...[
-                  _RecommendationsCard(
-                    sessions:
-                        filtered.where((s) => s.gameType == 'cash').toList(),
-                    gameLabel: 'cash',
-                    displayCurrency: displayCurrency,
-                  ),
-                  const SizedBox(height: 8),
-                  _RecommendationsCard(
-                    sessions: filtered
-                        .where((s) => isTournamentType(s.gameType))
-                        .toList(),
-                    gameLabel: 'tournament',
-                    displayCurrency: displayCurrency,
-                  ),
-                ] else if (showingCash)
-                  _RecommendationsCard(
-                    sessions:
-                        filtered.where((s) => s.gameType == 'cash').toList(),
-                    gameLabel: 'cash',
-                    displayCurrency: displayCurrency,
-                  )
-                else if (showingTournaments)
-                  _RecommendationsCard(
-                    sessions: filtered
-                        .where((s) => isTournamentType(s.gameType))
-                        .toList(),
-                    gameLabel: 'tournament',
-                    displayCurrency: displayCurrency,
-                  ),
-              ],
+                icon: const Icon(Icons.upload_file_outlined),
+                label: const Text('Import'),
+              ),
             ],
           ),
+        ],
+        // "Filters hid everything" (distinct from "no data yet").
+        if (d.sessions.isNotEmpty && filtered.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                'No sessions match these filters.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─── Factor tab ───────────────────────────────────────────────────────────────
+
+/// One factor's page: legend + sort menu row, then the breakdown card.
+class AnalyticsFactorTab extends StatelessWidget {
+  final AnalyticsData data;
+  final AnalyticsFactor factor;
+  final InsightSort sort;
+  final ValueChanged<InsightSort> onSortChanged;
+
+  const AnalyticsFactorTab({
+    super.key,
+    required this.data,
+    required this.factor,
+    required this.sort,
+    required this.onSortChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = factor.isTournament;
+    return ListView(
+      padding: statsTabPadding(context, top: 8),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                // Legend for the card rows: count/hours · rate · profit.
+                t ? '#  ·  ROI  ·  Profit' : 'hrs  ·  ${data.sym}/hr  ·  Profit',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.outline),
+              ),
+            ),
+            PopupMenuButton<InsightSort>(
+              icon: Icon(Icons.sort, color: theme.colorScheme.onSurfaceVariant),
+              tooltip: 'Sort',
+              initialValue: sort,
+              onSelected: onSortChanged,
+              itemBuilder: (_) => [
+                CheckedPopupMenuItem(
+                  value: InsightSort.rate,
+                  checked: sort == InsightSort.rate,
+                  child: Text(t ? 'ROI' : 'Win rate'),
+                ),
+                CheckedPopupMenuItem(
+                  value: InsightSort.profit,
+                  checked: sort == InsightSort.profit,
+                  child: const Text('Profit'),
+                ),
+                CheckedPopupMenuItem(
+                  value: InsightSort.volume,
+                  checked: sort == InsightSort.volume,
+                  child: Text(t ? 'Volume' : 'Hours'),
+                ),
+                CheckedPopupMenuItem(
+                  value: InsightSort.natural,
+                  checked: sort == InsightSort.natural,
+                  child: const Text('Natural order'),
+                ),
+              ],
+            ),
+          ],
+        ),
+        _InsightCard(
+          title: factor.title,
+          sessions: factor.sessions,
+          keyFn: factor.keyFn,
+          orderedKeys: factor.orderedKeys,
+          displayCurrency: data.displayCurrency,
+          isTournament: factor.isTournament,
+          sort: sort,
+          naturalCompare: factor.naturalCompare,
         ),
       ],
     );
   }
+}
 
-  bool _hasMultipleLocations(List<SessionModel> sessions) {
-    final locs = sessions
-        .map((s) => s.location)
-        .whereType<String>()
-        .where((l) => l.isNotEmpty)
-        .toSet();
-    return locs.length > 1;
+// ─── Tips tab ─────────────────────────────────────────────────────────────────
+
+/// The Recommendations cards — the takeaway drawn from the factor breakdowns.
+class AnalyticsTipsTab extends StatelessWidget {
+  final AnalyticsData data;
+  const AnalyticsTipsTab({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final d = data;
+    final filtered = d.filtered;
+    return ListView(
+      padding: statsTabPadding(context),
+      children: [
+        if (d.showingCash && d.showingTournaments) ...[
+          _RecommendationsCard(
+            sessions: d.cashSessions,
+            gameLabel: 'cash',
+            displayCurrency: d.displayCurrency,
+          ),
+          const SizedBox(height: 8),
+          _RecommendationsCard(
+            sessions: d.tSessions,
+            gameLabel: 'tournament',
+            displayCurrency: d.displayCurrency,
+          ),
+        ] else if (d.showingCash)
+          _RecommendationsCard(
+            sessions: d.cashSessions,
+            gameLabel: 'cash',
+            displayCurrency: d.displayCurrency,
+          )
+        else if (d.showingTournaments)
+          _RecommendationsCard(
+            sessions: d.tSessions,
+            gameLabel: 'tournament',
+            displayCurrency: d.displayCurrency,
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                filtered.isEmpty && d.sessions.isEmpty
+                    ? 'Log a few sessions to unlock recommendations.'
+                    : 'No sessions match these filters.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
-  Widget _sectionHeader(BuildContext context, String title) => Text(
-        title,
-        style: Theme.of(context)
-            .textTheme
-            .titleMedium
-            ?.copyWith(fontWeight: FontWeight.bold),
-      );
+}
+
+bool _hasMultipleLocations(List<SessionModel> sessions) {
+  final locs = sessions
+      .map((s) => s.location)
+      .whereType<String>()
+      .where((l) => l.isNotEmpty)
+      .toSet();
+  return locs.length > 1;
 }
 
 // ─── Metric summary (one per row, tappable → full-screen trend chart) ─────────
 
-class _SummaryItem {
+/// User-selectable ordering for the insight breakdown cards. One global
+/// choice (held by the Stats screen) applies to every factor tab. PUBLIC —
+/// the Stats screen owns the state; the factor tabs render the menu.
+enum InsightSort {
+  rate, // $/hr (cash cards) or ROI (tournament cards) — the old fixed order
+  profit, // total profit desc
+  volume, // hours (cash) or tournament count desc
+  natural, // the category's own order: declared orderedKeys (days Mon–Sun,
+  // buy-in buckets), stakes by blind size, else A–Z
+}
+
+class SummaryItem {
   final String label;
   final String value;
   final Color? color;
   final StatMetric? metric;
-  const _SummaryItem(this.label, this.value, [this.color, this.metric]);
+
+  /// Explainer for metrics with no trend chart (e.g. the SD rows): tapping
+  /// the row shows this text in a dialog instead of pushing a chart.
+  final String? info;
+  const SummaryItem(this.label, this.value,
+      [this.color, this.metric, this.info]);
 }
 
 /// The Analytics summary, rendered one metric per row. Each row is a CTA that
 /// opens the metric's full-screen trend chart (mirrors the Overview tab).
 class _MetricSummaryList extends StatelessWidget {
-  final List<_SummaryItem> items;
+  final List<SummaryItem> items;
   final List<SessionModel> sessions;
   final String displayCurrency;
   final List<String> activeFilters;
@@ -508,7 +732,7 @@ class _MetricSummaryList extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context, _SummaryItem item) {
+  Widget _row(BuildContext context, SummaryItem item) {
     final theme = Theme.of(context);
     final body = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -528,12 +752,35 @@ class _MetricSummaryList extends StatelessWidget {
             const SizedBox(width: 6),
             Icon(Icons.chevron_right,
                 color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+          ] else if (item.info != null) ...[
+            const SizedBox(width: 6),
+            Icon(Icons.info_outline,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
           ],
         ],
       ),
     );
 
-    if (item.metric == null) return body;
+    if (item.metric == null) {
+      final info = item.info;
+      if (info == null) return body;
+      return InkWell(
+        onTap: () => showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(item.label),
+            content: Text(info),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Got it')),
+            ],
+          ),
+        ),
+        child: body,
+      );
+    }
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -547,6 +794,285 @@ class _MetricSummaryList extends StatelessWidget {
         ),
       ),
       child: body,
+    );
+  }
+}
+
+// ─── Combined Cash + Tournament view ──────────────────────────────────────────
+
+/// Side-by-side Cash | Tournament metric comparison for the combined view.
+/// Each VALUE CELL is tappable and opens that metric's trend chart scoped to
+/// its game type ([MetricChartScreen] takes pre-filtered sessions — there is
+/// no game-type filter on the chart itself, so the scoping happens here and
+/// is disclosed via the chart's filter chips).
+class _TypeComparisonCard extends StatelessWidget {
+  final AnalyticsData data;
+
+  /// Tapping a column HEADER narrows the Stats screen to that game type
+  /// ({'cash'} / {'tournament'}) — the headers render in the primary color
+  /// as the tappable affordance.
+  final ValueChanged<Set<String>> onSelectType;
+
+  const _TypeComparisonCard({
+    required this.data,
+    required this.onSelectType,
+  });
+
+  void _open(BuildContext context, StatMetric metric,
+      List<SessionModel> sessions, String typeLabel) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MetricChartScreen(
+          metric: metric,
+          sessions: sessions,
+          displayCurrency: data.displayCurrency,
+          activeFilters: [...data.activeFilters, typeLabel],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cash = data.cashSessions;
+    final tournaments = data.tSessions;
+    final displayCurrency = data.displayCurrency;
+    double toD(double amount, String from) =>
+        convertCurrency(amount, from, displayCurrency);
+    double pl(List<SessionModel> l) =>
+        l.fold(0.0, (a, s) => a + toD(s.profitLoss, s.currency));
+    double hrs(List<SessionModel> l) =>
+        l.fold(0, (a, s) => a + s.durationMinutes) / 60.0;
+    double avgBuyIn(List<SessionModel> l) => l.isEmpty
+        ? 0
+        : l.fold(0.0, (a, s) => a + toD(s.buyIn, s.currency)) / l.length;
+
+    final cashPL = pl(cash);
+    final cashHours = hrs(cash);
+    final cashRate = cashHours > 0 ? cashPL / cashHours : 0.0;
+    final tPL = pl(tournaments);
+
+    // Derived metrics (BB/100, ROI, ITM%, std devs) come from AnalyticsData —
+    // ONE implementation; this card only does the cheap per-type folds.
+    final bb100 = data.cashBB100;
+    final tROI = data.tournROI ?? 0.0;
+    final itm = data.tournItmPct ?? 0;
+    final bb100StdDev = data.cashBB100StdDev;
+    final hourlyStdDev = data.cashHourlyStdDev;
+    final tournStdDev = data.tournStdDevBuyIns;
+
+    // Per-type extras — everything the summary shows lives IN the two
+    // columns (nothing renders below the card in combined view).
+    double exp(List<SessionModel> l) =>
+        l.fold(0.0, (a, s) => a + toD(s.totalExpenses, s.currency));
+    final cashExp = exp(cash);
+    final tExp = exp(tournaments);
+    final hasExpenses = cashExp > 0 || tExp > 0;
+    final sym = currencySymbol(displayCurrency);
+    // The $/hr SD has no cell of its own here — fold it into the cash SD
+    // dialog so the combined view loses no information vs the type lists.
+    final cashSdInfo = hourlyStdDev == null
+        ? kCashSdInfo
+        : 'In money terms: about '
+            '${formatAmount(hourlyStdDev, displayCurrency)} per hour.'
+            '\n\n$kCashSdInfo';
+
+    Color? signColor(double v) => v >= 0 ? Colors.green : Colors.red;
+
+    Widget header(String t, Set<String> types) => Expanded(
+          flex: 3,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => onSelectType(types),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(t,
+                  textAlign: TextAlign.right,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ),
+        );
+
+    Widget cell(String text, StatMetric metric, List<SessionModel> sessions,
+        String typeLabel,
+        {Color? color}) {
+      return Expanded(
+        flex: 3,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: sessions.isEmpty
+              ? null
+              : () => _open(context, metric, sessions, typeLabel),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(text,
+                  maxLines: 1,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold, color: color)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget label(String t) => Expanded(
+          flex: 2,
+          child: Text(t,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        );
+
+    // Info-dialog cell for metrics with no trend chart (the SD cells) —
+    // mirrors _MetricSummaryList's info rows.
+    Widget infoCell(String text, String title, String info) {
+      return Expanded(
+        flex: 3,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(title),
+              content: Text(info),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Got it')),
+              ],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(text,
+                  maxLines: 1,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget row(String name, Widget cashCell, Widget tournCell) => Row(
+          children: [label(name), cashCell, tournCell],
+        );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Column(
+          children: [
+            Row(children: [
+              const Expanded(flex: 2, child: SizedBox()),
+              header('Cash', const {'cash'}),
+              header('Tournament', const {'tournament'}),
+            ]),
+            const SizedBox(height: 4),
+            row(
+              'Profit',
+              cell(formatPL(cashPL, ''), StatMetric.profit, cash, 'Cash',
+                  color: signColor(cashPL)),
+              cell(formatPL(tPL, ''), StatMetric.profit, tournaments,
+                  'Tournaments',
+                  color: signColor(tPL)),
+            ),
+            row(
+              'Rate',
+              cell(
+                  '${formatPLWithCurrency(cashRate, displayCurrency)}/hr',
+                  StatMetric.winRate,
+                  cash,
+                  'Cash',
+                  color: signColor(cashRate)),
+              cell('${formatROI(tROI)} ROI', StatMetric.roi, tournaments,
+                  'Tournaments',
+                  color: signColor(tROI)),
+            ),
+            // Session COUNT for both types (the hours-only Volume row hid
+            // the cash count in combined view). Tournaments deliberately
+            // repeat the number in Volume below.
+            row(
+              'Sessions',
+              cell('${cash.length}', StatMetric.sessions, cash, 'Cash'),
+              cell('${tournaments.length}', StatMetric.sessions, tournaments,
+                  'Tournaments'),
+            ),
+            row(
+              'Volume',
+              cell(formatHours(cashHours), StatMetric.hours, cash, 'Cash'),
+              // Hours for BOTH types — the Sessions row above already
+              // carries the tournament count (device-review call).
+              cell(formatHours(hrs(tournaments)), StatMetric.hours,
+                  tournaments, 'Tournaments'),
+            ),
+            row(
+              'Avg Buy-In',
+              cell(formatAmount(avgBuyIn(cash), displayCurrency),
+                  StatMetric.buyIn, cash, 'Cash'),
+              cell(formatAmount(avgBuyIn(tournaments), displayCurrency),
+                  StatMetric.buyIn, tournaments, 'Tournaments'),
+            ),
+            row(
+              'Edge',
+              bb100 == null
+                  ? cell('—', StatMetric.bb100, const [], 'Cash')
+                  : cell('${formatBB100(bb100)} BB/100', StatMetric.bb100,
+                      cash, 'Cash',
+                      color: signColor(bb100)),
+              cell('$itm% ITM', StatMetric.itmPct, tournaments, 'Tournaments'),
+            ),
+            if (hasExpenses) ...[
+              row(
+                'Expenses',
+                cashExp > 0
+                    ? cell('-$sym${cashExp.toStringAsFixed(0)}',
+                        StatMetric.expenses, cash, 'Cash')
+                    : cell('—', StatMetric.expenses, const [], 'Cash'),
+                tExp > 0
+                    ? cell('-$sym${tExp.toStringAsFixed(0)}',
+                        StatMetric.expenses, tournaments, 'Tournaments')
+                    : cell('—', StatMetric.expenses, const [], 'Tournaments'),
+              ),
+              row(
+                'Net Profit',
+                cell(formatPL(cashPL - cashExp, ''),
+                    StatMetric.netAfterExpenses, cash, 'Cash',
+                    color: signColor(cashPL - cashExp)),
+                cell(formatPL(tPL - tExp, ''), StatMetric.netAfterExpenses,
+                    tournaments, 'Tournaments',
+                    color: signColor(tPL - tExp)),
+              ),
+            ],
+            // Std dev per type (info dialogs, no trend chart). '—' until the
+            // 10-qualifying-session threshold — the dialog explains it.
+            row(
+              'Std Dev',
+              infoCell(
+                  bb100StdDev == null
+                      ? '—'
+                      : '${formatWholeNum(bb100StdDev)} BB/100',
+                  'Cash Std Dev (BB/100)',
+                  cashSdInfo),
+              infoCell(
+                  tournStdDev == null
+                      ? '—'
+                      : '${tournStdDev.toStringAsFixed(1)} buy-ins',
+                  'Tournament Std Dev (buy-ins)',
+                  kTournSdInfo),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -595,6 +1121,11 @@ class _InsightCard extends StatelessWidget {
   final List<String>? orderedKeys;
   final String displayCurrency;
   final bool isTournament;
+  final InsightSort sort;
+
+  /// Category order for [InsightSort.natural] when there is no declared
+  /// [orderedKeys] (e.g. By Stakes sorts by blind size). Falls back to A–Z.
+  final int Function(String a, String b)? naturalCompare;
 
   const _InsightCard({
     required this.title,
@@ -603,6 +1134,8 @@ class _InsightCard extends StatelessWidget {
     required this.displayCurrency,
     this.orderedKeys,
     this.isTournament = false,
+    this.sort = InsightSort.rate,
+    this.naturalCompare,
   });
 
   @override
@@ -628,10 +1161,29 @@ class _InsightCard extends StatelessWidget {
       keys = stats.keys.toList();
     }
 
-    if (isTournament) {
-      keys.sort((a, b) => stats[b]!.roi.compareTo(stats[a]!.roi));
-    } else {
-      keys.sort((a, b) => stats[b]!.hourlyRate.compareTo(stats[a]!.hourlyRate));
+    switch (sort) {
+      case InsightSort.rate:
+        if (isTournament) {
+          keys.sort((a, b) => stats[b]!.roi.compareTo(stats[a]!.roi));
+        } else {
+          keys.sort(
+              (a, b) => stats[b]!.hourlyRate.compareTo(stats[a]!.hourlyRate));
+        }
+      case InsightSort.profit:
+        keys.sort((a, b) => stats[b]!.totalPL.compareTo(stats[a]!.totalPL));
+      case InsightSort.volume:
+        if (isTournament) {
+          keys.sort((a, b) => stats[b]!.count.compareTo(stats[a]!.count));
+        } else {
+          keys.sort(
+              (a, b) => stats[b]!.totalHours.compareTo(stats[a]!.totalHours));
+        }
+      case InsightSort.natural:
+        // Declared orderedKeys already ordered `keys` above — keep it.
+        if (orderedKeys == null) {
+          final cmp = naturalCompare;
+          keys.sort(cmp ?? (a, b) => a.compareTo(b));
+        }
     }
 
     final maxAbsValue = isTournament
@@ -1112,6 +1664,8 @@ class StatsFilterSheet extends StatefulWidget {
   final bool hasMultipleCountries;
   final bool hasOnline;
   final bool hasLive;
+  final bool hasCash;
+  final bool hasTournaments;
   final List<String> allLocations;
   final ValueChanged<StatsFilter> onApply;
   final VoidCallback onReset;
@@ -1124,6 +1678,8 @@ class StatsFilterSheet extends StatefulWidget {
     required this.hasMultipleCountries,
     required this.hasOnline,
     required this.hasLive,
+    required this.hasCash,
+    required this.hasTournaments,
     required this.allLocations,
     required this.onApply,
     required this.onReset,
@@ -1134,6 +1690,7 @@ class StatsFilterSheet extends StatefulWidget {
 }
 
 class _StatsFilterSheetState extends State<StatsFilterSheet> {
+  late Set<String> _gameTypes;
   late String _currency;
   late Set<String> _country;
   late String? _venue;
@@ -1144,6 +1701,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
   @override
   void initState() {
     super.initState();
+    _gameTypes = {...widget.filter.gameTypes};
     _currency = widget.filter.displayCurrency ?? widget.effectiveCurrency;
     _country = {...widget.filter.country};
     _venue = widget.filter.venue;
@@ -1225,6 +1783,34 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
             ),
             Text('Display Options', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
+
+            // ── Game Type — both types exist, OR a game-type filter is
+            // already set (else a lingering filter over vanished data blanks
+            // every tab with no visible control to clear it) ─────────────────
+            if ((widget.hasCash && widget.hasTournaments) ||
+                _gameTypes.isNotEmpty)
+              _section(
+                title: 'Game Type',
+                summary: gameTypeChipLabel(_gameTypes) ?? 'All game types',
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final entry in [
+                        (const <String>{}, 'All Games'),
+                        (const {'cash'}, 'Cash'),
+                        (const {'tournament'}, 'Tournament'),
+                      ])
+                        ChoiceChip(
+                          label: Text(entry.$2),
+                          selected: setEquals(_gameTypes, entry.$1),
+                          onSelected: (_) =>
+                              setState(() => _gameTypes = entry.$1),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
 
             // ── Date Range (presets + custom range) ─────────────────────────
             _section(
@@ -1394,6 +1980,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
                   child: FilledButton(
                     onPressed: () {
                       widget.onApply(StatsFilter(
+                        gameTypes: _gameTypes,
                         displayCurrency: _currency,
                         country: _country,
                         venue: _venue,

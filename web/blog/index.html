@@ -17,7 +17,19 @@
   <meta name="twitter:description" content="Honest, solver-grounded poker writing for live cash and tournament players.">
   <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
   <meta name="author" content="MagpiQ">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link rel="stylesheet" href="/site.css">
+  <script src="/site.js" defer></script>
 
   <script type="application/ld+json">
   {
@@ -42,8 +54,17 @@
         "url": "https://tablelab.app",
         "sameAs": ["https://magpiq.com"],
         "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
-        "logo": { "@type": "ImageObject", "url": "https://tablelab.app/icons/Icon-512.png", "width": 512, "height": 512 },
-        "contactPoint": { "@type": "ContactPoint", "email": "support@tablelab.app", "contactType": "customer support" }
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
       },
       {
         "@type": "BreadcrumbList",
@@ -65,6 +86,10 @@
       <a class="link" href="/blog/">Blog</a>
       <a class="link" href="/about">About</a>
       <a class="link" href="/privacy">Privacy</a>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
       <a class="btn btn-primary" href="/">Open App</a>
     </nav>
   </header>
@@ -100,6 +125,8 @@
         <a href="/">Open App</a>
         <a href="/blog/">Blog</a>
         <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="mailto:support@tablelab.app">Contact</a>

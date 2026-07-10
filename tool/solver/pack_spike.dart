@@ -45,7 +45,10 @@ Future<void> main(List<String> args) async {
   stdout.writeln('solving $flop @ SPR $sprVal ($sprName), river profile '
       '(dump_rounds 3), pot ${spot.pot} eff ${spot.effStack} …');
 
-  final ds = await solveToFile(spot, dumpRounds: 3, betProfile: 'river');
+  // forceJsonDump: this tool jsonDecodes the dump itself — the JSON tree is a
+  // hard requirement regardless of TLSOLVE_DUMP_FMT or its default.
+  final ds = await solveToFile(spot,
+      dumpRounds: 3, betProfile: 'river', forceJsonDump: true);
   try {
     final dumpBytes = File(ds.dumpPath).lengthSync();
     stdout.writeln('solved in ${(ds.wallMs / 1000).toStringAsFixed(0)}s · expl '

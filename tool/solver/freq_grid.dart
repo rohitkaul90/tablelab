@@ -33,6 +33,15 @@
 //   dart run tool/solver/freq_grid.dart --write     # (re)assemble the library JSON
 //                                                   #   from ALL cached scenarios
 //   TLSOLVE_SCENARIO=3bp_bb_v_btn dart run …        # solve a different scenario
+//   TLSOLVE_FLOPS=all1755 dart run …                # FULL-DENSITY flop set
+//     (rep = the 26 curated flops (default) | all1755 = every canonical
+//      suit-isomorphic flop | file:<path> = newline-separated flop list —
+//      slice a bulk run across boxes)
+//   TLSOLVE_DUMP_FMT=bin dart run …                 # TLSD binary dumps (~10×
+//     smaller, small-heap parse; json = oracle/packs; both = validation)
+//   dart run tool/solver/freq_grid.dart --compact   # fold the per-scenario
+//     .jsonl checkpoint shards into freq_grid_results.json (run before seeding
+//     a box — the launcher scp's the single results file)
 //   … --emit-pack <dir>                             # ALSO write a GTO Explorer
 //     pack per solved spot to <dir>/<scenario>/<flop>_<spr>/ (same parse pass —
 //     see explorer_pack.dart / launch/GTO_EXPLORER.md). Only NEWLY-SOLVED spots
@@ -45,9 +54,11 @@ import 'dart:io';
 import 'package:tablelab/equity/card.dart';
 import 'package:tablelab/equity/chart_keys.dart';
 
+import 'flop_enum.dart';
 import 'freq_tabulate.dart';
 import 'run_solver.dart';
 import 'solver_input.dart';
+import 'spot_sched.dart';
 
 /// One solvable scenario: a preflop range pair + the SPR regimes it's solved
 /// at. The grid solves ONE scenario per run (TLSOLVE_SCENARIO); the library
@@ -213,6 +224,42 @@ const List<String> kRepFlops = [
 List<int> flopInts(String flop) =>
     flop.split(' ').where((t) => t.isNotEmpty).map(parseCard).toList();
 
+/// The grid's flop set, selected by `TLSOLVE_FLOPS` (full-density plan WS2):
+///   `rep`         — the 26 hand-picked representative flops (default; the
+///                   shipped library's basis)
+///   `all1755`     — every canonical suit-isomorphic flop (flop_enum.dart);
+///                   full density, ~67× the spot count
+///   `file:<path>` — newline-separated "As Kd 7h" flop list (slicing a bulk
+///                   run across boxes, or a calibration subset)
+List<String> _gridFlops() {
+  final v = (Platform.environment['TLSOLVE_FLOPS'] ?? 'rep').trim();
+  if (v.isEmpty || v.toLowerCase() == 'rep') return kRepFlops;
+  if (v.toLowerCase() == 'all1755') return allIsoFlops();
+  if (v.toLowerCase().startsWith('file:')) {
+    final path = v.substring(5);
+    final lines = File(path)
+        .readAsLinesSync()
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty && !l.startsWith('#'))
+        .toList();
+    for (final l in lines) {
+      final ints = flopInts(l);
+      if (ints.length != 3 || ints.any((c) => c < 0)) {
+        throw StateError('TLSOLVE_FLOPS file $path: bad flop line "$l" '
+            '(want e.g. "As Kd 7h")');
+      }
+    }
+    if (lines.isEmpty) throw StateError('TLSOLVE_FLOPS file $path is empty');
+    return lines;
+  }
+  throw StateError('TLSOLVE_FLOPS="$v" not recognized (rep|all1755|file:<path>)');
+}
+
+String _flopSourceLabel() =>
+    (Platform.environment['TLSOLVE_FLOPS'] ?? 'rep').trim().isEmpty
+        ? 'rep'
+        : (Platform.environment['TLSOLVE_FLOPS'] ?? 'rep').trim();
+
 /// The SELECTED scenario's preflop ranges. Public so the calibration runner and
 /// pack_spike solve the SAME ranges as the full grid (no second copy to drift);
 /// throws a descriptive error on a missing preset or unknown scenario.
@@ -256,15 +303,96 @@ bool _isCached(Map<String, dynamic> results, String flop, String sprName) =>
     (kScenario == 'srp_late_v_bb' &&
         results.containsKey(_legacySpotKey(flop, sprName)));
 
+/// Per-scenario APPEND-ONLY checkpoint shard (full-density plan WS2). The
+/// legacy whole-file `_saveResults` rewrite was O(total results) after EVERY
+/// solve — already a 128 MB rewrite at 312 spots, quadratic and multi-GB at
+/// 1,755-flop scale. A solved spot now appends ONE JSONL line
+/// (`{"key": …, "entry": {…}}`) to its scenario's shard; `_loadResults` folds
+/// shards over the legacy JSON (later lines win, so a re-solve supersedes).
+String _shardPath([String? scenario]) =>
+    'tool/solver/freq_grid_results.${scenario ?? kScenario}.jsonl';
+
 Map<String, dynamic> _loadResults() {
+  final out = <String, dynamic>{};
   final f = File(kResultsPath);
-  if (!f.existsSync()) return {};
-  return jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
+  if (f.existsSync()) {
+    out.addAll(jsonDecode(f.readAsStringSync()) as Map<String, dynamic>);
+  }
+  final dir = Directory('tool/solver');
+  if (dir.existsSync()) {
+    final shards = dir
+        .listSync()
+        .whereType<File>()
+        .where((e) =>
+            e.path.replaceAll('\\', '/').contains('/freq_grid_results.') &&
+            e.path.endsWith('.jsonl'))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    for (final shard in shards) {
+      for (final line in shard.readAsLinesSync()) {
+        final l = line.trim();
+        if (l.isEmpty) continue;
+        try {
+          final m = jsonDecode(l) as Map<String, dynamic>;
+          out[m['key'] as String] = m['entry'];
+        } catch (e) {
+          // A torn tail line (kill mid-append) loses ONE spot, not the run.
+          stderr.writeln('WARN: skipping bad shard line in ${shard.path}: $e');
+        }
+      }
+    }
+  }
+  return out;
 }
 
-void _saveResults(Map<String, dynamic> results) {
+void _appendResult(String key, Map<String, dynamic> entry) {
+  File(_shardPath()).writeAsStringSync(
+      '${jsonEncode({'key': key, 'entry': entry})}\n',
+      mode: FileMode.append,
+      flush: true);
+}
+
+/// `--compact`: fold every shard into the legacy JSON and delete the shards —
+/// run before seeding a box (the launcher scp's the single results file) or to
+/// keep the shard set tidy between cycles.
+///
+/// CONCURRENCY GUARD (review finding): a grid run may be appending to a shard
+/// WHILE compact runs. Deleting such a shard would permanently destroy the
+/// spots appended after our snapshot read (paid solves, silently re-solved
+/// later). So each shard's byte length is captured BEFORE the read, and a
+/// shard is deleted only if its length is unchanged afterwards; a grown shard
+/// is kept intact — its already-folded lines re-fold harmlessly on the next
+/// load (later-wins with identical values), and the new lines survive.
+void _compactResults() {
+  final lengthsAtRead = <String, int>{};
+  final dir = Directory('tool/solver');
+  if (dir.existsSync()) {
+    for (final e in dir.listSync().whereType<File>()) {
+      final p = e.path.replaceAll('\\', '/');
+      if (p.contains('/freq_grid_results.') && p.endsWith('.jsonl')) {
+        lengthsAtRead[e.path] = e.lengthSync();
+      }
+    }
+  }
+  final merged = _loadResults();
   File(kResultsPath)
-      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(results));
+      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(merged));
+  var removed = 0, kept = 0;
+  lengthsAtRead.forEach((path, len) {
+    final f = File(path);
+    if (!f.existsSync()) return;
+    if (f.lengthSync() == len) {
+      f.deleteSync();
+      removed++;
+    } else {
+      kept++;
+      stderr.writeln('WARN --compact: $path grew during compaction (a grid '
+          'run is appending to it?) — kept intact; its lines re-fold next '
+          'load. Re-run --compact after that run finishes.');
+    }
+  });
+  stdout.writeln('compacted ${merged.length} results into $kResultsPath '
+      '($removed shard(s) removed${kept > 0 ? ', $kept kept (in use)' : ''})');
 }
 
 /// Merge FreqCells sharing a key (texture×spr×street×pos×facing×class) by
@@ -545,6 +673,11 @@ Future<void> main(List<String> args) async {
     return;
   }
 
+  if (args.contains('--compact')) {
+    _compactResults();
+    return;
+  }
+
   final results = _loadResults();
 
   if (writeOnly) {
@@ -553,8 +686,11 @@ Future<void> main(List<String> args) async {
   }
 
   final ranges = scenarioRanges();
+  final gridFlops = _gridFlops();
+  stdout.writeln('flop source: ${_flopSourceLabel()} (${gridFlops.length} '
+      'flops × ${kSprReps.length} SPRs)');
   final spots = <({String flop, String spr, double sprVal})>[];
-  for (final flop in kRepFlops) {
+  for (final flop in gridFlops) {
     for (final e in kSprReps.entries) {
       spots.add((flop: flop, spr: e.key, sprVal: e.value));
     }
@@ -587,24 +723,110 @@ Future<void> main(List<String> args) async {
     exitCode = 64;
     return;
   }
+  // Pack emission walks the JSON dump (explorer_pack is not TLSD-adapted —
+  // packs are only emitted on curated 26-flop runs, never the full-density
+  // bulk). An EXPLICIT bin + packs is an intent conflict → fail fast; with
+  // packs on, the solve below forces JSON regardless of the format default
+  // (forceJsonDump), so a flipped default can't silently break pack runs.
+  if (emitPackRoot != null && solverDumpFmt() == 'bin' &&
+      (Platform.environment['TLSOLVE_DUMP_FMT'] ?? '').isNotEmpty) {
+    stderr.writeln('--emit-pack requires the JSON dump: unset '
+        'TLSOLVE_DUMP_FMT=bin (use json or both) when emitting packs.');
+    exitCode = 64;
+    return;
+  }
+  // The effective format of THIS run's dumps — drives the parse footprints
+  // (JSON parses need the giant heap; TLSD a few GB).
+  final dumpFmtEnv = emitPackRoot != null ? 'json' : solverDumpFmt();
 
   // Spots still needing a solve (cached ones skipped), capped to --limit if set.
   // Each pending spot is claimed and solved exactly once by exactly one worker.
+  // TLSOLVE_MAX_SPOT_GB skips (never fails) spots whose predicted solve RAM
+  // exceeds it — a small-RAM box grinds the shallow/medium classes while a big
+  // box takes deep (the split is pure env policy; see spot_sched.dart).
+  final maxSpotGb =
+      double.tryParse(Platform.environment['TLSOLVE_MAX_SPOT_GB'] ?? '');
   final pending = <({String flop, String spr, double sprVal})>[];
-  var skipped = 0;
+  var skipped = 0, skippedTooBig = 0;
   for (final s in spots) {
     if (_isCached(results, s.flop, s.spr)) {
       skipped++;
+    } else if (maxSpotGb != null &&
+        spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv).solveGb > maxSpotGb) {
+      skippedTooBig++;
     } else if (limit == null || pending.length < limit) {
       pending.add(s);
     }
   }
+  if (skippedTooBig > 0) {
+    stdout.writeln('⚠ TLSOLVE_MAX_SPOT_GB=$maxSpotGb: $skippedTooBig spot(s) '
+        'skipped as too big for this box (solve them on a bigger one).');
+  }
+
+  // Ordering: LPT within a footprint class, then INTERLEAVED round-robin
+  // across classes (largest class first in each round). Strict LPT alone puts
+  // every deep spot first — on a RAM-tight box only ~2-4 deep claims fit, so
+  // all workers block on deep admissions while the shallow work that could
+  // fill the idle cores sits queued BEHIND hundreds of deep spots (~50% CPU
+  // idle through the whole deep phase). Interleaving keeps deep spots
+  // saturating the RAM budget from the start (their long tails still overlap
+  // the backfill — the original LPT motivation) while medium/shallow flow
+  // around them and keep the cores busy. Stable within a class (explicit
+  // original-index tie-break — Dart's sort is not stable).
+  final origIdx = {for (var i = 0; i < pending.length; i++) pending[i]: i};
+  final byClass = <double, List<({String flop, String spr, double sprVal})>>{};
+  for (final s in pending) {
+    byClass
+        .putIfAbsent(
+            spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv).solveGb, () => [])
+        .add(s);
+  }
+  final classOrder = byClass.keys.toList()..sort((a, b) => b.compareTo(a));
+  for (final g in classOrder) {
+    byClass[g]!.sort((a, b) {
+      final ea = spotFootprint(a.sprVal, dumpFmt: dumpFmtEnv).estMinutes;
+      final eb = spotFootprint(b.sprVal, dumpFmt: dumpFmtEnv).estMinutes;
+      final c = eb.compareTo(ea);
+      return c != 0 ? c : origIdx[a]!.compareTo(origIdx[b]!);
+    });
+  }
+  pending.clear();
+  var remaining = true;
+  while (remaining) {
+    remaining = false;
+    for (final g in classOrder) {
+      final list = byClass[g]!;
+      if (list.isNotEmpty) {
+        pending.add(list.removeAt(0));
+        remaining = remaining || list.isNotEmpty;
+      }
+    }
+  }
+
+  // Admission budget: workers still cap at --parallel, but each phase's
+  // (RAM, threads) claim must ALSO fit the box budget — so a high --parallel
+  // is safe (deep spots' 100 GB claims throttle actual concurrency) and cores
+  // stop idling behind a worst-case cap. See spot_sched.dart.
+  final budget = ResourceBudget.fromEnv();
+  final solverThreads =
+      int.tryParse(Platform.environment['TLSOLVE_THREADS'] ?? '') ?? 8;
 
   var solved = 0, failed = 0, started = 0, next = 0;
   final total = pending.length;
   final sw = Stopwatch()..start();
-  stdout.writeln('Solving $total spot(s) — $parallel at a time, '
-      '$skipped cached/skipped.');
+  stdout.writeln('Solving $total spot(s) — up to $parallel workers, budget '
+      '${budget.totalGb.toStringAsFixed(0)} GB / ${budget.totalThreads} '
+      'threads (${solverThreads}t per solve), $skipped cached/skipped.');
+
+  if (args.contains('--sched-dry-run')) {
+    stdout.writeln('sched dry run — planned order (LPT):');
+    for (final s in pending) {
+      final fp = spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv);
+      stdout.writeln('  ${s.flop} ${s.spr}: solve ${fp.solveGb} GB/'
+          '${solverThreads}t ~${fp.estMinutes}min, parse ${fp.parseGb} GB/1t');
+    }
+    return;
+  }
   if (emitPackRoot != null && skipped > 0) {
     stdout.writeln('⚠ --emit-pack: $skipped cached spot(s) will NOT get packs '
         '(only newly-solved spots do) — delete their results.json entries to '
@@ -616,24 +838,49 @@ Future<void> main(List<String> args) async {
   // and `await Process.run(tabulate_one)` (the parse+tabulate runs in a separate
   // process, so several spots tabulate on separate cores with independent heaps/GC).
   // Both let other workers proceed; claiming an index (next++) and the results-mutate +
-  // _saveResults block run WITHOUT an await, so they stay atomic w.r.t. other
-  // workers under Dart's single-threaded main isolate: no race on results.json, no
-  // concurrent map modification. Each solve uses its own temp dir (see
-  // _runSolverToDump), so parallel solves never collide on dump files.
+  // _appendResult block run WITHOUT an await, so they stay atomic w.r.t. other
+  // workers under Dart's single-threaded main isolate: no race on the shard file, no
+  // concurrent map modification (the append is a single synchronous O(spot) write —
+  // the old whole-file _saveResults rewrite was O(total) per solve). Each solve uses
+  // its own temp dir (see _runSolverToDump), so parallel solves never collide on
+  // dump files.
   Future<void> worker() async {
     while (true) {
       final i = next;
       if (i >= total) break;
       next++;
       final s = pending[i];
-      final n = ++started;
       final key = _spotKey(s.flop, s.spr);
-      stdout.writeln('[$n/$total] solving ${s.flop} SPR ${s.spr} …');
+      final fp = spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv);
       DumpSolve? ds;
+      // Phase claims: solve holds (solveGb, solver threads); tabulate swaps
+      // down to (parseGb, 1 thread). Track what we hold so the finally can
+      // release exactly once whatever phase failed.
+      var heldGb = 0.0;
+      var heldThreads = 0;
       try {
+        await budget.acquire(fp.solveGb, solverThreads);
+        heldGb = fp.solveGb;
+        heldThreads = solverThreads;
+        final n = ++started;
+        stdout.writeln('[$n/$total] solving ${s.flop} SPR ${s.spr} '
+            '(${fp.solveGb.toStringAsFixed(0)} GB claim) …');
         final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
+        // Pack runs force JSON (explorer_pack walks the Map tree) no matter
+        // what TLSOLVE_DUMP_FMT/its default says.
         ds = await solveToFile(spot,
-            dumpRounds: kDumpRounds, betProfile: kBetProfile);
+            dumpRounds: kDumpRounds,
+            betProfile: kBetProfile,
+            forceJsonDump: emitPackRoot != null);
+        // Solve finished — swap the claim down to the parse footprint before
+        // the tabulate subprocess (frees ~most of a deep spot's RAM for the
+        // next admission the moment the solver exits).
+        budget.release(heldGb, heldThreads);
+        heldGb = 0;
+        heldThreads = 0;
+        await budget.acquire(fp.parseGb, 1);
+        heldGb = fp.parseGb;
+        heldThreads = 1;
         // Capture the scalars BEFORE the Process.run await (avoids relying on
         // null-promotion of `ds` surviving the await).
         final dumpPath = ds.dumpPath;
@@ -707,7 +954,7 @@ Future<void> main(List<String> args) async {
           'wall_ms': wallMs,
           'cells': cells,
         };
-        _saveResults(results); // checkpoint after every solve (resumable)
+        _appendResult(key, results[key] as Map<String, dynamic>);
         solved++;
         stdout.writeln('    ✓ [${s.flop} ${s.spr}] ${cells.length} cells · expl '
             '${expl?.toStringAsFixed(2)}% · ${wallMs ~/ 1000}s');
@@ -715,6 +962,7 @@ Future<void> main(List<String> args) async {
         failed++;
         stdout.writeln('    ✗ [${s.flop} ${s.spr}] $e');
       } finally {
+        if (heldGb > 0 || heldThreads > 0) budget.release(heldGb, heldThreads);
         ds?.cleanup(); // remove the dump temp dir (after tabulating, or on failure)
       }
     }

@@ -771,4 +771,195 @@ void main() {
       expect(formatHours(45.4), equals('45h'));
     });
   });
+
+  // ── formatWholeNum ───────────────────────────────────────────────────────────
+
+  group('formatWholeNum', () {
+    test('bare thousands-separated whole number (no unit suffix)', () {
+      expect(formatWholeNum(3389.1), equals('3,389'));
+      expect(formatWholeNum(0), equals('0'));
+      expect(formatWholeNum(532.6), equals('533'));
+    });
+  });
+
+  // ── standard-deviation estimators ────────────────────────────────────────────
+
+  group('std dev estimators', () {
+    SessionModel makeSession({
+      required double profitLoss,
+      String stakes = '1/2',
+      int durationMinutes = 60,
+      int? handsPerHour,
+      String gameType = 'cash',
+      double buyIn = 200,
+      String currency = 'USD',
+    }) {
+      return SessionModel(
+        id: 'test',
+        date: '2026-01-01',
+        stakes: stakes,
+        gameType: gameType,
+        buyIn: buyIn,
+        cashOut: buyIn + profitLoss,
+        profitLoss: profitLoss,
+        startTime: '18:00',
+        endTime: '22:00',
+        durationMinutes: durationMinutes,
+        createdAt: '2026-01-01T18:00:00Z',
+        currency: currency,
+        handsPerHour: handsPerHour,
+      );
+    }
+
+    group('countsForBB100', () {
+      test('cash with parseable blinds and duration counts', () {
+        expect(countsForBB100(makeSession(profitLoss: 0)), isTrue);
+      });
+      test('tournaments, unparseable stakes, zero duration excluded', () {
+        expect(
+            countsForBB100(makeSession(profitLoss: 0, gameType: 'tournament')),
+            isFalse);
+        expect(countsForBB100(makeSession(profitLoss: 0, stakes: 'Deep')),
+            isFalse);
+        expect(countsForBB100(makeSession(profitLoss: 0, durationMinutes: 0)),
+            isFalse);
+      });
+    });
+
+    group('calcBB100StdDev', () {
+      test('matches the hand-computed Malmuth estimate', () {
+        // 1/2 stakes → bb = 2; hph 25 → hands = 25/50/100.
+        // xᵢ (bb) = 50, −25, 150; Σx = 175, Σn = 175, Σx²/n = 100+12.5+225.
+        // σ²_hand = (337.5 − 175²/175) / 2 = 81.25 → SD/100 = 10·√81.25.
+        final sessions = [
+          makeSession(profitLoss: 100, durationMinutes: 60),
+          makeSession(profitLoss: -50, durationMinutes: 120),
+          makeSession(profitLoss: 300, durationMinutes: 240),
+        ];
+        final sd = calcBB100StdDev(sessions, minSessions: 3);
+        expect(sd, isNotNull);
+        expect(sd!, closeTo(90.138, 0.01));
+      });
+
+      test('identical per-hand rate in every session → 0', () {
+        final sessions = [
+          makeSession(profitLoss: 50, durationMinutes: 60),
+          makeSession(profitLoss: 100, durationMinutes: 120),
+          makeSession(profitLoss: 200, durationMinutes: 240),
+        ];
+        expect(calcBB100StdDev(sessions, minSessions: 3), closeTo(0, 1e-9));
+      });
+
+      test('honours recorded handsPerHour over the 25 default', () {
+        final slow = [
+          makeSession(profitLoss: 100, durationMinutes: 60),
+          makeSession(profitLoss: -50, durationMinutes: 120),
+          makeSession(profitLoss: 300, durationMinutes: 240),
+        ];
+        final fast = [
+          for (final s in slow)
+            makeSession(
+                profitLoss: s.profitLoss,
+                durationMinutes: s.durationMinutes,
+                handsPerHour: 50),
+        ];
+        final a = calcBB100StdDev(slow, minSessions: 3)!;
+        final b = calcBB100StdDev(fast, minSessions: 3)!;
+        expect((a - b).abs(), greaterThan(1e-6));
+      });
+
+      test('tournaments and unparseable stakes are excluded', () {
+        final sessions = [
+          makeSession(profitLoss: 100),
+          makeSession(profitLoss: -50, gameType: 'tournament'),
+          makeSession(profitLoss: 300, stakes: 'Deep'),
+        ];
+        // Only 1 qualifying session < minSessions 2 → null.
+        expect(calcBB100StdDev(sessions, minSessions: 2), isNull);
+      });
+
+      test('null under the default 10-session minimum', () {
+        final nine = List.generate(9, (_) => makeSession(profitLoss: 100));
+        expect(calcBB100StdDev(nine), isNull);
+        final ten = List.generate(
+            10, (i) => makeSession(profitLoss: 100.0 + i * 10));
+        expect(calcBB100StdDev(ten), isNotNull);
+      });
+    });
+
+    group('calcHourlyStdDev', () {
+      test('matches a hand-computed hourly estimate', () {
+        // Hours 1/2/4, profits 100/−50/300 USD.
+        // Σx=350, Σn=7, Σx²/n = 10000+1250+22500 = 33750.
+        // σ²_hr = (33750 − 350²/7)/2 = 8125 → SD ≈ 90.14 $/hr.
+        final sessions = [
+          makeSession(profitLoss: 100, durationMinutes: 60),
+          makeSession(profitLoss: -50, durationMinutes: 120),
+          makeSession(profitLoss: 300, durationMinutes: 240),
+        ];
+        final sd = calcHourlyStdDev(sessions, 'USD', minSessions: 3);
+        expect(sd, closeTo(90.138, 0.01));
+      });
+
+      test('converts mixed currencies into the display currency', () {
+        final usdOnly = [
+          makeSession(profitLoss: 100, durationMinutes: 60),
+          makeSession(profitLoss: -50, durationMinutes: 120),
+          makeSession(profitLoss: 300, durationMinutes: 240),
+        ];
+        final mixed = [
+          makeSession(profitLoss: 100, durationMinutes: 60),
+          makeSession(profitLoss: -50, durationMinutes: 120, currency: 'CAD'),
+          makeSession(profitLoss: 300, durationMinutes: 240),
+        ];
+        final a = calcHourlyStdDev(usdOnly, 'USD', minSessions: 3)!;
+        final b = calcHourlyStdDev(mixed, 'USD', minSessions: 3)!;
+        // The CAD session converts to different USD → estimate must differ.
+        expect((a - b).abs(), greaterThan(1e-6));
+      });
+
+      test('zero-duration and tournament sessions excluded', () {
+        final sessions = [
+          makeSession(profitLoss: 100),
+          makeSession(profitLoss: 200, durationMinutes: 0),
+          makeSession(profitLoss: 300, gameType: 'tournament'),
+        ];
+        expect(calcHourlyStdDev(sessions, 'USD', minSessions: 2), isNull);
+      });
+    });
+
+    group('calcTournamentStdDevBuyIns', () {
+      test('plain sample SD of profit/buy-in', () {
+        // r = +1, −1, 0 → mean 0, s = √((1+1+0)/2) = 1.0
+        final sessions = [
+          makeSession(profitLoss: 100, buyIn: 100, gameType: 'tournament'),
+          makeSession(profitLoss: -100, buyIn: 100, gameType: 'tournament'),
+          makeSession(profitLoss: 0, buyIn: 100, gameType: 'tournament'),
+        ];
+        expect(calcTournamentStdDevBuyIns(sessions, minSessions: 3),
+            closeTo(1.0, 1e-9));
+      });
+
+      test('sit_and_go counts; cash and zero buy-in excluded', () {
+        final sessions = [
+          makeSession(profitLoss: 50, buyIn: 100, gameType: 'sit_and_go'),
+          makeSession(profitLoss: -100, buyIn: 100, gameType: 'sit_and_go'),
+          makeSession(profitLoss: 999, buyIn: 100), // cash — excluded
+          makeSession(
+              profitLoss: 999, buyIn: 0, gameType: 'tournament'), // excluded
+        ];
+        expect(
+            calcTournamentStdDevBuyIns(sessions, minSessions: 2), isNotNull);
+        expect(calcTournamentStdDevBuyIns(sessions, minSessions: 3), isNull);
+      });
+
+      test('null under the default 10-session minimum', () {
+        final nine = List.generate(
+            9,
+            (i) => makeSession(
+                profitLoss: i * 50.0, buyIn: 100, gameType: 'tournament'));
+        expect(calcTournamentStdDevBuyIns(nine), isNull);
+      });
+    });
+  });
 }

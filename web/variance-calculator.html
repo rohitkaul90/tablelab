@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poker Variance Calculator — Risk of Ruin &amp; Downswings — TableLab</title>
+  <meta name="description" content="Free poker variance calculator for cash games and tournaments. See your expected result, 70% and 95% outcome ranges, chance of losing, risk of ruin, and the bankroll you need — right in your browser.">
+  <link rel="canonical" href="https://tablelab.app/variance-calculator">
+  <meta property="og:title" content="Poker Variance Calculator — Risk of Ruin &amp; Downswings">
+  <meta property="og:description" content="Free poker variance calculator for cash and tournaments: expected result, 70%/95% ranges, chance of losing, risk of ruin, and the bankroll you need.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tablelab.app/variance-calculator">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Poker Variance Calculator — Risk of Ruin &amp; Downswings">
+  <meta name="twitter:description" content="Free poker variance calculator for cash and tournaments — risk of ruin, outcome ranges, and the bankroll you need.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta name="author" content="MagpiQ">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="stylesheet" href="/site.css">
+  <script src="/site.js" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "@id": "https://tablelab.app/variance-calculator#app",
+        "name": "Poker Variance Calculator",
+        "url": "https://tablelab.app/variance-calculator",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "Web Browser",
+        "description": "Free poker variance calculator for cash games and tournaments: expected result, 70% and 95% outcome ranges, chance of losing overall, risk of ruin, and the bankroll needed for a 5% or 1% risk of ruin. Runs entirely in the browser.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/variance-calculator#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tablelab.app" },
+          { "@type": "ListItem", "position": 2, "name": "Variance Calculator", "item": "https://tablelab.app/variance-calculator" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/variance-calculator#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "What standard deviation should I enter?", "acceptedAnswer": { "@type": "Answer", "text": "Measure it from your own tracked sessions if you can — it is the input the whole calculation hinges on. If you haven't measured yours yet, Primedope's published risk-of-ruin example uses 85 bb/100 for no-limit cash, and per-tournament standard deviations are commonly cited at roughly 5 to 10 times a comparable cash session. See our bankroll management guide for the sourced figures." } },
+          { "@type": "Question", "name": "What is risk of ruin in poker?", "acceptedAnswer": { "@type": "Answer", "text": "The probability that you eventually lose your entire bankroll despite being a winning player, estimated with the classic drift formula RoR = e^(−2·WR·B/SD²). It assumes you keep playing the same game at the same win rate and never move down in stakes — moving down when losing makes your real risk lower than the formula says." } },
+          { "@type": "Question", "name": "Why is my chance of losing so high even with a good win rate?", "acceptedAnswer": { "@type": "Answer", "text": "Because your expected profit grows linearly with volume while the spread of outcomes grows with the square root of volume. Over 10,000 hands, a solid 5 bb/100 winner with a 90 bb/100 standard deviation still finishes the sample as a net loser about 29% of the time. The edge wins eventually — but 'eventually' is measured in tens of thousands of hands." } },
+          { "@type": "Question", "name": "Does this calculator work for tournaments?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — switch to Tournament mode and enter your ROI, your standard deviation in buy-ins, and the number of tournaments. One caveat: everything here is a normal approximation, and tournament results are heavily right-skewed, so at small sample sizes the tournament figures understate tail risk. Treat them as estimates." } },
+          { "@type": "Question", "name": "Is this poker variance calculator free, and where does my data go?", "acceptedAnswer": { "@type": "Answer", "text": "Completely free, and nothing leaves your device — the math runs in your browser with plain JavaScript. There is no signup, no upload, and no tracking of the numbers you enter." } }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/about">About</a>
+      <a class="link" href="/icm-calculator">ICM Calculator</a>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / Variance Calculator</div>
+
+      <h1>Poker Variance Calculator</h1>
+
+      <p class="lead"><strong>This free variance calculator shows what your win rate actually
+      guarantees — and what it doesn't.</strong> Enter your win rate, standard deviation, and
+      sample size, and it computes your expected result, the 70% and 95% ranges your outcome will
+      land in, your chance of finishing the sample a loser, your risk of ruin for a given bankroll,
+      and the bankroll you'd need to cap that risk at 5% or 1%. Everything runs in your browser;
+      nothing is uploaded.</p>
+
+      <div class="tool-card" id="calculator">
+        <noscript><p class="tool-error">The interactive calculator needs JavaScript. The formulas,
+        worked example, and guidance below work without it.</p></noscript>
+
+        <div class="mode-row" role="group" aria-label="Game type">
+          <button class="mode-btn active" type="button" id="mode-cash">Cash</button>
+          <button class="mode-btn" type="button" id="mode-tournament">Tournament</button>
+        </div>
+
+        <div class="field-grid" id="fields-cash">
+          <div class="field">
+            <label for="in-wr">Win rate (bb/100)</label>
+            <input id="in-wr" type="number" step="any" value="5">
+          </div>
+          <div class="field">
+            <label for="in-sd">Standard deviation (bb/100)</label>
+            <input id="in-sd" type="number" step="any" value="90">
+          </div>
+          <div class="field">
+            <label for="in-hands">Number of hands</label>
+            <input id="in-hands" type="number" step="any" value="10000">
+          </div>
+          <div class="field">
+            <label for="in-bankroll">Bankroll in big blinds (optional)</label>
+            <input id="in-bankroll" type="number" step="any" value="2000">
+          </div>
+        </div>
+
+        <div class="field-grid" id="fields-tournament" style="display:none">
+          <div class="field">
+            <label for="in-roi">ROI (%)</label>
+            <input id="in-roi" type="number" step="any" value="30">
+          </div>
+          <div class="field">
+            <label for="in-tsd">Standard deviation (buy-ins)</label>
+            <input id="in-tsd" type="number" step="any" value="3">
+          </div>
+          <div class="field">
+            <label for="in-count">Number of tournaments</label>
+            <input id="in-count" type="number" step="any" value="100">
+          </div>
+          <div class="field">
+            <label for="in-tbankroll">Bankroll in buy-ins (optional)</label>
+            <input id="in-tbankroll" type="number" step="any" value="100">
+          </div>
+        </div>
+
+        <div class="tool-actions">
+          <button class="btn btn-primary" type="button" id="btn-calc">Calculate</button>
+          <button class="btn btn-ghost" type="button" id="btn-reroll" disabled title="Redraw the sample runs with a new random seed">Reroll sample runs</button>
+        </div>
+        <p class="tool-error" id="calc-error" style="display:none"></p>
+
+        <div class="results-grid" id="results" style="display:none"></div>
+        <canvas class="tool-canvas" id="chart" style="display:none" role="img" aria-label="Simulated result paths with 70% and 95% outcome envelopes and the expected-value line"></canvas>
+        <p class="note" id="chart-note" style="display:none">Shaded bands: where 95% (outer) and
+        70% (inner) of outcomes land at each point. Green line: expectation. Thin lines: 20
+        random sample runs at your exact win rate — every one of them is the same player.</p>
+      </div>
+
+      <h2>How the math works</h2>
+
+      <p>Poker results are a random walk with drift. Your win rate supplies the drift; your
+      standard deviation supplies the noise. Over a sample of <em>n</em> units (100-hand blocks
+      for cash, single tournaments for MTTs), the expected result is
+      <strong>EV&nbsp;=&nbsp;win&nbsp;rate&nbsp;×&nbsp;n</strong>, while the spread of outcomes
+      grows only with the square root:
+      <strong>σ(n)&nbsp;=&nbsp;SD&nbsp;×&nbsp;√n</strong>. That mismatch — profit linear, noise
+      square-root — is all of poker variance in one line. The 70% and 95% ranges are the normal
+      intervals EV&nbsp;±&nbsp;1.0364·σ and EV&nbsp;±&nbsp;1.96·σ, and your chance of finishing
+      the sample a net loser is Φ(−EV/σ), the standard normal CDF.</p>
+
+      <div class="callout"><p><strong>Risk of ruin</strong> = <em>e</em><sup>−2 · WR · B / SD²</sup>,
+      where WR is your win rate (bb/100), B is your bankroll (in big blinds), and SD is your
+      standard deviation (bb/100). The units cancel, so you can feed bb/100 figures straight in —
+      and the same formula works in tournament units (ROI in buy-ins per tournament, SD in
+      buy-ins, bankroll in buy-ins). Invert it and the bankroll needed to hold risk of ruin to
+      <em>r</em> is <strong>B&nbsp;=&nbsp;SD²&nbsp;·&nbsp;ln(1/r)&nbsp;/&nbsp;(2&nbsp;·&nbsp;WR)</strong>.</p></div>
+
+      <p>This is the classic drift formula popularized by Mason Malmuth and derived in Chen &amp;
+      Ankenman's <em>The Mathematics of Poker</em> — the same equation behind the guidelines in our
+      <a href="/blog/poker-bankroll-management">bankroll management guide</a>. It assumes you keep
+      playing the same stakes at the same win rate forever; in practice, moving down during a
+      downswing makes your true risk lower than the formula's.</p>
+
+      <h2>A worked example</h2>
+
+      <p>Take a solid live winner: <strong>5 bb/100</strong> win rate, <strong>90 bb/100</strong>
+      standard deviation, over a <strong>10,000-hand</strong> sample (about 350–400 hours of live
+      play), with a <strong>2,000 bb</strong> bankroll. The calculator returns:</p>
+
+      <ul>
+        <li><strong>Expected result:</strong> +500 bb (5 × 100 units).</li>
+        <li><strong>70% of outcomes:</strong> −433 to +1,433 bb.</li>
+        <li><strong>95% of outcomes:</strong> −1,264 to +2,264 bb — yes, a clear winner can be
+        down 12+ buy-ins after 10,000 hands and be running normally.</li>
+        <li><strong>Chance of losing overall:</strong> 28.9%.</li>
+        <li><strong>Risk of ruin with 2,000 bb:</strong> 8.5%.</li>
+        <li><strong>Bankroll for 5% risk of ruin:</strong> 2,427 bb. <strong>For 1%:</strong> 3,731 bb.</li>
+      </ul>
+
+      <p>Those last two numbers are why "how many buy-ins do I need?" has no single answer — the
+      bankroll you need is the price of the risk tolerance you choose.</p>
+
+      <h2>What standard deviation should you use?</h2>
+
+      <p>Ideally, <em>yours</em>, measured from tracked sessions — it's the input everything else
+      hinges on. If you haven't measured it yet, the figure used in Primedope's published
+      risk-of-ruin example is <strong>85 bb/100</strong> for no-limit cash, and per-tournament
+      standard deviations are commonly cited at roughly <strong>5–10× a comparable cash
+      session</strong>, driven by top-heavy payout structures. The sources and the full context are
+      in our <a href="/blog/poker-bankroll-management">bankroll management guide</a>.</p>
+
+      <div class="tool-cta">
+        <p><strong>Want your real numbers instead of estimates?</strong> The free TableLab app
+        tracks every session and computes the exact win rate and standard deviation this calculator
+        needs — and range-vs-range equity lives in the free TableLab app too, alongside the hand
+        recorder and AI coaching. <a href="/">Open the web app</a> or
+        <a href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker" rel="noopener" target="_blank">get it on Google Play</a>.</p>
+      </div>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>What standard deviation should I enter?</summary>
+          <p>Measure it from your own tracked sessions if you can — it is the input the whole
+          calculation hinges on. If you haven't measured yours yet, Primedope's published
+          risk-of-ruin example uses 85 bb/100 for no-limit cash, and per-tournament standard
+          deviations are commonly cited at roughly 5 to 10 times a comparable cash session. See our
+          <a href="/blog/poker-bankroll-management">bankroll management guide</a> for the sourced
+          figures.</p>
+        </details>
+        <details>
+          <summary>What is risk of ruin in poker?</summary>
+          <p>The probability that you eventually lose your entire bankroll despite being a winning
+          player, estimated with the classic drift formula RoR&nbsp;=&nbsp;e<sup>−2·WR·B/SD²</sup>.
+          It assumes you keep playing the same game at the same win rate and never move down in
+          stakes — moving down when losing makes your real risk lower than the formula says.</p>
+        </details>
+        <details>
+          <summary>Why is my chance of losing so high even with a good win rate?</summary>
+          <p>Because your expected profit grows linearly with volume while the spread of outcomes
+          grows with the square root of volume. Over 10,000 hands, a solid 5 bb/100 winner with a
+          90 bb/100 standard deviation still finishes the sample as a net loser about 29% of the
+          time. The edge wins eventually — but "eventually" is measured in tens of thousands of
+          hands.</p>
+        </details>
+        <details>
+          <summary>Does this calculator work for tournaments?</summary>
+          <p>Yes — switch to Tournament mode and enter your ROI, your standard deviation in
+          buy-ins, and the number of tournaments. One caveat: everything here is a normal
+          approximation, and tournament results are heavily right-skewed, so at small sample sizes
+          the tournament figures understate tail risk. Treat them as estimates.</p>
+        </details>
+        <details>
+          <summary>Is this poker variance calculator free, and where does my data go?</summary>
+          <p>Completely free, and nothing leaves your device — the math runs in your browser with
+          plain JavaScript. There is no signup, no upload, and no tracking of the numbers you
+          enter.</p>
+        </details>
+      </section>
+
+      <p class="disclaimer-line">All outputs are normal-approximation estimates of a random walk
+      with drift — useful for sizing risk, not guarantees. Tournament distributions are
+      right-skewed, so tournament tail risk is understated at small samples. Also try the
+      <a href="/icm-calculator">ICM deal calculator</a>.</p>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+  <script>
+  // Variance math — ported VERBATIM from the app's lib/utils/variance_math.dart.
+  // UNIT NORMALIZATION: cash unit = 100 hands (mean = WR bb/100, sd = SD bb/100,
+  // bankroll in bb); tournament unit = 1 tournament (mean = ROI/100 in buy-ins,
+  // sd in buy-ins, bankroll in buy-ins).
+  //
+  // RoR = exp(-2*mu*B/sigma^2) is UNIT-INVARIANT under this normalization: with
+  // per-hand mu = WR/100 and per-hand variance sigma^2_hand = SD^2/100,
+  // exp(-2*(WR/100)*B/(SD^2/100)) = exp(-2*WR*B/SD^2) — the 100s cancel, so
+  // feeding bb/100 figures directly is correct (and trivially so in tournament
+  // units).
+  //
+  // Self-checked fixtures (match the app's Dart unit tests):
+  //   WR 5, SD 90, 10,000 hands -> EV +500 bb, 95% range -1,264…+2,264,
+  //   P(loss) 28.9%, RoR(2,000 bb) 8.5%, minB(5%) 2,427 bb, minB(1%) 3,731 bb.
+  //   ROI 30%, SD 3 BI, 100 tourneys -> EV +30 BI, sigma 30 BI, RoR(100 BI) 0.13%.
+  (function () {
+    'use strict';
+
+    // Two-sided z for a 70% interval (Phi^-1(0.85)) / 95% interval (Phi^-1(0.975)).
+    var Z70 = 1.0364334;
+    var Z95 = 1.9599640;
+
+    // Standard normal CDF via the Abramowitz–Stegun 7.1.26 erf approximation
+    // (|eps| < 1.5e-7 — far below display precision).
+    function normalCdf(z) {
+      var x = z / Math.SQRT2;
+      var ax = Math.abs(x);
+      var t = 1.0 / (1.0 + 0.3275911 * ax);
+      var poly = t * (0.254829592 + t * (-0.284496736 +
+        t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+      var erf = 1.0 - poly * Math.exp(-ax * ax);
+      var signedErf = x >= 0 ? erf : -erf;
+      return 0.5 * (1.0 + signedErf);
+    }
+
+    function computeVariance(meanPerUnit, sdPerUnit, units, bankroll) {
+      var ev = meanPerUnit * units;
+      var sd = sdPerUnit * Math.sqrt(units);
+      var pLoss = sd > 0 ? normalCdf(-ev / sd) : (ev < 0 ? 1.0 : 0.0);
+
+      var ror = null;
+      if (bankroll != null) {
+        if (meanPerUnit <= 0) {
+          ror = 1.0;
+        } else if (sdPerUnit <= 0) {
+          ror = 0.0;
+        } else {
+          ror = Math.min(1, Math.max(0,
+            Math.exp(-2 * meanPerUnit * bankroll / (sdPerUnit * sdPerUnit))));
+        }
+      }
+
+      function minBankroll(r) {
+        if (meanPerUnit <= 0 || sdPerUnit <= 0) return meanPerUnit <= 0 ? null : 0;
+        return sdPerUnit * sdPerUnit * Math.log(1 / r) / (2 * meanPerUnit);
+      }
+
+      return {
+        ev: ev, sd: sd,
+        ci70Low: ev - Z70 * sd, ci70High: ev + Z70 * sd,
+        ci95Low: ev - Z95 * sd, ci95High: ev + Z95 * sd,
+        pLoss: pLoss,
+        riskOfRuin: ror,
+        bankrollForRoR5: minBankroll(0.05),
+        bankrollForRoR1: minBankroll(0.01)
+      };
+    }
+
+    // Seeded PRNG (mulberry32) + Box–Muller (the second uniform is discarded
+    // for simplicity — path counts here are tiny; u1 clamped so log() stays
+    // finite, mirroring the app's _gauss).
+    function mulberry32(seed) {
+      var a = seed >>> 0;
+      return function () {
+        a = (a + 0x6D2B79F5) | 0;
+        var t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function gauss(rng) {
+      var u1 = Math.min(1.0, Math.max(1e-12, rng()));
+      var u2 = rng();
+      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+    function simulatePaths(meanPerUnit, sdPerUnit, units, paths, steps, seed) {
+      var rng = mulberry32(seed);
+      var h = units / steps;
+      var drift = meanPerUnit * h;
+      var vol = sdPerUnit * Math.sqrt(h);
+      var out = [];
+      for (var i = 0; i < paths; i++) {
+        var p = [0];
+        for (var k = 1; k <= steps; k++) p.push(p[k - 1] + drift + vol * gauss(rng));
+        out.push(p);
+      }
+      return out;
+    }
+
+    // ── UI state ─────────────────────────────────────────────────────────────
+    var mode = 'cash';
+    var seed = 1;
+    var STEPS = 120;
+    var PATHS = 20;
+    var last = null; // { meanPerUnit, sdPerUnit, units, bankroll, result, paths }
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    function setMode(m) {
+      mode = m;
+      $('mode-cash').classList.toggle('active', m === 'cash');
+      $('mode-tournament').classList.toggle('active', m === 'tournament');
+      $('fields-cash').style.display = m === 'cash' ? '' : 'none';
+      $('fields-tournament').style.display = m === 'tournament' ? '' : 'none';
+      // Clear a mode-specific validation error too — it would otherwise
+      // hover over the OTHER mode's (untouched, likely valid) form.
+      $('calc-error').style.display = 'none';
+      hideResults();
+    }
+
+    function hideResults() {
+      last = null;
+      $('results').style.display = 'none';
+      $('chart').style.display = 'none';
+      $('chart-note').style.display = 'none';
+      $('btn-reroll').disabled = true;
+    }
+
+    function num(id) {
+      var raw = $(id).value.trim();
+      if (raw === '') return null;
+      var v = parseFloat(raw);
+      return isFinite(v) ? v : NaN;
+    }
+
+    function fail(msg) {
+      var el = $('calc-error');
+      el.textContent = msg;
+      el.style.display = '';
+      hideResults();
+    }
+
+    // ── Formatting: bb as whole numbers, buy-ins to 1 decimal ────────────────
+    function fmtAmount(v) {
+      return mode === 'cash'
+        ? Math.round(v).toLocaleString('en-US')
+        : (Math.round(v * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    }
+    function fmtSigned(v) { return (v >= 0 ? '+' : '') + fmtAmount(v); }
+    function unitWord() { return mode === 'cash' ? 'bb' : 'buy-ins'; }
+    function fmtPct(p) {
+      var x = p * 100;
+      return (x >= 1 || x === 0 ? x.toFixed(1) : x.toFixed(2)) + '%';
+    }
+    // Bankroll requirements round UP — it's a floor, not an estimate.
+    function fmtBankrollNeed(v) {
+      return mode === 'cash'
+        ? Math.ceil(v).toLocaleString('en-US')
+        : (Math.ceil(v * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    }
+
+    function calculate() {
+      $('calc-error').style.display = 'none';
+      var meanPerUnit, sdPerUnit, units, bankroll;
+      if (mode === 'cash') {
+        var wr = num('in-wr'), sd = num('in-sd'), hands = num('in-hands');
+        bankroll = num('in-bankroll');
+        if (wr === null || isNaN(wr)) return fail('Enter a win rate in bb/100.');
+        if (sd === null || isNaN(sd) || sd <= 0) return fail('Enter a standard deviation above 0 (bb/100).');
+        if (hands === null || isNaN(hands) || hands <= 0) return fail('Enter a number of hands above 0.');
+        if (bankroll !== null && (isNaN(bankroll) || bankroll <= 0)) return fail('Bankroll must be above 0 (or leave it blank).');
+        meanPerUnit = wr; sdPerUnit = sd; units = hands / 100;
+      } else {
+        var roi = num('in-roi'), tsd = num('in-tsd'), count = num('in-count');
+        bankroll = num('in-tbankroll');
+        if (roi === null || isNaN(roi)) return fail('Enter an ROI in %.');
+        if (tsd === null || isNaN(tsd) || tsd <= 0) return fail('Enter a standard deviation above 0 (buy-ins).');
+        if (count === null || isNaN(count) || count <= 0) return fail('Enter a number of tournaments above 0.');
+        if (bankroll !== null && (isNaN(bankroll) || bankroll <= 0)) return fail('Bankroll must be above 0 (or leave it blank).');
+        meanPerUnit = roi / 100; sdPerUnit = tsd; units = count;
+      }
+
+      var r = computeVariance(meanPerUnit, sdPerUnit, units, bankroll);
+      last = {
+        meanPerUnit: meanPerUnit, sdPerUnit: sdPerUnit, units: units,
+        bankroll: bankroll, result: r,
+        paths: simulatePaths(meanPerUnit, sdPerUnit, units, PATHS, STEPS, seed)
+      };
+      renderResults(r, bankroll);
+      $('btn-reroll').disabled = false;
+      $('chart').style.display = '';
+      $('chart-note').style.display = '';
+      drawChart();
+    }
+
+    function renderResults(r, bankroll) {
+      var u = unitWord();
+      var rows = [
+        ['Expected result', fmtSigned(r.ev) + ' ' + u, r.ev >= 0 ? 'pos' : 'neg'],
+        ['70% of outcomes', fmtSigned(r.ci70Low) + ' to ' + fmtSigned(r.ci70High) + ' ' + u, ''],
+        ['95% of outcomes', fmtSigned(r.ci95Low) + ' to ' + fmtSigned(r.ci95High) + ' ' + u, ''],
+        ['Chance of losing overall', fmtPct(r.pLoss), r.pLoss > 0.5 ? 'neg' : '']
+      ];
+      if (r.riskOfRuin !== null) {
+        rows.push(['Risk of ruin (bankroll ' + fmtAmount(bankroll) + ' ' + u + ')',
+          fmtPct(r.riskOfRuin), r.riskOfRuin > 0.05 ? 'neg' : 'pos']);
+      }
+      if (r.bankrollForRoR5 !== null) {
+        rows.push(['Bankroll for 5% risk of ruin', fmtBankrollNeed(r.bankrollForRoR5) + ' ' + u, '']);
+        rows.push(['Bankroll for 1% risk of ruin', fmtBankrollNeed(r.bankrollForRoR1) + ' ' + u, '']);
+      } else {
+        rows.push(['Bankroll for 5% / 1% risk of ruin',
+          '— (win rate ≤ 0: no finite bankroll suffices)', 'neg']);
+      }
+      var host = $('results');
+      host.innerHTML = '';
+      rows.forEach(function (row) {
+        var k = document.createElement('span');
+        k.className = 'k';
+        k.textContent = row[0];
+        var v = document.createElement('span');
+        v.className = 'v' + (row[2] ? ' ' + row[2] : '');
+        v.textContent = row[1];
+        host.appendChild(k);
+        host.appendChild(v);
+      });
+      host.style.display = '';
+    }
+
+    // ── Chart: 95%/70% envelopes, EV line, zero line, seeded sample paths ────
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function drawChart() {
+      if (!last) return;
+      var canvas = $('chart');
+      var dpr = window.devicePixelRatio || 1;
+      var w = canvas.clientWidth, h = canvas.clientHeight;
+      if (w === 0 || h === 0) return;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      var ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      var colPrimary = cssVar('--primary') || '#4CAF50';
+      var colMuted = cssVar('--text-muted') || 'rgba(255,255,255,0.55)';
+      var colFaint = cssVar('--text-faint') || 'rgba(255,255,255,0.38)';
+
+      var padL = 10, padR = 64, padT = 12, padB = 24;
+      var iw = w - padL - padR, ih = h - padT - padB;
+
+      var r = last.result;
+      // y-range: cover the 95% envelope AT EVERY STEP plus every sample
+      // path. The horizon endpoints alone miss the band's interior minimum
+      // (for a winner the lower envelope dips to −z²σ²/4μ mid-chart before
+      // drift pulls it back up), which clipped the shaded band off-canvas.
+      var yMin = 0, yMax = 0;
+      for (var ke = 0; ke <= STEPS; ke++) {
+        var te = last.units * ke / STEPS;
+        var sde = last.sdPerUnit * Math.sqrt(te);
+        var mide = r.ev * ke / STEPS;
+        if (mide - Z95 * sde < yMin) yMin = mide - Z95 * sde;
+        if (mide + Z95 * sde > yMax) yMax = mide + Z95 * sde;
+      }
+      last.paths.forEach(function (p) {
+        p.forEach(function (v) {
+          if (v < yMin) yMin = v;
+          if (v > yMax) yMax = v;
+        });
+      });
+      var span = yMax - yMin || 1;
+      yMin -= span * 0.05; yMax += span * 0.05;
+
+      function X(k) { return padL + iw * (k / STEPS); }
+      function Y(v) { return padT + ih * (1 - (v - yMin) / (yMax - yMin)); }
+
+      // Envelopes: at step k, ev_k ± z·sd·sqrt(units·k/steps).
+      function envelope(z, alpha) {
+        ctx.beginPath();
+        var k;
+        for (k = 0; k <= STEPS; k++) {
+          var uK = last.units * k / STEPS;
+          var y = Y(last.meanPerUnit * uK + z * last.sdPerUnit * Math.sqrt(uK));
+          if (k === 0) ctx.moveTo(X(k), y); else ctx.lineTo(X(k), y);
+        }
+        for (k = STEPS; k >= 0; k--) {
+          var uK2 = last.units * k / STEPS;
+          ctx.lineTo(X(k), Y(last.meanPerUnit * uK2 - z * last.sdPerUnit * Math.sqrt(uK2)));
+        }
+        ctx.closePath();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = colPrimary;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      envelope(Z95, 0.10);
+      envelope(Z70, 0.14);
+
+      // Zero line (dashed).
+      ctx.strokeStyle = colFaint;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(padL, Y(0));
+      ctx.lineTo(w - padR, Y(0));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Sample paths.
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = colMuted;
+      ctx.lineWidth = 1;
+      last.paths.forEach(function (p) {
+        ctx.beginPath();
+        for (var k = 0; k <= STEPS; k++) {
+          if (k === 0) ctx.moveTo(X(k), Y(p[k])); else ctx.lineTo(X(k), Y(p[k]));
+        }
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+
+      // EV line.
+      ctx.strokeStyle = colPrimary;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(X(0), Y(0));
+      ctx.lineTo(X(STEPS), Y(r.ev));
+      ctx.stroke();
+
+      // Right-edge labels: EV and the 95% band endpoints.
+      ctx.font = '11px ' + (cssVar('--font') || 'sans-serif');
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = colPrimary;
+      ctx.fillText('EV ' + fmtSigned(r.ev), w - padR + 6, Y(r.ev));
+      ctx.fillStyle = colMuted;
+      ctx.fillText(fmtSigned(r.ci95High), w - padR + 6, Y(r.ci95High));
+      ctx.fillText(fmtSigned(r.ci95Low), w - padR + 6, Y(r.ci95Low));
+      ctx.fillStyle = colFaint;
+      ctx.fillText('0', w - padR + 6, Y(0));
+
+      // X-axis caption.
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = colFaint;
+      var xLabel = mode === 'cash'
+        ? Math.round(last.units * 100).toLocaleString('en-US') + ' hands'
+        : Math.round(last.units).toLocaleString('en-US') + ' tournaments';
+      ctx.fillText('0', padL, h - 8);
+      var m = ctx.measureText(xLabel);
+      ctx.fillText(xLabel, w - padR - m.width, h - 8);
+    }
+
+    // ── Wiring ───────────────────────────────────────────────────────────────
+    $('mode-cash').addEventListener('click', function () { setMode('cash'); });
+    $('mode-tournament').addEventListener('click', function () { setMode('tournament'); });
+    $('btn-calc').addEventListener('click', calculate);
+    $('btn-reroll').addEventListener('click', function () {
+      if (!last) return;
+      seed++;
+      last.paths = simulatePaths(last.meanPerUnit, last.sdPerUnit, last.units, PATHS, STEPS, seed);
+      drawChart();
+    });
+    window.addEventListener('resize', function () { requestAnimationFrame(drawChart); });
+    // The theme toggle (site.js) dispatches this; repaint with the new palette.
+    window.addEventListener('themechange', drawChart);
+  })();
+  </script>
+
+</body>
+</html>

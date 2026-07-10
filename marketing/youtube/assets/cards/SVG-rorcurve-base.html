@@ -1,0 +1,56 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1920px;height:1080px;overflow:hidden}
+  body{background:#111811;display:flex;align-items:center;justify-content:center;padding:90px 130px}
+  svg{width:100%;height:auto;font-family:"Segoe UI",Arial,sans-serif}
+  .hide{visibility:hidden}
+  .title{fill:#eceff1;font-size:40px;font-weight:800}
+  .axis{stroke:#3a4a3d;stroke-width:3}
+  .curve{fill:none;stroke:#4CAF50;stroke-width:6;stroke-linejoin:round}
+  .dimlab{fill:#7f8f82;font-size:34px;font-weight:600}
+  .src{fill:#7f8f82;font-size:26px;font-weight:500}
+  .brt{fill:#fff;font-size:38px;font-weight:800}
+  .guide{stroke-width:3;stroke-dasharray:9 9;opacity:.6}
+</style></head><body>
+<svg viewBox="0 0 1600 780" xmlns="http://www.w3.org/2000/svg">
+  <g class="">
+    <text x="70" y="52" class="title">Risk of ruin vs. bankroll <tspan fill="#7fae86" font-size="30">(3 bb/100 winner, 85 SD)</tspan></text>
+    <line x1="260" y1="110" x2="260" y2="620" class="axis"/>
+    <line x1="260" y1="620" x2="1470" y2="620" class="axis"/>
+    <polyline points="430,155 850,380 1270,560" class="curve"/>
+    <text x="235" y="167" text-anchor="end" class="dimlab">5%</text>
+    <text x="235" y="392" text-anchor="end" class="dimlab">2%</text>
+    <text x="235" y="572" text-anchor="end" class="dimlab">1%</text>
+    <text x="430" y="685" text-anchor="middle" class="dimlab">36 BI</text>
+    <text x="850" y="685" text-anchor="middle" class="dimlab">48 BI</text>
+    <text x="1270" y="685" text-anchor="middle" class="dimlab">56 BI</text>
+    <text x="260" y="745" class="src">More buy-ins &#8594; lower chance of going broke. Source: Primedope.</text>
+  </g>
+  <!-- p1 36/5% red -->
+  <g class="hide">
+    <line x1="260" y1="155" x2="430" y2="155" class="guide" stroke="#ef9a9a"/>
+    <line x1="430" y1="155" x2="430" y2="620" class="guide" stroke="#ef9a9a"/>
+    <circle cx="430" cy="155" r="34" fill="none" stroke="#ef9a9a" stroke-width="4" opacity=".45"/>
+    <circle cx="430" cy="155" r="17" fill="#ef9a9a"/>
+    <text x="235" y="167" text-anchor="end" class="brt">5%</text>
+    <text x="430" y="685" text-anchor="middle" class="brt">36 BI</text>
+  </g>
+  <!-- p2 48/2% yellow -->
+  <g class="hide">
+    <line x1="260" y1="380" x2="850" y2="380" class="guide" stroke="#ffd54f"/>
+    <line x1="850" y1="380" x2="850" y2="620" class="guide" stroke="#ffd54f"/>
+    <circle cx="850" cy="380" r="34" fill="none" stroke="#ffd54f" stroke-width="4" opacity=".45"/>
+    <circle cx="850" cy="380" r="17" fill="#ffd54f"/>
+    <text x="235" y="392" text-anchor="end" class="brt">2%</text>
+    <text x="850" y="685" text-anchor="middle" class="brt">48 BI</text>
+  </g>
+  <!-- p3 56/1% green (payoff) -->
+  <g class="hide">
+    <line x1="260" y1="560" x2="1270" y2="560" class="guide" stroke="#4CAF50"/>
+    <line x1="1270" y1="560" x2="1270" y2="620" class="guide" stroke="#4CAF50"/>
+    <circle cx="1270" cy="560" r="38" fill="none" stroke="#4CAF50" stroke-width="4" opacity=".55"/>
+    <circle cx="1270" cy="560" r="19" fill="#4CAF50"/>
+    <text x="235" y="572" text-anchor="end" class="brt">1%</text>
+    <text x="1270" y="685" text-anchor="middle" class="brt">56 BI</text>
+  </g>
+</svg></body></html>

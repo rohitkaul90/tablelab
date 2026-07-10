@@ -32,7 +32,7 @@ import 'package:tablelab/equity/card.dart';
 import 'package:tablelab/equity/decision_context.dart';
 import 'package:tablelab/equity/texture_cell.dart';
 
-import 'range_calib.dart' show parseComboKey;
+import 'dump_codec.dart';
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
@@ -310,13 +310,52 @@ List<FreqCell> tabulateDumpFile(
   required double effStack,
   int maxBoardLen = 5,
 }) {
+  // Dispatch on the file's magic bytes, not its extension: a TLSD binary dump
+  // (dump_result_bin) decodes into a compact typed tree (~25-50× less heap
+  // than jsonDecode of the equivalent JSON); anything else is the legacy JSON
+  // path, kept intact as the validation oracle.
+  if (looksLikeTlsd(path)) {
+    return tabulateTlsd(readTlsdFile(path),
+        board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
+  }
   final root = jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
   return tabulateSpot(root,
       board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
 }
 
+/// Tabulate a decoded TLSD dump. Sanity-checks the dump's own header board
+/// against the caller's [board] — a flop mismatch means the grid wired the
+/// wrong dump to the wrong spot (silent garbage otherwise).
+List<FreqCell> tabulateTlsd(
+  TlsdDump dump, {
+  required List<int> board,
+  required double pot0,
+  required double effStack,
+  int maxBoardLen = 5,
+}) {
+  if (dump.board.length >= 3 &&
+      !(board.toSet().containsAll(dump.board.take(3)))) {
+    throw StateError('TLSD board ${dump.board} does not match spot flop $board');
+  }
+  final root = dump.root;
+  if (root == null) return const [];
+  return _tabulate(TlsdNodeView(root, dump.dicts),
+      board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
+}
+
 List<FreqCell> tabulateSpot(
   Map<String, dynamic> root, {
+  required List<int> board,
+  required double pot0,
+  required double effStack,
+  int maxBoardLen = 5,
+}) {
+  return _tabulate(JsonNodeView(root),
+      board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
+}
+
+List<FreqCell> _tabulate(
+  DumpNodeView root, {
   required List<int> board,
   required double pot0,
   required double effStack,
@@ -348,36 +387,26 @@ List<FreqCell> tabulateSpot(
 }
 
 void _walk(
-  Map<String, dynamic> node,
+  DumpNodeView node,
   List<int> board,
   Map<String, Map<String, double>> reachByPos,
-  String position, // 'oop' | 'ip' — derived STRUCTURALLY, not from node['player']
+  String position, // 'oop' | 'ip' — derived STRUCTURALLY, not from the player id
   String facing,
   Map<String, _CellAcc> acc,
   SprState spr,
   int maxBoardLen,
 ) {
-  final type = node['node_type'] as String?;
-  final children = node['childrens'] as Map<String, dynamic>?;
-  final strat = node['strategy'] as Map<String, dynamic>?;
-
   // Chance node: deal each child card, drop conflicting combos, recurse. The new
   // street's first actor is OOP → position resets to 'oop', facing first_to_act.
-  // A chance node enumerates the deck under `dealcards` (keyed by card string),
-  // NOT `childrens` (action nodes use `childrens`); we fall back to `childrens`
-  // so the unit-test synthetic dumps (which use `childrens`) still walk.
-  final dealCards =
-      (node['dealcards'] ?? node['childrens']) as Map<String, dynamic>?;
-  if (type == 'chance_node' ||
-      (strat == null && dealCards != null && type != 'action_node')) {
-    if (dealCards == null) return;
+  // (Format specifics — `dealcards` vs the synthetic-test `childrens` fallback,
+  // TLSD typed nodes — live behind DumpNodeView in dump_codec.dart.)
+  if (node.isChance) {
     if (board.length >= maxBoardLen) return;
     // The street just closed → fold this street's chips into the pot and
     // re-derive the SPR bucket for the new street (pot grew, stacks shrank).
     final nextSpr = spr.nextStreet();
-    dealCards.forEach((cardStr, child) {
-      final card = parseCard(cardStr.trim());
-      if (card < 0 || board.contains(card)) return;
+    node.forEachDeal((card, child) {
+      if (board.contains(card)) return;
       final nextBoard = [...board, card];
       final pruned = <String, Map<String, double>>{
         for (final e in reachByPos.entries)
@@ -386,21 +415,21 @@ void _walk(
               if (!_keyHasCard(r.key, card)) r.key: r.value
           },
       };
-      _walk(child as Map<String, dynamic>, nextBoard, pruned, 'oop',
-          'first_to_act', acc, nextSpr, maxBoardLen);
+      _walk(child, nextBoard, pruned, 'oop', 'first_to_act', acc, nextSpr,
+          maxBoardLen);
     });
     return;
   }
 
-  if (strat == null) return; // showdown / terminal leaf
+  if (!node.isAction) return; // showdown / terminal leaf
 
-  final actions = (strat['actions'] as List?)?.cast<String>() ?? const [];
-  final byCombo = strat['strategy'] as Map<String, dynamic>?;
-  if (actions.isEmpty || byCombo == null || byCombo.isEmpty) return;
+  final actions = node.actions;
+  final nCombos = node.comboCount;
+  if (actions.isEmpty || nCombos == 0) return;
 
   // Position comes from tree STRUCTURE (root + post-chance = OOP, flipping each
-  // action), NOT node['player'] — that field's 0/1↔OOP/IP convention is not
-  // reliable across solver builds (verified: a build had player 0 = IP).
+  // action), NOT the dump's player field — that field's 0/1↔OOP/IP convention is
+  // not reliable across solver builds (verified: a build had player 0 = IP).
   final canon = canonicalActionLabels(actions);
 
   // Initialise this position's reach map on first encounter: every combo present
@@ -410,61 +439,55 @@ void _walk(
   final firstNodeForPlayer = reach == null;
   if (reach == null) {
     reach = <String, double>{};
-    byCombo.forEach((rawKey, _) {
-      final cards = parseComboKey(rawKey);
-      if (cards != null) reach![_ckey(cards)] = 1.0;
-    });
+    for (var c = 0; c < nCombos; c++) {
+      final cards = node.comboCards(c);
+      if (cards != null) reach[_ckey(cards)] = 1.0;
+    }
   }
 
   // Tabulate: bucket combos by hand class, accumulate reach-weighted freqs.
   final tex = textureCell(board)?.key;
   if (tex != null) {
     final street = _streetName(board.length);
-    byCombo.forEach((rawKey, vec) {
-      if (vec is! List) return;
-      final cards = parseComboKey(rawKey);
-      if (cards == null) return;
-      final w = firstNodeForPlayer ? 1.0 : (reach![_ckey(cards)] ?? 0.0);
-      if (w <= 0) return;
+    for (var c = 0; c < nCombos; c++) {
+      if (!node.comboHasFreqs(c)) continue;
+      final cards = node.comboCards(c);
+      if (cards == null) continue;
+      final w = firstNodeForPlayer ? 1.0 : (reach[_ckey(cards)] ?? 0.0);
+      if (w <= 0) continue;
       final hc = classifyHandClass(cards, board);
-      if (hc == null) return;
+      if (hc == null) continue;
       final cellKey =
           '$tex@@${spr.bucket}@@$street@@$position@@$facing@@${hc.name}';
       final ca = acc.putIfAbsent(cellKey, () => _CellAcc());
-      for (var i = 0; i < canon.length && i < vec.length; i++) {
-        final f = (vec[i] as num).toDouble();
+      final fl = node.freqLen(c);
+      for (var i = 0; i < canon.length && i < fl; i++) {
+        final f = node.freq(c, i);
         ca.weighted[canon[i]] = (ca.weighted[canon[i]] ?? 0.0) + w * f;
       }
       ca.totalReach += w;
-    });
+    }
   }
 
   // Descend each action child: the acting player's reach is multiplied by that
   // action's per-combo frequency; the other player's reach is carried unchanged,
   // and the child node belongs to the OTHER position (strict alternation within a
   // street until it closes into a chance node).
-  if (children == null) return;
   final other = position == 'oop' ? 'ip' : 'oop';
   for (var ai = 0; ai < actions.length; ai++) {
-    final childKey = children.keys.firstWhere(
-      (k) =>
-          k == actions[ai] ||
-          k.toUpperCase().startsWith(actions[ai].trim().toUpperCase()),
-      orElse: () => '',
-    );
-    if (childKey.isEmpty) continue;
-    final child = children[childKey] as Map<String, dynamic>;
+    final child = node.child(ai);
+    if (child == null) continue;
 
     final childReach = <String, double>{};
-    byCombo.forEach((rawKey, vec) {
-      if (vec is! List || ai >= vec.length) return;
-      final cards = parseComboKey(rawKey);
-      if (cards == null) return;
+    for (var c = 0; c < nCombos; c++) {
+      if (!node.comboHasFreqs(c)) continue;
+      final cards = node.comboCards(c);
+      if (cards == null) continue;
       final ck = _ckey(cards);
-      final old = firstNodeForPlayer ? 1.0 : (reach![ck] ?? 0.0);
-      final nr = old * (vec[ai] as num).toDouble();
+      final old = firstNodeForPlayer ? 1.0 : (reach[ck] ?? 0.0);
+      final nr = old * node.freq(c, ai);
       if (nr > 1e-9) childReach[ck] = nr;
-    });
+    }
 
     final nextReach = <String, Map<String, double>>{
       position: childReach,
@@ -549,7 +572,6 @@ void main(List<String> args) {
         '<flopSpr e.g. 6> [maxBoardLen] [potScale=10]');
     exit(64);
   }
-  final root = jsonDecode(File(args[0]).readAsStringSync()) as Map<String, dynamic>;
   final flop = <int>[];
   for (var i = 0; i + 1 < args[1].length; i += 2) {
     final c = parseCard(args[1].substring(i, i + 2));
@@ -563,7 +585,8 @@ void main(List<String> args) {
   }
   final maxLen = args.length > 3 ? int.tryParse(args[3]) ?? 5 : 5;
   final pot0 = args.length > 4 ? double.tryParse(args[4]) ?? 10.0 : 10.0;
-  final cells = tabulateSpot(root,
+  // tabulateDumpFile dispatches on magic bytes — works for JSON and TLSD dumps.
+  final cells = tabulateDumpFile(args[0],
       board: flop, pot0: pot0, effStack: spr * pot0, maxBoardLen: maxLen);
   cells.sort((a, b) => b.reachWeight.compareTo(a.reachWeight));
   stdout.writeln('${cells.length} cells (by reach mass):');

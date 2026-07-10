@@ -228,9 +228,15 @@ class _MetricSpec {
   /// passes that period's sessions; cumulative mode passes the expanding window
   /// of all sessions up to and including the period.
   final double Function(List<SessionModel>) aggregate;
-  final String Function(double) headline; // tooltip + headline + value cell
+  final String Function(double) headline; // tooltip + big headline (unit-suffixed)
   final String Function(double) axisLabel; // compact axis tick
-  final String valueLabel; // table value-column header
+
+  /// Unit-LESS table-cell formatter. The value column's HEADER ([valueLabel])
+  /// names the unit, so repeating it in every row ("533h" under "Hours",
+  /// "+15%" under "ROI %") is noise. Null → fall back to [headline] (metrics
+  /// whose headline is already bare, e.g. sessions/ITM counts).
+  final String Function(double)? cellText;
+  final String valueLabel; // table value-column header (carries the unit)
   final bool signed; // green/red coloring
   final bool rich; // profit/net → extra $/hr + Hrs table columns
 
@@ -252,6 +258,7 @@ class _MetricSpec {
     required this.headline,
     required this.axisLabel,
     required this.valueLabel,
+    this.cellText,
     this.signed = false,
     this.rich = false,
     this.sessionFilter,
@@ -264,11 +271,15 @@ class _MetricSpec {
         aggregate = _zeroAgg,
         headline = _emptyFmt,
         axisLabel = _emptyFmt,
+        cellText = null,
         valueLabel = '',
         signed = false,
         rich = false,
         sessionFilter = null,
         cumulativeSupported = true;
+
+  /// Table-cell text: unit-less when [cellText] is set, else the headline.
+  String cellFor(double v) => (cellText ?? headline)(v);
 }
 
 _MetricSpec _specFor(StatMetric m, String cur) {
@@ -314,6 +325,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         },
         headline: (v) => '${money(v)}/hr',
         axisLabel: moneyAxis,
+        cellText: (v) => formatPL(v, ''),
         valueLabel: '$sym/hr',
         signed: true,
         cumulativeSupported: false,
@@ -324,6 +336,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         aggregate: hours,
         headline: (v) => formatHours(v),
         axisLabel: (v) => '${v.round()}',
+        cellText: formatWholeNum,
         valueLabel: 'Hours',
       );
     case StatMetric.sessions:
@@ -336,11 +349,20 @@ _MetricSpec _specFor(StatMetric m, String cur) {
       );
     case StatMetric.buyIn:
       return _MetricSpec(
-        title: 'Total Buy-In',
-        aggregate: (l) => l.fold(0.0, (a, s) => a + buyin(s)),
+        title: 'Avg Buy-In',
+        // Per-session AVERAGE (matches the Analytics summary row) — a total
+        // pooled buy-in mostly tracked volume, not how much the user actually
+        // puts on the table per session. ROI denominators elsewhere stay
+        // pooled totals; this metric is display-only.
+        aggregate: (l) =>
+            l.isEmpty ? 0.0 : l.fold(0.0, (a, s) => a + buyin(s)) / l.length,
         headline: (v) => formatAmount(v, cur),
         axisLabel: moneyAxis,
-        valueLabel: 'Buy-In',
+        cellText: formatWholeNum,
+        valueLabel: 'Buy-In ($sym)',
+        // A "cumulative" average is a converging lifetime mean — nonsense as
+        // a running-total toggle, same rationale as the rate metrics.
+        cumulativeSupported: false,
       );
     case StatMetric.expenses:
       return _MetricSpec(
@@ -348,7 +370,8 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         aggregate: (l) => l.fold(0.0, (a, s) => a + exp(s)),
         headline: (v) => formatAmount(v, cur),
         axisLabel: moneyAxis,
-        valueLabel: 'Expenses',
+        cellText: formatWholeNum,
+        valueLabel: 'Expenses ($sym)',
       );
     case StatMetric.bb100:
       return _MetricSpec(
@@ -356,7 +379,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         // Scope to the cash sessions calcBB100 actually counts, so a period
         // with no qualifying session drops out of the chart entirely rather
         // than plotting a misleading 0 (no-data ≠ break-even).
-        sessionFilter: _countsForBB100,
+        sessionFilter: countsForBB100,
         aggregate: (l) => calcBB100(l) ?? 0.0,
         headline: formatBB100,
         axisLabel: (v) => '${v.round()}',
@@ -378,7 +401,8 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         },
         headline: formatROI,
         axisLabel: (v) => '${v.round()}%',
-        valueLabel: 'ROI',
+        cellText: (v) => '${v >= 0 ? '+' : ''}${v.round()}',
+        valueLabel: 'ROI %',
         signed: true,
         cumulativeSupported: false,
       );
@@ -408,6 +432,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         },
         headline: (v) => '${v.round()}%',
         axisLabel: (v) => '${v.round()}%',
+        cellText: (v) => '${v.round()}',
         valueLabel: 'ITM %',
         cumulativeSupported: false,
       );
@@ -417,16 +442,6 @@ _MetricSpec _specFor(StatMetric m, String cur) {
 }
 
 // ─── Shared lookback / period helpers ─────────────────────────────────────────
-
-/// Whether a session contributes to BB/100 — mirrors the per-session test in
-/// [calcBB100] (cash, parseable positive blind, non-zero estimated hands). Kept
-/// in sync so per-period scoping matches the headline figure.
-bool _countsForBB100(SessionModel s) {
-  if (s.gameType != 'cash') return false;
-  final bb = parseBBFromStakes(s.stakes);
-  if (bb == null || bb <= 0) return false;
-  return (s.handsPerHour ?? 25) * (s.durationMinutes / 60.0) > 0;
-}
 
 List<SessionModel> _applyLookback(List<SessionModel> sessions, _Lookback lb) {
   if (lb == _Lookback.all) return sessions;
@@ -1024,7 +1039,8 @@ class _MetricChartState extends State<_MetricChart> {
       ];
     }
     return [
-      cell(_spec.headline(value), 3, c: color, bold: true),
+      // Unit-less cell — the column header (valueLabel) names the unit.
+      cell(_spec.cellFor(value), 3, c: color, bold: true),
       cell('$count', 1, c: outline, big: false),
     ];
   }

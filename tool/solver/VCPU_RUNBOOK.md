@@ -31,11 +31,32 @@ Dart-heap flag and the 8-thread cap.
 ```
 
 Key params: `-Profile turn|river` (default river), `-GridArgs`, `-InstanceType` (+ `-Fallbacks`),
-`-Spot` (default on-demand — spot kept getting reclaimed), `-HeapMB` (default 200000),
-`-Branch`, `-AmiId` (default the golden AMI), `-PullAndTerminate` (FULL solves only — it
-refuses to auto-pull a `--limit` partial). The script prints ready-to-paste watch / tail /
-RAM / pull / terminate commands. The manual runbook below is the fallback when there's no
-golden AMI yet, or for debugging a launch.
+`-Spot` (opt-in; see spot resilience below), `-HeapMB` (default 24000 — tabulation runs in
+per-spot subprocesses, `-TabulateHeapMB`), `-Branch`, `-AmiId` (default the golden AMI),
+`-PullAndTerminate` (FULL solves only — it refuses to auto-pull a `--limit` partial). The
+script prints ready-to-paste watch / tail / RAM / pull / terminate commands. The manual
+runbook below is the fallback when there's no golden AMI yet, or for debugging a launch.
+
+**CPU oversubscription (`-CpuOversub`, 2026-07-10):** solves CLAIM 8 threads but drive only
+~4-5 (calibration measured ~50-55% CPU util on both box classes), so the admission budget
+can oversubscribe cores: `-CpuOversub 1.6` sets `TLSOLVE_CPU_OVERSUB` (a multiplier on
+nproc; `-CpuBudget` is the absolute override). Size `--parallel` above `cores×oversub/8`
+so the scheduler — not the worker pool — is the binding cap. The `-PullAndTerminate` poll
+prints a `[cpu] <load> / <cores>` line each interval; load/cores nearing ~0.8-0.9 (from
+~0.5) = the tune is working. RAM claims still gate the deep class.
+
+**Spot resilience (WS3, 2026-07-09):** under `-PullAndTerminate` the launcher stages the
+checkpoint shards locally every `-SyncEveryMin` (default 10) into
+`tool\solver\.remote-staging\`, and `-AutoRelaunch` relaunches on a CONFIRMED spot reclaim
+(StateReason `Server.SpotInstanceTermination` or the box's `~/SPOT_RECLAIM_NOTICE` marker,
+stamped by an IMDSv2 watcher in run-solve.sh), reseeding the freshest staged shards;
+`-RelaunchBudget` (default 3) caps retries and the final attempt drops `-Spot`. A crash
+still leaves the box up for triage. This makes `-Spot` (~25–35% of the on-demand rate) the
+sensible default for bulk runs:
+
+```powershell
+.\tool\solver\vcpu-solve.ps1 -GridArgs "--parallel 16" -Spot -AutoRelaunch -PullAndTerminate
+```
 
 ---
 
@@ -178,13 +199,20 @@ TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=3000 TLSOLVE_MAXITER=400 TLSOLVE_THREADS=
 | `TLSOLVE_ACCURACY` | `0.5` | exploitability % stop threshold |
 | `TLSOLVE_TIMEOUT_S` | `3000` | per-spot wall cap. **Deep/river may need higher** — bump if deep spots don't reach 0.5% |
 | `TLSOLVE_MAXITER` | `400` | CFR iteration cap |
-| `TLSOLVE_THREADS` | `8` | solver worker threads per spot. **16 crashed ~48%** on wet turn-raise trees (concurrency race, not OOM) — keep 8 |
-| `--parallel N` | `12` | concurrent spots. Set `N ≈ vCPU / TLSOLVE_THREADS` (96/8 = 12) |
+| `TLSOLVE_THREADS` | `8` | solver worker threads per spot. **16 crashed ~48%** on wet turn-raise trees (concurrency race, not OOM) — keep 8. Note threads are NOT a throughput lever anyway (8→16t only ~1.2–1.3×, memory-bandwidth-bound) — more concurrent spots is |
+| `TLSOLVE_DUMP_FMT` | `bin` | **TLSD binary dump** (2026-07-09): ~10× smaller, small-heap parse — the pre-TLSD ~15 GB JSON needed a ~150 GB heap and capped `--parallel` at ~5/TB. `json` = the oracle + REQUIRED for `--emit-pack`; `both` = one solve, two dumps (validate_dump.dart) |
+| `TLSOLVE_FLOPS` | `rep` | flop set: `rep` (26 curated) / `all1755` (full density) / `file:<path>` (slice across boxes) |
+| `TLSOLVE_RAM_BUDGET_GB` | MemTotal×0.85 | RAM-aware scheduler budget (spot_sched.dart): solve/parse phases claim (GB, threads); deep claims throttle concurrency, shallow packs around them (LPT deep-first) |
+| `TLSOLVE_MAX_SPOT_GB` | unset | SKIP spots predicted above this (a 256 GB box grinds shallow/medium, a 1 TB box takes deep) |
+| `--parallel N` | high | worker cap only — the scheduler's budget admission does the real throttling, so set it generously (e.g. 16–24 on 128 vCPU) and let RAM claims govern. `--sched-dry-run` prints the planned packing |
 
-Concurrency model: one orchestrator process, a bounded worker pool, the parent isolate is
-the **single writer** of `results.json`; per-call temp dirs prevent dump collisions; each
-spot is checkpointed on completion (resumable). Thread count is excluded from the cache tag
-(doesn't change the GTO result).
+Concurrency model: one orchestrator process, a bounded worker pool; each solved spot
+appends ONE line to its scenario's `freq_grid_results.<scenario>.jsonl` shard (O(spot)
+checkpoint — the old whole-file rewrite was O(total) and already 128 MB/spot at 312 spots);
+`--compact` folds shards into `freq_grid_results.json` (run before seeding a box; the box
+run-script compacts automatically before its `BATCH DONE`). Per-call temp dirs prevent dump
+collisions. Thread count + dump format are excluded from the cache tag (they don't change
+the GTO result).
 
 ---
 
@@ -238,24 +266,33 @@ This cycle = **deep-SPR** (`kSprReps` gained `'deep': 15.0`; same BTN-vs-BB scen
 
 | Cycle | Code prep | Notes |
 |---|---|---|
-| **River** | ✅ prep DONE + **3-spot trial done (2026-06-30)**. Invoke `TLSOLVE_PROFILE=river` (dump-rounds derived → 3). **River converges ≤0.5% and fits 256 GB** (deep spot 1082s solve, ~89 GB peak). **TWO trial findings below.** | **⚠️ Full solve BLOCKED on a tabulation code fix — do NOT run it yet** (see below) |
+| **River** | ✅ DONE — full river solved 2026-07-01 (78 spots, 0 failures). The 2026-06-30 trial's "parse is the blocker" finding was fixed twice over: first the per-spot SUBPROCESS tabulator (commit 0130619), then **TLSD binary dumps (2026-07-09)** which shrink the parse itself ~10×/25-50× heap — see the run-config table. Historical trial detail lives in `memory/dce_river_trial`. | JSON-era river rules (200 GB main heap, 150 GB tabulate heaps, --parallel ≤5/TB) are OBSOLETE under `TLSOLVE_DUMP_FMT=bin`; keep them only for `--emit-pack` (JSON) runs |
 
-**River trial findings (must address before a full river solve):**
-1. **MANDATORY Dart heap flag.** The default Dart heap OOMs parsing the medium/deep river
-   dumps *even with 228 GB system RAM free* (`evacuation failed / Exhausted heap space` =
-   Dart VM heap, not system OOM). Always run river as
-   `dart --old_gen_heap_size=200000 run tool/solver/freq_grid.dart …`.
-2. **⛔ Parse+tabulate is a SERIAL single-isolate bottleneck — the real blocker.** A 3-spot
-   trial took **91 min, but only ~25 min was solving** — the other ~66 min was the Dart-side
-   `jsonDecode(readAsStringSync())` + `tabulateSpot` of the huge river dumps, which runs
-   SERIALLY in one isolate. So `--parallel` does NOT speed it up (it only overlaps the
-   external solvers) and **a bigger box does not help**. A full 78-spot river solve as-is is
-   ~20-30 h of un-parallelizable Dart work. **Fix the tabulation pipeline first**
-   (per-spot `Isolate.run` parse+tabulate / streamed parse / smaller dump), then trial again.
+### Golden AMI + refresh
 
-**Golden AMI:** `ami-04c312a0a89b077c2` (us-east-2) bakes the toolchain + built
-`console_solver` + flutter deps — launch from it (`--image-id ami-04c312a0a89b077c2`) to skip
-§2 + §4 entirely; just `git archive` the branch over the baked-in repo for code changes.
+**Golden AMI:** `ami-0f3cf3bc4ef5c1255` (`tablelab-solver-tlsd-20260709`, us-east-2) bakes
+the toolchain + the **TLSD-patched** `console_solver` + flutter deps — launch from it to
+skip §2 + §4 entirely; just `git archive` the branch over the baked-in repo for code
+changes. Baked 2026-07-09 after the deep dual-dump gate passed (15.1 GB JSON vs 1.58 GB
+TLSD, 2,123 servable cells, 0 mismatches); `TLSOLVE_DUMP_FMT` defaults to `bin` from the
+same date. Predecessor `ami-04c312a0a89b077c2` (pre-TLSD) — deregister + delete its
+snapshot after the first successful solve on the new AMI.
+
+Refresh the AMI (future solver-source changes) with
+**`tool/solver/refresh-ami.ps1`** (WS1c cloud step): it launches a 256 GB box from the
+current golden AMI, syncs the patched solver source (git archive from the LOCAL-ONLY source
+repo — vsbuild/ is gitignored so the archive is clean), rebuilds `console_solver` on Linux
+(§4's cmake flags), then gates the bake behind (1) a dual-dump SMOKE equivalence and (2) the
+**DEEP gate** — one real srp_late deep spot (SPR 15, river profile) solved once with
+`TLSOLVE_DUMP_FMT=both`, JSON vs TLSD cells compared (the ~15 GB-dump class TLSD exists
+for; ~60–90 min). Passing bakes `tablelab-solver-tlsd-<date>` and terminates the box; any
+failure leaves the box up for triage (`~/ami-validate.log`). ~$6 all-in.
+
+After a successful refresh (manual, deliberate): update the `-AmiId` defaults
+(vcpu-solve.ps1 + refresh-ami.ps1) and keep the OLD AMI until the first successful solve
+on the new one, then deregister it + delete its snapshot. (The one-time
+`TLSOLVE_DUMP_FMT` json→bin default flip happened with the 2026-07-09 refresh — the WS1c
+deep gate was its criterion.)
 | **New scenario** (3-bet / other openers / BvB) | Parameterize `scenarioRanges()` beyond hardcoded BTN-vs-BB; thread a scenario key through the spot/library | Biggest gap (1 of ~8 scenarios); largest code change |
 | **`facing_allin` relabel** | Relabel all-ins like the live `facing_bet_*`/`facing_raise` path so shove cells are reachable | Cheap; bundle with any solve |
 | **Asymmetric per-street SPR** | Match the live asymmetric-stack lookup against the symmetric offline solve | Pre-existing latent miss (flop too) |

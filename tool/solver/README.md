@@ -35,6 +35,22 @@ dump (see `memory/solver-engine-landscape` for the full rationale):
    realization with fold equity stripped** → emitted as `"ev_passive"`.
 3. **`PCfrSolver::dumps`** calls both and `reConvertJson` attaches `"ev"`/`"ev_passive"`
    to flop (`deal==0`) action nodes.
+4. **TLSD v1 binary dump** (full-density cost plan WS1, 2026-07-09) — a compact
+   little-endian binary alternative to the JSON dump: ~10× smaller on disk,
+   parseable in a fraction of the heap (the ~15 GB JSON → ~150 GB Dart heap
+   parse was what capped `--parallel` at ~5 on a 1 TB box). ADDITIVE — the JSON
+   path is untouched and stays the validation oracle. Touched files:
+   - `src/solver/PCfrSolver.cpp` — `TlsdWriter` + `reConvertBinary` (walk twin
+     of `reConvertJson`, same isomorphism-exchange semantics) + `dumps_binary`.
+     The authoritative format spec is the block comment above `TlsdWriter`;
+     the Dart reader (`tool/solver/dump_codec.dart`) mirrors it field by field.
+   - `include/solver/PCfrSolver.h`, `include/solver/Solver.h` (non-pure virtual
+     `dumps_binary`, default-throws), `include/runtime/PokerSolver.h` +
+     `src/runtime/PokerSolver.cpp` (`dump_strategy_bin`),
+     `src/tools/CommandLineTool.cpp` (**`dump_result_bin <path>`** command).
+   Select per solve via `TLSOLVE_DUMP_FMT=json|bin|both` (`both` = one solve,
+   two dumps — feeds `validate_dump.dart`). `--emit-pack` still requires JSON
+   (explorer_pack is not TLSD-adapted; packs are curated-subset only).
 
 ## Files
 

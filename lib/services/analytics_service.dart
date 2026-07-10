@@ -218,6 +218,18 @@ class AnalyticsService {
     Posthog().capture(eventName: 'icm_calculator_used');
   }
 
+  @visibleForTesting
+  static Map<String, Object> varianceCalculatorUsedProps(String mode) =>
+      {'mode': mode};
+
+  /// [mode] is 'cash' or 'tournament'.
+  static void varianceCalculatorUsed({required String mode}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+        eventName: 'variance_calculator_used',
+        properties: varianceCalculatorUsedProps(mode));
+  }
+
   // ── Reads ───────────────────────────────────────────────────────────────────
 
   @visibleForTesting

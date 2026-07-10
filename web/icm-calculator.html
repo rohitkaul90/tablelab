@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICM Deal Calculator — Final-Table Deals Done Right — TableLab</title>
+  <meta name="description" content="Free ICM calculator for final-table deals. Enter chip stacks and payouts to get each player's ICM equity vs a chip-chop split — up to 9 players, right in your browser.">
+  <link rel="canonical" href="https://tablelab.app/icm-calculator">
+  <meta property="og:title" content="ICM Deal Calculator — Final-Table Deals Done Right">
+  <meta property="og:description" content="Free ICM deal calculator: chip stacks + payouts in, each player's ICM equity vs chip-chop out. Up to 9 players, no signup.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tablelab.app/icm-calculator">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ICM Deal Calculator — Final-Table Deals Done Right">
+  <meta name="twitter:description" content="Free ICM deal calculator: chip stacks + payouts in, ICM equity vs chip-chop out. Up to 9 players, no signup.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta name="author" content="MagpiQ">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="stylesheet" href="/site.css">
+  <script src="/site.js" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "@id": "https://tablelab.app/icm-calculator#app",
+        "name": "ICM Deal Calculator",
+        "url": "https://tablelab.app/icm-calculator",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "Web Browser",
+        "description": "Free ICM (Independent Chip Model) calculator for final-table deals. Enter each remaining player's chip count and the remaining payouts to get every player's ICM equity, compared against a proportional chip-chop split. Handles 2 to 9 players with the exact Malmuth–Harville recursion, entirely in the browser.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/icm-calculator#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tablelab.app" },
+          { "@type": "ListItem", "position": 2, "name": "ICM Calculator", "item": "https://tablelab.app/icm-calculator" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/icm-calculator#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "What is ICM in poker?", "acceptedAnswer": { "@type": "Answer", "text": "The Independent Chip Model converts tournament chip stacks into real-money equity by computing each player's probability of finishing in every paid place, given the payout structure. It exists because tournament chips are not worth their face value in dollars — the payout jumps make each additional chip worth less than the last." } },
+          { "@type": "Question", "name": "How is an ICM deal calculated?", "acceptedAnswer": { "@type": "Answer", "text": "With the Malmuth–Harville method: each player's chance of finishing 1st is their share of the chips in play; the chance of finishing 2nd is computed by removing each possible winner and repeating the calculation on the chips that remain, and so on down the payout places. Summing probability × prize across places gives each player's dollar equity. This calculator runs that recursion exactly, for up to 9 players." } },
+          { "@type": "Question", "name": "Why does the chip leader get less than a chip-chop split?", "acceptedAnswer": { "@type": "Answer", "text": "A chip-chop hands out the whole prize pool in proportion to chips, which implicitly values every chip equally. But the chip leader can only win first place once — stacking more chips mostly adds equity they already have. ICM caps the leader's payout at what their finish-probability distribution is actually worth, which is always less than their chip share of the pool when payouts are top-heavy." } },
+          { "@type": "Question", "name": "Should a short stack ever accept a chip-chop deal?", "acceptedAnswer": { "@type": "Answer", "text": "Chip-chop usually favors the big stack and shortchanges medium stacks, so compare both numbers before agreeing. In the worked example on this page, the 5,000-chip leader gets $500 under chip-chop but only about $384 under ICM, while the 2,000-chip short stack gets $200 under chip-chop and about $289 under ICM. Run your own numbers before you agree to anything." } },
+          { "@type": "Question", "name": "Is ICM only used for final-table deals?", "acceptedAnswer": { "@type": "Answer", "text": "No — the same model drives in-game strategy anywhere payout jumps matter: bubble play, pay-jump laddering, and satellite decisions. A shove that is profitable in chips can be losing in dollars once ICM is applied, which is why tournament players tighten up near the bubble." } }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/about">About</a>
+      <a class="link" href="/variance-calculator">Variance Calculator</a>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / ICM Calculator</div>
+
+      <h1>ICM Deal Calculator</h1>
+
+      <p class="lead"><strong>Deciding whether a final-table deal is fair?</strong> Enter each
+      remaining player's chip count and the remaining payouts, and this free calculator computes
+      every player's <strong>ICM equity</strong> — their real-dollar share of the prize pool under
+      the Independent Chip Model — side by side with a proportional <strong>chip-chop</strong>
+      split, so you can see exactly who a chip-chop overpays. Up to 9 players, exact
+      Malmuth&ndash;Harville math, entirely in your browser.</p>
+
+      <div class="tool-card" id="calculator">
+        <noscript><p class="tool-error">The interactive calculator needs JavaScript. The
+        explanation and worked example below work without it.</p></noscript>
+
+        <h3 style="margin-top:0">Players <span class="note" id="player-count" style="font-size:0.8rem"></span></h3>
+        <p class="note" style="margin-top:0">Enter each remaining player's chip count. Names are optional.</p>
+        <div id="players"></div>
+        <button class="add-btn" type="button" id="add-player">+ Add Player</button>
+
+        <h3>Prize pool <span class="note" id="payout-count" style="font-size:0.8rem"></span></h3>
+        <p class="note" style="margin-top:0">Enter the prize for each remaining place. The number
+        of places must equal the number of players.</p>
+        <div id="payouts"></div>
+        <button class="add-btn" type="button" id="add-payout">+ Add Place</button>
+
+        <div class="tool-actions">
+          <button class="btn btn-primary" type="button" id="btn-calc">Calculate Deal</button>
+          <button class="btn btn-ghost" type="button" id="btn-copy" disabled>Copy results</button>
+        </div>
+        <p class="tool-error" id="calc-error" style="display:none"></p>
+
+        <div id="results-wrap" style="display:none">
+          <p class="note" id="total-prize"></p>
+          <table class="icm-results">
+            <thead>
+              <tr><th>Player</th><th>ICM Deal</th><th>Chip-Chop</th><th>Diff</th></tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+          </table>
+          <p class="note">ICM accounts for the payout structure — short stacks receive more than
+          their chip % suggests because their elimination risk is higher. Chip-chop ignores payout
+          jumps and splits the prize pool in direct proportion to chip counts. The "Diff" column
+          shows how much each player gains or loses under ICM vs a pure chip-chop.</p>
+        </div>
+      </div>
+
+      <h2>What is ICM, and why not just split by chips?</h2>
+
+      <p>Tournament chips aren't dollars. Payouts are awarded by <em>finishing place</em>, not by
+      chip count, and that breaks the one-to-one link between chips and money: your 40th chip is
+      worth less to you than your 4th, because the extra chips mostly pile onto first-place
+      outcomes you were already likely to win. The <strong>Independent Chip Model (ICM)</strong>
+      restores the link by converting stacks into finish-probability distributions and pricing
+      them against the actual payouts.</p>
+
+      <p>The standard way to compute it — and the way this calculator does — is the
+      <strong>Malmuth&ndash;Harville method</strong>: each player's chance of finishing 1st equals
+      their share of the chips in play; their chance of finishing 2nd is computed by removing each
+      possible winner in turn and re-running the same logic on the remaining chips; and so on down
+      the paid places. Multiply each finish probability by its prize, sum across places, and you
+      have each player's real-dollar equity. This page runs that recursion exactly (no
+      approximation) for up to 9 players — the same algorithm as the ICM calculator inside the
+      TableLab app.</p>
+
+      <h2>Why a chip-chop overpays the big stack</h2>
+
+      <p>A chip-chop split hands out the <em>entire</em> prize pool in proportion to chips — which
+      quietly assumes every chip is worth the same. But the chip leader can only win first place
+      once. Once their stack is big enough to make them the likely winner, additional chips barely
+      move their equity, while for everyone else those same chips would buy real ladder-survival
+      value. Under top-heavy payouts, the leader's chip share of the pool is therefore always more
+      than their ICM equity — and the shorter stacks' chip shares are always less.</p>
+
+      <h2>A worked 3-player example</h2>
+
+      <!-- Parity fixture — verified byte-for-byte against the TableLab app's Dart
+           implementation (lib/screens/icm_calculator_screen.dart _computeIcm):
+           stacks 5000 / 3000 / 2000, payouts $500 / $300 / $200
+           ICM  (exact): 383.928571  327.500000  288.571429  (sum 1000.000000)
+           Chip-chop:    500.000000  300.000000  200.000000
+           JS port and Dart oracle agree to 6 decimal places. -->
+      <p>Three players remain. Stacks: <strong>5,000 / 3,000 / 2,000</strong>. Remaining payouts:
+      <strong>$500 / $300 / $200</strong> ($1,000 total). Here's what each split says:</p>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <thead>
+            <tr><th>Player</th><th>ICM deal</th><th>Chip-chop</th><th>Difference</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Chip leader — 5,000 (50.0%)</td><td>$383.93</td><td>$500.00</td><td>−$116.07</td></tr>
+            <tr><td>Middle stack — 3,000 (30.0%)</td><td>$327.50</td><td>$300.00</td><td>+$27.50</td></tr>
+            <tr><td>Short stack — 2,000 (20.0%)</td><td>$288.57</td><td>$200.00</td><td>+$88.57</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="note">The chip leader holds 50% of the chips but is entitled to only ~38.4% of the
+      pool under ICM — a chip-chop would overpay them by $116. The short stack's floor does the
+      work: even the last-place prize here is $200, so 2,000 chips are worth $288.57, not $200.
+      Load these numbers into the calculator above and press Calculate to reproduce the table.</p>
+
+      <h2>When deals come up (and when ICM matters mid-game)</h2>
+
+      <p>Most deals happen at the final table when stacks are shallow relative to the payout jumps
+      and everyone wants to lock up money. ICM is the neutral arbiter: it rewards chips without
+      pretending they're dollars. The same model matters <em>during</em> play, too — on the money
+      bubble and at pay jumps, a shove that's profitable in chips can be clearly losing in dollars.
+      If you play tournaments seriously, the deal calculator and the discipline of
+      <a href="/blog/poker-bankroll-management">a proper tournament bankroll</a> (variance in MTTs
+      dwarfs cash) are two halves of the same money-management skill — you can quantify the second
+      half with our <a href="/variance-calculator">variance calculator</a>.</p>
+
+      <div class="tool-cta">
+        <p><strong>Play tournaments regularly?</strong> This same ICM calculator ships inside the
+        free TableLab app, next to session tracking, ROI and ITM% stats, a hand recorder, and
+        range-vs-range equity. <a href="/">Open the web app</a> or
+        <a href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker" rel="noopener" target="_blank">get it on Google Play</a>.</p>
+      </div>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>What is ICM in poker?</summary>
+          <p>The Independent Chip Model converts tournament chip stacks into real-money equity by
+          computing each player's probability of finishing in every paid place, given the payout
+          structure. It exists because tournament chips are not worth their face value in dollars —
+          the payout jumps make each additional chip worth less than the last.</p>
+        </details>
+        <details>
+          <summary>How is an ICM deal calculated?</summary>
+          <p>With the Malmuth&ndash;Harville method: each player's chance of finishing 1st is their
+          share of the chips in play; the chance of finishing 2nd is computed by removing each
+          possible winner and repeating the calculation on the chips that remain, and so on down
+          the payout places. Summing probability × prize across places gives each player's dollar
+          equity. This calculator runs that recursion exactly, for up to 9 players.</p>
+        </details>
+        <details>
+          <summary>Why does the chip leader get less than a chip-chop split?</summary>
+          <p>A chip-chop hands out the whole prize pool in proportion to chips, which implicitly
+          values every chip equally. But the chip leader can only win first place once — stacking
+          more chips mostly adds equity they already have. ICM caps the leader's payout at what
+          their finish-probability distribution is actually worth, which is always less than their
+          chip share of the pool when payouts are top-heavy.</p>
+        </details>
+        <details>
+          <summary>Should a short stack ever accept a chip-chop deal?</summary>
+          <p>Chip-chop usually favors the big stack and shortchanges medium stacks, so compare both
+          numbers before agreeing. In the worked example above, the 5,000-chip leader gets $500
+          under chip-chop but only about $384 under ICM, while the 2,000-chip short stack gets $200
+          under chip-chop and about $289 under ICM. Run your own numbers before you agree to
+          anything.</p>
+        </details>
+        <details>
+          <summary>Is ICM only used for final-table deals?</summary>
+          <p>No — the same model drives in-game strategy anywhere payout jumps matter: bubble play,
+          pay-jump laddering, and satellite decisions. A shove that is profitable in chips can be
+          losing in dollars once ICM is applied, which is why tournament players tighten up near
+          the bubble.</p>
+        </details>
+      </section>
+
+      <p class="disclaimer-line">ICM is a model, not a rulebook — it assumes equal skill and
+      ignores position, blinds, and who's about to pay the big blind. It's the standard, neutral
+      baseline for deals; negotiate from it, not around it.</p>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+  <script>
+  // ICM engine — ported EXACTLY from the TableLab app's Dart implementation
+  // (lib/screens/icm_calculator_screen.dart): Malmuth–Harville recursion with
+  // bitmask memoisation (memo key = mask * (places + 1) + place), exact for
+  // up to 9 players, plus the proportional chip-chop comparison.
+  //
+  // Parity fixture (see the HTML comment by the worked example): stacks
+  // 5000/3000/2000 with payouts 500/300/200 -> ICM 383.928571 / 327.500000 /
+  // 288.571429 — matches the Dart oracle to 6 decimals.
+  (function () {
+    'use strict';
+
+    function computeIcm(chips, payouts) {
+      var n = chips.length;
+      var p = Math.min(n, payouts.length);
+      var effPayouts = payouts.slice(0, p);
+      var memo = new Map();
+
+      function solve(mask, place) {
+        if (place >= effPayouts.length) return new Array(n).fill(0);
+        var key = mask * (effPayouts.length + 1) + place;
+        if (memo.has(key)) return memo.get(key);
+
+        var result = new Array(n).fill(0);
+        var totalChips = 0;
+        for (var i = 0; i < n; i++) {
+          if ((mask >> i) & 1) totalChips += chips[i];
+        }
+        if (totalChips <= 0) {
+          memo.set(key, result);
+          return result;
+        }
+
+        for (var w = 0; w < n; w++) {
+          if (!((mask >> w) & 1)) continue;
+          var pWin = chips[w] / totalChips;
+          result[w] += pWin * effPayouts[place];
+          var nextMask = mask & ~(1 << w);
+          var sub = solve(nextMask, place + 1);
+          for (var j = 0; j < n; j++) {
+            if (j !== w && ((mask >> j) & 1)) result[j] += pWin * sub[j];
+          }
+        }
+
+        memo.set(key, result);
+        return result;
+      }
+
+      return solve((1 << n) - 1, 0);
+    }
+
+    function computeChipChop(chips, payouts) {
+      var totalChips = chips.reduce(function (a, b) { return a + b; }, 0);
+      var totalPrize = payouts.reduce(function (a, b) { return a + b; }, 0);
+      if (totalChips <= 0) return new Array(chips.length).fill(0);
+      return chips.map(function (c) { return c / totalChips * totalPrize; });
+    }
+
+    // ── UI ───────────────────────────────────────────────────────────────────
+    var MAX = 9, MIN = 2;
+    var $ = function (id) { return document.getElementById(id); };
+    var lastResults = null;
+
+    function placeLabel(n) {
+      var suffixes = ['st', 'nd', 'rd'];
+      return n + (n <= 3 ? suffixes[n - 1] : 'th');
+    }
+    function fmtMoney(v) { return '$' + Math.round(v).toLocaleString('en-US'); }
+    function fmtChips(v) { return Math.round(v).toLocaleString('en-US'); }
+
+    function rowCount(hostId) { return $(hostId).children.length; }
+
+    function refreshChrome() {
+      var np = rowCount('players'), nq = rowCount('payouts');
+      $('player-count').textContent = np + '/9';
+      $('payout-count').textContent = nq + ' places';
+      $('add-player').style.display = np >= MAX ? 'none' : '';
+      $('add-payout').style.display = nq >= MAX ? 'none' : '';
+      Array.prototype.forEach.call(document.querySelectorAll('#players .rm'), function (b) {
+        b.disabled = np <= MIN;
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('#payouts .rm'), function (b) {
+        b.disabled = nq <= MIN;
+      });
+      // Re-number the row labels.
+      Array.prototype.forEach.call($('players').children, function (row, i) {
+        row.querySelector('.idx').textContent = i + 1;
+        row.querySelector('.p-name').placeholder = 'Player ' + (i + 1);
+      });
+      Array.prototype.forEach.call($('payouts').children, function (row, i) {
+        row.querySelector('.idx').textContent = placeLabel(i + 1);
+      });
+    }
+
+    function clearResults() {
+      lastResults = null;
+      $('results-wrap').style.display = 'none';
+      $('btn-copy').disabled = true;
+    }
+
+    function makeRemoveBtn(host) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'rm';
+      b.setAttribute('aria-label', 'Remove row');
+      b.textContent = '−';
+      b.addEventListener('click', function () {
+        if (rowCount(host) <= MIN) return;
+        b.parentNode.parentNode.removeChild(b.parentNode);
+        clearResults();
+        refreshChrome();
+      });
+      return b;
+    }
+
+    function addPlayer() {
+      if (rowCount('players') >= MAX) return;
+      var row = document.createElement('div');
+      row.className = 'row-line';
+      var idx = document.createElement('span');
+      idx.className = 'idx';
+      var name = document.createElement('input');
+      name.type = 'text';
+      name.className = 'p-name';
+      name.autocomplete = 'off';
+      var chips = document.createElement('input');
+      chips.type = 'text';
+      chips.className = 'p-chips';
+      chips.placeholder = 'Chips';
+      chips.inputMode = 'numeric';
+      chips.autocomplete = 'off';
+      row.appendChild(idx);
+      row.appendChild(name);
+      row.appendChild(chips);
+      row.appendChild(makeRemoveBtn('players'));
+      $('players').appendChild(row);
+      row.addEventListener('input', clearResults);
+      clearResults();
+      refreshChrome();
+    }
+
+    function addPayout() {
+      if (rowCount('payouts') >= MAX) return;
+      var row = document.createElement('div');
+      row.className = 'row-line';
+      var idx = document.createElement('span');
+      idx.className = 'idx';
+      var prize = document.createElement('input');
+      prize.type = 'text';
+      prize.className = 'q-prize';
+      prize.placeholder = '$ prize';
+      prize.inputMode = 'decimal';
+      prize.autocomplete = 'off';
+      row.appendChild(idx);
+      row.appendChild(prize);
+      row.appendChild(makeRemoveBtn('payouts'));
+      $('payouts').appendChild(row);
+      row.addEventListener('input', clearResults);
+      clearResults();
+      refreshChrome();
+    }
+
+    function fail(msg) {
+      var el = $('calc-error');
+      el.textContent = msg;
+      el.style.display = '';
+      clearResults();
+    }
+
+    function calculate() {
+      $('calc-error').style.display = 'none';
+
+      // Parse chips — validation copy mirrors the TableLab app.
+      var chips = [], names = [];
+      var playerRows = $('players').children;
+      for (var i = 0; i < playerRows.length; i++) {
+        var raw = playerRows[i].querySelector('.p-chips').value.trim().replace(/,/g, '');
+        var v = parseFloat(raw);
+        if (raw === '' || !isFinite(v) || v <= 0) {
+          return fail('Player ' + (i + 1) + ': enter a valid chip count.');
+        }
+        chips.push(v);
+        var n = playerRows[i].querySelector('.p-name').value.trim();
+        names.push(n === '' ? 'Player ' + (i + 1) : n);
+      }
+
+      // Parse payouts.
+      var payouts = [];
+      var payoutRows = $('payouts').children;
+      for (var k = 0; k < payoutRows.length; k++) {
+        var praw = payoutRows[k].querySelector('.q-prize').value.trim().replace(/,/g, '').replace(/\$/g, '');
+        var pv = parseFloat(praw);
+        if (praw === '' || !isFinite(pv) || pv < 0) {
+          return fail(placeLabel(k + 1) + ': enter a valid prize amount.');
+        }
+        payouts.push(pv);
+      }
+
+      if (payouts.length === 0 || payouts.every(function (x) { return x === 0; })) {
+        return fail('Enter at least one prize amount.');
+      }
+      if (payouts.length !== chips.length) {
+        return fail('Number of prize places (' + payouts.length + ') must equal number of players (' + chips.length + ').');
+      }
+
+      var icm = computeIcm(chips, payouts);
+      var chop = computeChipChop(chips, payouts);
+      var totalChips = chips.reduce(function (a, b) { return a + b; }, 0);
+
+      var results = chips.map(function (c, idx) {
+        return {
+          name: names[idx],
+          chips: c,
+          chipPct: c / totalChips * 100,
+          icm: icm[idx],
+          chipChop: chop[idx]
+        };
+      });
+      // Sort by ICM equity descending — mirrors the app.
+      results.sort(function (a, b) { return b.icm - a.icm; });
+      lastResults = results;
+      renderResults(results);
+    }
+
+    function renderResults(results) {
+      var body = $('results-body');
+      body.innerHTML = '';
+      var total = results.reduce(function (s, r) { return s + r.icm; }, 0);
+      $('total-prize').textContent = 'Total prize pool: ' + fmtMoney(total);
+      results.forEach(function (r) {
+        var tr = document.createElement('tr');
+        var name = document.createElement('td');
+        name.textContent = r.name;
+        var sub = document.createElement('span');
+        sub.className = 'sub';
+        sub.textContent = fmtChips(r.chips) + ' chips · ' + r.chipPct.toFixed(1) + '%';
+        name.appendChild(sub);
+        var icmTd = document.createElement('td');
+        icmTd.className = 'pos';
+        icmTd.style.fontWeight = '700';
+        icmTd.textContent = fmtMoney(r.icm);
+        var chopTd = document.createElement('td');
+        chopTd.textContent = fmtMoney(r.chipChop);
+        var diff = r.icm - r.chipChop;
+        var diffTd = document.createElement('td');
+        diffTd.className = diff >= 0 ? 'pos' : 'neg';
+        diffTd.textContent = (diff >= 0 ? '+' : '−') + fmtMoney(Math.abs(diff));
+        tr.appendChild(name);
+        tr.appendChild(icmTd);
+        tr.appendChild(chopTd);
+        tr.appendChild(diffTd);
+        body.appendChild(tr);
+      });
+      $('results-wrap').style.display = '';
+      $('btn-copy').disabled = false;
+    }
+
+    function copyResults() {
+      if (!lastResults) return;
+      var total = lastResults.reduce(function (s, r) { return s + r.icm; }, 0);
+      var lines = ['ICM Deal (' + lastResults.length + ' players):'];
+      lastResults.forEach(function (r) {
+        lines.push(r.name + ' — ' + fmtChips(r.chips) + ' chips (' +
+          r.chipPct.toFixed(1) + '%) → ' + fmtMoney(r.icm));
+      });
+      lines.push('');
+      lines.push('Total prize pool: ' + fmtMoney(total));
+      lines.push('Calculated with TableLab — tablelab.app/icm-calculator');
+      var text = lines.join('\n');
+      var done = function () {
+        var btn = $('btn-copy');
+        var old = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function () { btn.textContent = old; }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {});
+      }
+    }
+
+    // ── Boot: 3 players + 3 payouts, the app's sensible default ─────────────
+    $('add-player').addEventListener('click', addPlayer);
+    $('add-payout').addEventListener('click', addPayout);
+    $('btn-calc').addEventListener('click', calculate);
+    $('btn-copy').addEventListener('click', copyResults);
+    for (var i = 0; i < 3; i++) { addPlayer(); addPayout(); }
+  })();
+  </script>
+
+</body>
+</html>

@@ -159,4 +159,13 @@ void main() {
       );
     });
   });
+
+  group('varianceCalculatorUsedProps', () {
+    test('carries the calculator mode', () {
+      expect(AnalyticsService.varianceCalculatorUsedProps('cash'),
+          {'mode': 'cash'});
+      expect(AnalyticsService.varianceCalculatorUsedProps('tournament'),
+          {'mode': 'tournament'});
+    });
+  });
 }

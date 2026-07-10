@@ -145,7 +145,7 @@ class AppDrawer extends ConsumerWidget {
                     ListTile(
                       leading: const Icon(Icons.construction_outlined),
                       title: const Text('Tools'),
-                      subtitle: const Text('Equity & ICM calculators',
+                      subtitle: const Text('Equity, ICM & variance calculators',
                           style: TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);

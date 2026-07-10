@@ -108,14 +108,16 @@ class _SolveConfig {
   final String betProfile; // 'multi' (tiered, realistic) | 'single' (fast POC)
   final int timeoutS; // per-spot wall-clock cap
   final int threads; // solver worker threads (peak memory scales with this)
+  final String dumpFmt; // 'json' | 'bin' (TLSD) | 'both' (validation runs)
 
-  _SolveConfig(
-      this.accuracy, this.maxIter, this.betProfile, this.timeoutS, this.threads);
+  _SolveConfig(this.accuracy, this.maxIter, this.betProfile, this.timeoutS,
+      this.threads, this.dumpFmt);
 
   /// Compact descriptor — folded into the batch cache signature so a settings
   /// change invalidates cached solves (they'd otherwise be served stale). Thread
-  /// count is intentionally EXCLUDED — it changes solve speed/peak memory, not
-  /// the GTO result, so it must not invalidate cached solves.
+  /// count and dump FORMAT are intentionally EXCLUDED — they change solve
+  /// speed/peak memory/artifact encoding, not the GTO result, so they must not
+  /// invalidate cached solves.
   String get tag => 'acc$accuracy|it$maxIter|$betProfile';
 }
 
@@ -137,15 +139,37 @@ _SolveConfig _config() {
   const known = {'single', 'multi', 'vol', 'turn', 'river'};
   if (!known.contains(bets)) bets = 'single';
   final timeoutS = posInt('TLSOLVE_TIMEOUT_S', 900);
-  // Worker threads. Default 16; lower (e.g. 8) to cut PEAK MEMORY / avoid the
-  // concurrency-race access violation (exit -1073741819) on the branchiest
-  // turn-raise trees. Result is identical (not in the cache tag).
-  final threads = posInt('TLSOLVE_THREADS', 16);
-  return _SolveConfig(accuracy, maxIter, bets, timeoutS, threads);
+  // Worker threads. Default 8 — the STABLE max: 16 crashed ~48% of the
+  // branchiest turn-raise trees with a concurrency-race access violation
+  // (exit -1073741819), and measured thread scaling past 8 is ~1.2× anyway
+  // (memory-bandwidth-bound). The old default of 16 was a landmine every
+  // launch path had to remember to override; it also disagreed with the
+  // admission scheduler's per-solve thread budget (review finding). Raise
+  // explicitly only for single-spot latency experiments. Result is identical
+  // either way (not in the cache tag).
+  final threads = posInt('TLSOLVE_THREADS', 8);
+  // Dump format: 'bin' = TLSD binary (dump_result_bin — ~10× smaller, parses
+  // in a fraction of the JSON heap; needs the patched console_solver);
+  // 'json' = the legacy JSON dump (the validation oracle; REQUIRED when
+  // --emit-pack is on — explorer_pack still walks the JSON tree; the
+  // parse-inline callers force it via forceJsonDump regardless);
+  // 'both' = one solve, both dumps (the validate_dump.dart harness).
+  // DEFAULT 'bin' since 2026-07-09: the WS1c dual-dump equivalence gate
+  // passed on all four spot classes — smoke (Windows+Linux), 3bp committed,
+  // srp medium, and the deep gate on the cloud box (15.1 GB JSON vs 1.58 GB
+  // TLSD, 2,123 servable cells, 0 mismatches, max diff 1.6e-5).
+  var dumpFmt = (e['TLSOLVE_DUMP_FMT'] ?? 'bin').toLowerCase();
+  if (!const {'json', 'bin', 'both'}.contains(dumpFmt)) dumpFmt = 'bin';
+  return _SolveConfig(accuracy, maxIter, bets, timeoutS, threads, dumpFmt);
 }
 
 /// The current solve-config tag (for batch.dart's cache signature).
 String solverConfigTag() => _config().tag;
+
+/// The EFFECTIVE dump format this process would solve with (env + default) —
+/// callers must use this, not re-read the env with their own default, or a
+/// future default flip desyncs them (review finding).
+String solverDumpFmt() => _config().dumpFmt;
 
 /// Bet-size block.
 /// 'single': one 50%-pot bet + all-in per street — fast, low branching (POC).
@@ -227,6 +251,15 @@ String _betSizes(String profile) {
 String _buildInput(SolverSpot spot, String dumpPath, _SolveConfig cfg,
     {int dumpRounds = 1, String? betProfile}) {
   final profile = betProfile ?? cfg.betProfile;
+  // Dump command(s) by format: 'both' emits the JSON and the TLSD binary from
+  // the SAME converged strategy in one process — the WS1c equivalence harness
+  // relies on this (two dumps of one solve, byte-comparable cells). The TLSD
+  // sibling path is always "<jsonPath>.tlsd" by convention.
+  final dumpCmds = switch (cfg.dumpFmt) {
+    'bin' => 'dump_result_bin $dumpPath',
+    'both' => 'dump_result $dumpPath\ndump_result_bin $dumpPath.tlsd',
+    _ => 'dump_result $dumpPath',
+  };
   return '''
 set_pot ${spot.pot}
 set_effective_stack ${spot.effStack}
@@ -242,7 +275,7 @@ set_print_interval 10
 set_use_isomorphism 1
 start_solve
 set_dump_rounds $dumpRounds
-dump_result $dumpPath
+$dumpCmds
 ''';
 }
 
@@ -327,7 +360,7 @@ class _DumpRun {
 /// invocation — both the parse-inline path ([_invokeSolver]) and the
 /// parse-in-isolate path ([solveToFile]) build on it.
 Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
-    {String? betProfile}) async {
+    {String? betProfile, bool forceJsonDump = false}) async {
   final dir = _sourceDir();
   final bin = _solverBin(dir);
   if (!File(bin).existsSync()) {
@@ -345,8 +378,19 @@ Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
   var keep = false; // hand tmp to the caller only on success
   try {
     final inputPath = '${tmp.path}/input.txt';
-    final dumpPath = '${tmp.path}/out.json';
-    final cfg = _config();
+    var cfg = _config();
+    // The parse-inline callers (solve()/solveRoot() → the calibration tools,
+    // pack_spike) jsonDecode the dump directly and NEED the JSON tree — a
+    // leftover TLSOLVE_DUMP_FMT=bin from a bulk-run shell (or the flipped
+    // default) must not make their paid solve unparseable (review finding).
+    if (forceJsonDump && cfg.dumpFmt != 'json') {
+      cfg = _SolveConfig(cfg.accuracy, cfg.maxIter, cfg.betProfile,
+          cfg.timeoutS, cfg.threads, 'json');
+    }
+    // 'bin' writes only the TLSD file; 'json'/'both' keep the JSON as the
+    // primary dumpPath ('both' adds the .tlsd sibling — see _buildInput).
+    final dumpPath =
+        cfg.dumpFmt == 'bin' ? '${tmp.path}/out.tlsd' : '${tmp.path}/out.json';
     File(inputPath).writeAsStringSync(_buildInput(spot, dumpPath, cfg,
         dumpRounds: dumpRounds, betProfile: betProfile));
 
@@ -371,6 +415,10 @@ Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
     if (!File(dumpPath).existsSync()) {
       throw StateError('solver produced no output_result\n$out');
     }
+    if (cfg.dumpFmt == 'both' && !File('$dumpPath.tlsd').existsSync()) {
+      throw StateError('solver produced no TLSD sibling dump '
+          '(dump_result_bin unsupported by this binary? rebuild it)\n$out');
+    }
     keep = true;
     return _DumpRun(dumpPath, out, sw.elapsedMilliseconds, tmp);
   } finally {
@@ -387,7 +435,9 @@ Future<_DumpRun> _runSolverToDump(SolverSpot spot, int dumpRounds,
 Future<_RawSolve> _invokeSolver(
     SolverSpot spot, int dumpRounds, bool verbose,
     {String? betProfile}) async {
-  final run = await _runSolverToDump(spot, dumpRounds, betProfile: betProfile);
+  // forceJsonDump: this path jsonDecodes the dump inline — see _runSolverToDump.
+  final run = await _runSolverToDump(spot, dumpRounds,
+      betProfile: betProfile, forceJsonDump: true);
   try {
     if (verbose) {
       stdout.writeln(run.out.split('\n').takeLast(4).join('\n'));
@@ -453,8 +503,11 @@ Future<TreeSolveResult> solveRoot(SolverSpot spot,
 /// `--parallel` workers tabulate on separate cores. The caller MUST call
 /// [DumpSolve.cleanup] once it has tabulated (or on failure).
 Future<DumpSolve> solveToFile(SolverSpot spot,
-    {int dumpRounds = 2, String? betProfile}) async {
-  final run = await _runSolverToDump(spot, dumpRounds, betProfile: betProfile);
+    {int dumpRounds = 2, String? betProfile, bool forceJsonDump = false}) async {
+  // forceJsonDump: for callers that jsonDecode the dump themselves (e.g.
+  // pack_spike) — declares the format need instead of trusting the env/default.
+  final run = await _runSolverToDump(spot, dumpRounds,
+      betProfile: betProfile, forceJsonDump: forceJsonDump);
   return DumpSolve(run.dumpPath, _parseExploitability(run.out), run.wallMs, run.tmp);
 }
 
