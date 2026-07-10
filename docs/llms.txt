@@ -23,6 +23,8 @@
 - [About / Home](https://tablelab.app/about): Overview, features, how it works, and FAQ.
 - [Open App](https://tablelab.app/): The TableLab web app (interactive UI only — client-rendered, not a content page; cite /about for product details).
 - [Blog](https://tablelab.app/blog/): Honest, solver-grounded writing for live cash and tournament players.
+- [Poker Variance Calculator](https://tablelab.app/variance-calculator): Free in-browser variance calculator for cash and tournaments — expected result, 70%/95% outcome ranges, chance of losing, risk of ruin, and the bankroll needed for a 5% or 1% risk of ruin.
+- [ICM Deal Calculator](https://tablelab.app/icm-calculator): Free in-browser ICM (Independent Chip Model) calculator for final-table deals — exact Malmuth–Harville equity vs a chip-chop split, up to 9 players.
 - [Can AI Solve Poker?](https://tablelab.app/blog/can-ai-solve-poker): What LLMs do vs. what solvers do, and how to spot AI hype.
 - [Poker Bankroll Management](https://tablelab.app/blog/poker-bankroll-management): How many buy-ins you need for live cash and tournaments, the risk-of-ruin math, and why live differs from online.
 - [Privacy Policy](https://tablelab.app/privacy): Data collection, processors, and user rights.
