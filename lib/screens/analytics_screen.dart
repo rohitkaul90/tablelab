@@ -997,10 +997,10 @@ class _TypeComparisonCard extends StatelessWidget {
             row(
               'Volume',
               cell(formatHours(cashHours), StatMetric.hours, cash, 'Cash'),
-              // Bare count — "entries" reads like "entrants" and the Volume
-              // row label already carries the meaning (device-review call).
-              cell('${tournaments.length}', StatMetric.sessions, tournaments,
-                  'Tournaments'),
+              // Hours for BOTH types — the Sessions row above already
+              // carries the tournament count (device-review call).
+              cell(formatHours(hrs(tournaments)), StatMetric.hours,
+                  tournaments, 'Tournaments'),
             ),
             row(
               'Avg Buy-In',
