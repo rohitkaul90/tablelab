@@ -55,6 +55,10 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
   // set means "all game types".
   Set<String>? _gameTypes;
 
+  // Ordering applied to every insight breakdown card (the sort menu in the
+  // "What's Affecting Your Win Rate" section header).
+  _InsightSort _insightSort = _InsightSort.rate;
+
   Set<String> get _effectiveTypes =>
       _gameTypes ?? defaultGameTypes(widget.sessions);
 
@@ -125,16 +129,19 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
     final itmPct = (itmCount != null && tSessions.isNotEmpty)
         ? (itmCount / tSessions.length * 100).round()
         : null;
-    final rateSign = hourlyRate >= 0 ? '+' : '-';
     final cashSessions = filtered.where((s) => s.gameType == 'cash').toList();
     final bb100 = calcBB100(cashSessions);
+    // Standard deviations (null under 10 qualifying sessions → '—' rows).
+    final bb100StdDev = calcBB100StdDev(cashSessions);
+    final hourlyStdDev = calcHourlyStdDev(cashSessions, displayCurrency);
+    final tournStdDev = calcTournamentStdDevBuyIns(tSessions);
 
     final summaryItems = <_SummaryItem>[
       _SummaryItem('Sessions', '${filtered.length}', null, StatMetric.sessions),
       _SummaryItem('Hours', formatHours(totalHours), null, StatMetric.hours),
       _SummaryItem(
         'Win Rate',
-        '$rateSign$sym${hourlyRate.abs().toStringAsFixed(0)}/hr',
+        '${formatPLWithCurrency(hourlyRate, displayCurrency)}/hr',
         rateColor,
         StatMetric.winRate,
       ),
@@ -144,9 +151,14 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
         plColor,
         StatMetric.profit,
       ),
-      _SummaryItem(
-          'Buy-In', formatAmount(totalBuyIn, displayCurrency), null,
-          StatMetric.buyIn),
+      // AVERAGE buy-in per session — how much the user actually puts on the
+      // table, not a volume total. ROI denominators stay pooled totals.
+      if (filtered.isNotEmpty)
+        _SummaryItem(
+            'Avg Buy-In',
+            formatAmount(totalBuyIn / filtered.length, displayCurrency),
+            null,
+            StatMetric.buyIn),
       if (hasExpenses)
         _SummaryItem('Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}',
             null, StatMetric.expenses),
@@ -164,6 +176,34 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
           bb100 >= 0 ? Colors.green : Colors.red,
           StatMetric.bb100,
         ),
+      // Standard-deviation rows: session-estimated (Malmuth), info dialog
+      // instead of a trend chart (an SD time series isn't meaningful).
+      if (showingCash && cashSessions.isNotEmpty)
+        _SummaryItem(
+          'Std Dev (BB/100)',
+          bb100StdDev == null ? '—' : formatWholeNum(bb100StdDev),
+          null,
+          null,
+          'How swingy your cash game is, in big blinds per 100 hands. '
+          'Estimated from your per-session results and durations (hands '
+          'assumed at 25 per hour unless a session records its own pace). '
+          'Typical live no-limit hold\'em runs roughly 70–100.\n\n'
+          'Shown once you have at least 10 qualifying cash sessions '
+          '(cash game with parseable blinds and a duration).',
+        ),
+      if (showingCash && cashSessions.isNotEmpty)
+        _SummaryItem(
+          'Std Dev ($sym/hr)',
+          hourlyStdDev == null
+              ? '—'
+              : formatAmount(hourlyStdDev, displayCurrency),
+          null,
+          null,
+          'How much a typical hour deviates from your average hourly rate, '
+          'in $displayCurrency. Estimated from per-session results and '
+          'durations.\n\nShown once you have at least 10 cash sessions with '
+          'a recorded duration.',
+        ),
       if (tournamentROI != null)
         _SummaryItem(
           'Tourn. ROI',
@@ -173,6 +213,29 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
         ),
       if (itmPct != null)
         _SummaryItem('ITM', '$itmPct%', null, StatMetric.itmPct),
+      if (showingTournaments && hasTournaments)
+        _SummaryItem(
+          'Std Dev (buy-ins)',
+          tournStdDev == null ? '—' : tournStdDev.toStringAsFixed(1),
+          null,
+          null,
+          'How swingy your tournament results are, measured in buy-ins per '
+          'tournament (each result divided by its buy-in, so mixed buy-in '
+          'levels stay comparable).\n\nTournament results are heavily '
+          'skewed by rare big scores — with few tournaments logged this '
+          'UNDERSTATES the real swings. Shown once you have at least 10 '
+          'tournaments with a buy-in.',
+        ),
+    ];
+
+    // The extras shown UNDER the side-by-side comparison in combined view —
+    // metrics that don't fit the two-column card (expense totals span both
+    // types; SD rows are type-specific but info-only).
+    final combinedExtraItems = <_SummaryItem>[
+      for (final it in summaryItems)
+        if (it.label == 'Expenses' ||
+            it.label == 'Net Profit' ||
+            it.label.startsWith('Std Dev')) it,
     ];
 
     return CustomScrollView(
@@ -200,12 +263,42 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                   alignment: Alignment.centerRight,
                   child: ApproxCurrencyChip(currency: displayCurrency),
                 ),
-              _MetricSummaryList(
-                items: summaryItems,
-                sessions: filtered,
-                displayCurrency: displayCurrency,
-                activeFilters: _activeFilterLabels(displayCurrency),
-              ),
+              // Combined view: cash and tournament metrics don't blend
+              // meaningfully (a $/hr pooled across both, or a buy-in total
+              // mixing rebuys with entries, answers no real question) — so
+              // when both types are in view, show a compact combined line
+              // plus a side-by-side per-type comparison instead of the
+              // single blended list.
+              if (showingCash && showingTournaments) ...[
+                _CombinedSummaryLine(
+                  totalPL: totalPL,
+                  totalHours: totalHours,
+                  sessionCount: filtered.length,
+                  displayCurrency: displayCurrency,
+                ),
+                const SizedBox(height: 8),
+                _TypeComparisonCard(
+                  cash: cashSessions,
+                  tournaments: tSessions,
+                  displayCurrency: displayCurrency,
+                  activeFilters: _activeFilterLabels(displayCurrency),
+                ),
+                if (combinedExtraItems.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _MetricSummaryList(
+                    items: combinedExtraItems,
+                    sessions: filtered,
+                    displayCurrency: displayCurrency,
+                    activeFilters: _activeFilterLabels(displayCurrency),
+                  ),
+                ],
+              ] else
+                _MetricSummaryList(
+                  items: summaryItems,
+                  sessions: filtered,
+                  displayCurrency: displayCurrency,
+                  activeFilters: _activeFilterLabels(displayCurrency),
+                ),
               if (filtered.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 32),
@@ -229,11 +322,50 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                 const SizedBox(height: 20),
 
                 // Section header changes based on the primary game type in view.
-                _sectionHeader(
-                  context,
-                  (showingTournaments && !showingCash)
-                      ? "What's Affecting Your ROI"
-                      : "What's Affecting Your Win Rate",
+                Row(
+                  children: [
+                    Expanded(
+                      child: _sectionHeader(
+                        context,
+                        (showingTournaments && !showingCash)
+                            ? "What's Affecting Your ROI"
+                            : "What's Affecting Your Win Rate",
+                      ),
+                    ),
+                    PopupMenuButton<_InsightSort>(
+                      icon: Icon(Icons.sort,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      tooltip: 'Sort breakdowns',
+                      initialValue: _insightSort,
+                      onSelected: (v) => setState(() => _insightSort = v),
+                      itemBuilder: (_) => [
+                        CheckedPopupMenuItem(
+                          value: _InsightSort.rate,
+                          checked: _insightSort == _InsightSort.rate,
+                          child: Text((showingTournaments && !showingCash)
+                              ? 'ROI'
+                              : 'Win rate'),
+                        ),
+                        CheckedPopupMenuItem(
+                          value: _InsightSort.profit,
+                          checked: _insightSort == _InsightSort.profit,
+                          child: const Text('Profit'),
+                        ),
+                        CheckedPopupMenuItem(
+                          value: _InsightSort.volume,
+                          checked: _insightSort == _InsightSort.volume,
+                          child: Text((showingTournaments && !showingCash)
+                              ? 'Entries'
+                              : 'Hours'),
+                        ),
+                        CheckedPopupMenuItem(
+                          value: _InsightSort.natural,
+                          checked: _insightSort == _InsightSort.natural,
+                          child: const Text('Natural order'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 Text(
                   (showingTournaments && !showingCash)
@@ -254,6 +386,20 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                         .toList(),
                     keyFn: (s) => s.stakes,
                     displayCurrency: displayCurrency,
+                    sort: _insightSort,
+                    // Natural order for stakes = by blind size, small→big;
+                    // unparseable stakes sort last, then alphabetical.
+                    naturalCompare: (a, b) {
+                      final ba = parseBBFromStakes(a);
+                      final bb = parseBBFromStakes(b);
+                      if (ba != null && bb != null) {
+                        final c = ba.compareTo(bb);
+                        return c != 0 ? c : a.compareTo(b);
+                      }
+                      if (ba != null) return -1;
+                      if (bb != null) return 1;
+                      return a.compareTo(b);
+                    },
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -275,6 +421,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                     ],
                     displayCurrency: displayCurrency,
                     isTournament: true,
+                    sort: _insightSort,
                   ),
                   const SizedBox(height: 8),
                   // Field size — only shown when enough sessions have entrant counts
@@ -300,6 +447,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                       ],
                       displayCurrency: displayCurrency,
                       isTournament: true,
+                      sort: _insightSort,
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -312,6 +460,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                     sessions: filtered,
                     keyFn: (s) => gameTypeLabel(s.gameType),
                     displayCurrency: displayCurrency,
+                    sort: _insightSort,
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -326,6 +475,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                   ],
                   displayCurrency: displayCurrency,
                   isTournament: showingTournaments && !showingCash,
+                  sort: _insightSort,
                 ),
                 const SizedBox(height: 8),
 
@@ -338,6 +488,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                         .toList(),
                     keyFn: (s) => timeOfDayBucket(s.startTime),
                     displayCurrency: displayCurrency,
+                    sort: _insightSort,
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -354,6 +505,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                       '< 2 hours', '2–4 hours', '4–6 hours', '> 6 hours'
                     ],
                     displayCurrency: displayCurrency,
+                    sort: _insightSort,
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -375,6 +527,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                     orderedKeys: List.generate(
                         5, (i) => '${i + 1}★ ${tableQualityLabel(i + 1)}'),
                     displayCurrency: displayCurrency,
+                    sort: _insightSort,
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -388,6 +541,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                     keyFn: (s) => s.location!,
                     displayCurrency: displayCurrency,
                     isTournament: showingTournaments && !showingCash,
+                    sort: _insightSort,
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -400,6 +554,7 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
                     orderedKeys: const ['Live', 'Online'],
                     displayCurrency: displayCurrency,
                     isTournament: showingTournaments && !showingCash,
+                    sort: _insightSort,
                   ),
                 ],
 
@@ -466,12 +621,27 @@ class _AnalyticsBodyState extends State<_AnalyticsBody> {
 
 // ─── Metric summary (one per row, tappable → full-screen trend chart) ─────────
 
+/// User-selectable ordering for the insight breakdown cards. One global
+/// choice applies to every card (a per-card control would be clutter).
+enum _InsightSort {
+  rate, // $/hr (cash cards) or ROI (tournament cards) — the old fixed order
+  profit, // total profit desc
+  volume, // hours (cash) or entries (tournament) desc
+  natural, // the category's own order: declared orderedKeys (days Mon–Sun,
+  // buy-in buckets), stakes by blind size, else A–Z
+}
+
 class _SummaryItem {
   final String label;
   final String value;
   final Color? color;
   final StatMetric? metric;
-  const _SummaryItem(this.label, this.value, [this.color, this.metric]);
+
+  /// Explainer for metrics with no trend chart (e.g. the SD rows): tapping
+  /// the row shows this text in a dialog instead of pushing a chart.
+  final String? info;
+  const _SummaryItem(this.label, this.value,
+      [this.color, this.metric, this.info]);
 }
 
 /// The Analytics summary, rendered one metric per row. Each row is a CTA that
@@ -528,12 +698,35 @@ class _MetricSummaryList extends StatelessWidget {
             const SizedBox(width: 6),
             Icon(Icons.chevron_right,
                 color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+          ] else if (item.info != null) ...[
+            const SizedBox(width: 6),
+            Icon(Icons.info_outline,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
           ],
         ],
       ),
     );
 
-    if (item.metric == null) return body;
+    if (item.metric == null) {
+      final info = item.info;
+      if (info == null) return body;
+      return InkWell(
+        onTap: () => showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(item.label),
+            content: Text(info),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Got it')),
+            ],
+          ),
+        ),
+        child: body,
+      );
+    }
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -547,6 +740,227 @@ class _MetricSummaryList extends StatelessWidget {
         ),
       ),
       child: body,
+    );
+  }
+}
+
+// ─── Combined Cash + Tournament view ──────────────────────────────────────────
+
+/// The one-line combined totals shown above the per-type comparison: only the
+/// metrics that genuinely add across game types (profit, time, count).
+class _CombinedSummaryLine extends StatelessWidget {
+  final double totalPL;
+  final double totalHours;
+  final int sessionCount;
+  final String displayCurrency;
+
+  const _CombinedSummaryLine({
+    required this.totalPL,
+    required this.totalHours,
+    required this.sessionCount,
+    required this.displayCurrency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Text('Combined',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            const Spacer(),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '${formatPLWithCurrency(totalPL, displayCurrency)}  ·  '
+                  '${formatHours(totalHours)}  ·  $sessionCount sessions',
+                  maxLines: 1,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: totalPL >= 0 ? Colors.green : Colors.red,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Side-by-side Cash | Tournament metric comparison for the combined view.
+/// Each VALUE CELL is tappable and opens that metric's trend chart scoped to
+/// its game type ([MetricChartScreen] takes pre-filtered sessions — there is
+/// no game-type filter on the chart itself, so the scoping happens here and
+/// is disclosed via the chart's filter chips).
+class _TypeComparisonCard extends StatelessWidget {
+  final List<SessionModel> cash;
+  final List<SessionModel> tournaments;
+  final String displayCurrency;
+  final List<String> activeFilters;
+
+  const _TypeComparisonCard({
+    required this.cash,
+    required this.tournaments,
+    required this.displayCurrency,
+    required this.activeFilters,
+  });
+
+  void _open(BuildContext context, StatMetric metric,
+      List<SessionModel> sessions, String typeLabel) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MetricChartScreen(
+          metric: metric,
+          sessions: sessions,
+          displayCurrency: displayCurrency,
+          activeFilters: [...activeFilters, typeLabel],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    double toD(double amount, String from) =>
+        convertCurrency(amount, from, displayCurrency);
+    double pl(List<SessionModel> l) =>
+        l.fold(0.0, (a, s) => a + toD(s.profitLoss, s.currency));
+    double hrs(List<SessionModel> l) =>
+        l.fold(0, (a, s) => a + s.durationMinutes) / 60.0;
+    double avgBuyIn(List<SessionModel> l) => l.isEmpty
+        ? 0
+        : l.fold(0.0, (a, s) => a + toD(s.buyIn, s.currency)) / l.length;
+
+    final cashPL = pl(cash);
+    final cashHours = hrs(cash);
+    final cashRate = cashHours > 0 ? cashPL / cashHours : 0.0;
+    final bb100 = calcBB100(cash);
+
+    final tPL = pl(tournaments);
+    final tBuyIn =
+        tournaments.fold(0.0, (a, s) => a + toD(s.buyIn, s.currency));
+    final tROI = tBuyIn > 0 ? tPL / tBuyIn * 100 : 0.0;
+    final itm = tournaments.isEmpty
+        ? 0
+        : (tournaments
+                    .where((s) => isSessionItm(s.prizeWon, s.profitLoss))
+                    .length /
+                tournaments.length *
+                100)
+            .round();
+
+    Color? signColor(double v) => v >= 0 ? Colors.green : Colors.red;
+
+    Widget header(String t) => Expanded(
+          flex: 3,
+          child: Text(t,
+              textAlign: TextAlign.right,
+              style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.bold)),
+        );
+
+    Widget cell(String text, StatMetric metric, List<SessionModel> sessions,
+        String typeLabel,
+        {Color? color}) {
+      return Expanded(
+        flex: 3,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: sessions.isEmpty
+              ? null
+              : () => _open(context, metric, sessions, typeLabel),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(text,
+                  maxLines: 1,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold, color: color)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget label(String t) => Expanded(
+          flex: 2,
+          child: Text(t,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        );
+
+    Widget row(String name, Widget cashCell, Widget tournCell) => Row(
+          children: [label(name), cashCell, tournCell],
+        );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Column(
+          children: [
+            Row(children: [
+              const Expanded(flex: 2, child: SizedBox()),
+              header('Cash'),
+              header('Tournament'),
+            ]),
+            const SizedBox(height: 4),
+            row(
+              'Profit',
+              cell(formatPL(cashPL, ''), StatMetric.profit, cash, 'Cash',
+                  color: signColor(cashPL)),
+              cell(formatPL(tPL, ''), StatMetric.profit, tournaments,
+                  'Tournaments',
+                  color: signColor(tPL)),
+            ),
+            row(
+              'Rate',
+              cell(
+                  '${formatPLWithCurrency(cashRate, displayCurrency)}/hr',
+                  StatMetric.winRate,
+                  cash,
+                  'Cash',
+                  color: signColor(cashRate)),
+              cell('${formatROI(tROI)} ROI', StatMetric.roi, tournaments,
+                  'Tournaments',
+                  color: signColor(tROI)),
+            ),
+            row(
+              'Volume',
+              cell(formatHours(cashHours), StatMetric.hours, cash, 'Cash'),
+              cell('${tournaments.length} entries', StatMetric.sessions,
+                  tournaments, 'Tournaments'),
+            ),
+            row(
+              'Avg Buy-In',
+              cell(formatAmount(avgBuyIn(cash), displayCurrency),
+                  StatMetric.buyIn, cash, 'Cash'),
+              cell(formatAmount(avgBuyIn(tournaments), displayCurrency),
+                  StatMetric.buyIn, tournaments, 'Tournaments'),
+            ),
+            row(
+              'Edge',
+              bb100 == null
+                  ? cell('—', StatMetric.bb100, const [], 'Cash')
+                  : cell('${formatBB100(bb100)} BB/100', StatMetric.bb100,
+                      cash, 'Cash',
+                      color: signColor(bb100)),
+              cell('$itm% ITM', StatMetric.itmPct, tournaments, 'Tournaments'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -595,6 +1009,11 @@ class _InsightCard extends StatelessWidget {
   final List<String>? orderedKeys;
   final String displayCurrency;
   final bool isTournament;
+  final _InsightSort sort;
+
+  /// Category order for [_InsightSort.natural] when there is no declared
+  /// [orderedKeys] (e.g. By Stakes sorts by blind size). Falls back to A–Z.
+  final int Function(String a, String b)? naturalCompare;
 
   const _InsightCard({
     required this.title,
@@ -603,6 +1022,8 @@ class _InsightCard extends StatelessWidget {
     required this.displayCurrency,
     this.orderedKeys,
     this.isTournament = false,
+    this.sort = _InsightSort.rate,
+    this.naturalCompare,
   });
 
   @override
@@ -628,10 +1049,29 @@ class _InsightCard extends StatelessWidget {
       keys = stats.keys.toList();
     }
 
-    if (isTournament) {
-      keys.sort((a, b) => stats[b]!.roi.compareTo(stats[a]!.roi));
-    } else {
-      keys.sort((a, b) => stats[b]!.hourlyRate.compareTo(stats[a]!.hourlyRate));
+    switch (sort) {
+      case _InsightSort.rate:
+        if (isTournament) {
+          keys.sort((a, b) => stats[b]!.roi.compareTo(stats[a]!.roi));
+        } else {
+          keys.sort(
+              (a, b) => stats[b]!.hourlyRate.compareTo(stats[a]!.hourlyRate));
+        }
+      case _InsightSort.profit:
+        keys.sort((a, b) => stats[b]!.totalPL.compareTo(stats[a]!.totalPL));
+      case _InsightSort.volume:
+        if (isTournament) {
+          keys.sort((a, b) => stats[b]!.count.compareTo(stats[a]!.count));
+        } else {
+          keys.sort(
+              (a, b) => stats[b]!.totalHours.compareTo(stats[a]!.totalHours));
+        }
+      case _InsightSort.natural:
+        // Declared orderedKeys already ordered `keys` above — keep it.
+        if (orderedKeys == null) {
+          final cmp = naturalCompare;
+          keys.sort(cmp ?? (a, b) => a.compareTo(b));
+        }
     }
 
     final maxAbsValue = isTournament

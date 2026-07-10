@@ -1,3 +1,5 @@
+import 'dart:math' show sqrt;
+
 import 'package:intl/intl.dart';
 import '../models/session_model.dart';
 
@@ -83,6 +85,11 @@ String formatAmount(double amount, String currency) {
 /// Hours played — rounded to a whole number with a thousands separator
 /// (e.g. 3389.1 → "3,389h").
 String formatHours(double hours) => '${_numFmt.format(hours.round())}h';
+
+/// Bare thousands-separated whole number (e.g. 3389.1 → "3,389") — for table
+/// cells whose COLUMN HEADER already names the unit ("Hours", "Buy-In (CA$)"),
+/// so the unit isn't repeated on every row.
+String formatWholeNum(double v) => _numFmt.format(v.round());
 
 String formatPLWithCurrency(double amount, String currency) =>
     formatPL(amount, currencySymbol(currency));
@@ -319,6 +326,90 @@ double? calcBB100(List<SessionModel> sessions) {
 String formatBB100(double bb100) {
   final sign = bb100 >= 0 ? '+' : '';
   return '$sign${bb100.round()}';
+}
+
+/// Whether a session contributes to BB/100 stats — the per-session gate
+/// [calcBB100] applies (cash, parseable positive blind, non-zero estimated
+/// hands). Single source: the metric chart's BB/100 sessionFilter and the
+/// std-dev estimator below both use it, so "qualifying session" can't drift.
+bool countsForBB100(SessionModel s) {
+  if (s.gameType != 'cash') return false;
+  final bb = parseBBFromStakes(s.stakes);
+  if (bb == null || bb <= 0) return false;
+  return (s.handsPerHour ?? 25) * (s.durationMinutes / 60.0) > 0;
+}
+
+/// Session-based per-unit variance (the Malmuth estimator): sessions are
+/// windows of nᵢ i.i.d. units (hands or hours) with total result xᵢ, so
+///   σ̂²_unit = [ Σ(xᵢ²/nᵢ) − (Σxᵢ)²/Σnᵢ ] / (N − 1)
+/// The bracket is ≥ 0 by Cauchy–Schwarz (0 when every session has the exact
+/// same rate) — clamped for float noise. Returns null under [minSessions]
+/// (an SD off a handful of sessions is noise dressed as insight).
+double? _sessionVariancePerUnit(List<(double x, double n)> obs,
+    {required int minSessions}) {
+  if (obs.length < minSessions) return null;
+  double sumX = 0, sumN = 0, sumX2overN = 0;
+  for (final (x, n) in obs) {
+    sumX += x;
+    sumN += n;
+    sumX2overN += x * x / n;
+  }
+  if (sumN <= 0) return null;
+  final v = (sumX2overN - sumX * sumX / sumN) / (obs.length - 1);
+  return v < 0 ? 0 : v;
+}
+
+/// Cash-game standard deviation in BB per 100 hands (the number variance
+/// calculators ask for). Uses the same qualifying gate + hands estimate as
+/// [calcBB100] (`handsPerHour ?? 25`); dimensionless in BBs, so no currency
+/// conversion. SD/100 = √(100·σ²_hand) = 10·σ_hand. Null when fewer than
+/// [minSessions] qualifying cash sessions.
+double? calcBB100StdDev(List<SessionModel> sessions, {int minSessions = 10}) {
+  final obs = <(double, double)>[];
+  for (final s in sessions) {
+    if (!countsForBB100(s)) continue;
+    final bb = parseBBFromStakes(s.stakes)!;
+    final hands = (s.handsPerHour ?? 25) * (s.durationMinutes / 60.0);
+    obs.add((s.profitLoss / bb, hands));
+  }
+  final v = _sessionVariancePerUnit(obs, minSessions: minSessions);
+  return v == null ? null : 10 * sqrt(v);
+}
+
+/// Cash-game hourly standard deviation in [displayCurrency] — the same
+/// estimator with hours as the unit. Cash sessions with duration > 0 only;
+/// profits converted per session (mixed-currency logs stay comparable).
+double? calcHourlyStdDev(List<SessionModel> sessions, String displayCurrency,
+    {int minSessions = 10}) {
+  final obs = <(double, double)>[];
+  for (final s in sessions) {
+    if (s.gameType != 'cash') continue;
+    final hrs = s.durationMinutes / 60.0;
+    if (hrs <= 0) continue;
+    obs.add((convertCurrency(s.profitLoss, s.currency, displayCurrency), hrs));
+  }
+  final v = _sessionVariancePerUnit(obs, minSessions: minSessions);
+  return v == null ? null : sqrt(v);
+}
+
+/// Tournament standard deviation in BUY-INS per tournament: the plain sample
+/// SD of rᵢ = profit/buy-in over tournament sessions with a buy-in recorded.
+/// Buy-in-normalized results are dimensionless, so mixed currencies and
+/// mixed buy-in levels stay comparable. CAVEAT (surface in any UI): MTT
+/// results are heavily right-skewed — with few tournaments this UNDERSTATES
+/// tail risk. Null under [minSessions].
+double? calcTournamentStdDevBuyIns(List<SessionModel> sessions,
+    {int minSessions = 10}) {
+  final r = <double>[];
+  for (final s in sessions) {
+    if (!isTournamentType(s.gameType)) continue;
+    if (s.buyIn <= 0) continue;
+    r.add(s.profitLoss / s.buyIn);
+  }
+  if (r.length < minSessions) return null;
+  final mean = r.reduce((a, b) => a + b) / r.length;
+  final ss = r.fold(0.0, (a, x) => a + (x - mean) * (x - mean));
+  return sqrt(ss / (r.length - 1));
 }
 
 // ─── Currency Conversion ──────────────────────────────────────────────────────
