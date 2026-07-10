@@ -1,21 +1,53 @@
 /* TableLab marketing site — shared styles for the landing, privacy, and terms
    pages. The Flutter app itself lives at "/"; these static pages are the
-   browsable website around it. Dark brand theme, matched to the app
-   (#111811 background, #4CAF50 green accents). */
+   browsable website around it. Dark brand theme by default, matched to the app
+   (#111811 background, #4CAF50 green accents), with a light theme switched via
+   [data-theme="light"] on <html> (set by the per-page FOUC snippet + site.js). */
 
 :root {
+  color-scheme: dark;
   --bg: #111811;
   --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.05);
   --surface-border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --header-bg: rgba(17, 24, 17, 0.85);
   --primary: #4CAF50;
   --primary-dark: #2E7D32;
   --primary-hover: #388E3C;
   --secondary: #81C784;
+  --heading: #fff;
+  --text-strong: rgba(255, 255, 255, 0.92);
   --text: rgba(255, 255, 255, 0.87);
   --text-soft: rgba(255, 255, 255, 0.78);
   --text-muted: rgba(255, 255, 255, 0.55);
   --text-faint: rgba(255, 255, 255, 0.38);
+  --on-primary: #fff; /* white-on-green buttons/step numbers — both themes */
+  --tldr-bg: rgba(76, 175, 80, 0.08);
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Light theme — app light scaffold #F6F8F4; primary darkened to #2E7D32 so
+   green-on-light text keeps AA contrast. */
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #F6F8F4;
+  --surface: rgba(17, 24, 17, 0.04);
+  --surface-2: rgba(17, 24, 17, 0.05);
+  --surface-border: rgba(17, 24, 17, 0.12);
+  --border-strong: rgba(17, 24, 17, 0.28);
+  --header-bg: rgba(246, 248, 244, 0.85);
+  --primary: #2E7D32;
+  --primary-dark: #2E7D32;
+  --primary-hover: #1B5E20;
+  --secondary: #388E3C;
+  --heading: #14210f;
+  --text-strong: rgba(17, 24, 17, 0.92);
+  --text: rgba(17, 24, 17, 0.87);
+  --text-soft: rgba(17, 24, 17, 0.78);
+  --text-muted: rgba(17, 24, 17, 0.60);
+  --text-faint: rgba(17, 24, 17, 0.42);
+  --tldr-bg: rgba(46, 125, 50, 0.08);
 }
 
 * { box-sizing: border-box; }
@@ -45,7 +77,7 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   gap: 16px;
   padding: 14px 24px;
-  background: rgba(17, 24, 17, 0.85);
+  background: var(--header-bg);
   backdrop-filter: saturate(160%) blur(10px);
   -webkit-backdrop-filter: saturate(160%) blur(10px);
   border-bottom: 1px solid var(--surface-border);
@@ -83,15 +115,37 @@ a:hover { text-decoration: underline; }
   border: none;
   text-align: center;
 }
-.btn-primary { background: var(--primary-dark); color: #fff; }
+.btn-primary { background: var(--primary-dark); color: var(--on-primary); }
 .btn-primary:hover { background: var(--primary-hover); text-decoration: none; }
 .btn-ghost {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--surface-border);
 }
-.btn-ghost:hover { border-color: rgba(255,255,255,0.2); text-decoration: none; }
+.btn-ghost:hover { border-color: var(--border-strong); text-decoration: none; }
 .site-header .btn { padding: 9px 18px; font-size: 0.9rem; }
+
+/* ── Theme toggle (small ghost circle in the header nav) ───────────────────── */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--surface-border);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+.theme-toggle svg { width: 17px; height: 17px; }
+/* Dark theme shows the sun (tap → light); light theme shows the moon. */
+.theme-toggle .icon-moon { display: none; }
+[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+[data-theme="light"] .theme-toggle .icon-moon { display: block; }
 
 /* ── Layout ────────────────────────────────────────────────────────────────── */
 
@@ -104,7 +158,7 @@ a:hover { text-decoration: underline; }
   font-size: 2.6rem;
   line-height: 1.1;
   margin: 0 0 16px;
-  color: #fff;
+  color: var(--heading);
   letter-spacing: -0.02em;
 }
 .hero h1 .accent { color: var(--primary); }
@@ -135,7 +189,7 @@ h2.section-title {
   padding: 18px;
 }
 .feature .ic { font-size: 1.4rem; margin-bottom: 8px; display: block; }
-.feature strong { color: rgba(255,255,255,0.92); display: block; margin-bottom: 4px; }
+.feature strong { color: var(--text-strong); display: block; margin-bottom: 4px; }
 .feature span { color: var(--text-muted); font-size: 0.92rem; }
 
 .author-box {
@@ -165,7 +219,7 @@ h2.section-title {
   margin: 0 auto 10px;
   border-radius: 50%;
   background: var(--primary-dark);
-  color: #fff;
+  color: var(--on-primary);
   font-weight: 700;
 }
 .step strong { display: block; margin-bottom: 4px; }
@@ -206,7 +260,7 @@ ul.plain li { margin-bottom: 6px; color: var(--text-soft); }
 .legal li { margin-bottom: 4px; }
 .legal .meta { color: var(--text-faint); font-size: 0.85rem; margin-bottom: 2rem; }
 .legal .disclaimer {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-2);
   border-left: 3px solid var(--primary);
   padding: 12px 16px;
   margin: 1.5rem 0;
@@ -218,7 +272,7 @@ ul.plain li { margin-bottom: 6px; color: var(--text-soft); }
 /* ── Lead / definition ─────────────────────────────────────────────────────── */
 
 .lead { font-size: 1.12rem; color: var(--text-soft); margin: 0 0 14px; }
-.lead strong { color: rgba(255, 255, 255, 0.92); }
+.lead strong { color: var(--text-strong); }
 
 /* ── Comparison table ──────────────────────────────────────────────────────── */
 
@@ -282,7 +336,7 @@ table.compare tbody tr:last-child td { border-bottom: none; }
 .breadcrumb { font-size: 0.82rem; color: var(--text-faint); margin: 24px 0 10px; }
 .breadcrumb a { color: var(--text-muted); }
 .article h1 {
-  color: #fff; font-size: 2.1rem; line-height: 1.15;
+  color: var(--heading); font-size: 2.1rem; line-height: 1.15;
   letter-spacing: -0.02em; margin: 6px 0 10px;
 }
 .article .byline { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 26px; }
@@ -294,7 +348,7 @@ table.compare tbody tr:last-child td { border-bottom: none; }
 .article p { color: var(--text-soft); margin: 0 0 1.1rem; }
 .article ul, .article ol { color: var(--text-soft); padding-left: 1.45em; margin: 0 0 1.1rem; }
 .article li { margin-bottom: 0.5rem; }
-.article strong { color: rgba(255,255,255,0.92); }
+.article strong { color: var(--text-strong); }
 .article em { color: var(--text); }
 .article figure { margin: 2rem 0; text-align: center; }
 .article figcaption { color: var(--text-faint); font-size: 0.82rem; margin-top: 8px; }
@@ -306,8 +360,18 @@ table.compare tbody tr:last-child td { border-bottom: none; }
 }
 .hero-banner svg { display: block; width: 100%; height: auto; }
 
+/* The in-article figure SVGs hardcode light-on-dark ink (#eceff1/#cfd8dc text
+   on a transparent background) — in light mode back them with a dark panel
+   instead of retinting each chart. Hero banners paint their own dark gradient
+   and need nothing. */
+[data-theme="light"] .article figure > svg {
+  background: #111811;
+  border-radius: 12px;
+  padding: 12px;
+}
+
 .tldr {
-  background: rgba(76,175,80,0.08);
+  background: var(--tldr-bg);
   border-left: 3px solid var(--primary);
   padding: 16px 20px; margin: 0 0 28px; border-radius: 0 8px 8px 0;
 }
@@ -335,12 +399,12 @@ table.compare tbody tr:last-child td { border-bottom: none; }
   display: block; background: var(--surface);
   border: 1px solid var(--surface-border); border-radius: 12px; padding: 20px 22px;
 }
-.post-card:hover { border-color: rgba(255,255,255,0.18); text-decoration: none; }
+.post-card:hover { border-color: var(--border-strong); text-decoration: none; }
 .post-card .kicker {
   color: var(--secondary); font-size: 0.72rem;
   text-transform: uppercase; letter-spacing: 0.08em;
 }
-.post-card h2 { color: #fff; font-size: 1.3rem; margin: 6px 0 8px; line-height: 1.2; }
+.post-card h2 { color: var(--heading); font-size: 1.3rem; margin: 6px 0 8px; line-height: 1.2; }
 .post-card p { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 10px; }
 .post-card .meta { color: var(--text-faint); font-size: 0.82rem; }
 
@@ -350,3 +414,4 @@ table.compare tbody tr:last-child td { border-bottom: none; }
   .article h1 { font-size: 1.7rem; }
   .article h2 { font-size: 1.3rem; }
 }
+

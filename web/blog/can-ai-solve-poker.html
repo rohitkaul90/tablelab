@@ -17,13 +17,25 @@
   <meta property="og:image:alt" content="TableLab — solver-grounded poker analysis.">
   <meta property="og:locale" content="en_US">
   <meta property="article:published_time" content="2026-06-29">
-  <meta property="article:modified_time" content="2026-07-05">
+  <meta property="article:modified_time" content="2026-07-10">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Can AI Solve Poker? What LLMs Do vs. What Solvers Do">
   <meta name="twitter:description" content="AI beat poker pros in 2019 — with CFR solvers, not language models. What LLMs do, what they can't, and how to spot the hype.">
   <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
   <meta name="author" content="Rohit Kaul">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link rel="stylesheet" href="/site.css">
+  <script src="/site.js" defer></script>
 
   <script type="application/ld+json">
   {
@@ -35,7 +47,7 @@
         "headline": "Can AI Solve Poker? What LLMs Do vs. What Solvers Do",
         "description": "AI beat poker pros in 2019, but with CFR solvers, not language models. Here's what LLMs actually do for your game, what they can't, and how to spot hype.",
         "datePublished": "2026-06-29",
-        "dateModified": "2026-07-05",
+        "dateModified": "2026-07-10",
         "author": { "@id": "https://tablelab.app/#rohit" },
         "publisher": { "@id": "https://tablelab.app/#organization" },
         "image": { "@id": "https://tablelab.app/blog/can-ai-solve-poker#primaryimage" },
@@ -129,6 +141,10 @@
       <a class="link" href="/blog/">Blog</a>
       <a class="link" href="/about">About</a>
       <a class="link" href="/privacy">Privacy</a>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
       <a class="btn btn-primary" href="/">Open App</a>
     </nav>
   </header>
