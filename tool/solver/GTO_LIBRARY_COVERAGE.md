@@ -16,7 +16,17 @@ Related: design = `launch/GTO_FREQUENCY_LIBRARY.md` (gitignored, local); tooling
 
 ---
 
-## Snapshot — as of 2026-07-04 (Cycle B: opener-bucket SRP scenarios added)
+## Snapshot — as of 2026-07-11 (Cycle C: blind-vs-blind added; density growth pending commit)
+
+**FIVE scenarios — 54,778 cells from 1,050 spots** (as pulled 2026-07-11, UNCOMMITTED
+pending the consolidated eval re-baseline; the committed asset is still the 42,202-cell
+2026-07-04 build). Cycle C (2026-07-11, one r7i.8xlarge spot box, 78 spots, ~3.5 h,
+**0 failures**, all ≤0.5% expl): **`srp_sb_v_bb` (SB open vs BB call — blind-vs-blind,
+11,710 cells)** — the FIRST scenario whose opener is OOP (SB range = the solver's OOP
+player, so the physical ip/oop cell keys stay correct; live mapping + explorer wiring on
+PR #47). The 2026-07-10 calibration + tune density slices added ~860 srp_late cells
+(312→972 spots) on top of Cycle B. All 6 `gto-bvb-*` eval specs fire (47/49 overall).
+Prior snapshot below:
 
 **FOUR scenarios — 42,202 cells from 312 spots** (Cycle B batch 2026-07-03/04:
 `srp_early_v_bb` 10,723 + `srp_middle_v_bb` 11,688 cells solved fresh, and
@@ -82,9 +92,10 @@ full surface (≈8 scenarios × 3 streets × 4 SPR regimes × HU/multiway × chi
 is a **~low-single-digit-to-15% slice — but the single highest-frequency one** (BTN-vs-BB
 SRP is the most common HU postflop spot).
 
-1. **Scenario ≈ 2 of ~8** — BTN-vs-BB single-raised + ✅ **3-bet BB-vs-BTN (added
-   2026-07-02, full flop+turn+river)**. Still zero for other openers (UTG/CO/SB —
-   Cycle B), blind-vs-blind (Cycle C), 4-bet pots, limped pots.
+1. **Scenario ≈ 5 of ~8** — BTN/CO-class/UTG-class-vs-BB single-raised (Cycle B) +
+   ✅ **3-bet BB-vs-BTN (2026-07-02)** + ✅ **blind-vs-blind `srp_sb_v_bb` (Cycle C,
+   2026-07-11, pending commit)**. Still zero for: IP-caller SRPs, 4-bet pots, limped
+   pots (incl. limped BvB).
 2. ~~**River = 0%**~~ — ✅ **covered 2026-07-01** (BTN-vs-BB SRP, all SPR incl. deep;
    'river' profile / dump_rounds 3, so river check-raise is faithful; solved on a 128-vCPU /
    1 TB r7a.32xlarge, 78 spots, 0 failures, all ≤0.5% expl). Full postflop (flop+turn+river)
@@ -167,3 +178,4 @@ PY
 | 2026-07-01 | river | **+ river cells** ('river' profile / dump_rounds 3 — river check-raise faithful); full re-solve of all 78 BTN-vs-BB SRP spots (all SPR incl. deep) on a 128-vCPU / 1 TB r7a.32xlarge (us-east-1), `--parallel 5`, ~6 h, 0 failures, all ≤0.5% expl; **11,764 cells (11,400 eligible, 97%)**; river ≈ 23% of eligible. Full postflop (flop+turn+river) for BTN-vs-BB now complete. Enabled by the per-spot **subprocess tabulator** (commit 0130619) — the old Isolate.run shared-GC stalled deep river parses. **Eval re-baseline + `gen_gto_spots.dart --write` (fires the 4 river eval templates) NOT yet run — pending.** |
 | 2026-07-03/04 | opener SRPs (Cycle B) | **+ scenarios `srp_early_v_bb` (UTG-class open, 10,723 cells) and `srp_middle_v_bb` (CO-class, 11,688)**, + full `srp_late_v_bb` re-solve with explorer packs — one 3-scenario batch on an r7a.32xlarge (us-east-1, `--parallel 5`, 611 min, **234 spots, 0 failures**, ≤0.5% expl). Library **19,791 → 42,202 cells (312 spots)**; ~51 GB explorer packs now cover ALL SRP scenarios + 3bp. All 10 `gto-e-*`/`gto-m-*` eval specs fire (41/43 overall). Ops note: the solve was perfect but the launcher's batch health check false-negatived on a PowerShell array-stringify bug and left the box running — pulls were manual; `Invoke-SshTimed` now newline-joins output. **Consolidated eval re-baseline still pending (gates the merge).** |
 | 2026-07-02 | 3-bet (Cycle A) | **+ scenario `3bp_bb_v_btn`** (BTN open → BB 3-bet → BTN call; aggressor OOP) — the library's first WIDTH cycle. 78 spots (26 flops × committed/shallow/medium), 'river' profile, r7a.8xlarge us-east-1, `--parallel 4`, **41 min, 0 failures, ≤0.5% expl**; **+8,027 cells (6,564 eligible, 82%)** → library total 19,791. First solve with the live-compatible faced-ALL-IN labels AND with **explorer packs emitted in the same pass** (`--emit-pack`; 2.3 GB → ~/tlpacks). 7 `gto-3bp-*` eval specs all fire (31/33 total; the 2 ✗ are the pre-existing SRP flop size-seam templates). **Consolidated eval re-baseline still pending (gates the merge).** |
+| 2026-07-11 | blind-vs-blind (Cycle C) | **+ scenario `srp_sb_v_bb`** (SB open vs BB call — the FIRST scenario whose opener is OOP; SB RFI = the solver's OOP player so the physical ip/oop keys stay correct). 78 spots (26 flops × shallow/medium/deep), 'river' profile, TLSD dumps, one r7i.8xlarge us-east-2 spot box, `--parallel 8`, **~3.5 h, 0 failures, ≤0.5% expl**; **+11,710 cells** → library **54,778 cells / 1,050 spots** (incl. the 2026-07-10 calibration+tune srp_late density slices, 312→972 spots before this cycle). No packs emitted (TLSD run — BvB explorer packs deferred). Live mapping + explorer trail wiring + 6 `gto-bvb-*` eval specs (all fire, 47/49 overall; fixtures re-baked to 364) on **PR #47**. Box-class lesson: deep is RAM-bound — big-RAM box FIRST next time (16xlarge = 4 concurrent deeps vs 2 on this 256 GB box; ~2× wall clock at the same cost). **Library UNCOMMITTED — the consolidated eval re-baseline gates the commit + merge.** |
