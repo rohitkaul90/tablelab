@@ -2,6 +2,8 @@
 // count is a hard mathematical fact (1,430 unpaired + 312 paired + 13 trips) —
 // any other number means the canonicalization is broken.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/equity/card.dart';
 
@@ -58,6 +60,59 @@ void main() {
 
     test('card input order does not matter', () {
       expect(canonicalFlop(_f('4c 9h Ks')), canonicalFlop(_f('Ks 9h 4c')));
+    });
+  });
+
+  group('strideSlice', () {
+    late final List<String> all = allIsoFlops();
+
+    test('5 × 351 slices at offsets 0..4 partition all 1,755 exactly', () {
+      // The committed bulk-campaign slice files (tool/solver/flops/) rely on
+      // this: when count divides the list length, the stride is uniform and
+      // phase offsets 0..K-1 are pairwise disjoint and union to the whole.
+      final slices = [for (var k = 0; k < 5; k++) strideSlice(all, 351, k)];
+      final union = <String>{};
+      var total = 0;
+      for (final s in slices) {
+        expect(s.length, 351);
+        total += s.length;
+        union.addAll(s);
+      }
+      expect(total, 1755);
+      expect(union.length, 1755); // pairwise disjoint AND covering
+      expect(union, all.toSet());
+    });
+
+    test('slices are deterministic and stride-spread (not a prefix)', () {
+      final s0 = strideSlice(all, 351, 0);
+      expect(strideSlice(all, 351, 0), s0); // deterministic
+      expect(s0.first, all.first);
+      // Stride 5: the slice spans the whole sorted list, not its head.
+      expect(s0[1], all[5]);
+      expect(s0.last, all[1750]);
+    });
+
+    test('the COMMITTED slice files match strideSlice byte-for-byte', () {
+      // The boxes consume the committed tool/solver/flops/*.txt artifacts (via
+      // git archive), NOT the function — a stale/hand-edited/regenerated-
+      // under-a-changed-canonicalization file would silently break the
+      // disjoint-partition property two concurrently-running boxes rely on
+      // (overlaps re-solve paid spots; dropped flops become coverage holes).
+      final union = <String>{};
+      for (var k = 0; k < 5; k++) {
+        final f = File('tool/solver/flops/slice351_off$k.txt');
+        expect(f.existsSync(), isTrue, reason: '${f.path} missing');
+        final lines = f
+            .readAsLinesSync()
+            .map((l) => l.trim())
+            .where((l) => l.isNotEmpty && !l.startsWith('#'))
+            .toList();
+        expect(lines, strideSlice(all, 351, k),
+            reason: '${f.path} is stale — regenerate: '
+                'dart run tool/solver/flop_enum.dart 351 ${f.path} $k');
+        union.addAll(lines);
+      }
+      expect(union.length, 1755);
     });
   });
 }

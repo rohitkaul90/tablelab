@@ -10,6 +10,11 @@ the library covers and what's left, so we can scope solve cycles and judge ROI.
 > command below, refresh the tables, and add a row to the Changelog. Keep it honest —
 > coverage is a credibility instrument, like the eval baseline.
 
+> **FULL-DENSITY BULK CAMPAIGN (planned 2026-07-11):** all 1,755 flops × the 5 live
+> scenarios, staged by value — see `BULK_DENSITY_RUNBOOK.md`. During the campaign the
+> library asset stays at its committed build and `freq_grid_results.json` stays FROZEN
+> (per-scenario `.jsonl` shards are the durable store; do not `--compact` until the end).
+
 Related: design = `launch/GTO_FREQUENCY_LIBRARY.md` (gitignored, local); tooling =
 `tool/solver/freq_grid.dart` (solve) + `freq_tabulate.dart` (tabulate) +
 `run_solver.dart` (TexasSolver bridge); live lookup = `lib/equity/gto_frequency_library.dart`.

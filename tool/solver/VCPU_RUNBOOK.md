@@ -13,6 +13,12 @@ Related: `GTO_LIBRARY_COVERAGE.md` (scope map — update after every cycle), `RE
 (harness overview), `SOLVER_PRIMER.md` (how the solver works), memory `dce_q1_phase2b_turn`
 (phase-2b history + the scaling research that produced this runbook).
 
+> **FULL-DENSITY BULK CAMPAIGN → see `BULK_DENSITY_RUNBOOK.md`.** Bulk runs pass
+> `--no-write` in `-GridArgs`, which flips the launcher into bulk mode (frozen results
+> monolith, shard-only sync/pull, no box-side library write/pull, scenario-scoped shard
+> seeding). This runbook's fast path stays the reference for CURATED (26-flop / pack)
+> cycles.
+
 ---
 
 ## ⚡ Fast path — `tool/solver/vcpu-solve.ps1`

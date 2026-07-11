@@ -74,6 +74,10 @@ param(
   [string]$CpuOversub = '',
   # Absolute thread budget (TLSOLVE_CPU_BUDGET); overrides -CpuOversub.
   [string]$CpuBudget = '',
+  # SPR-bucket include-filter (TLSOLVE_SPRS), e.g. 'deep' or 'shallow,medium'.
+  # Bucket names must exist in the scenario's sprReps (3bp has no 'deep') -
+  # unknown names fail the grid run fast. Contingency knob for the class-split.
+  [string]$Sprs = '',
   # Root EBS size (GB). The AMI snapshot is ~193 GB; grow it for pack-emitting
   # batches (packs + their pull-time tar both land on the root volume - a
   # 3-scenario river batch produces ~60-70 GB of packs). gp3 costs ~cents/day.
@@ -130,6 +134,22 @@ if (-not $Branch) {
   $Branch = (& git rev-parse --abbrev-ref HEAD).Trim()
   if (-not $Branch -or $Branch -eq 'HEAD') { throw "Cannot resolve current branch - pass -Branch." }
 }
+# Parameter-combination validation BEFORE any AWS call - a pure param error
+# must never launch (and then orphan) a paid instance (review finding).
+# BULK MODE (--no-write in -GridArgs): boxes never assemble the library - the
+# grid prints 'library write SKIPPED' instead of 'Wrote ', box-side --compact
+# is skipped (the monolith stays FROZEN so seeds/parses don't balloon toward
+# ~12 GB over a 26k-spot campaign), the health check keys on the SKIPPED line,
+# the library pull is skipped, and shard seeding/sync narrows to the run's own
+# scenario(s).
+$noWrite = $GridArgs -match '--no-write'
+if ($EmitPack -and $DumpFmt -eq 'bin') {
+  throw "-EmitPack requires the JSON dump (packs walk the JSON tree) - use -DumpFmt json/both or drop it."
+}
+if ($EmitPack -and $noWrite) {
+  throw "-EmitPack with --no-write makes no sense (packs are curated runs; bulk runs are pack-free)."
+}
+if ($noWrite) { Write-Host "Bulk mode (--no-write): frozen monolith, shard-only sync, no library pull." }
 
 function Invoke-Aws { # run aws, throw on non-zero exit (native exe - $ErrorAction won't)
   $out = aws @args
@@ -262,19 +282,29 @@ if ($LASTEXITCODE -ne 0) { throw "remote extract / flutter pub get failed" }
 # it the box's final _writeLibrary sees only THIS run's scenario, trips the
 # scenario-drop guard against the synced library asset (which has the others),
 # never prints 'Wrote ' - and -PullAndTerminate would read that as a failed solve.
-# Seeding also makes the run resumable and skips already-solved spots.
+# (Under --no-write the guard never runs, but the seed still provides the
+# cache-skip.) Seeding also makes the run resumable.
 $cache = Join-Path $repo 'tool\solver\freq_grid_results.json'
 if (Test-Path $cache) {
-  scp -i $key $cache "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.json"
+  scp -C -i $key $cache "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.json"
   if ($LASTEXITCODE -ne 0) { throw "scp freq_grid_results.json (cache seed) failed" }
   Write-Host "Seeded solve cache from local freq_grid_results.json."
 }
 # Per-scenario JSONL checkpoint shards (WS2) are part of the cache too - a
 # relaunch after a spot reclaim resumes from them (they hold the spots solved
-# since the last --compact).
+# since the last --compact). In bulk mode only the run's OWN scenario(s)
+# shards are seeded — other scenarios' shards grow to GBs over the campaign
+# and provide zero cache value here (slices are keyed per scenario).
 $shards = Get-ChildItem (Join-Path $repo 'tool\solver') -Filter 'freq_grid_results.*.jsonl' -ErrorAction SilentlyContinue
+if ($noWrite) {
+  $scNames = @($Scenario -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+  $shards = @($shards) | Where-Object {
+    $n = $_.Name
+    ($scNames | Where-Object { $n -eq "freq_grid_results.$_.jsonl" }).Count -gt 0
+  }
+}
 foreach ($sh in @($shards)) {
-  scp -i $key $sh.FullName "ubuntu@${pubip}:~/poker_tracker/tool/solver/$($sh.Name)"
+  scp -C -i $key $sh.FullName "ubuntu@${pubip}:~/poker_tracker/tool/solver/$($sh.Name)"
   if ($LASTEXITCODE -ne 0) { throw "scp $($sh.Name) (shard seed) failed" }
   Write-Host "Seeded shard $($sh.Name)."
 }
@@ -297,8 +327,14 @@ if ($RamBudgetGB) { $extraEnv += "TLSOLVE_RAM_BUDGET_GB=$RamBudgetGB " }
 if ($MaxSpotGB) { $extraEnv += "TLSOLVE_MAX_SPOT_GB=$MaxSpotGB " }
 if ($CpuOversub) { $extraEnv += "TLSOLVE_CPU_OVERSUB=$CpuOversub " }
 if ($CpuBudget) { $extraEnv += "TLSOLVE_CPU_BUDGET=$CpuBudget " }
-if ($EmitPack -and $DumpFmt -eq 'bin') {
-  throw "-EmitPack requires the JSON dump (packs walk the JSON tree) - use -DumpFmt json/both or drop it."
+if ($Sprs) { $extraEnv += "TLSOLVE_SPRS=$Sprs " }
+# Bulk mode: skip the box-side --compact so the monolith stays frozen — the
+# .jsonl shards are the durable store and the launcher's shard sync/pull
+# captures them. Normal mode folds shards into the single results file.
+$compactLine = if ($noWrite) {
+  'echo "COMPACT SKIPPED (bulk mode: shards are the durable store)"'
+} else {
+  'dart run tool/solver/freq_grid.dart --compact || echo "COMPACT FAILED"'
 }
 $solveSh = @"
 #!/usr/bin/env bash
@@ -343,8 +379,9 @@ for SC in $scenarioList; do
   TLSOLVE_SCENARIO=`$SC TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB $extraEnv dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs || echo "SCENARIO `$SC FAILED"
 done
 # Fold the per-scenario JSONL shards into freq_grid_results.json so the
-# launcher's single-file cache pull captures every solved spot (WS2 shards).
-dart run tool/solver/freq_grid.dart --compact || echo "COMPACT FAILED"
+# launcher's single-file cache pull captures every solved spot (WS2 shards) —
+# unless bulk mode replaced this with a COMPACT SKIPPED echo (frozen monolith).
+$compactLine
 echo "BATCH DONE"
 } 2>&1 | tee ~/solve.log
 "@
@@ -366,7 +403,10 @@ Write-Host ""
 
 # -- 6. Optional: wait for completion, pull library + cache, terminate --------
 if ($PullAndTerminate) {
-  if ($GridArgs -match '--limit') {
+  # Bulk mode is exempt: it never writes/pulls a library, and .jsonl shards
+  # are always safe to pull - so a --limit smoke (e.g. '--limit 1 --no-write')
+  # gets the full pull+terminate flow instead of an orphaned box.
+  if ($GridArgs -match '--limit' -and -not $noWrite) {
     Write-Warning "GridArgs has --limit: this is a PARTIAL solve. Pulling its library would"
     Write-Warning "clobber the committed one. Skipping auto-pull; leaving the box running."
     Write-Warning "Inspect over SSH, then terminate manually with the command above."
@@ -451,12 +491,20 @@ if ($PullAndTerminate) {
     if ($SyncEveryMin -gt 0 -and ((Get-Date) - $lastSync).TotalMinutes -ge $SyncEveryMin) {
       $lastSync = Get-Date
       New-Item -ItemType Directory -Force $staging | Out-Null
+      # Bulk mode: the monolith never changes mid-run (frozen; box compact is
+      # skipped), so re-pulling ~500 MB every interval is pure waste — sync
+      # only the .jsonl shards, which hold everything this run solved.
+      $syncGlob = if ($noWrite) {
+        '~/poker_tracker/tool/solver/freq_grid_results.*.jsonl'
+      } else {
+        '~/poker_tracker/tool/solver/freq_grid_results.*'
+      }
       $sj = Start-Job -ScriptBlock {
-        param($k, $ip, $dest)
-        scp -i $k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes `
-          "ubuntu@${ip}:~/poker_tracker/tool/solver/freq_grid_results.*" $dest 2>$null
+        param($k, $ip, $glob, $dest)
+        scp -C -i $k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes `
+          "ubuntu@${ip}:$glob" $dest 2>$null
         $LASTEXITCODE
-      } -ArgumentList $key, $pubip, $staging
+      } -ArgumentList $key, $pubip, $syncGlob, $staging
       if (Wait-Job $sj -Timeout 120) {
         $code = Receive-Job $sj | Select-Object -Last 1
         if ($code -eq 0) { Write-Host "  [sync] staged checkpoint shards" }
@@ -530,7 +578,10 @@ if ($PullAndTerminate) {
   # shards (the .json is pre-run stale) — the final pull below fetches the
   # shards regardless, so nothing is lost, but say so (review finding: the
   # old single-file pull + staging cleanup silently destroyed those results).
-  $chk = Invoke-SshTimed "grep -c '^Wrote ' ~/solve.log; grep -c 'SCENARIO .* FAILED' ~/solve.log; grep -c 'COMPACT FAILED' ~/solve.log" -TimeoutSec 60
+  # Bulk mode has no library writes by design — the per-scenario completion
+  # marker is the grid's 'library write SKIPPED' line instead of '^Wrote '.
+  $wrotePat = if ($noWrite) { 'library write SKIPPED' } else { '^Wrote ' }
+  $chk = Invoke-SshTimed "grep -c '$wrotePat' ~/solve.log; grep -c 'SCENARIO .* FAILED' ~/solve.log; grep -c 'COMPACT FAILED' ~/solve.log" -TimeoutSec 60
   $wroteCount = 0
   $scenarioFails = 0
   $compactFails = 0
@@ -548,16 +599,26 @@ if ($PullAndTerminate) {
   if ($wroteCount -eq 0) {
     $r = Invoke-SshTimed "tail -n 30 ~/solve.log" -TimeoutSec 60
     if ($r) { Write-Host $r.Out }
-    Write-Warning "BATCH DONE but NO library write happened (every scenario failed or"
-    Write-Warning "aborted on a guard). Instance $iid LEFT RUNNING for triage - do not"
-    Write-Warning "trust a pulled library. Terminate when done:"
+    if ($noWrite) {
+      Write-Warning "BATCH DONE but no grid run reached its end marker (every scenario"
+      Write-Warning "failed early). Instance $iid LEFT RUNNING for triage:"
+    } else {
+      Write-Warning "BATCH DONE but NO library write happened (every scenario failed or"
+      Write-Warning "aborted on a guard). Instance $iid LEFT RUNNING for triage - do not"
+      Write-Warning "trust a pulled library. Terminate when done:"
+    }
     Write-Warning "  aws ec2 terminate-instances --region $Region --instance-ids $iid"
     return
   }
   if ($scenarioFails -gt 0) {
-    Write-Warning "$scenarioFails scenario(s) FAILED in the batch - the pulled library"
-    Write-Warning "holds only the successful ones (grep 'SCENARIO .* FAILED' ~/solve.log"
-    Write-Warning "on the box, or the pulled log). The library write guards still ran."
+    if ($noWrite) {
+      Write-Warning "$scenarioFails scenario(s) FAILED in the batch - the pulled shards hold"
+      Write-Warning "only the successful scenarios' spots (grep 'SCENARIO .* FAILED' in the log)."
+    } else {
+      Write-Warning "$scenarioFails scenario(s) FAILED in the batch - the pulled library"
+      Write-Warning "holds only the successful ones (grep 'SCENARIO .* FAILED' ~/solve.log"
+      Write-Warning "on the box, or the pulled log). The library write guards still ran."
+    }
   }
   $r = Invoke-SshTimed "tail -n 3 ~/solve.log" -TimeoutSec 60
   if ($r) { Write-Host $r.Out }
@@ -568,13 +629,32 @@ if ($PullAndTerminate) {
   # the resumable freq_grid_results.json) isn't destroyed.
   Push-Location $repo
   try {
-    scp -i $key "ubuntu@${pubip}:~/poker_tracker/assets/gto_freq_library.json" 'assets/gto_freq_library.json'
-    $okLib = ($LASTEXITCODE -eq 0)
-    # Pull the compacted json AND any .jsonl shards in one glob: if the
-    # box-side --compact failed, the shards ARE the run's results — a
-    # json-only pull would discard them at terminate (review finding).
-    scp -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*" 'tool/solver/'
-    $okCache = ($LASTEXITCODE -eq 0)
+    if ($noWrite) {
+      # Bulk mode: the box never wrote a library (and its asset is just the
+      # seeded stale copy — pulling it would clobber the local one), and the
+      # monolith is frozen (identical to the local seed). The run's results
+      # live ONLY in the .jsonl shards. PROBE before the glob scp: a fully
+      # cache-skipped run (or a first slice with no seed and zero solves)
+      # never creates a shard, and a no-match glob would fail the pull and
+      # leave a ~$7/h box billing over output that never existed.
+      $okLib = $true
+      $sprobe = Invoke-SshTimed 'ls ~/poker_tracker/tool/solver/freq_grid_results.*.jsonl >/dev/null 2>&1 && echo yes || echo no' -TimeoutSec 60
+      if ($sprobe -and "$($sprobe.Out)".Trim() -eq 'no') {
+        Write-Host "No .jsonl shards on the box (nothing newly solved - fully cache-skipped run); nothing to pull."
+        $okCache = $true
+      } else {
+        scp -C -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*.jsonl" 'tool/solver/'
+        $okCache = ($LASTEXITCODE -eq 0)
+      }
+    } else {
+      scp -i $key "ubuntu@${pubip}:~/poker_tracker/assets/gto_freq_library.json" 'assets/gto_freq_library.json'
+      $okLib = ($LASTEXITCODE -eq 0)
+      # Pull the compacted json AND any .jsonl shards in one glob: if the
+      # box-side --compact failed, the shards ARE the run's results — a
+      # json-only pull would discard them at terminate (review finding).
+      scp -C -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*" 'tool/solver/'
+      $okCache = ($LASTEXITCODE -eq 0)
+    }
   } finally { Pop-Location }
   $okPacks = $true
   if ($EmitPack) {
@@ -620,5 +700,9 @@ if ($PullAndTerminate) {
   # freq_grid_results.json before BATCH DONE) - the staging copies are now
   # redundant snapshots.
   if (Test-Path $staging) { Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue }
-  Write-Host "Done. Library pulled (review 'git diff', then 'git add -f' it)$(if ($EmitPack) { ", packs in $PackDest" }) + instance terminated."
+  if ($noWrite) {
+    Write-Host "Done. Shards pulled (bulk mode - assemble the library operator-side with --write at campaign end) + instance terminated."
+  } else {
+    Write-Host "Done. Library pulled (review 'git diff', then 'git add -f' it)$(if ($EmitPack) { ", packs in $PackDest" }) + instance terminated."
+  }
 }
