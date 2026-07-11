@@ -2,10 +2,12 @@
 //
 // The Pluribus benchmark plays ~100bb (deep SPR) 6-max, so after the v1
 // library's correct restrictions (BTN-opener vs BB, single-raised, heads-up,
-// shallow/medium SPR, covered texture) it produces ZERO `[HEURISTIC — GTO
-// frequency]` lines — the eval can't see the feature. This builds a small set
-// of synthetic BTN-vs-BB hands that DO hit the library, spanning hero position,
-// facing-node, hand class, SPR bucket, and texture.
+// shallow/medium SPR, covered texture) it produced ZERO `[HEURISTIC — GTO
+// frequency]` lines — the eval couldn't see the feature. This builds a small
+// set of synthetic hands that DO hit the library — one spec family per solved
+// scenario (BTN/CO/UTG-vs-BB single-raised, the BB-vs-BTN 3-bet pot, and
+// blind-vs-blind SB-vs-BB) — spanning hero position, facing-node, hand class,
+// SPR bucket, street, and texture.
 //
 // Self-verifying: for each spec it computes the real equity check + facts (with
 // the library) and prints whether the GTO FACT fired and what it says, so the

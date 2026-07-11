@@ -1270,31 +1270,33 @@ void main() {
 
     test('out-of-scenario hand → no GTO frequency FACT even with a library',
         () async {
-      // SB opener: the one SRP shape excluded by design (opens OOP — the
-      // position-keyed cells would invert). CO/UTG openers map to their own
-      // scenarios since Cycle B, so they no longer test the negative path.
+      // BTN opens and the SB cold-calls: the caller is not the BB, so no
+      // scenario maps (every solved scenario has a BB defender). SB OPENS
+      // stopped being a negative case when srp_sb_v_bb landed (like CO/UTG
+      // opens did with Cycle B) — if an SB-caller scenario is ever solved,
+      // swap this for whatever shape remains uncovered.
       final check = await computeHandEquityCheck(
-        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 1, streets: [
+        _hand(heroSeat: 0, heroCards: ['As', 'Ah'], villainSeat: 1, streets: [
           const StreetData(street: Street.preflop, actions: [
             HandAction(seat: 1, type: ActionType.post, amount: 1), // SB
-            HandAction(seat: 2, type: ActionType.post, amount: 2),
-            HandAction(seat: 1, type: ActionType.raise, amount: 5), // SB opens
-            HandAction(seat: 2, type: ActionType.call, amount: 5),
+            HandAction(seat: 0, type: ActionType.raise, amount: 5), // BTN opens
+            HandAction(seat: 1, type: ActionType.call, amount: 5), // SB calls
           ]),
           const StreetData(
               street: Street.flop,
               communityCards: ['Ks', '9h', '4c'],
               actions: [
-                // SB is OOP postflop and leads; the BB hero calls.
-                HandAction(seat: 1, type: ActionType.raise, amount: 4),
-                HandAction(seat: 2, type: ActionType.call, amount: 4),
+                // SB is OOP postflop; the BTN hero c-bets after the check.
+                HandAction(seat: 1, type: ActionType.check),
+                HandAction(seat: 0, type: ActionType.raise, amount: 4),
               ]),
         ]),
         iterations: 500,
         seed: 1,
       );
+      expect(check!.scenarioKey, isNull);
       expect(
-          equityCheckFacts(check!, library: lib)
+          equityCheckFacts(check, library: lib)
               .any((f) => f.contains('GTO frequency (')),
           isFalse);
     });

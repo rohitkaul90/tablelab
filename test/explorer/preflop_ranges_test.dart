@@ -99,8 +99,10 @@ void main() {
           'srp_early_v_bb');
       expect(key(opener: 'BTN', responder: 'BB', act: '3-bet', resp: 'Call'),
           '3bp_bb_v_btn');
+      // Blind-vs-blind: the SB open takes its OWN scenario (opener OOP),
+      // never the late-bucket BTN cells.
+      expect(key(opener: 'SB', responder: 'BB', act: 'Call'), 'srp_sb_v_bb');
       // Excluded shapes.
-      expect(key(opener: 'SB', responder: 'BB', act: 'Call'), isNull);
       expect(key(opener: 'BTN', responder: 'SB', act: 'Call'), isNull);
       expect(key(opener: 'BTN', responder: 'BB', act: '3-bet', resp: '4-bet'),
           isNull);
@@ -114,6 +116,8 @@ void main() {
   group('bb anchoring', () {
     test('bbPerUnit anchors the normalized pot-10 scale to bb', () {
       expect(bbPerUnit('srp_late_v_bb', 10), closeTo(0.55, 1e-9));
+      // BvB flop pot is 5.0bb (no dead SB), not the 5.5 the other SRPs share.
+      expect(bbPerUnit('srp_sb_v_bb', 10), closeTo(0.5, 1e-9));
       expect(bbPerUnit('3bp_bb_v_btn', 10), closeTo(2.25, 1e-9));
       expect(bbPerUnit('unknown_scenario', 10), isNull);
     });
@@ -122,6 +126,9 @@ void main() {
       // Each player commits half of (flop pot − dead SB): SRP 2.5, 3-bet 11.
       expect(perPlayerPreflopInvestBB('srp_late_v_bb'), closeTo(2.5, 1e-9));
       expect(perPlayerPreflopInvestBB('3bp_bb_v_btn'), closeTo(11.0, 1e-9));
+      // Blind-vs-blind has NO dead SB (the SB's blind is part of its open):
+      // each player still commits 2.5 into the 5.0 pot.
+      expect(perPlayerPreflopInvestBB('srp_sb_v_bb'), closeTo(2.5, 1e-9));
       expect(perPlayerPreflopInvestBB('unknown'), isNull);
     });
 
