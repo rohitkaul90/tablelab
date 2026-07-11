@@ -41,7 +41,21 @@
 //     smaller, small-heap parse; json = oracle/packs; both = validation)
 //   dart run tool/solver/freq_grid.dart --compact   # fold the per-scenario
 //     .jsonl checkpoint shards into freq_grid_results.json (run before seeding
-//     a box — the launcher scp's the single results file)
+//     a box — the launcher scp's the single results file). BULK-CAMPAIGN NOTE:
+//     during a full-density campaign do NOT compact — the monolith stays frozen
+//     and the per-scenario shards are the durable store (_loadResults folds
+//     shards over the monolith in memory, so dry-runs and --write never need a
+//     compaction; a 26k-spot monolith would be ~12 GB and poison every box seed).
+//   … --no-write                                     # skip the end-of-run
+//     library assembly — REQUIRED on bulk boxes: a box seeded with only its own
+//     scenario's cache would trip _writeLibrary's scenario-drop guard (and a
+//     partial write must never be pulled over the shipped asset). The one
+//     authoritative --write happens operator-side from the union of all shards.
+//   TLSOLVE_SPRS=deep dart run …                     # solve ONLY the named SPR
+//     bucket(s) (comma list; names must exist in the scenario's sprReps —
+//     unknown names fail fast). Contingency knob for the class-split: deep-only
+//     cleanup passes, or pairing a small-RAM box (TLSOLVE_MAX_SPOT_GB) with a
+//     big-RAM deep-only box.
 //   … --emit-pack <dir>                             # ALSO write a GTO Explorer
 //     pack per solved spot to <dir>/<scenario>/<flop>_<spr>/ (same parse pass —
 //     see explorer_pack.dart / launch/GTO_EXPLORER.md). Only NEWLY-SOLVED spots
@@ -671,6 +685,7 @@ void _writeLibrary(Map<String, dynamic> results) {
 
 Future<void> main(List<String> args) async {
   final writeOnly = args.contains('--write');
+  final noWrite = args.contains('--no-write');
   final limitIdx = args.indexOf('--limit');
   final limit = limitIdx >= 0 && limitIdx + 1 < args.length
       ? int.tryParse(args[limitIdx + 1])
@@ -704,11 +719,28 @@ Future<void> main(List<String> args) async {
 
   final ranges = scenarioRanges();
   final gridFlops = _gridFlops();
+  // TLSOLVE_SPRS: optional include-filter on SPR bucket names. Bucket sets
+  // differ per scenario (3bp has committed/shallow/medium, no deep), so an
+  // unknown name is a hard error — a typo'd filter must fail fast, not
+  // silently solve zero spots. Throws StateError on a bad name.
+  final Set<String>? sprFilter;
+  try {
+    sprFilter = parseSprFilter(
+        Platform.environment['TLSOLVE_SPRS'], kSprReps.keys);
+  } on StateError catch (e) {
+    stderr.writeln('TLSOLVE_SPRS: $e');
+    exitCode = 64;
+    return;
+  }
+  final sprEntries = kSprReps.entries
+      .where((e) => sprFilter == null || sprFilter.contains(e.key))
+      .toList();
   stdout.writeln('flop source: ${_flopSourceLabel()} (${gridFlops.length} '
-      'flops × ${kSprReps.length} SPRs)');
+      'flops × ${sprEntries.length} SPRs'
+      '${sprFilter == null ? '' : ' — TLSOLVE_SPRS=${sprFilter.join(',')}'})');
   final spots = <({String flop, String spr, double sprVal})>[];
   for (final flop in gridFlops) {
-    for (final e in kSprReps.entries) {
+    for (final e in sprEntries) {
       spots.add((flop: flop, spr: e.key, sprVal: e.value));
     }
   }
@@ -990,5 +1022,10 @@ Future<void> main(List<String> args) async {
   stdout.writeln('\nGrid: solved $solved, skipped $skipped, failed $failed '
       'in ${sw.elapsed.inMinutes}m.');
 
-  if (results.isNotEmpty) _writeLibrary(results);
+  if (noWrite) {
+    stdout.writeln('library write SKIPPED (--no-write): assemble '
+        'operator-side from the union of all shards via --write.');
+  } else if (results.isNotEmpty) {
+    _writeLibrary(results);
+  }
 }

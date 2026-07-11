@@ -60,4 +60,34 @@ void main() {
       expect(canonicalFlop(_f('4c 9h Ks')), canonicalFlop(_f('Ks 9h 4c')));
     });
   });
+
+  group('strideSlice', () {
+    late final List<String> all = allIsoFlops();
+
+    test('5 × 351 slices at offsets 0..4 partition all 1,755 exactly', () {
+      // The committed bulk-campaign slice files (tool/solver/flops/) rely on
+      // this: when count divides the list length, the stride is uniform and
+      // phase offsets 0..K-1 are pairwise disjoint and union to the whole.
+      final slices = [for (var k = 0; k < 5; k++) strideSlice(all, 351, k)];
+      final union = <String>{};
+      var total = 0;
+      for (final s in slices) {
+        expect(s.length, 351);
+        total += s.length;
+        union.addAll(s);
+      }
+      expect(total, 1755);
+      expect(union.length, 1755); // pairwise disjoint AND covering
+      expect(union, all.toSet());
+    });
+
+    test('slices are deterministic and stride-spread (not a prefix)', () {
+      final s0 = strideSlice(all, 351, 0);
+      expect(strideSlice(all, 351, 0), s0); // deterministic
+      expect(s0.first, all.first);
+      // Stride 5: the slice spans the whole sorted list, not its head.
+      expect(s0[1], all[5]);
+      expect(s0.last, all[1750]);
+    });
+  });
 }

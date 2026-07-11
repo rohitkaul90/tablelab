@@ -36,6 +36,30 @@
 import 'dart:async';
 import 'dart:io';
 
+/// Parses the TLSOLVE_SPRS include-filter: a comma list of SPR bucket NAMES
+/// (e.g. "deep" or "shallow,medium"), trimmed and lowercased. Returns null for
+/// an unset/empty value (= no filter). Throws [StateError] on any name not in
+/// [validBuckets] — bucket sets differ per scenario (3bp has
+/// committed/shallow/medium and NO deep), so a typo'd or wrong-scenario filter
+/// must fail fast rather than silently solving zero spots.
+Set<String>? parseSprFilter(String? env, Iterable<String> validBuckets) {
+  final raw = (env ?? '').trim();
+  if (raw.isEmpty) return null;
+  final valid = validBuckets.toSet();
+  final names = raw
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .where((s) => s.isNotEmpty)
+      .toSet();
+  if (names.isEmpty) return null;
+  final unknown = names.difference(valid);
+  if (unknown.isNotEmpty) {
+    throw StateError('unknown SPR bucket(s) ${unknown.join(',')} — this '
+        'scenario has: ${valid.join(',')}');
+  }
+  return names;
+}
+
 /// Predicted per-phase resource footprint of one spot.
 class SpotFootprint {
   final double solveGb;
