@@ -3,22 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TableLab — Poker Bankroll Tracker & AI Coaching</title>
-  <meta name="description" content="TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record hands, run equity, and get solver-grounded AI coaching — on Android and the web.">
+  <title>TableLab — Poker Bankroll Tracker, Solver Study & AI Coaching</title>
+  <meta name="description" content="TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record hands, study solver-computed strategies, and get AI coaching grounded in solver math — on Android and the web.">
   <link rel="canonical" href="https://tablelab.app/about">
-  <meta property="og:title" content="TableLab — Poker Bankroll Tracker & AI Coaching">
-  <meta property="og:description" content="Track sessions, record hands, and get solver-grounded AI coaching. Free on Android and the web.">
+  <meta property="og:title" content="TableLab — Poker Bankroll Tracker, Solver Study & AI Coaching">
+  <meta property="og:description" content="Track sessions, record hands, study solver-computed strategies, and get AI coaching grounded in real math. Free on Android and the web.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://tablelab.app/about">
   <meta property="og:site_name" content="TableLab">
   <meta property="og:image" content="https://tablelab.app/og-cover.png">
   <meta property="og:image:width" content="2400">
   <meta property="og:image:height" content="1260">
-  <meta property="og:image:alt" content="TableLab — track your poker, fix your leaks. Free bankroll tracker with hand recording, equity calculator, and AI coaching.">
+  <meta property="og:image:alt" content="TableLab — track your poker, fix your leaks. Free bankroll tracker with hand recording, solver strategy study, equity tools, and AI coaching.">
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="TableLab — Poker Bankroll Tracker & AI Coaching">
-  <meta name="twitter:description" content="Free poker bankroll tracker for cash games and tournaments — sessions, hand recorder, equity calculator, and solver-grounded AI coaching.">
+  <meta name="twitter:title" content="TableLab — Poker Bankroll Tracker, Solver Study & AI Coaching">
+  <meta name="twitter:description" content="Free poker bankroll tracker for cash games and tournaments — sessions, hand recorder, solver strategy study, equity and variance tools, and AI coaching.">
   <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
   <meta name="author" content="MagpiQ">
   <meta name="theme-color" content="#111811">
@@ -93,15 +93,17 @@
         "operatingSystem": "Android, Web Browser",
         "url": "https://tablelab.app",
         "downloadUrl": "https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker",
-        "description": "TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions, record full hand histories, run a range-vs-range equity calculator offline, track player reads, and get solver-grounded AI coaching on your sessions and individual hands.",
+        "description": "TableLab is a free poker bankroll tracker for cash games and tournaments. Log sessions with a live recorder, record full hand histories, study solver-computed strategies street by street, run equity, variance, and ICM calculators offline, track player reads, and get AI coaching grounded in solver math on your sessions and individual hands.",
         "image": "https://tablelab.app/icons/Icon-512.png",
         "featureList": [
-          "Cash game and tournament session tracking",
+          "Cash game and tournament session tracking with a live session recorder",
           "Street-by-street hand recorder and replayer",
+          "AI coaching for sessions and hands, grounded in equity and solver frequencies",
+          "Solver strategy study library for common preflop battles",
           "Offline range-vs-range equity calculator with GTO presets",
-          "AI coaching for sessions and hands",
+          "Variance and ICM calculators",
           "Player reads and tendency tracking",
-          "Bankroll dashboard with win rate and BB/100"
+          "Stats dashboard with tappable charts, win rate, BB/100, and multi-currency display"
         ],
         "offers": {
           "@type": "Offer",
@@ -156,6 +158,14 @@
           },
           {
             "@type": "Question",
+            "name": "Does TableLab include solver strategies?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The Study tab holds a library of solver-computed strategies for common preflop battles — how often each hand bets, checks, calls, or raises on any flop, turn, and river. We compute it offline with a licensed CFR solver (TexasSolver); the app doesn't solve arbitrary spots on demand."
+            }
+          },
+          {
+            "@type": "Question",
             "name": "Is TableLab good for tournament players?",
             "acceptedAnswer": {
               "@type": "Answer",
@@ -202,6 +212,10 @@
       <a class="link" href="/blog/">Blog</a>
       <a class="link" href="/variance-calculator">Tools</a>
       <a class="link" href="/privacy">Privacy</a>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
       <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -214,9 +228,10 @@
     <div class="hero">
       <h1>Track your poker.<br><span class="accent">Fix your leaks.</span></h1>
       <p class="tagline">A free bankroll tracker for cash games and tournaments — with hand
-        recording, an equity calculator, and AI coaching that tells you what to work on.</p>
+        recording, solver strategy study, and AI coaching that tells you what to work on.</p>
       <div class="actions">
         <a class="btn btn-primary" href="/">Open the App</a>
+        <a class="store-badge" href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker" rel="noopener" target="_blank"><img src="/badges/google-play-badge.png" alt="Get it on Google Play" width="646" height="250"></a>
         <a class="btn btn-ghost" href="#features">See features</a>
       </div>
     </div>
@@ -227,9 +242,10 @@
         <h2 class="section-title">What is TableLab?</h2>
         <p class="lead"><strong>TableLab is a free poker bankroll tracker and study tool for live cash
         games and tournaments</strong>, available on Android and in any web browser. It brings together
-        five things players usually juggle across separate apps: session and bankroll tracking, a
-        street-by-street hand recorder, an offline equity calculator, opponent reads, and AI coaching
-        that reviews your sessions and hands and tells you what to work on.</p>
+        the things players usually juggle across separate apps: session and bankroll tracking with a
+        live session recorder, a street-by-street hand recorder, offline equity, variance, and ICM
+        calculators, a browsable solver strategy library, opponent reads, and AI coaching that reviews
+        your sessions and hands.</p>
         <p>It's built for serious recreational and semi-pro players who play live and want to study
         away from the table — no spreadsheets, no desktop-only software, and no subscription to get
         started. Your data stays private to your account, and AI analysis is opt-in, sent only when
@@ -242,7 +258,7 @@
           <div class="feature">
             <span class="ic">📒</span>
             <strong>Session Tracking</strong>
-            <span>Log cash and tournament sessions with stakes, buy-in, cash-out, table size, duration, and notes.</span>
+            <span>Log cash and tournament sessions with stakes, buy-in, cash-out, table size, duration, and notes — or run the live recorder to track rebuys, breaks, and expenses in real time.</span>
           </div>
           <div class="feature">
             <span class="ic">🃏</span>
@@ -252,12 +268,22 @@
           <div class="feature">
             <span class="ic">✨</span>
             <strong>AI Coaching</strong>
-            <span>Claude explains your sessions and hands in plain English, grounded in real equity and pot-odds math, not guesses. It flags your leaks and says when a spot is a judgment call.</span>
+            <span>Claude explains your sessions and hands in plain English, grounded in equity math and solver-computed frequencies, not guesses. It flags your leaks and says when a spot is a judgment call.</span>
+          </div>
+          <div class="feature">
+            <span class="ic">♟️</span>
+            <strong>Study Solver Strategies</strong>
+            <span>Browse solver-computed strategies for common preflop battles, street by street — how often each hand bets, checks, calls, or raises on any runout.</span>
           </div>
           <div class="feature">
             <span class="ic">🧮</span>
             <strong>Equity Calculator</strong>
             <span>Run range-vs-range equity with GTO presets and Monte Carlo simulation — fully offline.</span>
+          </div>
+          <div class="feature">
+            <span class="ic">🎲</span>
+            <strong>Variance &amp; ICM Tools</strong>
+            <span>Risk of ruin, expected downswings, and bankroll targets from your win rate or your own logged results — plus an ICM calculator for final-table spots.</span>
           </div>
           <div class="feature">
             <span class="ic">👁️</span>
@@ -266,8 +292,8 @@
           </div>
           <div class="feature">
             <span class="ic">📈</span>
-            <strong>Bankroll Dashboard</strong>
-            <span>Win rate, BB/100, profit by game type, and trends across your full history.</span>
+            <strong>Stats Dashboard</strong>
+            <span>Tap any stat — profit, win rate, BB/100, ROI — to chart it over time. Breakdowns by stakes, day, and location, cash vs tournament side by side, multi-currency aware.</span>
           </div>
         </div>
       </section>
@@ -287,8 +313,8 @@
           </div>
           <div class="step">
             <div class="num">3</div>
-            <strong>Get coached</strong>
-            <span>The AI explains your spots with real equity and GTO numbers, and surfaces your leaks.</span>
+            <strong>Get coached, then study</strong>
+            <span>The AI explains your spots with real equity and solver numbers and surfaces your leaks — then drill the full strategies in the Study tab.</span>
           </div>
         </div>
       </section>
@@ -300,7 +326,7 @@
         <p>The <strong>numbers are computed, not guessed</strong>: equity and pot odds from an on-device
         engine, and, where the spot is covered, GTO action frequencies from a real CFR solver
         (TexasSolver) we run offline and ship with the app. Those figures are handed to the AI as hard
-        facts.</p>
+        facts. The same solver library is browsable directly in the app's Study tab.</p>
         <p>The <strong>AI's job is the words</strong>: it explains those numbers in plain English and
         reasons about the spots a solver can't tractably cover, like multiway pots and deep live
         decisions. It's barred from stating a GTO number it wasn't given, and it tells you when a read is
@@ -322,6 +348,7 @@
               <tr><td>Live cash &amp; tournament play</td><td>Built for it</td><td>Manual entry</td><td>Online play only</td></tr>
               <tr><td>Hand recorder &amp; replayer</td><td>Yes</td><td>No</td><td>Import only</td></tr>
               <tr><td>Equity calculator</td><td>Built in, offline</td><td>No</td><td>Separate tool</td></tr>
+              <tr><td>Solver strategy library</td><td>Built in</td><td>No</td><td>Separate tool</td></tr>
               <tr><td>AI coaching</td><td>Yes</td><td>No</td><td>No</td></tr>
             </tbody>
           </table>
@@ -334,9 +361,13 @@
       <section id="platforms">
         <h2 class="section-title">Where to play</h2>
         <ul class="plain">
-          <li><strong>Android</strong> — available on Google Play.</li>
+          <li><strong>Android</strong> — install from Google Play:<br>
+            <a class="store-badge" href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker" rel="noopener" target="_blank"><img src="/badges/google-play-badge.png" alt="Get it on Google Play" width="646" height="250"></a>
+          </li>
           <li><strong>Web</strong> — runs in any modern browser at <a href="/">tablelab.app</a>.</li>
         </ul>
+        <p class="note" style="font-size: 0.8rem; color: var(--text-faint);">Google Play and the
+        Google Play logo are trademarks of Google LLC.</p>
       </section>
 
       <section id="faq" class="faq">
@@ -365,6 +396,13 @@
           <summary>Does the equity calculator work offline?</summary>
           <p>Yes. The range-vs-range equity calculator runs entirely on your device using a Monte
           Carlo simulation with GTO preset ranges — no internet connection required.</p>
+        </details>
+        <details>
+          <summary>Does TableLab include solver strategies?</summary>
+          <p>Yes. The Study tab holds a library of solver-computed strategies for common preflop
+          battles — how often each hand bets, checks, calls, or raises on any flop, turn, and river.
+          We compute it offline with a licensed CFR solver (TexasSolver); the app doesn't solve
+          arbitrary spots on demand.</p>
         </details>
         <details>
           <summary>Is TableLab good for tournament players?</summary>

@@ -46,4 +46,27 @@
     if (!btn) return;
     applyTheme(currentTheme() === 'light' ? 'dark' : 'light');
   });
+
+  // Mobile nav (☰): the header's <details class="nav-menu"> panel is filled
+  // from the page's own inline .site-nav links (hidden by CSS under 560px), so
+  // each page's menu mirrors its own nav with one identical markup snippet.
+  var menu = document.querySelector('details.nav-menu');
+  if (menu) {
+    var panel = menu.querySelector('nav');
+    document.querySelectorAll('.site-nav > a.link').forEach(function (a) {
+      var copy = a.cloneNode(true);
+      copy.classList.remove('link'); // the .link class is display:none on mobile
+      panel.appendChild(copy);
+    });
+    // Close after picking a link (matters for same-page anchors) and on any
+    // tap/click outside the open panel.
+    document.addEventListener('click', function (e) {
+      if (!menu.hasAttribute('open')) return;
+      var t = e.target;
+      var inside = t && t.closest ? t.closest('details.nav-menu') : null;
+      if (!inside || (t.closest && t.closest('.nav-menu nav a'))) {
+        menu.removeAttribute('open');
+      }
+    });
+  }
 })();
