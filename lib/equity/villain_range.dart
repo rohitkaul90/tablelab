@@ -845,7 +845,11 @@ double? _multiwayFieldMdf(
 /// Keys must match the solve grid's kScenarios (tool/solver/freq_grid.dart):
 ///  - srp_{early,middle,late}_v_bb — heads-up single-raised, an IP opener
 ///    (bucketed early/middle/late like the response charts) vs a BB caller.
-///    The SB stays excluded (opens OOP — cells would invert).
+///  - srp_sb_v_bb — heads-up single-raised, SB open vs BB call (blind-vs-blind).
+///    The only scenario whose opener is OOP: it is solved with the SB range as
+///    the solver's OOP player and the BB defend range as IP, so the physical
+///    ip/oop cell keys stay correct. The SB must NOT fall through to the 'late'
+///    bucket (those cells assume a BTN opener IN position).
 ///  - 3bp_bb_v_btn — heads-up 3-bet pot: BTN open → BB 3-bet → BTN call
 ///    (the 3-bettor OOP). The BTN must be the ORIGINAL opener — a cold-called
 ///    3-bet or squeeze reaches the flop with different ranges than the solve.
@@ -900,15 +904,17 @@ String? _deriveScenarioKey(PokerHand hand, StreetData preflop, int heroSeat,
     }
     return '3bp_bb_v_btn';
   }
-  // The SRP scenarios are solved opener-IP vs BB(OOP)-caller, one per opener
-  // BUCKET (the same early/middle/late bucketing the response charts use). The
-  // SB also buckets 'late' but opens OUT of position — its IP/OOP cells would
-  // be inverted (the lookup keys on physical position), so it stays excluded.
+  // The bucketed SRP scenarios are solved opener-IP vs BB(OOP)-caller, one per
+  // opener BUCKET (the same early/middle/late bucketing the response charts
+  // use). The SB also buckets 'late' but opens OUT of position, so it takes its
+  // OWN scenario (srp_sb_v_bb — solved SB-OOP vs BB-IP) rather than falling
+  // through to the BTN cells, which assume an in-position opener.
   if (posOf(callerSeat) != 'BB') return null;
   final openerLabel = posOf(openerSeat);
-  if (openerLabel == 'SB' || openerLabel == 'BB') return null;
+  if (openerLabel == 'BB') return null;
+  if (openerLabel == 'SB') return 'srp_sb_v_bb';
   return switch (openerBucketForLabel(openerLabel)) {
-    'late' => 'srp_late_v_bb', // BTN (SB excluded above)
+    'late' => 'srp_late_v_bb', // BTN (SB has its own scenario above)
     'middle' => 'srp_middle_v_bb', // HJ/CO
     _ => 'srp_early_v_bb', // UTG…MP (and exotic labels, matching the charts)
   };

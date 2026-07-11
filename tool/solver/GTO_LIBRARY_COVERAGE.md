@@ -129,7 +129,10 @@ pass `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`). No pruning, no engine change.
 prep DONE 2026-07-02: multi-scenario grid via `TLSOLVE_SCENARIO`, scenario defined,
 facing_allin relabel, live `_deriveScenarioKey` mapping, 7 eval templates) →
 **Cycle B = `srp_early_v_bb` + `srp_middle_v_bb`** (big box; same session re-dumps
-BTN-vs-BB with explorer packs) → **Cycle C = `srp_sb_v_bb`**.
+BTN-vs-BB with explorer packs) → **Cycle C = `srp_sb_v_bb`** (blind-vs-blind — code
+prep DONE 2026-07-10: scenario defined in `kScenarios` with the SB range as the
+solver's OOP player, live `_deriveScenarioKey` maps SB opens to it (the old
+exclusion removed), 6 `gto-bvb-*` eval templates; solve pending).
 
 ---
 

@@ -130,6 +130,21 @@ final Map<String, GridScenario> kScenarios = {
         rfiKey('CO', false)!, // cash_rfi_co
         callKey('bb', 'middle', 'CO', false)), // cash_call_bb_vs_co
   ),
+  'srp_sb_v_bb': GridScenario(
+    key: 'srp_sb_v_bb',
+    description: 'SB open vs BB call — blind-vs-blind single-raised. The FIRST '
+        'scenario whose OPENER is OUT of position (SB acts first postflop; the '
+        'BB caller is IP), so the SB range is the solver\'s OOP player and the '
+        'BB defend range the IP player — the physical ip/oop cell keys the live '
+        'lookup uses stay correct without any inversion.',
+    // Same SRP band as the other single-raised scenarios — the pot structure is
+    // identical (open + call → pot 10 at the flop), only the ranges (and the
+    // opener's position) differ.
+    sprReps: const {'shallow': 3.0, 'medium': 6.0, 'deep': 15.0},
+    ranges: () => _rangePair(
+        callKey('bb', 'late', 'SB', false), // cash_call_bb_vs_sb — BB caller IP
+        rfiKey('SB', false)!), // cash_rfi_sb — SB opener OOP
+  ),
   '3bp_bb_v_btn': GridScenario(
     key: '3bp_bb_v_btn',
     description: 'BTN open, BB 3-bet, BTN call — heads-up 3-bet pot '

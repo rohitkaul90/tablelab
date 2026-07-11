@@ -59,7 +59,9 @@ class _Spec {
   final bool threeBet;
 
   /// Which seat opens (single-raised specs): 0 = BTN (srp_late_v_bb),
-  /// 3 = UTG (srp_early_v_bb), 5 = CO (srp_middle_v_bb) — 6-max, buttonSeat 0.
+  /// 3 = UTG (srp_early_v_bb), 5 = CO (srp_middle_v_bb), 1 = SB (srp_sb_v_bb —
+  /// blind-vs-blind, the only scenario whose OPENER is OOP: the SB acts first
+  /// postflop and the BB caller is IP) — 6-max, buttonSeat 0.
   final int openerSeat;
   const _Spec(this.id, this.board, this.hero, this.heroSeat, this.stack,
       this.flop, this.note,
@@ -276,6 +278,39 @@ final List<_Spec> _specs = [
       'MIDDLE RIVER IP facing_bet, set of sixes (strongMade), medium',
       openerSeat: 5, turn: '2s', turnAct: [_chk(2), _chk(5)],
       river: '3d', riverAct: [_bet(2, 6), _call(5, 6)]),
+
+  // ── BLIND-vs-BLIND SRP spots (scenario srp_sb_v_bb, SB = seat 1) —
+  // TEMPLATES until solved; ✗ / skipped by --write until then. The OPENER is
+  // OOP here (the scenario's whole point): the SB acts FIRST on every postflop
+  // street, so flop actions lead with seat 1, and the BB caller (seat 2) is
+  // the IP player. Same pot shape as the other SRPs (open 5, BB call → pot 10;
+  // stacks 30/50 → shallow/medium; native flop sizes 4 = 40% small, 8 = 80%
+  // big; turn/river 6 = 60% mid).
+  _Spec('gto-bvb-oop-fta-marg-sh', _boardA, ['Ac', 'Qd'], 1, 30,
+      [_bet(1, 4), _call(2, 4)],
+      'BvB OOP (SB opener) first_to_act (c-bet lead), top pair, shallow',
+      openerSeat: 1),
+  _Spec('gto-bvb-oop-fbet-sdraw-sh', _boardB, ['Jc', 'Tc'], 1, 30,
+      [_chk(1), _bet(2, 4), _call(1, 4)],
+      'BvB OOP (SB opener) facing_bet after check, OESD (strongDraw), shallow',
+      openerSeat: 1),
+  _Spec('gto-bvb-ip-fcheck-strong-md', _boardA, ['7s', '7c'], 2, 50,
+      [_chk(1), _bet(2, 5)],
+      'BvB IP (BB caller) facing_check, set (strongMade), medium',
+      openerSeat: 1),
+  _Spec('gto-bvb-ip-fbet-marg-md', _boardA, ['Ac', 'Qd'], 2, 50,
+      [_bet(1, 8), _call(2, 8)],
+      'BvB IP (BB caller) facing_bet (big SB lead), top pair, medium',
+      openerSeat: 1),
+  _Spec('gto-bvb-t-oop-fta-air-md', _boardA, ['9c', '4d'], 1, 50,
+      [_chk(1), _chk(2)],
+      'BvB TURN OOP (SB) first_to_act (check-through), air, medium',
+      openerSeat: 1, turn: '2c', turnAct: [_chk(1), _chk(2)]),
+  _Spec('gto-bvb-r-ip-fbet-marg-sh', _boardB, ['9h', 'Tc'], 2, 30,
+      [_chk(1), _chk(2)],
+      'BvB RIVER IP (BB) facing_bet (bluff-catch), top pair 9, shallow',
+      openerSeat: 1, turn: '2s', turnAct: [_chk(1), _chk(2)],
+      river: '3d', riverAct: [_bet(1, 6), _call(2, 6)]),
 ];
 
 PokerHand _buildHand(_Spec s) {
@@ -322,6 +357,11 @@ PokerHand _buildHand(_Spec s) {
                   HandAction(seat: 0, type: ActionType.call, amount: 18),
                 ]
               : [
+                  // Blind-vs-blind (openerSeat 1): the SB is IN the hand, so
+                  // model its post too (other openers' blinds aren't posted —
+                  // those seats aren't in the 2-player hand at all).
+                  if (s.openerSeat == 1)
+                    const HandAction(seat: 1, type: ActionType.post, amount: 1),
                   const HandAction(seat: 2, type: ActionType.post, amount: 2),
                   HandAction(
                       seat: s.openerSeat, type: ActionType.raise, amount: 5),

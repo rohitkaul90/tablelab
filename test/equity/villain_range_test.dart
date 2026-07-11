@@ -991,9 +991,10 @@ void main() {
       expect(flop.betHeroFaced, 6);
     });
 
-    test('SB opener (out of position) → scenarioKey null', () async {
-      // SB opens, BB calls — heads-up single-raised, but the SB opens OOP so the
-      // library's BTN-opener cells don't apply.
+    test('SB opener (blind-vs-blind) → srp_sb_v_bb', () async {
+      // SB opens, BB calls — heads-up single-raised with the opener OOP. Maps
+      // to the dedicated srp_sb_v_bb scenario (solved SB-OOP vs BB-IP), never
+      // to the late-bucket BTN cells (which assume an in-position opener).
       final check = await computeHandEquityCheck(
         _hand(heroSeat: 1, heroCards: ['As', 'Ah'], villainSeat: 2, streets: [
           const StreetData(street: Street.preflop, actions: [
@@ -1006,7 +1007,35 @@ void main() {
         iterations: 500,
         seed: 1,
       );
-      expect(check!.scenarioKey, isNull);
+      expect(check!.scenarioKey, 'srp_sb_v_bb');
+    });
+
+    test('SB-open pot maps from the BB-caller side too (hero = BB, IP)',
+        () async {
+      // Same blind-vs-blind pot from the other seat: hero is the BB CALLER,
+      // who is IN position postflop (the inversion that forced the SB open
+      // into its own scenario). The flop confirms the structural position:
+      // the SB acts first, hero (BB) faces the c-bet lead in position.
+      final check = await computeHandEquityCheck(
+        _hand(heroSeat: 2, heroCards: ['As', 'Ah'], villainSeat: 1, streets: [
+          const StreetData(street: Street.preflop, actions: [
+            HandAction(seat: 1, type: ActionType.post, amount: 1), // SB
+            HandAction(seat: 2, type: ActionType.post, amount: 2), // BB
+            HandAction(seat: 1, type: ActionType.raise, amount: 5), // SB opens
+            HandAction(seat: 2, type: ActionType.call, amount: 5),
+          ]),
+          mkFlop(const [
+            HandAction(seat: 1, type: ActionType.raise, amount: 6), // SB leads
+            HandAction(seat: 2, type: ActionType.call, amount: 6),
+          ]),
+        ]),
+        iterations: 500,
+        seed: 1,
+      );
+      expect(check!.scenarioKey, 'srp_sb_v_bb');
+      final flop = check.streets.firstWhere((s) => s.street == Street.flop);
+      expect(flop.heroInPosition, isTrue);
+      expect(flop.heroFacing, startsWith('facing_bet'));
     });
 
     test('hero IP c-bet after villain check → facing_check', () async {
