@@ -1,6 +1,6 @@
 # TableLab
 
-> TableLab is a free poker bankroll tracker for cash games and tournaments, available on Android and the web. It logs sessions, records full street-by-street hand histories, runs an offline range-vs-range equity calculator, tracks player reads, and provides solver-grounded AI coaching on sessions and individual hands. Built and operated by MagpiQ, an independent software studio in Ontario, Canada.
+> TableLab is a free poker bankroll tracker for cash games and tournaments, available on Android and the web. It logs sessions (including a live session recorder), records full street-by-street hand histories, runs offline equity, variance, and ICM calculators, holds a browsable library of solver-computed strategies (the Study tab), tracks player reads, and provides solver-grounded AI coaching on sessions and individual hands. Built and operated by MagpiQ, an independent software studio in Ontario, Canada.
 
 ## Key facts
 
@@ -11,12 +11,15 @@
 
 ## Features
 
-- Session tracking — log cash and tournament sessions with stakes, buy-in, cash-out, table size, duration, and notes.
+- Session tracking — log cash and tournament sessions with stakes, buy-in, cash-out, table size, duration, and notes, or run the live recorder to track rebuys, breaks, and expenses in real time.
 - Hand recorder — record full hand histories street by street, from heads-up to 9-handed, and replay them on a table.
 - AI coaching — Claude explains your sessions and hands in plain English, grounded in computed equity and solver-derived GTO frequencies (where the spot is covered), never invented numbers.
+- Study tab — a browsable library of solver-computed strategies for common preflop battles: how often each hand bets, checks, calls, or raises on any flop, turn, and river. Computed offline with a licensed CFR solver (TexasSolver); the app does not solve arbitrary spots on demand.
 - Equity calculator — range-vs-range equity with GTO presets and Monte Carlo simulation, fully offline.
+- Variance calculator — risk of ruin, expected downswings, and bankroll targets from a win rate or the user's own logged results.
+- ICM calculator — Malmuth–Harville equities for tournament and final-table spots.
 - Player reads — track opponent tendencies and turn tags into rule-based insights.
-- Bankroll dashboard — win rate, BB/100, profit by game type, and trends across full history.
+- Stats dashboard — tap any stat (profit, win rate, BB/100, ROI) to chart it over time; breakdowns by stakes, day, time, and location; cash vs tournament side by side; multi-currency display.
 
 ## Pages
 
