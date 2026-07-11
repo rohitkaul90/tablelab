@@ -2,6 +2,8 @@
 // count is a hard mathematical fact (1,430 unpaired + 312 paired + 13 trips) —
 // any other number means the canonicalization is broken.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/equity/card.dart';
 
@@ -88,6 +90,29 @@ void main() {
       // Stride 5: the slice spans the whole sorted list, not its head.
       expect(s0[1], all[5]);
       expect(s0.last, all[1750]);
+    });
+
+    test('the COMMITTED slice files match strideSlice byte-for-byte', () {
+      // The boxes consume the committed tool/solver/flops/*.txt artifacts (via
+      // git archive), NOT the function — a stale/hand-edited/regenerated-
+      // under-a-changed-canonicalization file would silently break the
+      // disjoint-partition property two concurrently-running boxes rely on
+      // (overlaps re-solve paid spots; dropped flops become coverage holes).
+      final union = <String>{};
+      for (var k = 0; k < 5; k++) {
+        final f = File('tool/solver/flops/slice351_off$k.txt');
+        expect(f.existsSync(), isTrue, reason: '${f.path} missing');
+        final lines = f
+            .readAsLinesSync()
+            .map((l) => l.trim())
+            .where((l) => l.isNotEmpty && !l.startsWith('#'))
+            .toList();
+        expect(lines, strideSlice(all, 351, k),
+            reason: '${f.path} is stale — regenerate: '
+                'dart run tool/solver/flop_enum.dart 351 ${f.path} $k');
+        union.addAll(lines);
+      }
+      expect(union.length, 1755);
     });
   });
 }

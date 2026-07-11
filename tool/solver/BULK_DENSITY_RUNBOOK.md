@@ -73,14 +73,21 @@ calibration wall). Expected: ~12–17 h/slice, ~1.5 days/stage with two boxes,
    regions**: `aws ec2 describe-instances --region <r> --filters
    "Name=instance-state-name,Values=pending,running"` → empty.
 2. Merge the worktree's shard into the primary repo (concat IS the merge —
-   the loader's later-wins fold dedups):
-   `Get-Content ..\poker_tracker_e1\tool\solver\freq_grid_results.<sc>.jsonl |
-   Add-Content tool\solver\freq_grid_results.<sc>.jsonl` then delete the
-   worktree copy.
+   the loader's later-wins fold dedups). Use a BINARY concat, not a
+   PowerShell line pipeline (which is slow and re-encodes multi-GB JSONL
+   through the ANSI codepage):
+   ```powershell
+   cmd /c copy /b "tool\solver\freq_grid_results.<sc>.jsonl"+"..\poker_tracker_e1\tool\solver\freq_grid_results.<sc>.jsonl" "tool\solver\freq_grid_results.<sc>.merged"
+   Move-Item -Force "tool\solver\freq_grid_results.<sc>.merged" "tool\solver\freq_grid_results.<sc>.jsonl"
+   ```
+   Then delete the worktree copy.
 3. **Zero-pending check** (primary repo):
    `$env:TLSOLVE_SCENARIO='<sc>'; $env:TLSOLVE_FLOPS='all1755';
    dart --old_gen_heap_size=32000 run tool/solver/freq_grid.dart --sched-dry-run`
-   → expect `Solving 0 spot(s)`. Stragglers → one cleanup launch with
+   → expect `Solving 0 spot(s)`. Safe at any campaign size: `--sched-dry-run`
+   uses the keys-only cache loader (monolith keys + the CURRENT scenario's
+   shard streamed line-by-line — it never decodes the multi-GB entry payloads
+   or other scenarios' shards). Stragglers → one cleanup launch with
    `-Flops all1755` (cache skips solved); if they're deep timeouts:
    `-Sprs deep -TimeoutS 14400`.
 4. Cost guardrail: `dart run tool/solver/solve_report.dart --rate <spot $/vCPU-h>`

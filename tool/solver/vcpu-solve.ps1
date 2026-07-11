@@ -134,6 +134,22 @@ if (-not $Branch) {
   $Branch = (& git rev-parse --abbrev-ref HEAD).Trim()
   if (-not $Branch -or $Branch -eq 'HEAD') { throw "Cannot resolve current branch - pass -Branch." }
 }
+# Parameter-combination validation BEFORE any AWS call - a pure param error
+# must never launch (and then orphan) a paid instance (review finding).
+# BULK MODE (--no-write in -GridArgs): boxes never assemble the library - the
+# grid prints 'library write SKIPPED' instead of 'Wrote ', box-side --compact
+# is skipped (the monolith stays FROZEN so seeds/parses don't balloon toward
+# ~12 GB over a 26k-spot campaign), the health check keys on the SKIPPED line,
+# the library pull is skipped, and shard seeding/sync narrows to the run's own
+# scenario(s).
+$noWrite = $GridArgs -match '--no-write'
+if ($EmitPack -and $DumpFmt -eq 'bin') {
+  throw "-EmitPack requires the JSON dump (packs walk the JSON tree) - use -DumpFmt json/both or drop it."
+}
+if ($EmitPack -and $noWrite) {
+  throw "-EmitPack with --no-write makes no sense (packs are curated runs; bulk runs are pack-free)."
+}
+if ($noWrite) { Write-Host "Bulk mode (--no-write): frozen monolith, shard-only sync, no library pull." }
 
 function Invoke-Aws { # run aws, throw on non-zero exit (native exe - $ErrorAction won't)
   $out = aws @args
@@ -262,14 +278,6 @@ scp -i $key $tgz "ubuntu@${pubip}:~/repo.tgz"
 if ($LASTEXITCODE -ne 0) { throw "scp repo.tgz failed" }
 ssh @ssh 'mkdir -p ~/poker_tracker && tar -xzf ~/repo.tgz -C ~/poker_tracker && cd ~/poker_tracker && flutter pub get'
 if ($LASTEXITCODE -ne 0) { throw "remote extract / flutter pub get failed" }
-# BULK MODE (--no-write in -GridArgs): boxes never assemble the library — the
-# grid prints 'library write SKIPPED' instead of 'Wrote ', box-side --compact
-# is skipped (the monolith stays FROZEN so seeds/parses don't balloon toward
-# ~12 GB over a 26k-spot campaign), the health check keys on the SKIPPED line,
-# the library pull is skipped (it would only fetch back the seeded stale
-# asset), and shard seeding/sync narrows to the run's own scenario(s).
-$noWrite = $GridArgs -match '--no-write'
-if ($noWrite) { Write-Host "Bulk mode (--no-write): frozen monolith, shard-only sync, no library pull." }
 # Seed the local solve cache: it is GITIGNORED (git archive omits it), and without
 # it the box's final _writeLibrary sees only THIS run's scenario, trips the
 # scenario-drop guard against the synced library asset (which has the others),
@@ -320,12 +328,6 @@ if ($MaxSpotGB) { $extraEnv += "TLSOLVE_MAX_SPOT_GB=$MaxSpotGB " }
 if ($CpuOversub) { $extraEnv += "TLSOLVE_CPU_OVERSUB=$CpuOversub " }
 if ($CpuBudget) { $extraEnv += "TLSOLVE_CPU_BUDGET=$CpuBudget " }
 if ($Sprs) { $extraEnv += "TLSOLVE_SPRS=$Sprs " }
-if ($EmitPack -and $DumpFmt -eq 'bin') {
-  throw "-EmitPack requires the JSON dump (packs walk the JSON tree) - use -DumpFmt json/both or drop it."
-}
-if ($EmitPack -and $noWrite) {
-  throw "-EmitPack with --no-write makes no sense (packs are curated runs; bulk runs are pack-free)."
-}
 # Bulk mode: skip the box-side --compact so the monolith stays frozen — the
 # .jsonl shards are the durable store and the launcher's shard sync/pull
 # captures them. Normal mode folds shards into the single results file.
@@ -401,7 +403,10 @@ Write-Host ""
 
 # -- 6. Optional: wait for completion, pull library + cache, terminate --------
 if ($PullAndTerminate) {
-  if ($GridArgs -match '--limit') {
+  # Bulk mode is exempt: it never writes/pulls a library, and .jsonl shards
+  # are always safe to pull - so a --limit smoke (e.g. '--limit 1 --no-write')
+  # gets the full pull+terminate flow instead of an orphaned box.
+  if ($GridArgs -match '--limit' -and -not $noWrite) {
     Write-Warning "GridArgs has --limit: this is a PARTIAL solve. Pulling its library would"
     Write-Warning "clobber the committed one. Skipping auto-pull; leaving the box running."
     Write-Warning "Inspect over SSH, then terminate manually with the command above."
@@ -606,9 +611,14 @@ if ($PullAndTerminate) {
     return
   }
   if ($scenarioFails -gt 0) {
-    Write-Warning "$scenarioFails scenario(s) FAILED in the batch - the pulled library"
-    Write-Warning "holds only the successful ones (grep 'SCENARIO .* FAILED' ~/solve.log"
-    Write-Warning "on the box, or the pulled log). The library write guards still ran."
+    if ($noWrite) {
+      Write-Warning "$scenarioFails scenario(s) FAILED in the batch - the pulled shards hold"
+      Write-Warning "only the successful scenarios' spots (grep 'SCENARIO .* FAILED' in the log)."
+    } else {
+      Write-Warning "$scenarioFails scenario(s) FAILED in the batch - the pulled library"
+      Write-Warning "holds only the successful ones (grep 'SCENARIO .* FAILED' ~/solve.log"
+      Write-Warning "on the box, or the pulled log). The library write guards still ran."
+    }
   }
   $r = Invoke-SshTimed "tail -n 3 ~/solve.log" -TimeoutSec 60
   if ($r) { Write-Host $r.Out }
@@ -623,10 +633,19 @@ if ($PullAndTerminate) {
       # Bulk mode: the box never wrote a library (and its asset is just the
       # seeded stale copy — pulling it would clobber the local one), and the
       # monolith is frozen (identical to the local seed). The run's results
-      # live ONLY in the .jsonl shards.
+      # live ONLY in the .jsonl shards. PROBE before the glob scp: a fully
+      # cache-skipped run (or a first slice with no seed and zero solves)
+      # never creates a shard, and a no-match glob would fail the pull and
+      # leave a ~$7/h box billing over output that never existed.
       $okLib = $true
-      scp -C -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*.jsonl" 'tool/solver/'
-      $okCache = ($LASTEXITCODE -eq 0)
+      $sprobe = Invoke-SshTimed 'ls ~/poker_tracker/tool/solver/freq_grid_results.*.jsonl >/dev/null 2>&1 && echo yes || echo no' -TimeoutSec 60
+      if ($sprobe -and "$($sprobe.Out)".Trim() -eq 'no') {
+        Write-Host "No .jsonl shards on the box (nothing newly solved - fully cache-skipped run); nothing to pull."
+        $okCache = $true
+      } else {
+        scp -C -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*.jsonl" 'tool/solver/'
+        $okCache = ($LASTEXITCODE -eq 0)
+      }
     } else {
       scp -i $key "ubuntu@${pubip}:~/poker_tracker/assets/gto_freq_library.json" 'assets/gto_freq_library.json'
       $okLib = ($LASTEXITCODE -eq 0)

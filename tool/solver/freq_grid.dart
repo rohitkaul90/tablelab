@@ -383,6 +383,41 @@ void _appendResult(String key, Map<String, dynamic> entry) {
       flush: true);
 }
 
+/// Keys-only cache load for paths that never assemble the library (bulk
+/// `--no-write` runs and `--sched-dry-run`): `_isCached` needs only KEY
+/// presence, and full per-cell entries for a density scenario decode to tens
+/// of GB — an OOM on the 32 GB operator machine (the end-of-stage zero-pending
+/// check) and wasted RAM on boxes. The monolith is decoded once for its keys
+/// (values become garbage immediately); shards are STREAMED line-by-line, and
+/// only the CURRENT scenario's shard is read — spot keys embed the scenario,
+/// so other scenarios' (multi-GB by mid-campaign) shards can never satisfy a
+/// cache probe here.
+Future<Set<String>> _loadCachedKeys() async {
+  final keys = <String>{};
+  final f = File(kResultsPath);
+  if (f.existsSync()) {
+    keys.addAll(
+        (jsonDecode(f.readAsStringSync()) as Map<String, dynamic>).keys);
+  }
+  final shard = File(_shardPath());
+  if (shard.existsSync()) {
+    final lines = shard
+        .openRead()
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+    await for (final line in lines) {
+      final l = line.trim();
+      if (l.isEmpty) continue;
+      try {
+        keys.add((jsonDecode(l) as Map<String, dynamic>)['key'] as String);
+      } catch (e) {
+        stderr.writeln('WARN: skipping bad shard line in ${shard.path}: $e');
+      }
+    }
+  }
+  return keys;
+}
+
 /// `--compact`: fold every shard into the legacy JSON and delete the shards —
 /// run before seeding a box (the launcher scp's the single results file) or to
 /// keep the shard set tidy between cycles.
@@ -710,7 +745,18 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  final results = _loadResults();
+  // Keys-only mode: bulk boxes (--no-write) and --sched-dry-run never
+  // assemble the library, so they need cache-KEY presence only — loading the
+  // decoded entries would be tens of GB at density-campaign shard sizes.
+  final schedDryRun = args.contains('--sched-dry-run');
+  final keysOnly = (noWrite || schedDryRun) && !writeOnly;
+  final results = keysOnly ? <String, dynamic>{} : _loadResults();
+  final cachedKeys = keysOnly ? await _loadCachedKeys() : null;
+  bool isCachedSpot(String flop, String spr) => cachedKeys != null
+      ? (cachedKeys.contains(_spotKey(flop, spr)) ||
+          (kScenario == 'srp_late_v_bb' &&
+              cachedKeys.contains(_legacySpotKey(flop, spr))))
+      : _isCached(results, flop, spr);
 
   if (writeOnly) {
     _writeLibrary(results);
@@ -798,7 +844,7 @@ Future<void> main(List<String> args) async {
   final pending = <({String flop, String spr, double sprVal})>[];
   var skipped = 0, skippedTooBig = 0;
   for (final s in spots) {
-    if (_isCached(results, s.flop, s.spr)) {
+    if (isCachedSpot(s.flop, s.spr)) {
       skipped++;
     } else if (maxSpotGb != null &&
         spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv).solveGb > maxSpotGb) {
@@ -989,7 +1035,7 @@ Future<void> main(List<String> args) async {
         final cells =
             jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;
         // --- atomic block (no await until the next loop turn) ---
-        results[key] = {
+        final entry = <String, dynamic>{
           'flop': s.flop,
           'spr': s.spr,
           // Stamp scenario/profile/dump-rounds so a library rebuild groups each
@@ -1003,7 +1049,11 @@ Future<void> main(List<String> args) async {
           'wall_ms': wallMs,
           'cells': cells,
         };
-        _appendResult(key, results[key] as Map<String, dynamic>);
+        // In keys-only (bulk) mode the map is never used for a library write —
+        // holding every solved entry would just accumulate the slice's cells
+        // in RAM for nothing. The shard append is the record either way.
+        if (!keysOnly) results[key] = entry;
+        _appendResult(key, entry);
         solved++;
         stdout.writeln('    ✓ [${s.flop} ${s.spr}] ${cells.length} cells · expl '
             '${expl?.toStringAsFixed(2)}% · ${wallMs ~/ 1000}s');
@@ -1023,8 +1073,17 @@ Future<void> main(List<String> args) async {
       'in ${sw.elapsed.inMinutes}m.');
 
   if (noWrite) {
-    stdout.writeln('library write SKIPPED (--no-write): assemble '
-        'operator-side from the union of all shards via --write.');
+    if (solved == 0 && failed > 0) {
+      // Every attempted spot failed — do NOT print the completion marker.
+      // The launcher's bulk health check keys on it; an all-failed slice must
+      // read as a FAILED scenario (box left up for triage), never as 'Done'.
+      stderr.writeln('bulk run FAILED: 0 solved, $failed failed — '
+          'completion marker withheld.');
+      exitCode = 1;
+    } else {
+      stdout.writeln('library write SKIPPED (--no-write): assemble '
+          'operator-side from the union of all shards via --write.');
+    }
   } else if (results.isNotEmpty) {
     _writeLibrary(results);
   }

@@ -31,6 +31,9 @@ Future<void> main(List<String> args) async {
       8;
 
   final dir = Directory('tool/solver');
+  // Shard naming must match freq_grid.dart's _shardPath()
+  // ('freq_grid_results.<scenario>.jsonl') — if that convention ever changes,
+  // change this filter with it.
   final shards = dir
       .listSync()
       .whereType<File>()
@@ -49,7 +52,9 @@ Future<void> main(List<String> args) async {
   for (final shard in shards) {
     final name = shard.uri.pathSegments.last;
     final bySpr = <String, int>{};
-    var spots = 0, wallMs = 0, badLines = 0, maxExpl = 0.0;
+    final seen = <String>{};
+    var spots = 0, wallMs = 0, badLines = 0, dupLines = 0;
+    var maxExpl = 0.0;
     // One JSON object per line: {"key": ..., "entry": {spot entry}} — the
     // _appendResult format. Streamed (openRead + LineSplitter), never loaded
     // whole: a late-campaign shard is multi-GB. Torn trailing lines (reclaim
@@ -72,10 +77,20 @@ Future<void> main(List<String> args) async {
         badLines++;
         continue;
       }
+      // Duplicate keys are legal in a shard (later-wins fold: re-solves, and
+      // the end-of-stage worktree concat-merge). Count UNIQUE spots for
+      // progress — but keep every line's wall in the cost total, because a
+      // re-solved duplicate was paid for twice. $/spot = total $ ÷ unique,
+      // so duplication correctly RAISES the guardrail number.
+      wallMs += (v['wall_ms'] as num?)?.toInt() ?? 0;
+      final key = row['key'] as String? ?? '';
+      if (!seen.add(key)) {
+        dupLines++;
+        continue;
+      }
       spots++;
       bySpr.update(v['spr'] as String? ?? '?', (n) => n + 1,
           ifAbsent: () => 1);
-      wallMs += (v['wall_ms'] as num?)?.toInt() ?? 0;
       final e = (v['exploitability'] as num?)?.toDouble();
       if (e != null && e > maxExpl) maxExpl = e;
     }
@@ -90,6 +105,8 @@ Future<void> main(List<String> args) async {
         '${(wallMs / 3600e3).toStringAsFixed(1)} h · ~${vcpuH.toStringAsFixed(0)} '
         'claimed vCPU-h · max expl ${maxExpl.toStringAsFixed(2)}%'
         '${rate != null ? ' · ~\$${(vcpuH * rate).toStringAsFixed(0)}' : ''}'
+        '${dupLines > 0 ? ' · ⚠ $dupLines duplicate key(s) (re-solved/merged '
+            'twice — wall counted, spot not)' : ''}'
         '${badLines > 0 ? ' · ⚠ $badLines unparseable line(s)' : ''}');
   }
   final gVcpuH = grandWallMs / 3600e3 * threads;
