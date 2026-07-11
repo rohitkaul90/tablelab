@@ -18,12 +18,16 @@ const List<String> kTrailPositions = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
 /// Flop pot in BIG BLINDS per solved scenario — the anchor that maps the
 /// solver's normalized chip scale (flop pot pinned to pot0 = 10) back to bb.
 /// SRP = open 2.5x + BB call + dead SB (5.5bb); the 3-bet pot = BTN open, BB
-/// 3-bet to 11, BTN call (22.5bb). Mirrors tool/solver freq_grid.dart
-/// kScenarios; a scenario absent here (a future hosted pack) simply shows no bb.
+/// 3-bet to 11, BTN call (22.5bb). Blind-vs-blind is 5.0, NOT 5.5: the SB's
+/// blind is part of its open, so there is no dead SB — copying the other SRP
+/// rows here would mislabel every BvB bb value by 10%. Mirrors tool/solver
+/// freq_grid.dart kScenarios; a scenario absent here (a future hosted pack)
+/// simply shows no bb.
 const Map<String, double> kScenarioFlopPotBB = {
   'srp_late_v_bb': 5.5,
   'srp_early_v_bb': 5.5,
   'srp_middle_v_bb': 5.5,
+  'srp_sb_v_bb': 5.0,
   '3bp_bb_v_btn': 22.5,
 };
 
@@ -45,6 +49,10 @@ const Map<String, Map<String, int>> kScenarioDepthStartBB = {
   'srp_late_v_bb': {'shallow': 20, 'medium': 40, 'deep': 100},
   'srp_early_v_bb': {'shallow': 20, 'medium': 40, 'deep': 100},
   'srp_middle_v_bb': {'shallow': 20, 'medium': 40, 'deep': 100},
+  // BvB's smaller flop pot (5.0bb, no dead SB) means the same solved SPR reps
+  // (3/6/15) correspond to shallower starts: 3×5+2.5 / 6×5+2.5 / 15×5+2.5
+  // ≈ 17.5 / 32.5 / 77.5bb, rounded to the picker's coarse labels.
+  'srp_sb_v_bb': {'shallow': 20, 'medium': 35, 'deep': 80},
   '3bp_bb_v_btn': {'committed': 30, 'shallow': 60, 'medium': 100},
 };
 
@@ -71,10 +79,14 @@ double _postedBlind(String seat) => switch (seat) {
 
 /// The per-player preflop investment (bb) that brings the pot to the scenario's
 /// flop anchor — each of the two players in a heads-up pot puts in this much
-/// (SRP 2.5, 3-bet pot 11). Derived from the flop pot minus the dead SB.
+/// (SRP 2.5, 3-bet pot 11, BvB 2.5). Derived from the flop pot minus the dead
+/// SB — which is ZERO blind-vs-blind (the SB is a live player whose blind is
+/// part of its open, so nothing is dead).
 double? perPlayerPreflopInvestBB(String scenario) {
   final potBB = kScenarioFlopPotBB[scenario];
-  return potBB == null ? null : (potBB - kSbBlind) / 2;
+  if (potBB == null) return null;
+  final deadSB = scenario == 'srp_sb_v_bb' ? 0.0 : kSbBlind;
+  return (potBB - deadSB) / 2;
 }
 
 /// Effective (remaining) stack in bb going INTO [seat]'s decision, given the
@@ -169,8 +181,9 @@ PreflopDecision openerVs3BetDecision(String openerLabel,
 
 /// The SOLVED postflop scenario a completed trail maps to, or null. Mirrors
 /// the live gate (villain_range._deriveScenarioKey): IP openers by bucket vs
-/// a BB caller; BTN-open → BB-3-bet → BTN-call; SB opener excluded (opens
-/// OOP); solved scenarios are cash-only.
+/// a BB caller; SB open vs BB call = blind-vs-blind (srp_sb_v_bb, the one
+/// scenario whose opener is OOP); BTN-open → BB-3-bet → BTN-call; solved
+/// scenarios are cash-only.
 String? trailScenarioKey({
   required String opener,
   required String? responder,
@@ -181,7 +194,7 @@ String? trailScenarioKey({
   if (trn) return null;
   if (responder != 'BB') return null;
   if (responderAction == 'Call') {
-    if (opener == 'SB') return null;
+    if (opener == 'SB') return 'srp_sb_v_bb';
     return switch (openerBucketForLabel(opener)) {
       'late' => 'srp_late_v_bb',
       'middle' => 'srp_middle_v_bb',
@@ -284,6 +297,8 @@ PreflopTrail trailForScenario(String key) => switch (key) {
           opener: 'CO', responder: 'BB', responderAction: 'Call'),
       'srp_early_v_bb' => const PreflopTrail(
           opener: 'UTG', responder: 'BB', responderAction: 'Call'),
+      'srp_sb_v_bb' => const PreflopTrail(
+          opener: 'SB', responder: 'BB', responderAction: 'Call'),
       '3bp_bb_v_btn' => const PreflopTrail(
           opener: 'BTN',
           responder: 'BB',

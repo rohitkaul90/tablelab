@@ -63,6 +63,60 @@
     "reads": []
   },
   {
+    "id": "gto-bvb-ip-fbet-marg-md",
+    "file": "tool/eval/samples/gto/gto-bvb-ip-fbet-marg-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "BvB IP (BB caller) facing_bet (big SB lead), top pair, medium",
+    "reads": []
+  },
+  {
+    "id": "gto-bvb-ip-fcheck-strong-md",
+    "file": "tool/eval/samples/gto/gto-bvb-ip-fcheck-strong-md.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "BvB IP (BB caller) facing_check, set (strongMade), medium",
+    "reads": []
+  },
+  {
+    "id": "gto-bvb-oop-fbet-sdraw-sh",
+    "file": "tool/eval/samples/gto/gto-bvb-oop-fbet-sdraw-sh.json",
+    "source": "synthetic/gto",
+    "hero": 1,
+    "bucket": "gto-frequency",
+    "notes": "BvB OOP (SB opener) facing_bet after check, OESD (strongDraw), shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-bvb-oop-fta-marg-sh",
+    "file": "tool/eval/samples/gto/gto-bvb-oop-fta-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 1,
+    "bucket": "gto-frequency",
+    "notes": "BvB OOP (SB opener) first_to_act (c-bet lead), top pair, shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-bvb-r-ip-fbet-marg-sh",
+    "file": "tool/eval/samples/gto/gto-bvb-r-ip-fbet-marg-sh.json",
+    "source": "synthetic/gto",
+    "hero": 2,
+    "bucket": "gto-frequency",
+    "notes": "BvB RIVER IP (BB) facing_bet (bluff-catch), top pair 9, shallow",
+    "reads": []
+  },
+  {
+    "id": "gto-bvb-t-oop-fta-air-md",
+    "file": "tool/eval/samples/gto/gto-bvb-t-oop-fta-air-md.json",
+    "source": "synthetic/gto",
+    "hero": 1,
+    "bucket": "gto-frequency",
+    "notes": "BvB TURN OOP (SB) first_to_act (check-through), air, medium",
+    "reads": []
+  },
+  {
     "id": "gto-e-ip-fcheck-marg-sh",
     "file": "tool/eval/samples/gto/gto-e-ip-fcheck-marg-sh.json",
     "source": "synthetic/gto",
