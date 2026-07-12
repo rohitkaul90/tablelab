@@ -12,17 +12,28 @@ import '../../tool/solver/flop_enum.dart';
 List<int> _f(String s) =>
     s.split(' ').where((t) => t.isNotEmpty).map(parseCard).toList();
 
-void main() {
-  group('allIsoFlops', () {
-    late final List<String> flops = allIsoFlops();
+/// The data lines of a committed slice file (trims, drops blanks + the '#'
+/// header) — ONE copy of the slice-file format contract, shared by every
+/// artifact-lock test so the parsing can't fork between slice families.
+List<String> _sliceFileLines(File f) => f
+    .readAsLinesSync()
+    .map((l) => l.trim())
+    .where((l) => l.isNotEmpty && !l.startsWith('#'))
+    .toList();
 
+void main() {
+  // allIsoFlops() canonicalizes 22,100 × 24 combos — enumerate ONCE for the
+  // whole suite (late final: first accessor pays, everyone shares).
+  late final List<String> all = allIsoFlops();
+
+  group('allIsoFlops', () {
     test('yields exactly 1,755 canonical classes', () {
-      expect(flops.length, 1755);
-      expect(flops.toSet().length, 1755); // no duplicates
+      expect(all.length, 1755);
+      expect(all.toSet().length, 1755); // no duplicates
     });
 
     test('every flop is 3 valid, distinct cards', () {
-      for (final f in flops) {
+      for (final f in all) {
         final cards = _f(f);
         expect(cards.length, 3, reason: f);
         expect(cards.toSet().length, 3, reason: f);
@@ -31,7 +42,7 @@ void main() {
     });
 
     test('every flop is its own canonical form (fixed point)', () {
-      for (final f in flops.take(200)) {
+      for (final f in all.take(200)) {
         expect(canonicalFlop(_f(f)), f);
       }
     });
@@ -64,8 +75,6 @@ void main() {
   });
 
   group('strideSlice', () {
-    late final List<String> all = allIsoFlops();
-
     test('5 × 351 slices at offsets 0..4 partition all 1,755 exactly', () {
       // The committed bulk-campaign slice files (tool/solver/flops/) rely on
       // this: when count divides the list length, the stride is uniform and
@@ -92,6 +101,16 @@ void main() {
       expect(s0.last, all[1750]);
     });
 
+    test('divisor-count stride slices coincide with modSlice (one primitive)',
+        () {
+      // strideSlice(all, len ~/ m, k) computes index k + m·i with no wrap —
+      // exactly modSlice(all, k, m). The committed 5-way files are therefore
+      // equivalently `mod 5 k` outputs; modSlice is the partition primitive.
+      for (var k = 0; k < 5; k++) {
+        expect(strideSlice(all, 351, k), modSlice(all, k, 5));
+      }
+    });
+
     test('the COMMITTED slice files match strideSlice byte-for-byte', () {
       // The boxes consume the committed tool/solver/flops/*.txt artifacts (via
       // git archive), NOT the function — a stale/hand-edited/regenerated-
@@ -102,14 +121,49 @@ void main() {
       for (var k = 0; k < 5; k++) {
         final f = File('tool/solver/flops/slice351_off$k.txt');
         expect(f.existsSync(), isTrue, reason: '${f.path} missing');
-        final lines = f
-            .readAsLinesSync()
-            .map((l) => l.trim())
-            .where((l) => l.isNotEmpty && !l.startsWith('#'))
-            .toList();
+        final lines = _sliceFileLines(f);
         expect(lines, strideSlice(all, 351, k),
             reason: '${f.path} is stale — regenerate: '
                 'dart run tool/solver/flop_enum.dart 351 ${f.path} $k');
+        union.addAll(lines);
+      }
+      expect(union.length, 1755);
+    });
+  });
+
+  group('modSlice', () {
+    test('partitions for any m: 4 deals cover 1,755 exactly', () {
+      // 1,755 isn't divisible by 4, so the stride partition can't make a
+      // 4-way split — the round-robin deal can (sizes 439/439/439/438).
+      final slices = [for (var k = 0; k < 4; k++) modSlice(all, k, 4)];
+      expect(slices.map((s) => s.length), [439, 439, 439, 438]);
+      final union = <String>{};
+      for (final s in slices) {
+        union.addAll(s);
+      }
+      expect(union.length, 1755); // pairwise disjoint AND covering
+      expect(union, all.toSet());
+    });
+
+    test('rejects degenerate arguments instead of hanging or misbehaving', () {
+      // m=0 would loop forever (i += 0); k >= m is a non-partition residue.
+      expect(() => modSlice(all, 0, 0), throwsArgumentError);
+      expect(() => modSlice(all, -1, 4), throwsArgumentError);
+      expect(() => modSlice(all, 4, 4), throwsArgumentError);
+    });
+
+    test('the COMMITTED mod-4 slice files match modSlice byte-for-byte', () {
+      // Same artifact-lock rationale as the 5-way stride files: the 4-box
+      // fleet (stages 2-5) consumes the committed files, not the function —
+      // a stale file silently breaks slice disjointness.
+      final union = <String>{};
+      for (var k = 0; k < 4; k++) {
+        final f = File('tool/solver/flops/slice_mod4_$k.txt');
+        expect(f.existsSync(), isTrue, reason: '${f.path} missing');
+        final lines = _sliceFileLines(f);
+        expect(lines, modSlice(all, k, 4),
+            reason: '${f.path} is stale — regenerate: '
+                'dart run tool/solver/flop_enum.dart mod 4 $k ${f.path}');
         union.addAll(lines);
       }
       expect(union.length, 1755);

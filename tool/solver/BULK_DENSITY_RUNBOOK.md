@@ -2,9 +2,9 @@
 
 **Goal:** all 1,755 canonical flops × each scenario's SPR regimes for the 5 live
 scenarios (~26k spots, ≤0.5% expl, 'river' profile, TLSD, NO packs), staged by
-value with a spend-approval pause between scenarios. Budget ~$840 total
-(calibration-proven ~$0.033/spot srp-class; 3bp ~10× cheaper). Full plan
-approved 2026-07-11.
+value with a spend-approval pause between scenarios. Plan approved 2026-07-11;
+fleet re-planned to 4 × r7a.16xlarge after slice-0/1 price data (32xlarge spot
+ran ~$3.91/h in 2c vs ~$1.25/h per 16xlarge in 2a/2b — ~35% cheaper per GB-h).
 
 **Stage order:** `srp_late_v_bb` → `srp_middle_v_bb` → `srp_early_v_bb` →
 `srp_sb_v_bb` → `3bp_bb_v_btn`.
@@ -30,57 +30,83 @@ into bulk mode:
 
 ## One-time pre-flight
 
-1. Quota: us-east-2 spot vCPU (`L-34B43A08`) ≥ 256 for two boxes in-region, OR
-   us-east-1 ≥ 128 for the two-region split (both requests filed 2026-07-11 —
-   use whichever lands; single 128 works at half throughput meanwhile).
-2. Two-region only: copy the golden AMI to us-east-1
-   (`aws ec2 copy-image --source-region us-east-2 --source-image-id
-   ami-0f3cf3bc4ef5c1255 --region us-east-1 --name tablelab-solver-tlsd`),
-   import the keypair + create `tablelab-solver-sg` there (both regional).
-3. **Second launcher home**: `git worktree add ..\poker_tracker_e1
-   feature/bulk-density-prep` — the second box's launcher MUST run from a
-   separate worktree (two launchers in one repo clobber each other's pulled
-   shards and `.remote-staging\`). Copy the frozen monolith into its
-   `tool\solver\` once.
-4. Disable Windows sleep; one PowerShell window per box.
+1. Quota: us-east-2 spot vCPU (`L-34B43A08`) ≥ 256 — granted 2026-07-12;
+   holds exactly **4 × r7a.16xlarge (64 vCPU each)**. (A two-region split via
+   us-east-1 is a fallback only — AMI copy + regional keypair/SG needed there.)
+2. **One git worktree per EXTRA concurrent launcher** — N boxes need the
+   primary repo + N−1 worktrees, because launchers sharing a folder clobber
+   each other's pulled shards and `.remote-staging\`:
+   ```powershell
+   git worktree add ..\poker_tracker_e1 -b bulk-box2 main
+   git worktree add ..\poker_tracker_e2 -b bulk-box3 main
+   git worktree add ..\poker_tracker_e3 -b bulk-box4 main
+   ```
+   Copy the frozen monolith (`tool\solver\freq_grid_results.json`) into each
+   worktree's `tool\solver\` once.
+3. Disable Windows sleep; one PowerShell window per box.
 
-## Standard srp-stage launch (stages 1–4)
+## Slice sets — pick by fleet size
 
-Five committed slice files partition the 1,755 flops exactly:
-`tool/solver/flops/slice351_off{0..4}.txt` (see the partition test in
-`test/solver/flop_enum_test.dart`). Work-stealing: each box takes the next
-unassigned slice when it finishes one.
+Two committed, CI-locked partitions of the 1,755 flops (both scenario-agnostic
+— the same files serve every stage; see `test/solver/flop_enum_test.dart`):
+
+- **4-way** `tool/solver/flops/slice_mod4_{0..3}.txt` (439/439/439/438,
+  round-robin deal) — **the standard set for the 4-box fleet, stages 2–5**:
+  one slice per box, all parallel, no work-stealing, no idle-fleet tail.
+- **5-way** `tool/solver/flops/slice351_off{0..4}.txt` (351 each, stride) —
+  the original 2×32xlarge work-stealing set. Stage 1 ran off0/off1 from it;
+  its remainder (off2/off3/off4) finishes on 3 boxes, one slice each.
+
+⚠ **Never mix families within one stage** — a 5-way file unioned with 4-way
+files neither covers the 1,755 nor stays disjoint (the zero-pending check
+would catch the hole, after the fleet is already terminated).
+
+## Standard srp-stage launch (stages 2–4; stage-1 remainder differs only in files)
+
+Four boxes, one per slice, launched from the primary repo (box 1) and the
+three worktrees (boxes 2–4). Box 1 example — boxes 2–4 change only the
+`-Flops` file (`slice_mod4_1/2/3`) and the folder they run from:
 
 ```powershell
-.\tool\solver\vcpu-solve.ps1 -Scenario srp_late_v_bb `
-  -InstanceType r7a.32xlarge -Fallbacks @('r6a.32xlarge','r6i.32xlarge') `
+.\tool\solver\vcpu-solve.ps1 -Scenario <sc> `
+  -InstanceType r7a.16xlarge -Fallbacks @('r6a.16xlarge','r6i.16xlarge') `
   -Spot -AutoRelaunch -PullAndTerminate -SyncEveryMin 20 `
-  -DumpFmt bin -Flops file:tool/solver/flops/slice351_off0.txt `
-  -CpuOversub 1.5 -HeapMB 64000 `
-  -GridArgs "--parallel 24 --no-write"
+  -DumpFmt bin -Flops file:tool/solver/flops/slice_mod4_0.txt `
+  -CpuOversub 1.5 -HeapMB 48000 `
+  -GridArgs "--parallel 12 --no-write"
 ```
 
-Second box: same command with the next slice file (+ `-Region us-east-1
--AmiId <copied>` if two-region). Rationale: 1 TB → 8 concurrent deep claims
-(800 GB) + shallow/medium backfill; `--parallel 24` is a worker cap above what
-admission ever admits; per-spot timeout stays 7200 s (7.5× the deep
-calibration wall). Expected: ~12–17 h/slice, ~1.5 days/stage with two boxes,
-~$145–175/stage.
+Rationale: 512 GB box → 435 GB budget; `--parallel 12` = the CPU-side cap
+(64 × 1.5 ÷ 8). Deep concurrency depends on the deep claim in
+`spot_sched.dart:spotFootprint` (the slice-0/1 checkpoint decides whether it
+drops from 100 GB — see the scenario table below). Per-spot timeout stays
+7200 s. Stage-1's remainder: same command with `slice351_off2/3/4` on 3 boxes.
+
+| Deep claim | Deeps/box | Slice wall | Stage wall (4 boxes) | Stage cost |
+|---|---|---|---|---|
+| 100 GB (untuned) | 4 | ~25 h | ~25 h | ~$125 |
+| 50 GB (scenario B) | 8 | ~12.5 h | ~12.5 h | ~$63 |
+| 30 GB + oversub 2.0 (scenario D) | 12+ | ~9.5 h | ~9.5 h | ~$48 |
 
 ## End-of-stage checklist (every scenario)
 
-1. Both launchers report `Done. Shards pulled` + terminated. **Sweep both
-   regions**: `aws ec2 describe-instances --region <r> --filters
+1. All launchers report `Done. Shards pulled` + terminated. **Sweep the
+   region(s)**: `aws ec2 describe-instances --region us-east-2 --filters
    "Name=instance-state-name,Values=pending,running"` → empty.
-2. Merge the worktree's shard into the primary repo (concat IS the merge —
+2. Merge every worktree's shard into the primary repo (concat IS the merge —
    the loader's later-wins fold dedups). Use a BINARY concat, not a
    PowerShell line pipeline (which is slow and re-encodes multi-GB JSONL
    through the ANSI codepage):
    ```powershell
-   cmd /c copy /b "tool\solver\freq_grid_results.<sc>.jsonl"+"..\poker_tracker_e1\tool\solver\freq_grid_results.<sc>.jsonl" "tool\solver\freq_grid_results.<sc>.merged"
-   Move-Item -Force "tool\solver\freq_grid_results.<sc>.merged" "tool\solver\freq_grid_results.<sc>.jsonl"
+   foreach ($w in 'e1','e2','e3') {
+     $src = "..\poker_tracker_$w\tool\solver\freq_grid_results.<sc>.jsonl"
+     if (Test-Path $src) {
+       cmd /c copy /b "tool\solver\freq_grid_results.<sc>.jsonl"+"$src" "tool\solver\freq_grid_results.<sc>.merged"
+       Move-Item -Force "tool\solver\freq_grid_results.<sc>.merged" "tool\solver\freq_grid_results.<sc>.jsonl"
+       Remove-Item $src
+     }
+   }
    ```
-   Then delete the worktree copy.
 3. **Zero-pending check** (primary repo):
    `$env:TLSOLVE_SCENARIO='<sc>'; $env:TLSOLVE_FLOPS='all1755';
    dart --old_gen_heap_size=32000 run tool/solver/freq_grid.dart --sched-dry-run`
@@ -91,30 +117,36 @@ calibration wall). Expected: ~12–17 h/slice, ~1.5 days/stage with two boxes,
    `-Flops all1755` (cache skips solved); if they're deep timeouts:
    `-Sprs deep -TimeoutS 14400`.
 4. Cost guardrail: `dart run tool/solver/solve_report.dart --rate <spot $/vCPU-h>`
-   → verify ~$0.033/spot-class. Append a changelog row to
+   → verify vs the scenario table above. Append a changelog row to
    `GTO_LIBRARY_COVERAGE.md` (mark "pending final commit").
 5. **Back up the scenario shard** (gzip → S3 or external drive) — shards are
    the paid, gitignored, irreplaceable artifact.
 6. Operator approves the next stage's spend.
 
-## Stage 5 — 3bp (CPU-bound, cheap, one box)
+## Stage 5 — 3bp (CPU-bound, tiny trees)
+
+Same 4-box pattern with the same `slice_mod4_{0..3}` files — claims are
+8–16 GB so nothing is RAM-bound; oversub 2.0 packs the lanes:
 
 ```powershell
 .\tool\solver\vcpu-solve.ps1 -Scenario 3bp_bb_v_btn `
-  -InstanceType c7a.32xlarge -Fallbacks @('c6a.32xlarge','r7a.16xlarge') `
+  -InstanceType r7a.16xlarge -Fallbacks @('r6a.16xlarge','r6i.16xlarge') `
   -Spot -AutoRelaunch -PullAndTerminate -SyncEveryMin 20 `
-  -DumpFmt bin -Flops all1755 -CpuOversub 2.0 -HeapMB 48000 `
-  -GridArgs "--parallel 40 --no-write"
+  -DumpFmt bin -Flops file:tool/solver/flops/slice_mod4_0.txt `
+  -CpuOversub 2.0 -HeapMB 48000 `
+  -GridArgs "--parallel 20 --no-write"
 ```
-All claims ≤16 GB; ~6–12 h; ~$79.
+
+~3.5–4 h, ~$20 all-in. (Same-cost alternative if capacity is tight: ONE box,
+`-Flops all1755`, ~14–15 h.)
 
 ## Final integration (after stage 5)
 
 1. All 5 shards + frozen monolith in the primary repo; zero-pending green for
-   all 5 scenarios; both regions swept.
+   all 5 scenarios; region swept.
 2. **Assembly on a cloud box** (the union is ~11 GB of JSON — do NOT attempt
    on the operator machine): gzip shards+monolith (~1.5–2 GB), scp to an
-   on-demand ≥512 GB box (or reuse the stage-5 box before terminating),
+   on-demand ≥512 GB box (r7a.16xlarge on-demand ~$3.7/h),
    `dart --old_gen_heap_size=400000 run tool/solver/freq_grid.dart --write`
    (guards pass — the union is a superset of the committed asset), pull
    `assets/gto_freq_library.json` back, terminate.
@@ -124,7 +156,8 @@ All claims ≤16 GB; ~6–12 h; ~$79.
    baseline 99.5/90.1/95.5/86.8 — judge AGGREGATES, not per-spot churn).
 5. Ship: branch → PR → /code-review; `git add -f` the library + report.json;
    coverage doc + CLAUDE.md sync.
-6. Cleanup: remove the worktree + `.remote-staging`; keep AMIs + shard backups.
+6. Cleanup: remove the worktrees + `.remote-staging`; keep AMIs + shard
+   backups.
 
 ## Failure modes
 
@@ -134,5 +167,5 @@ All claims ≤16 GB; ~6–12 h; ~$79.
 | Launcher window dies | Box keeps solving in tmux. ssh in; if `BATCH DONE` in ~/solve.log: pull `freq_grid_results.*.jsonl`, terminate manually |
 | `Solving N>0` at stage end | Cleanup pass (see checklist 3) |
 | Deep spots ✗ with timeout | `-Sprs deep -TimeoutS 14400` cleanup pass |
-| 32xlarge capacity dry in both regions | 2× r7a.16xlarge per region (same quota, ~same deep concurrency), two invocations |
-| $/spot drifting above ~$0.04 | Stop launching; investigate util (`[cpu]` lines) before spending more |
+| r7a.16xlarge capacity dry | Fallbacks r6a/r6i.16xlarge are in the command; deeper fallback: fewer, bigger boxes (2 × 32xlarge + the 5-way slice set, work-stealing) |
+| $/spot drifting above table | Stop launching; investigate util (`[cpu]` lines) + current spot quotes before spending more |
