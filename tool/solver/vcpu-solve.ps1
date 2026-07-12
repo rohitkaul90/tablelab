@@ -78,6 +78,10 @@ param(
   # Bucket names must exist in the scenario's sprReps (3bp has no 'deep') -
   # unknown names fail the grid run fast. Contingency knob for the class-split.
   [string]$Sprs = '',
+  # Deep-class solve-RAM claim override in GB (TLSOLVE_DEEP_CLAIM_GB) - the
+  # 100 GB default is 13x the measured ~7.6 GB solver RSS peak; lowering it
+  # packs more concurrent deep solves per box (50 -> 8 deeps on 512 GB).
+  [string]$DeepClaimGB = '',
   # Root EBS size (GB). The AMI snapshot is ~193 GB; grow it for pack-emitting
   # batches (packs + their pull-time tar both land on the root volume - a
   # 3-scenario river batch produces ~60-70 GB of packs). gp3 costs ~cents/day.
@@ -328,6 +332,7 @@ if ($MaxSpotGB) { $extraEnv += "TLSOLVE_MAX_SPOT_GB=$MaxSpotGB " }
 if ($CpuOversub) { $extraEnv += "TLSOLVE_CPU_OVERSUB=$CpuOversub " }
 if ($CpuBudget) { $extraEnv += "TLSOLVE_CPU_BUDGET=$CpuBudget " }
 if ($Sprs) { $extraEnv += "TLSOLVE_SPRS=$Sprs " }
+if ($DeepClaimGB) { $extraEnv += "TLSOLVE_DEEP_CLAIM_GB=$DeepClaimGB " }
 # Bulk mode: skip the box-side --compact so the monolith stays frozen — the
 # .jsonl shards are the durable store and the launcher's shard sync/pull
 # captures them. Normal mode folds shards into the single results file.

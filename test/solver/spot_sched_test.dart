@@ -44,4 +44,19 @@ void main() {
       expect(parseSprFilter('committed', threeBetBuckets), {'committed'});
     });
   });
+
+  group('spotFootprint deep claim', () {
+    test('deepClaimGb overrides ONLY the deep class solve claim', () {
+      final tuned = spotFootprint(15, dumpFmt: 'bin', deepClaimGb: 50);
+      expect(tuned.solveGb, 50);
+      expect(tuned.parseGb, 8); // parse claim unaffected
+      // Non-deep classes ignore the override entirely.
+      expect(spotFootprint(6, dumpFmt: 'bin', deepClaimGb: 50).solveGb, 36);
+      expect(spotFootprint(3, dumpFmt: 'bin', deepClaimGb: 50).solveGb, 16);
+    });
+
+    test('default stays 100 with no override (env unset in tests)', () {
+      expect(spotFootprint(15, dumpFmt: 'bin').solveGb, 100);
+    });
+  });
 }

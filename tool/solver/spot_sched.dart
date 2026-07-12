@@ -28,6 +28,10 @@
 //   TLSOLVE_MAX_SPOT_GB  — SKIP (not fail) spots whose predicted solve RAM
 //     exceeds it: lets a small-RAM box (e.g. a 256 GB Hetzner) grind the
 //     shallow/medium classes while a big box handles deep — pure env policy.
+//   TLSOLVE_DEEP_CLAIM_GB — override the deep class's solve-RAM claim (see
+//     kDeepClaimGb): measured solver RSS peaks ~7.6 GB, so lowering the
+//     100 GB default packs more concurrent deeps per box. Launcher knob:
+//     -DeepClaimGB.
 //
 // Footprints are a static, measured-informed table (river profile, 8 threads)
 // with a deliberate lean toward OVER-estimating: a wrong table under-packs
@@ -60,6 +64,20 @@ Set<String>? parseSprFilter(String? env, Iterable<String> validBuckets) {
   return names;
 }
 
+/// The deep-class solve-RAM claim (GB), env-overridable. The table's default
+/// of 100 GB dates from a JSON-era measurement; the 2026-07-12 slice-0/1
+/// campaign data (1,839 spots, every texture class) measured actual solver
+/// RSS peaking at ~7.6 GB, so operators can lower this to pack more deep
+/// solves per box (TLSOLVE_DEEP_CLAIM_GB=50 → 8 deeps on a 512 GB box).
+/// Values ≤ 0 or unparseable fall back to 100. YOU own the OOM risk when
+/// lowering it — the guardrail is the measured peak plus margin, and the
+/// claim table's contract stays "over-packs never, OOMs never".
+final double kDeepClaimGb = () {
+  final v = double.tryParse(
+      Platform.environment['TLSOLVE_DEEP_CLAIM_GB'] ?? '');
+  return (v == null || v <= 0) ? 100.0 : v;
+}();
+
 /// Predicted per-phase resource footprint of one spot.
 class SpotFootprint {
   final double solveGb;
@@ -83,11 +101,14 @@ class SpotFootprint {
 /// decodes to a typed tree at ~2-3× its raw bytes (deep ~1-2 GB raw); the
 /// JSON path needs the giant jsonDecode heap (deep ~150 GB — the pre-WS1
 /// bottleneck, kept here so a JSON bulk run still packs safely).
-SpotFootprint spotFootprint(double sprVal, {required String dumpFmt}) {
+SpotFootprint spotFootprint(double sprVal,
+    {required String dumpFmt, double? deepClaimGb}) {
   final bool json = dumpFmt != 'bin'; // 'both' pays the JSON parse too
   if (sprVal >= 10) {
     return SpotFootprint(
-        solveGb: 100, parseGb: json ? 160 : 8, estMinutes: 18);
+        solveGb: deepClaimGb ?? kDeepClaimGb,
+        parseGb: json ? 160 : 8,
+        estMinutes: 18);
   }
   if (sprVal >= 5) {
     return SpotFootprint(solveGb: 36, parseGb: json ? 45 : 4, estMinutes: 6);
