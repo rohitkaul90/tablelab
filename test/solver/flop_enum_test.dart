@@ -92,6 +92,37 @@ void main() {
       expect(s0.last, all[1750]);
     });
 
+    test('modSlice partitions for any m: 4 deals cover 1,755 exactly', () {
+      // 1,755 isn't divisible by 4, so the stride partition can't make a
+      // 4-way split — the round-robin deal can (sizes 439/439/439/438).
+      final slices = [for (var k = 0; k < 4; k++) modSlice(all, k, 4)];
+      expect(slices.map((s) => s.length), [439, 439, 439, 438]);
+      final union = <String>{};
+      for (final s in slices) {
+        union.addAll(s);
+      }
+      expect(union.length, 1755); // pairwise disjoint AND covering
+      expect(union, all.toSet());
+    });
+
+    test('the COMMITTED mod-4 slice files match modSlice byte-for-byte', () {
+      // Same artifact-lock rationale as the 5-way stride files below: the
+      // 4-box fleet (stages 2-5) consumes the committed files, not the
+      // function — a stale file silently breaks slice disjointness.
+      for (var k = 0; k < 4; k++) {
+        final f = File('tool/solver/flops/slice4_mod$k.txt');
+        expect(f.existsSync(), isTrue, reason: '${f.path} missing');
+        final lines = f
+            .readAsLinesSync()
+            .map((l) => l.trim())
+            .where((l) => l.isNotEmpty && !l.startsWith('#'))
+            .toList();
+        expect(lines, modSlice(all, k, 4),
+            reason: '${f.path} is stale — regenerate: '
+                'dart run tool/solver/flop_enum.dart mod 4 $k ${f.path}');
+      }
+    });
+
     test('the COMMITTED slice files match strideSlice byte-for-byte', () {
       // The boxes consume the committed tool/solver/flops/*.txt artifacts (via
       // git archive), NOT the function — a stale/hand-edited/regenerated-

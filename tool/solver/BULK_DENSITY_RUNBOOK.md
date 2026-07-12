@@ -44,12 +44,19 @@ into bulk mode:
    `tool\solver\` once.
 4. Disable Windows sleep; one PowerShell window per box.
 
-## Standard srp-stage launch (stages 1–4)
+## Slice sets — pick by fleet size
 
-Five committed slice files partition the 1,755 flops exactly:
-`tool/solver/flops/slice351_off{0..4}.txt` (see the partition test in
-`test/solver/flop_enum_test.dart`). Work-stealing: each box takes the next
-unassigned slice when it finishes one.
+Two committed, CI-locked partitions of the 1,755 flops (both scenario-agnostic
+— the same files serve every stage; see `test/solver/flop_enum_test.dart`):
+
+- **5-way** `tool/solver/flops/slice351_off{0..4}.txt` (351 each, stride) —
+  the original 2-box work-stealing set; Stage 1 ran off0/off1 from it.
+- **4-way** `tool/solver/flops/slice4_mod{0..3}.txt` (439/439/439/438,
+  round-robin deal) — **the 4-box-fleet set for stages 2–5**: one slice per
+  box, all parallel, no work-stealing, no idle quarter-fleet tail (a 5-on-4
+  stage wastes ~38% wall-clock while one box runs the fifth slice).
+
+## Standard srp-stage launch
 
 ```powershell
 .\tool\solver\vcpu-solve.ps1 -Scenario srp_late_v_bb `
