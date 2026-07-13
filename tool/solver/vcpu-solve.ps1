@@ -51,10 +51,15 @@ param(
   [int]$HeapMB = 24000,
   # Per-SUBPROCESS Dart old-gen heap cap (MB) for each tabulate_one.dart parse.
   # The STREAMING tabulator (default since the tabulate-bottleneck fix) retains
-  # only raw dump bytes + O(depth) - 16000 is generous; pass 80000 only with the
-  # eager rollback (TLSOLVE_TABULATE_EAGER=1) or JSON/--emit-pack runs. 0 =
-  # inherit the grid's own default (16000 streaming / 80000 eager).
+  # only raw dump bytes + O(depth) - 16000 is generous. 0 = inherit the grid's
+  # own default, which already keys off the real path (16000 streaming / 80000
+  # for -TabulateEager or JSON/--emit-pack runs) - so 0 is right almost always.
   [int]$TabulateHeapMB = 0,
+  # Field rollback for the streaming tabulator: sets TLSOLVE_TABULATE_EAGER=1
+  # on the box so tabulate_one uses the old eager typed-tree path (the grid
+  # then auto-defaults the subprocess heap to 80000). Without this switch the
+  # runbook's rollback recipe is unreachable from the launcher.
+  [switch]$TabulateEager,
   # Solver worker threads (8 is the stable max - 16 raced/crashed on wet trees).
   [int]$Threads = 8,
   # Per-spot solver wall cap (s).
@@ -337,6 +342,7 @@ if ($Sprs) { $extraEnv += "TLSOLVE_SPRS=$Sprs " }
 if ($DeepClaimGB) { $extraEnv += "TLSOLVE_DEEP_CLAIM_GB=$DeepClaimGB " }
 # 0 = let the grid pick its own default (16 GB streaming / 80 GB eager).
 if ($TabulateHeapMB -gt 0) { $extraEnv += "TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB " }
+if ($TabulateEager) { $extraEnv += "TLSOLVE_TABULATE_EAGER=1 " }
 # Bulk mode: skip the box-side --compact so the monolith stays frozen — the
 # .jsonl shards are the durable store and the launcher's shard sync/pull
 # captures them. Normal mode folds shards into the single results file.

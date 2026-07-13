@@ -833,6 +833,15 @@ Future<void> main(List<String> args) async {
   // The effective format of THIS run's dumps — drives the parse footprints
   // (JSON parses need the giant heap; TLSD a few GB).
   final dumpFmtEnv = emitPackRoot != null ? 'json' : solverDumpFmt();
+  // Whether tabulate_one will EAGERLY materialize its input: true for any
+  // JSON dump (--emit-pack or TLSOLVE_DUMP_FMT=json/both — with 'both' the
+  // dump handed to tabulate_one is the JSON file) and for the eager TLSD
+  // rollback. Drives BOTH the subprocess heap default and the parse-phase RAM
+  // claims (spotFootprint) — a streaming tabulate claiming the eager
+  // footprint would starve solve admissions for nothing.
+  final eagerTabulate =
+      Platform.environment['TLSOLVE_TABULATE_EAGER'] == '1' ||
+          dumpFmtEnv != 'bin';
 
   // Spots still needing a solve (cached ones skipped), capped to --limit if set.
   // Each pending spot is claimed and solved exactly once by exactly one worker.
@@ -936,10 +945,19 @@ Future<void> main(List<String> args) async {
   // saturation; with the old solve→await-tabulate lane coupling most lanes sat
   // in tabulate and only 4-7 of 24 were solving. Backpressure is real but
   // gentle: the parse claim comes from the SAME budget (RAM/threads), and
-  // `tabSlots` (TLSOLVE_MAX_PENDING_TABULATES, default 32) bounds outstanding
-  // dumps on /dev/shm (each detached tabulate keeps its ~1.5 GB dump alive
-  // until it completes). Setting it to 1 approximates the old serialized
-  // behavior — the soft rollback for the decoupling.
+  // `tabSlots` (TLSOLVE_MAX_PENDING_TABULATES, default 16) bounds FIRED
+  // detached tabulates. The true /dev/shm dump residency bound is
+  // maxPendingTabs + parallel: a lane that finished its solve holds its dump
+  // while it waits at tabSlots.acquire(), and a solving lane's dump is being
+  // written — so size /dev/shm for (16 + parallel) × ~1.5 GB deep dumps, not
+  // 16. Setting it to 1 approximates the old serialized behavior — the soft
+  // rollback for the decoupling.
+  //
+  // Crash-loss window (spot reclaim / box death): completed solves whose
+  // tabulate hasn't landed in the shard yet — up to maxPendingTabs fired +
+  // parallel waiting — are lost with the tmpfs and re-solve on relaunch. The
+  // default 16 keeps that comparable to the ≤20-min periodic-sync loss the
+  // bulk runbook already accepts; raise it only with that trade-off in mind.
   //
   // Concurrency safety is unchanged in kind: the tabulate subprocess is a
   // separate PROCESS (never Isolate.run — the shared-GC lesson, see
@@ -951,16 +969,25 @@ Future<void> main(List<String> args) async {
   // tabulates before the summary/marker.
   //
   // Streaming tabulator note: TLSOLVE_TABULATE_HEAP_MB defaults to 16 GB (the
-  // streaming cursor retains raw bytes + O(depth)); the eager rollback
-  // (TLSOLVE_TABULATE_EAGER=1) restores the 80 GB default it needs.
+  // streaming cursor retains raw bytes + O(depth)) ONLY when the tabulate will
+  // actually stream — i.e. the dump handed to tabulate_one is TLSD
+  // (dumpFmtEnv == 'bin') and the eager rollback isn't engaged. JSON dumps
+  // (--emit-pack forces JSON; TLSOLVE_DUMP_FMT=json/both hands tabulate_one
+  // the JSON file) still eagerly jsonDecode multi-GB trees (~45 GB medium /
+  // ~150 GB deep), as does TLSOLVE_TABULATE_EAGER=1 — both keep the 80 GB
+  // default (a 16 GB cap there OOMs every subprocess and destroys the run's
+  // paid solves). `eagerTabulate` is derived next to dumpFmtEnv above.
   final tabHeapMb =
       int.tryParse(Platform.environment['TLSOLVE_TABULATE_HEAP_MB'] ?? '') ??
-          (Platform.environment['TLSOLVE_TABULATE_EAGER'] == '1'
-              ? 80000
-              : 16000);
-  final maxPendingTabs = int.tryParse(
+          (eagerTabulate ? 80000 : 16000);
+  // Clamp ≥1: Semaphore(0) can never be acquired (release only ever follows a
+  // successful acquire), so 0 — a plausible misreading as "disable pending
+  // tabulates" — would silently hang every lane after its first solve on a
+  // billing cloud box. 1 is the real serialization floor.
+  var maxPendingTabs = int.tryParse(
           Platform.environment['TLSOLVE_MAX_PENDING_TABULATES'] ?? '') ??
-      32;
+      16;
+  if (maxPendingTabs < 1) maxPendingTabs = 1;
   final tabSlots = Semaphore(maxPendingTabs);
   final outstanding = <Future<void>>[];
 
@@ -1045,7 +1072,8 @@ Future<void> main(List<String> args) async {
       next++;
       final s = pending[i];
       final key = _spotKey(s.flop, s.spr);
-      final fp = spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv);
+      final fp = spotFootprint(s.sprVal,
+          dumpFmt: dumpFmtEnv, eagerTabulate: eagerTabulate);
       DumpSolve? ds;
       // Phase claims: solve holds (solveGb, solver threads); the detached
       // tabulate holds (parseGb, 1 thread). Track what THIS lane holds so the

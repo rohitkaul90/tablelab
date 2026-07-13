@@ -334,12 +334,25 @@ List<FreqCell> tabulateDumpFile(
       board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
 }
 
+/// Shared TLSD board sanity check: the dump's own header board must match the
+/// caller's spot flop — a mismatch means the grid wired the wrong dump to the
+/// wrong spot (silent garbage otherwise). ONE copy for the streaming default
+/// AND the eager rollback so the rule can't drift between them (the two paths
+/// must stay oracle-equivalent).
+void _checkTlsdBoard(List<int> dumpBoard, List<int> board) {
+  if (dumpBoard.length >= 3 && !(board.toSet().containsAll(dumpBoard.take(3)))) {
+    throw StateError('TLSD board $dumpBoard does not match spot flop $board');
+  }
+}
+
 /// Tabulate a TLSD dump via the STREAMING cursor: nodes decode on demand in
 /// walk order and are discarded behind it, so retained heap is the raw bytes +
 /// O(depth) — the fix for tabulation being the bulk fleet's throughput ceiling
 /// (deep tabulates ran 20-40 min under saturation with the eager tree; see
 /// BULK_DENSITY_RUNBOOK.md). Same board sanity check as [tabulateTlsd];
-/// `finish()` restores the eager parser's trailing-bytes integrity check.
+/// `finish()` restores the eager parser's trailing-bytes integrity check on
+/// EVERY exit path — an omitted (type-2) root must still fail on trailing
+/// garbage exactly as the eager parse() does, not record a 0-cell success.
 List<FreqCell> tabulateTlsdStream(
   String path, {
   required List<int> board,
@@ -348,21 +361,20 @@ List<FreqCell> tabulateTlsdStream(
   int maxBoardLen = 5,
 }) {
   final dump = readTlsdStreamFile(path);
-  if (dump.board.length >= 3 &&
-      !(board.toSet().containsAll(dump.board.take(3)))) {
-    throw StateError('TLSD board ${dump.board} does not match spot flop $board');
-  }
+  _checkTlsdBoard(dump.board, board);
   final root = dump.root;
-  if (root == null) return const [];
+  if (root == null) {
+    dump.finish();
+    return const [];
+  }
   final cells = _tabulate(root,
       board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
   dump.finish();
   return cells;
 }
 
-/// Tabulate a decoded TLSD dump. Sanity-checks the dump's own header board
-/// against the caller's [board] — a flop mismatch means the grid wired the
-/// wrong dump to the wrong spot (silent garbage otherwise).
+/// Tabulate a decoded TLSD dump. Board sanity check shared with the streaming
+/// path via [_checkTlsdBoard].
 List<FreqCell> tabulateTlsd(
   TlsdDump dump, {
   required List<int> board,
@@ -370,10 +382,7 @@ List<FreqCell> tabulateTlsd(
   required double effStack,
   int maxBoardLen = 5,
 }) {
-  if (dump.board.length >= 3 &&
-      !(board.toSet().containsAll(dump.board.take(3)))) {
-    throw StateError('TLSD board ${dump.board} does not match spot flop $board');
-  }
+  _checkTlsdBoard(dump.board, board);
   final root = dump.root;
   if (root == null) return const [];
   return _tabulate(TlsdNodeView(root, dump.dicts),

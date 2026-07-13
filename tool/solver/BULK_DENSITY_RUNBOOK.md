@@ -78,10 +78,12 @@ three worktrees (boxes 2–4). Box 1 example — boxes 2–4 change only the
 
 Rationale (post streaming-tabulator + decoupling): solve lanes never wait on
 tabulates anymore (they fire detached; `TLSOLVE_MAX_PENDING_TABULATES`
-default 32 bounds /dev/shm dumps), and the streaming tabulator cuts a deep
-tabulate from 20-40 min to low single-digit minutes with a 16 GB heap
-(`-TabulateHeapMB 16000`; the eager rollback `TLSOLVE_TABULATE_EAGER=1`
-needs 80000). `-CpuOversub 2.0` (128-thread budget) leaves headroom so
+default 16 bounds fired tabulates — true /dev/shm residency ≈ 16 + parallel
+lanes' own dumps, and that backlog is also the reclaim-loss window on top of
+the ≤20-min sync loss), and the streaming tabulator cuts a deep tabulate from
+20-40 min to low single-digit minutes with a 16 GB heap (`-TabulateHeapMB
+16000`; the eager rollback is the launcher switch `-TabulateEager`, under
+which the grid auto-defaults the heap to 80000). `-CpuOversub 2.0` (128-thread budget) leaves headroom so
 1-thread tabulate claims don't queue behind 8-thread solve claims;
 `--parallel 14` caps solve lanes near the CPU budget. Deep claim 50 GB =
 stage-1's validated scenario B (measured solver RSS peaks ~7.8 GB). Per-spot

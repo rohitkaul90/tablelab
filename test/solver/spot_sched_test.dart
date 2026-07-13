@@ -49,7 +49,7 @@ void main() {
     test('deepClaimGb overrides ONLY the deep class solve claim', () {
       final tuned = spotFootprint(15, dumpFmt: 'bin', deepClaimGb: 50);
       expect(tuned.solveGb, 50);
-      expect(tuned.parseGb, 8); // parse claim unaffected
+      expect(tuned.parseGb, 3); // parse claim unaffected (streaming default)
       // Non-deep classes ignore the override entirely.
       expect(spotFootprint(6, dumpFmt: 'bin', deepClaimGb: 50).solveGb, 36);
       expect(spotFootprint(3, dumpFmt: 'bin', deepClaimGb: 50).solveGb, 16);
@@ -57,6 +57,22 @@ void main() {
 
     test('default stays 100 with no override (env unset in tests)', () {
       expect(spotFootprint(15, dumpFmt: 'bin').solveGb, 100);
+    });
+
+    test('parse claims key off the real tabulate path', () {
+      // Streaming (bin default): raw bytes + O(depth) — small claims. A
+      // pending detached tabulate over-claiming the eager footprint would
+      // starve solve admissions (the throughput the decoupling exists to
+      // recover).
+      expect(spotFootprint(15, dumpFmt: 'bin').parseGb, 3);
+      expect(spotFootprint(6, dumpFmt: 'bin').parseGb, 1.5);
+      // Eager TLSD rollback: typed tree at ~2-3× raw bytes.
+      expect(spotFootprint(15, dumpFmt: 'bin', eagerTabulate: true).parseGb, 8);
+      expect(spotFootprint(6, dumpFmt: 'bin', eagerTabulate: true).parseGb, 4);
+      // JSON dumps always pay the giant jsonDecode heap, whatever the flag.
+      expect(spotFootprint(15, dumpFmt: 'json').parseGb, 160);
+      expect(spotFootprint(15, dumpFmt: 'both', eagerTabulate: false).parseGb,
+          160);
     });
   });
 }

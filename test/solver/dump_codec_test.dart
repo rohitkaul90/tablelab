@@ -418,6 +418,30 @@ void main() {
           throwsFormatException);
     });
 
+    test('omitted (type-2) root with trailing garbage still throws — the '
+        'null-root early return must not skip finish()', () {
+      // Regression: the streaming path returned const [] for a type-2 root
+      // WITHOUT the trailing-bytes check, so a corrupt dump whose first node
+      // byte happened to be 2 recorded a permanent '✓ 0 cells' success while
+      // the eager rollback failed loudly on the same bytes.
+      final e = _Enc();
+      e.header(board: _b('Ks 9h 4c'));
+      e.dict(['QcQd']);
+      e.dict(['AdAh']);
+      e.u8(2); // omitted root
+      final junk = Uint8List.fromList([...e.bytes(), 0xDE, 0xAD]);
+      final dir = Directory.systemTemp.createTempSync('tlsd_nullroot_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final path = '${dir.path}/dump.bin';
+      File(path).writeAsBytesSync(junk);
+      expect(
+          () => tabulateTlsdStream(path,
+              board: _b('Ks 9h 4c'), pot0: 10, effStack: 45),
+          throwsFormatException);
+      // Parity: the eager path rejects the same bytes.
+      expect(() => decodeTlsd(junk), throwsFormatException);
+    });
+
     test('truncated stream throws instead of returning partial cells', () {
       final good = _fixture();
       final dir = Directory.systemTemp.createTempSync('tlsd_trunc_');

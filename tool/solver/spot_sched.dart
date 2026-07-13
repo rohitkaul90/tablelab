@@ -97,26 +97,34 @@ class SpotFootprint {
 /// solver cares about is the tree, so the value is the honest key.
 ///
 /// Solve RAM: measured deep-river solve peaked ~89 GB (srp_late, 8t); medium
-/// ~26-32 GB; shallow and 3-bet-pot trees far smaller. Parse RAM: a TLSD dump
-/// decodes to a typed tree at ~2-3× its raw bytes (deep ~1-2 GB raw); the
-/// JSON path needs the giant jsonDecode heap (deep ~150 GB — the pre-WS1
-/// bottleneck, kept here so a JSON bulk run still packs safely).
+/// ~26-32 GB; shallow and 3-bet-pot trees far smaller. Parse RAM: the
+/// STREAMING TLSD tabulator (the default) retains raw bytes + O(depth) —
+/// measured 0.8 GB peak on a 502 MB medium dump, so deep (~1.5-2 GB raw)
+/// claims 3 GB with margin. The EAGER TLSD rollback ([eagerTabulate])
+/// materializes a typed tree at ~2-3× raw bytes; the JSON path needs the
+/// giant jsonDecode heap (deep ~150 GB — the pre-WS1 bottleneck, kept here so
+/// a JSON bulk run still packs safely). Over-claiming pending detached
+/// tabulates starves solve admissions, so these must track the real path.
 SpotFootprint spotFootprint(double sprVal,
-    {required String dumpFmt, double? deepClaimGb}) {
+    {required String dumpFmt, double? deepClaimGb, bool eagerTabulate = false}) {
   final bool json = dumpFmt != 'bin'; // 'both' pays the JSON parse too
+  final bool eager = json || eagerTabulate;
   if (sprVal >= 10) {
     return SpotFootprint(
         solveGb: deepClaimGb ?? kDeepClaimGb,
-        parseGb: json ? 160 : 8,
+        parseGb: json ? 160 : (eager ? 8 : 3),
         estMinutes: 18);
   }
   if (sprVal >= 5) {
-    return SpotFootprint(solveGb: 36, parseGb: json ? 45 : 4, estMinutes: 6);
+    return SpotFootprint(
+        solveGb: 36, parseGb: json ? 45 : (eager ? 4 : 1.5), estMinutes: 6);
   }
   if (sprVal >= 2.5) {
-    return SpotFootprint(solveGb: 16, parseGb: json ? 12 : 2, estMinutes: 2.5);
+    return SpotFootprint(
+        solveGb: 16, parseGb: json ? 12 : (eager ? 2 : 1), estMinutes: 2.5);
   }
-  return SpotFootprint(solveGb: 8, parseGb: json ? 6 : 1, estMinutes: 1);
+  return SpotFootprint(
+      solveGb: 8, parseGb: json ? 6 : (eager ? 1 : 0.5), estMinutes: 1);
 }
 
 /// Minimal counting semaphore (single-isolate, like [ResourceBudget]): the
