@@ -445,6 +445,46 @@ if ($PullAndTerminate) {
   # relaunch), a reclaim-vs-crash classifier, and the relaunch itself.
   $staging = Join-Path $repo 'tool\solver\.remote-staging'
 
+  function Invoke-AtomicScpPull {
+    # scp into a scratch subdir of $DestDir, then move files into place ONLY
+    # if scp exited 0 within the timeout. An interrupted/timed-out transfer
+    # must never leave a truncated file where complete data already lives:
+    # a 120s-capped sync of a 1.4 GB seeded shard once left a 43% partial in
+    # staging, and the reclaim promote then clobbered the repo shard with it
+    # (4,601 entries -> 1,959; recovered from the gzip backup). Returns bool.
+    param([string]$RemoteGlob, [string]$DestDir, [int]$TimeoutSec = 300)
+    # Anchor relative dests (final pulls run under Push-Location $repo) to an
+    # absolute path: the Start-Job runspace has its OWN cwd, so a relative
+    # $tmp would land the scp output somewhere else entirely.
+    if (-not [IO.Path]::IsPathRooted($DestDir)) {
+      $DestDir = Join-Path (Get-Location).ProviderPath $DestDir
+    }
+    $tmp = Join-Path $DestDir ('.pull-tmp-' + [IO.Path]::GetRandomFileName())
+    New-Item -ItemType Directory -Force $tmp | Out-Null
+    $sj = Start-Job -ScriptBlock {
+      param($k, $ip, $glob, $dest)
+      scp -C -i $k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes `
+        "ubuntu@${ip}:$glob" $dest 2>$null
+      $LASTEXITCODE
+    } -ArgumentList $key, $pubip, $RemoteGlob, $tmp
+    $ok = $false
+    if (Wait-Job $sj -Timeout $TimeoutSec) {
+      $code = Receive-Job $sj | Select-Object -Last 1
+      if ($code -eq 0) {
+        Get-ChildItem $tmp -ErrorAction SilentlyContinue | ForEach-Object {
+          Move-Item $_.FullName (Join-Path $DestDir $_.Name) -Force
+        }
+        $ok = $true
+      }
+    } else {
+      Stop-Job $sj
+    }
+    Remove-Job $sj -Force -ErrorAction SilentlyContinue
+    Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+    $global:LASTEXITCODE = 0
+    return $ok
+  }
+
   function Test-SpotReclaimed {
     # True iff the instance is gone/going BECAUSE EC2 reclaimed the spot
     # capacity (StateReason Server.SpotInstanceTermination) - a crash or a
@@ -473,8 +513,20 @@ if ($PullAndTerminate) {
     if (Test-Path $staging) {
       Get-ChildItem $staging -Filter 'freq_grid_results.*' -ErrorAction SilentlyContinue |
         ForEach-Object {
-          Copy-Item $_.FullName (Join-Path (Join-Path $repo 'tool\solver') $_.Name) -Force
-          Write-Host "  promoted staged $($_.Name) into the repo cache."
+          # SIZE GUARD: the box shard is always seed + appends, so a genuine
+          # pull is NEVER smaller than the repo copy. Smaller = truncated
+          # transfer — promoting it would clobber real solved results (the
+          # stage-2 warm-up incident). Refuse loudly; the relaunch then seeds
+          # from the intact repo copy and at worst re-solves the sync window.
+          $dest = Join-Path (Join-Path $repo 'tool\solver') $_.Name
+          if ((Test-Path $dest) -and $_.Length -lt (Get-Item $dest).Length) {
+            Write-Warning ("  staged $($_.Name) is SMALLER than the repo copy " +
+              "($($_.Length) vs $((Get-Item $dest).Length) bytes) - truncated " +
+              "pull; NOT promoting.")
+          } else {
+            Copy-Item $_.FullName $dest -Force
+            Write-Host "  promoted staged $($_.Name) into the repo cache."
+          }
         }
     }
     if ($RelaunchBudget -le 0) {
@@ -514,21 +566,14 @@ if ($PullAndTerminate) {
       } else {
         '~/poker_tracker/tool/solver/freq_grid_results.*'
       }
-      $sj = Start-Job -ScriptBlock {
-        param($k, $ip, $glob, $dest)
-        scp -C -i $k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes `
-          "ubuntu@${ip}:$glob" $dest 2>$null
-        $LASTEXITCODE
-      } -ArgumentList $key, $pubip, $syncGlob, $staging
-      if (Wait-Job $sj -Timeout 120) {
-        $code = Receive-Job $sj | Select-Object -Last 1
-        if ($code -eq 0) { Write-Host "  [sync] staged checkpoint shards" }
+      # Atomic + 300s: shards grow toward ~1.5 GB late in a bulk slice; the
+      # old 120s cap killed scp mid-transfer and left a truncated file in
+      # staging (see Invoke-AtomicScpPull's header for the incident).
+      if (Invoke-AtomicScpPull -RemoteGlob $syncGlob -DestDir $staging -TimeoutSec 300) {
+        Write-Host "  [sync] staged checkpoint shards"
       } else {
-        Stop-Job $sj
-        Write-Host "  [sync] shard pull timed out - will retry next interval"
+        Write-Host "  [sync] shard pull failed/timed out - will retry next interval"
       }
-      Remove-Job $sj -Force -ErrorAction SilentlyContinue
-      $global:LASTEXITCODE = 0
     }
     $r = Invoke-SshTimed "if grep -q 'BATCH DONE' ~/solve.log 2>/dev/null; then echo wrote; elif tmux has-session -t solve 2>/dev/null; then echo running; else echo dead; fi"
     if ($r -and $r.Code -eq 0 -and "$($r.Out)".Trim()) {
@@ -658,17 +703,23 @@ if ($PullAndTerminate) {
         Write-Host "No .jsonl shards on the box (nothing newly solved - fully cache-skipped run); nothing to pull."
         $okCache = $true
       } else {
-        scp -C -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*.jsonl" 'tool/solver/'
-        $okCache = ($LASTEXITCODE -eq 0)
+        # Atomic (temp-dir + move-on-success): an interrupted final pull must
+        # not leave a truncated shard over the repo copy — the box is left up
+        # on failure, so a clean retry stays possible.
+        $okCache = Invoke-AtomicScpPull `
+          -RemoteGlob '~/poker_tracker/tool/solver/freq_grid_results.*.jsonl' `
+          -DestDir 'tool/solver' -TimeoutSec 900
       }
     } else {
-      scp -i $key "ubuntu@${pubip}:~/poker_tracker/assets/gto_freq_library.json" 'assets/gto_freq_library.json'
-      $okLib = ($LASTEXITCODE -eq 0)
+      $okLib = Invoke-AtomicScpPull `
+        -RemoteGlob '~/poker_tracker/assets/gto_freq_library.json' `
+        -DestDir 'assets' -TimeoutSec 900
       # Pull the compacted json AND any .jsonl shards in one glob: if the
       # box-side --compact failed, the shards ARE the run's results — a
       # json-only pull would discard them at terminate (review finding).
-      scp -C -i $key "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.*" 'tool/solver/'
-      $okCache = ($LASTEXITCODE -eq 0)
+      $okCache = Invoke-AtomicScpPull `
+        -RemoteGlob '~/poker_tracker/tool/solver/freq_grid_results.*' `
+        -DestDir 'tool/solver' -TimeoutSec 1800
     }
   } finally { Pop-Location }
   $okPacks = $true

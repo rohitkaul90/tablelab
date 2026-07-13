@@ -181,3 +181,5 @@ Same 4-box pattern with the same `slice_mod4_{0..3}` files — claims are
 | Deep spots ✗ with timeout | `-Sprs deep -TimeoutS 14400` cleanup pass |
 | r7a.16xlarge capacity dry | Fallbacks r6a/r6i.16xlarge are in the command; deeper fallback: fewer, bigger boxes (2 × 32xlarge + the 5-way slice set, work-stealing) |
 | $/spot drifting above table | Stop launching; investigate util (`[cpu]` lines) + current spot quotes before spending more |
+| Launcher warns `staged ... SMALLER than the repo copy - NOT promoting` | A shard pull was truncated (reclaim mid-transfer). The repo copy is intact; the relaunch re-solves at most the sync window. If it recurs every sync, the shard has outgrown the sync timeout — raise `Invoke-AtomicScpPull`'s 300s or sync less often |
+| Repo shard suddenly tiny / box sees far fewer cached spots than expected | A truncated pull was promoted over the repo shard (pre-fix launcher). Restore from the stage-end gzip backup (`freq_grid_results.<sc>.jsonl.gz`), verify with `--sched-dry-run`, and re-seed any box launched with the bad shard |
