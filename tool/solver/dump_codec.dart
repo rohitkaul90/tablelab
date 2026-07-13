@@ -159,17 +159,23 @@ TlsdDump readTlsdFile(String path) => decodeTlsd(File(path).readAsBytesSync());
 
 TlsdDump decodeTlsd(Uint8List bytes) => _TlsdParser(bytes).parse();
 
-class _TlsdParser {
+/// Shared byte-level reader: primitives, the header/dict decode, and the
+/// stateful interned action table. BOTH the eager parser and the streaming
+/// cursor extend this, so the two decoders cannot drift on the format.
+abstract class _TlsdReaderBase {
   final Uint8List _b;
   final ByteData _d;
   int _p = 0;
   final List<String> _actionTable = [];
+  final List<int> _dictLens = [];
 
-  _TlsdParser(Uint8List bytes)
+  _TlsdReaderBase(Uint8List bytes)
       : _b = bytes,
         _d = ByteData.sublistView(bytes);
 
-  TlsdDump parse() {
+  /// Magic + version + flags + dumpRounds + board + both player dicts.
+  ({int version, int dumpRounds, List<int> board, List<TlsdDict> dicts})
+      _header() {
     for (var i = 0; i < 4; i++) {
       if (_u8() != kTlsdMagic[i]) {
         throw const FormatException('TLSD: bad magic');
@@ -182,17 +188,11 @@ class _TlsdParser {
     final nBoard = _u8();
     final board = [for (var i = 0; i < nBoard; i++) _u8()];
     final dicts = [_dict(), _dict()];
-    final root = _node();
-    if (_p != _b.length) {
-      throw FormatException(
-          'TLSD: ${_b.length - _p} trailing bytes after root node');
-    }
-    return TlsdDump(
+    return (
       version: version,
       dumpRounds: dumpRounds,
       board: board,
-      dicts: dicts,
-      root: root,
+      dicts: dicts
     );
   }
 
@@ -215,6 +215,120 @@ class _TlsdParser {
       }
     }
     return TlsdDict(cards, keys);
+  }
+
+  int _dictLenFor(int player) {
+    if (player < 0 || player >= _dictLens.length) {
+      throw FormatException('TLSD: node player $player out of range');
+    }
+    return _dictLens[player];
+  }
+
+  /// Dictionary-index list of set bits in an LSB-first bitmap over [dictLen].
+  Int32List _bitmap(int dictLen) {
+    final nBytes = (dictLen + 7) >> 3;
+    final start = _p;
+    _skip(nBytes);
+    var count = 0;
+    for (var i = 0; i < dictLen; i++) {
+      if (_b[start + (i >> 3)] & (1 << (i & 7)) != 0) count++;
+    }
+    final out = Int32List(count);
+    var w = 0;
+    for (var i = 0; i < dictLen; i++) {
+      if (_b[start + (i >> 3)] & (1 << (i & 7)) != 0) out[w++] = i;
+    }
+    return out;
+  }
+
+  /// Skip a bitmap, returning only its set-bit count (no allocation). Trailing
+  /// bits past [dictLen] in the final byte are masked off — the writer zeroes
+  /// them, but a popcount over raw bytes must not trust that.
+  int _bitmapCount(int dictLen) {
+    final nBytes = (dictLen + 7) >> 3;
+    final start = _p;
+    _skip(nBytes);
+    var count = 0;
+    for (var i = 0; i < nBytes; i++) {
+      var byte = _b[start + i];
+      if (i == nBytes - 1 && (dictLen & 7) != 0) {
+        byte &= (1 << (dictLen & 7)) - 1;
+      }
+      while (byte != 0) {
+        count += byte & 1;
+        byte >>= 1;
+      }
+    }
+    return count;
+  }
+
+  String _actionRef() {
+    final id = _u16();
+    if (id != 0xFFFF) {
+      if (id >= _actionTable.length) {
+        throw FormatException('TLSD: action id $id not yet defined');
+      }
+      return _actionTable[id];
+    }
+    final s = _shortString();
+    _actionTable.add(s);
+    return s;
+  }
+
+  String _shortString() {
+    final len = _u8();
+    final s = String.fromCharCodes(_b, _p, _p + len);
+    _skip(len);
+    return s;
+  }
+
+  int _u8() {
+    final v = _b[_p];
+    _p += 1;
+    return v;
+  }
+
+  int _u16() {
+    final v = _d.getUint16(_p, Endian.little);
+    _p += 2;
+    return v;
+  }
+
+  int _u32() {
+    final v = _d.getUint32(_p, Endian.little);
+    _p += 4;
+    return v;
+  }
+
+  double _f32() {
+    final v = _d.getFloat32(_p, Endian.little);
+    _p += 4;
+    return v;
+  }
+
+  void _skip(int n) {
+    _p += n;
+    if (_p > _b.length) throw const FormatException('TLSD: truncated file');
+  }
+}
+
+class _TlsdParser extends _TlsdReaderBase {
+  _TlsdParser(super.bytes);
+
+  TlsdDump parse() {
+    final h = _header();
+    final root = _node();
+    if (_p != _b.length) {
+      throw FormatException(
+          'TLSD: ${_b.length - _p} trailing bytes after root node');
+    }
+    return TlsdDump(
+      version: h.version,
+      dumpRounds: h.dumpRounds,
+      board: h.board,
+      dicts: h.dicts,
+      root: root,
+    );
   }
 
   TlsdNode? _node() {
@@ -279,33 +393,6 @@ class _TlsdParser {
     return TlsdNode.chance(dealCards: cards, dealChildren: children);
   }
 
-  // The two player dictionaries are parsed before any node, so this only needs
-  // their lengths — stashed by parse() via _dictLens.
-  final List<int> _dictLens = [];
-  int _dictLenFor(int player) {
-    if (player < 0 || player >= _dictLens.length) {
-      throw FormatException('TLSD: node player $player out of range');
-    }
-    return _dictLens[player];
-  }
-
-  /// Dictionary-index list of set bits in an LSB-first bitmap over [dictLen].
-  Int32List _bitmap(int dictLen) {
-    final nBytes = (dictLen + 7) >> 3;
-    final start = _p;
-    _skip(nBytes);
-    var count = 0;
-    for (var i = 0; i < dictLen; i++) {
-      if (_b[start + (i >> 3)] & (1 << (i & 7)) != 0) count++;
-    }
-    final out = Int32List(count);
-    var w = 0;
-    for (var i = 0; i < dictLen; i++) {
-      if (_b[start + (i >> 3)] & (1 << (i & 7)) != 0) out[w++] = i;
-    }
-    return out;
-  }
-
   Map<int, Float32List> _evSection(int dictLen) {
     final present = _bitmap(dictLen);
     final out = <int, Float32List>{};
@@ -318,55 +405,6 @@ class _TlsdParser {
       out[idx] = v;
     }
     return out;
-  }
-
-  String _actionRef() {
-    final id = _u16();
-    if (id != 0xFFFF) {
-      if (id >= _actionTable.length) {
-        throw FormatException('TLSD: action id $id not yet defined');
-      }
-      return _actionTable[id];
-    }
-    final s = _shortString();
-    _actionTable.add(s);
-    return s;
-  }
-
-  String _shortString() {
-    final len = _u8();
-    final s = String.fromCharCodes(_b, _p, _p + len);
-    _skip(len);
-    return s;
-  }
-
-  int _u8() {
-    final v = _b[_p];
-    _p += 1;
-    return v;
-  }
-
-  int _u16() {
-    final v = _d.getUint16(_p, Endian.little);
-    _p += 2;
-    return v;
-  }
-
-  int _u32() {
-    final v = _d.getUint32(_p, Endian.little);
-    _p += 4;
-    return v;
-  }
-
-  double _f32() {
-    final v = _d.getFloat32(_p, Endian.little);
-    _p += 4;
-    return v;
-  }
-
-  void _skip(int n) {
-    _p += n;
-    if (_p > _b.length) throw const FormatException('TLSD: truncated file');
   }
 }
 
@@ -558,4 +596,310 @@ class TlsdNodeView implements DumpNodeView {
     final c = node.children[actionIdx];
     return c == null ? null : TlsdNodeView(c, dicts);
   }
+}
+
+// ── Streaming reader (tabulate bottleneck fix) ───────────────────────────────
+//
+// The eager parser materializes the whole typed tree (tens of millions of
+// nodes at deep-river depth) before the walk starts — that allocation/GC churn
+// is what made tabulation the fleet's throughput ceiling. The streaming cursor
+// exploits a structural fact: freq_tabulate's `_walk` visits nodes in EXACTLY
+// the byte-stream's pre-order, requests action children in strictly increasing
+// index order exactly once, and never revisits a node after its subtree
+// completes. So nodes can be decoded ON DEMAND, retaining only the open
+// root-to-current path (a frame stack), with unconsumed subtrees (the walk's
+// early returns: maxBoardLen, board-conflict deals, terminal nodes)
+// decode-DISCARDED via `_skipNodeTree` when the cursor needs to advance past
+// them. Retained heap: the raw bytes + O(depth) frames, vs O(nodes).
+//
+// Identical traversal order + identical u16→double math ⇒ output cells are
+// BIT-IDENTICAL to the eager path (locked by tests). The skip path MUST keep
+// interning action-table definitions — the table is stateful across the whole
+// stream, and a definition inside a skipped subtree can be referenced by id in
+// a later sibling.
+
+/// A lazily-decoded TLSD dump. [root] is valid until [finish] is called; the
+/// walk must consume it strictly forward (freq_tabulate's `_walk` does).
+class TlsdStreamDump {
+  final int version;
+  final int dumpRounds;
+  final List<int> board;
+  final List<TlsdDict> dicts;
+  final DumpNodeView? root;
+  final _TlsdStreamCursor _cursor;
+
+  TlsdStreamDump._(
+    this._cursor, {
+    required this.version,
+    required this.dumpRounds,
+    required this.board,
+    required this.dicts,
+    required this.root,
+  });
+
+  /// Drain any unconsumed remainder and verify the stream ends exactly at the
+  /// end of the buffer — the streaming equivalent of the eager parser's
+  /// trailing-bytes check.
+  void finish() => _cursor._finish();
+}
+
+TlsdStreamDump readTlsdStreamFile(String path) =>
+    openTlsdStream(File(path).readAsBytesSync());
+
+TlsdStreamDump openTlsdStream(Uint8List bytes) {
+  final cursor = _TlsdStreamCursor(bytes);
+  final h = cursor._header();
+  cursor._streamDicts = h.dicts;
+  final root = cursor._openRoot();
+  return TlsdStreamDump._(
+    cursor,
+    version: h.version,
+    dumpRounds: h.dumpRounds,
+    board: h.board,
+    dicts: h.dicts,
+    root: root,
+  );
+}
+
+/// One open node on the cursor's path stack. Node-local data stays readable
+/// while the frame is on the stack (the walk re-reads the PARENT's strategy
+/// after opening a child — verified access pattern).
+class _StreamFrame {
+  final bool isChance;
+  // Action-node fields.
+  final int player;
+  final List<String> actions;
+  final Int32List comboIdx;
+  final int stratOff; // byte offset of the u16 freq block; -1 when absent
+  // Chance-node fields.
+  final int nDeals;
+
+  /// Next unconsumed child index (action child or deal index).
+  int nextChild = 0;
+
+  _StreamFrame.action(this.player, this.actions, this.comboIdx, this.stratOff)
+      : isChance = false,
+        nDeals = 0;
+
+  _StreamFrame.chance(this.nDeals)
+      : isChance = true,
+        player = -1,
+        actions = const [],
+        comboIdx = _emptyI32,
+        stratOff = -1;
+
+  static final Int32List _emptyI32 = Int32List(0);
+}
+
+class _TlsdStreamCursor extends _TlsdReaderBase {
+  final List<_StreamFrame> _stack = [];
+  List<TlsdDict> _streamDicts = const [];
+
+  _TlsdStreamCursor(super.bytes);
+
+  DumpNodeView? _openRoot() {
+    final type = _u8();
+    if (type == 2) return null;
+    final f = _openFrame(type);
+    _stack.add(f);
+    return TlsdStreamNodeView._(this, f);
+  }
+
+  _StreamFrame _openFrame(int type) {
+    switch (type) {
+      case 0:
+        final player = _u8();
+        final nActions = _u8();
+        final actions = List<String>.generate(nActions, (_) => _actionRef());
+        final flags = _u8();
+        final dictLen = _dictLenFor(player);
+        var comboIdx = _StreamFrame._emptyI32;
+        var stratOff = -1;
+        if (flags & 1 != 0) {
+          comboIdx = _bitmap(dictLen);
+          stratOff = _p;
+          _skip(comboIdx.length * nActions * 2);
+        }
+        if (flags & 2 != 0) _skipEvSection(dictLen);
+        if (flags & 4 != 0) _skipEvSection(dictLen);
+        return _StreamFrame.action(player, actions, comboIdx, stratOff);
+      case 1:
+        return _StreamFrame.chance(_u16());
+      default:
+        throw FormatException('TLSD: unknown node type $type at ${_p - 1}');
+    }
+  }
+
+  /// Pop (and decode-discard the remainder of) every frame ABOVE [f]. After
+  /// this, [f] is top-of-stack and `_p` sits at f's next unconsumed child.
+  void _syncTo(_StreamFrame f) {
+    while (_stack.isNotEmpty && !identical(_stack.last, f)) {
+      _skipFrameRemainder(_stack.removeLast());
+    }
+    if (_stack.isEmpty) {
+      throw StateError(
+          'TLSD stream: frame not on the cursor path — the walk revisited a '
+          'completed subtree (violates the streaming cursor contract)');
+    }
+  }
+
+  void _skipFrameRemainder(_StreamFrame f) {
+    if (f.isChance) {
+      for (var i = f.nextChild; i < f.nDeals; i++) {
+        _u8(); // dealt card
+        _skipNodeTree();
+      }
+      f.nextChild = f.nDeals;
+    } else {
+      final n = f.actions.length;
+      for (var i = f.nextChild; i < n; i++) {
+        _skipNodeTree();
+      }
+      f.nextChild = n;
+    }
+  }
+
+  DumpNodeView? _childOf(_StreamFrame f, int ai) {
+    _syncTo(f);
+    if (ai < f.nextChild) {
+      throw StateError('TLSD stream: child($ai) requested after child '
+          '${f.nextChild - 1} was consumed (non-increasing access)');
+    }
+    while (f.nextChild < ai) {
+      _skipNodeTree();
+      f.nextChild++;
+    }
+    f.nextChild++;
+    final type = _u8();
+    if (type == 2) return null; // omitted (terminal/showdown/pruned)
+    final nf = _openFrame(type);
+    _stack.add(nf);
+    return TlsdStreamNodeView._(this, nf);
+  }
+
+  void _forEachDealOf(
+      _StreamFrame f, void Function(int card, DumpNodeView child) fn) {
+    while (f.nextChild < f.nDeals) {
+      // Sync every iteration: the previous deal's subtree may be partially
+      // consumed (board-conflict early return) or fully walked — either way
+      // its frames may still be stacked above f.
+      _syncTo(f);
+      final card = _u8();
+      f.nextChild++;
+      final type = _u8();
+      if (type == 2) continue; // omitted child: skip WITHOUT calling fn
+      final nf = _openFrame(type);
+      _stack.add(nf);
+      fn(card, TlsdStreamNodeView._(this, nf));
+    }
+  }
+
+  /// Decode-and-discard one whole node subtree. MUST intern action defs.
+  void _skipNodeTree() {
+    final type = _u8();
+    switch (type) {
+      case 2:
+        return;
+      case 0:
+        final player = _u8();
+        final nActions = _u8();
+        for (var i = 0; i < nActions; i++) {
+          _actionRef(); // interns new definitions — load-bearing
+        }
+        final flags = _u8();
+        final dictLen = _dictLenFor(player);
+        if (flags & 1 != 0) {
+          final present = _bitmapCount(dictLen);
+          _skip(present * nActions * 2);
+        }
+        if (flags & 2 != 0) _skipEvSection(dictLen);
+        if (flags & 4 != 0) _skipEvSection(dictLen);
+        for (var i = 0; i < nActions; i++) {
+          _skipNodeTree();
+        }
+        return;
+      case 1:
+        final n = _u16();
+        for (var i = 0; i < n; i++) {
+          _u8(); // card
+          _skipNodeTree();
+        }
+        return;
+      default:
+        throw FormatException('TLSD: unknown node type $type at ${_p - 1}');
+    }
+  }
+
+  void _skipEvSection(int dictLen) {
+    final present = _bitmapCount(dictLen);
+    for (var i = 0; i < present; i++) {
+      final len = _u8();
+      _skip(len * 4);
+    }
+  }
+
+  void _finish() {
+    while (_stack.isNotEmpty) {
+      _skipFrameRemainder(_stack.removeLast());
+    }
+    if (_p != _b.length) {
+      throw FormatException(
+          'TLSD: ${_b.length - _p} trailing bytes after root node');
+    }
+  }
+
+  double _freqAt(int stratOff, int row, int nActions, int actionIdx) =>
+      _d.getUint16(stratOff + (row * nActions + actionIdx) * 2, Endian.little) /
+      65535.0;
+}
+
+/// Streaming [DumpNodeView]: same semantics as [TlsdNodeView], decoded lazily.
+class TlsdStreamNodeView implements DumpNodeView {
+  final _TlsdStreamCursor _cursor;
+  final _StreamFrame _frame;
+
+  TlsdStreamNodeView._(this._cursor, this._frame);
+
+  @override
+  bool get isChance => _frame.isChance;
+
+  // Matches the eager `freqs.isNotEmpty`: strategy flag set AND ≥1 present
+  // combo AND ≥1 action (stratOff is -1 unless flags&1 was set).
+  @override
+  bool get isAction =>
+      !_frame.isChance &&
+      _frame.stratOff >= 0 &&
+      _frame.comboIdx.isNotEmpty &&
+      _frame.actions.isNotEmpty;
+
+  @override
+  void forEachDeal(void Function(int card, DumpNodeView child) fn) =>
+      _cursor._forEachDealOf(_frame, fn);
+
+  @override
+  List<String> get actions => _frame.actions;
+
+  TlsdDict get _dict => _cursor._streamDicts[_frame.player];
+
+  @override
+  int get comboCount => _frame.comboIdx.length;
+
+  @override
+  List<int>? comboCards(int i) => _dict.cards[_frame.comboIdx[i]];
+
+  @override
+  bool comboHasFreqs(int i) => true;
+
+  @override
+  double freq(int comboIdx, int actionIdx) {
+    if (actionIdx >= _frame.actions.length || _frame.stratOff < 0) return 0.0;
+    return _cursor._freqAt(
+        _frame.stratOff, comboIdx, _frame.actions.length, actionIdx);
+  }
+
+  @override
+  int freqLen(int comboIdx) => _frame.actions.length;
+
+  @override
+  DumpNodeView? child(int actionIdx) => _cursor._childOf(_frame, actionIdx);
 }

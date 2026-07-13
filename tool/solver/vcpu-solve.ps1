@@ -49,10 +49,17 @@ param(
   # in per-spot SUBPROCESSES (tabulate_one.dart), the main process no longer holds a
   # giant dump, so this stays small. The big heap is per-subprocess (-TabulateHeapMB).
   [int]$HeapMB = 24000,
-  # Per-SUBPROCESS Dart old-gen heap cap (MB) for each tabulate_one.dart parse - a
-  # deep ~15 GB river dump needs a big heap. Each subprocess has its OWN heap/GC, so
-  # size --parallel so parallel * (dump + this) < system RAM (watch `free -g`).
-  [int]$TabulateHeapMB = 80000,
+  # Per-SUBPROCESS Dart old-gen heap cap (MB) for each tabulate_one.dart parse.
+  # The STREAMING tabulator (default since the tabulate-bottleneck fix) retains
+  # only raw dump bytes + O(depth) - 16000 is generous. 0 = inherit the grid's
+  # own default, which already keys off the real path (16000 streaming / 80000
+  # for -TabulateEager or JSON/--emit-pack runs) - so 0 is right almost always.
+  [int]$TabulateHeapMB = 0,
+  # Field rollback for the streaming tabulator: sets TLSOLVE_TABULATE_EAGER=1
+  # on the box so tabulate_one uses the old eager typed-tree path (the grid
+  # then auto-defaults the subprocess heap to 80000). Without this switch the
+  # runbook's rollback recipe is unreachable from the launcher.
+  [switch]$TabulateEager,
   # Solver worker threads (8 is the stable max - 16 raced/crashed on wet trees).
   [int]$Threads = 8,
   # Per-spot solver wall cap (s).
@@ -333,6 +340,9 @@ if ($CpuOversub) { $extraEnv += "TLSOLVE_CPU_OVERSUB=$CpuOversub " }
 if ($CpuBudget) { $extraEnv += "TLSOLVE_CPU_BUDGET=$CpuBudget " }
 if ($Sprs) { $extraEnv += "TLSOLVE_SPRS=$Sprs " }
 if ($DeepClaimGB) { $extraEnv += "TLSOLVE_DEEP_CLAIM_GB=$DeepClaimGB " }
+# 0 = let the grid pick its own default (16 GB streaming / 80 GB eager).
+if ($TabulateHeapMB -gt 0) { $extraEnv += "TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB " }
+if ($TabulateEager) { $extraEnv += "TLSOLVE_TABULATE_EAGER=1 " }
 # Bulk mode: skip the box-side --compact so the monolith stays frozen — the
 # .jsonl shards are the durable store and the launcher's shard sync/pull
 # captures them. Normal mode folds shards into the single results file.
@@ -381,7 +391,7 @@ rm -rf /dev/shm/tlsolve_* /mnt/scratch/tlsolve_* 2>/dev/null || true
 {
 for SC in $scenarioList; do
   echo "=== SCENARIO `$SC ==="
-  TLSOLVE_SCENARIO=`$SC TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB $extraEnv dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs || echo "SCENARIO `$SC FAILED"
+  TLSOLVE_SCENARIO=`$SC TLSOLVE_PROFILE=$Profile TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=$TimeoutS TLSOLVE_MAXITER=400 TLSOLVE_THREADS=$Threads $extraEnv dart --old_gen_heap_size=$HeapMB run tool/solver/freq_grid.dart $GridArgs$packArgs || echo "SCENARIO `$SC FAILED"
 done
 # Fold the per-scenario JSONL shards into freq_grid_results.json so the
 # launcher's single-file cache pull captures every solved spot (WS2 shards) —

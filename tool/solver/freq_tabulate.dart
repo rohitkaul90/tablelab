@@ -311,11 +311,22 @@ List<FreqCell> tabulateDumpFile(
   int maxBoardLen = 5,
 }) {
   // Dispatch on the file's magic bytes, not its extension: a TLSD binary dump
-  // (dump_result_bin) decodes into a compact typed tree (~25-50× less heap
-  // than jsonDecode of the equivalent JSON); anything else is the legacy JSON
-  // path, kept intact as the validation oracle.
+  // (dump_result_bin) is STREAMED — decoded node-by-node during the walk, never
+  // materializing the tree (the eager typed-tree path remains available via
+  // TLSOLVE_TABULATE_EAGER=1 as the field rollback; both produce BIT-IDENTICAL
+  // cells — same traversal order, same u16 math — locked by tests). Anything
+  // else is the legacy JSON path, kept intact as the validation oracle. The
+  // env hatch lives HERE so it covers tabulate_one, validate_dump, and the
+  // debug CLI in one place.
   if (looksLikeTlsd(path)) {
-    return tabulateTlsd(readTlsdFile(path),
+    if (Platform.environment['TLSOLVE_TABULATE_EAGER'] == '1') {
+      return tabulateTlsd(readTlsdFile(path),
+          board: board,
+          pot0: pot0,
+          effStack: effStack,
+          maxBoardLen: maxBoardLen);
+    }
+    return tabulateTlsdStream(path,
         board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
   }
   final root = jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
@@ -323,9 +334,47 @@ List<FreqCell> tabulateDumpFile(
       board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
 }
 
-/// Tabulate a decoded TLSD dump. Sanity-checks the dump's own header board
-/// against the caller's [board] — a flop mismatch means the grid wired the
-/// wrong dump to the wrong spot (silent garbage otherwise).
+/// Shared TLSD board sanity check: the dump's own header board must match the
+/// caller's spot flop — a mismatch means the grid wired the wrong dump to the
+/// wrong spot (silent garbage otherwise). ONE copy for the streaming default
+/// AND the eager rollback so the rule can't drift between them (the two paths
+/// must stay oracle-equivalent).
+void _checkTlsdBoard(List<int> dumpBoard, List<int> board) {
+  if (dumpBoard.length >= 3 && !(board.toSet().containsAll(dumpBoard.take(3)))) {
+    throw StateError('TLSD board $dumpBoard does not match spot flop $board');
+  }
+}
+
+/// Tabulate a TLSD dump via the STREAMING cursor: nodes decode on demand in
+/// walk order and are discarded behind it, so retained heap is the raw bytes +
+/// O(depth) — the fix for tabulation being the bulk fleet's throughput ceiling
+/// (deep tabulates ran 20-40 min under saturation with the eager tree; see
+/// BULK_DENSITY_RUNBOOK.md). Same board sanity check as [tabulateTlsd];
+/// `finish()` restores the eager parser's trailing-bytes integrity check on
+/// EVERY exit path — an omitted (type-2) root must still fail on trailing
+/// garbage exactly as the eager parse() does, not record a 0-cell success.
+List<FreqCell> tabulateTlsdStream(
+  String path, {
+  required List<int> board,
+  required double pot0,
+  required double effStack,
+  int maxBoardLen = 5,
+}) {
+  final dump = readTlsdStreamFile(path);
+  _checkTlsdBoard(dump.board, board);
+  final root = dump.root;
+  if (root == null) {
+    dump.finish();
+    return const [];
+  }
+  final cells = _tabulate(root,
+      board: board, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
+  dump.finish();
+  return cells;
+}
+
+/// Tabulate a decoded TLSD dump. Board sanity check shared with the streaming
+/// path via [_checkTlsdBoard].
 List<FreqCell> tabulateTlsd(
   TlsdDump dump, {
   required List<int> board,
@@ -333,10 +382,7 @@ List<FreqCell> tabulateTlsd(
   required double effStack,
   int maxBoardLen = 5,
 }) {
-  if (dump.board.length >= 3 &&
-      !(board.toSet().containsAll(dump.board.take(3)))) {
-    throw StateError('TLSD board ${dump.board} does not match spot flop $board');
-  }
+  _checkTlsdBoard(dump.board, board);
   final root = dump.root;
   if (root == null) return const [];
   return _tabulate(TlsdNodeView(root, dump.dicts),

@@ -833,6 +833,15 @@ Future<void> main(List<String> args) async {
   // The effective format of THIS run's dumps — drives the parse footprints
   // (JSON parses need the giant heap; TLSD a few GB).
   final dumpFmtEnv = emitPackRoot != null ? 'json' : solverDumpFmt();
+  // Whether tabulate_one will EAGERLY materialize its input: true for any
+  // JSON dump (--emit-pack or TLSOLVE_DUMP_FMT=json/both — with 'both' the
+  // dump handed to tabulate_one is the JSON file) and for the eager TLSD
+  // rollback. Drives BOTH the subprocess heap default and the parse-phase RAM
+  // claims (spotFootprint) — a streaming tabulate claiming the eager
+  // footprint would starve solve admissions for nothing.
+  final eagerTabulate =
+      Platform.environment['TLSOLVE_TABULATE_EAGER'] == '1' ||
+          dumpFmtEnv != 'bin';
 
   // Spots still needing a solve (cached ones skipped), capped to --limit if set.
   // Each pending spot is claimed and solved exactly once by exactly one worker.
@@ -928,17 +937,134 @@ Future<void> main(List<String> args) async {
         're-solve them with pack emission.');
   }
 
-  // Each worker drains the shared queue; `parallel` of them run concurrently. The
-  // suspension points are `await solveToFile` (the external solvers run in parallel)
-  // and `await Process.run(tabulate_one)` (the parse+tabulate runs in a separate
-  // process, so several spots tabulate on separate cores with independent heaps/GC).
-  // Both let other workers proceed; claiming an index (next++) and the results-mutate +
-  // _appendResult block run WITHOUT an await, so they stay atomic w.r.t. other
-  // workers under Dart's single-threaded main isolate: no race on the shard file, no
-  // concurrent map modification (the append is a single synchronous O(spot) write —
-  // the old whole-file _saveResults rewrite was O(total) per solve). Each solve uses
-  // its own temp dir (see _runSolverToDump), so parallel solves never collide on
-  // dump files.
+  // PIPELINE (tabulate-decoupling, stage-1 lesson): each worker drains the
+  // shared queue, but a worker lane only ever waits on SOLVES — when a solve
+  // finishes, the worker acquires the parse claim + a tabulate slot, FIRES the
+  // tabulate as a detached (tracked, unawaited) future, and immediately loops
+  // to the next spot. Stage 1 measured deep tabulates at 20-40 min under
+  // saturation; with the old solve→await-tabulate lane coupling most lanes sat
+  // in tabulate and only 4-7 of 24 were solving. Backpressure is real but
+  // gentle: the parse claim comes from the SAME budget (RAM/threads), and
+  // `tabSlots` (TLSOLVE_MAX_PENDING_TABULATES, default 16) bounds FIRED
+  // detached tabulates. The true /dev/shm dump residency bound is
+  // maxPendingTabs + parallel: a lane that finished its solve holds its dump
+  // while it waits at tabSlots.acquire(), and a solving lane's dump is being
+  // written — so size /dev/shm for (16 + parallel) × ~1.5 GB deep dumps, not
+  // 16. Setting it to 1 approximates the old serialized behavior — the soft
+  // rollback for the decoupling.
+  //
+  // Crash-loss window (spot reclaim / box death): completed solves whose
+  // tabulate hasn't landed in the shard yet — up to maxPendingTabs fired +
+  // parallel waiting — are lost with the tmpfs and re-solve on relaunch. The
+  // default 16 keeps that comparable to the ≤20-min periodic-sync loss the
+  // bulk runbook already accepts; raise it only with that trade-off in mind.
+  //
+  // Concurrency safety is unchanged in kind: the tabulate subprocess is a
+  // separate PROCESS (never Isolate.run — the shared-GC lesson, see
+  // VCPU_RUNBOOK), and the results-mutate + _appendResult block in the
+  // completion handler runs WITHOUT an await, so it stays atomic on the main
+  // isolate: no shard-file race, no concurrent map modification. ✓/✗ lines can
+  // now print after later '[n/total] solving' lines (completion is async);
+  // end-of-run counts are settled by awaiting workers AND outstanding
+  // tabulates before the summary/marker.
+  //
+  // Streaming tabulator note: TLSOLVE_TABULATE_HEAP_MB defaults to 16 GB (the
+  // streaming cursor retains raw bytes + O(depth)) ONLY when the tabulate will
+  // actually stream — i.e. the dump handed to tabulate_one is TLSD
+  // (dumpFmtEnv == 'bin') and the eager rollback isn't engaged. JSON dumps
+  // (--emit-pack forces JSON; TLSOLVE_DUMP_FMT=json/both hands tabulate_one
+  // the JSON file) still eagerly jsonDecode multi-GB trees (~45 GB medium /
+  // ~150 GB deep), as does TLSOLVE_TABULATE_EAGER=1 — both keep the 80 GB
+  // default (a 16 GB cap there OOMs every subprocess and destroys the run's
+  // paid solves). `eagerTabulate` is derived next to dumpFmtEnv above.
+  final tabHeapMb =
+      int.tryParse(Platform.environment['TLSOLVE_TABULATE_HEAP_MB'] ?? '') ??
+          (eagerTabulate ? 80000 : 16000);
+  // Clamp ≥1: Semaphore(0) can never be acquired (release only ever follows a
+  // successful acquire), so 0 — a plausible misreading as "disable pending
+  // tabulates" — would silently hang every lane after its first solve on a
+  // billing cloud box. 1 is the real serialization floor.
+  var maxPendingTabs = int.tryParse(
+          Platform.environment['TLSOLVE_MAX_PENDING_TABULATES'] ?? '') ??
+      16;
+  if (maxPendingTabs < 1) maxPendingTabs = 1;
+  final tabSlots = Semaphore(maxPendingTabs);
+  final outstanding = <Future<void>>[];
+
+  // Detached per-spot tabulate + record. NEVER throws (fully self-handled);
+  // owns the parse claim, the tabulate slot, and the dump dir, releasing all
+  // three in `finally`.
+  Future<void> tabulateAndRecord(
+    ({String flop, String spr, double sprVal}) s,
+    String key,
+    SpotFootprint fp,
+    DumpSolve ds,
+    double pot0,
+    double effStack,
+    int maxLen,
+    String? packDir,
+  ) async {
+    try {
+      final outPath = '${ds.dumpPath}.cells.json';
+      final res = await Process.run(Platform.resolvedExecutable, [
+        '--old_gen_heap_size=$tabHeapMb',
+        'run',
+        'tool/solver/tabulate_one.dart',
+        ds.dumpPath,
+        outPath,
+        s.flop.replaceAll(' ', ''),
+        pot0.toString(),
+        effStack.toString(),
+        maxLen.toString(),
+        if (packDir != null) ...['--emit-pack', packDir, kScenario, s.spr],
+      ]);
+      if (res.exitCode != 0) {
+        throw StateError('tabulate_one exit ${res.exitCode}: '
+            '${(res.stderr as String).trim()}');
+      }
+      if (packDir != null) {
+        // Surface the subprocess's pack report (sizes/EV coverage/timings)
+        // in the grid log — it's the only visibility into pack output.
+        final report = (res.stdout as String).trim();
+        if (report.isNotEmpty) {
+          stdout.writeln(report.split('\n').map((l) => '      $l').join('\n'));
+        }
+      }
+      final cells =
+          jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;
+      // --- atomic block (no await from here to the ✓ line) ---
+      final entry = <String, dynamic>{
+        'flop': s.flop,
+        'spr': s.spr,
+        // Stamp scenario/profile/dump-rounds so a library rebuild groups each
+        // spot under its scenario and folds in ONLY matching-profile spots — a
+        // results.json carried over from a different profile (e.g. v1 'multi')
+        // must not blend its cells into this library.
+        'scenario': kScenario,
+        'profile': kBetProfile,
+        'dump_rounds': kDumpRounds,
+        'exploitability': ds.exploitability,
+        'wall_ms': ds.wallMs,
+        'cells': cells,
+      };
+      // In keys-only (bulk) mode the map is never used for a library write —
+      // holding every solved entry would just accumulate the slice's cells
+      // in RAM for nothing. The shard append is the record either way.
+      if (!keysOnly) results[key] = entry;
+      _appendResult(key, entry);
+      solved++;
+      stdout.writeln('    ✓ [${s.flop} ${s.spr}] ${cells.length} cells · expl '
+          '${ds.exploitability?.toStringAsFixed(2)}% · ${ds.wallMs ~/ 1000}s');
+    } catch (e) {
+      failed++;
+      stdout.writeln('    ✗ [${s.flop} ${s.spr}] $e');
+    } finally {
+      budget.release(fp.parseGb, 1);
+      tabSlots.release();
+      ds.cleanup(); // the dump must outlive its tabulate — cleaned only here
+    }
+  }
+
   Future<void> worker() async {
     while (true) {
       final i = next;
@@ -946,13 +1072,16 @@ Future<void> main(List<String> args) async {
       next++;
       final s = pending[i];
       final key = _spotKey(s.flop, s.spr);
-      final fp = spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv);
+      final fp = spotFootprint(s.sprVal,
+          dumpFmt: dumpFmtEnv, eagerTabulate: eagerTabulate);
       DumpSolve? ds;
-      // Phase claims: solve holds (solveGb, solver threads); tabulate swaps
-      // down to (parseGb, 1 thread). Track what we hold so the finally can
-      // release exactly once whatever phase failed.
+      // Phase claims: solve holds (solveGb, solver threads); the detached
+      // tabulate holds (parseGb, 1 thread). Track what THIS lane holds so the
+      // finally releases exactly once whatever phase failed; once the handler
+      // is fired, claim + slot + dump ownership transfer to it.
       var heldGb = 0.0;
       var heldThreads = 0;
+      var heldTabSlot = false;
       try {
         await budget.acquire(fp.solveGb, solverThreads);
         heldGb = fp.solveGb;
@@ -967,107 +1096,48 @@ Future<void> main(List<String> args) async {
             dumpRounds: kDumpRounds,
             betProfile: kBetProfile,
             forceJsonDump: emitPackRoot != null);
-        // Solve finished — swap the claim down to the parse footprint before
-        // the tabulate subprocess (frees ~most of a deep spot's RAM for the
-        // next admission the moment the solver exits).
+        // Solve finished — swap this lane down to the tabulate's claim (slot
+        // first: it's the cheap resource and keeps acquire order uniform
+        // across workers, so the two gates can't deadlock).
         budget.release(heldGb, heldThreads);
         heldGb = 0;
         heldThreads = 0;
+        await tabSlots.acquire();
+        heldTabSlot = true;
         await budget.acquire(fp.parseGb, 1);
         heldGb = fp.parseGb;
         heldThreads = 1;
-        // Capture the scalars BEFORE the Process.run await (avoids relying on
-        // null-promotion of `ds` surviving the await).
-        final dumpPath = ds.dumpPath;
-        final expl = ds.exploitability;
-        final wallMs = ds.wallMs;
         // pot is fixed at 10 in gridSpot; effStack = spr·pot; the tabulator
-        // re-derives the SPR bucket per street (flop vs the shallower turn/river
-        // after chips go in). dr2 → maxBoardLen 4 (turn); dr3 → 5 (river).
-        final pot0 = spot.pot.toDouble();
-        final effStack = spot.effStack.toDouble();
-        final maxLen = kDumpRounds + 2;
-        // Parse + tabulate the dump in a SEPARATE PROCESS (tool/solver/tabulate_one.dart)
-        // — NOT an Isolate. Isolate.run put every concurrent parse in ONE shared
-        // isolate-group heap, so N deep-river dumps (~15 GB each) contended on a
-        // SINGLE GC and stalled each other (measured: 10 parses shared ~4.7 cores,
-        // ~2 spots/hr on a 128-vCPU box — see tool/solver/VCPU_RUNBOOK.md). A
-        // subprocess gives each parse its own heap + GC, so `--parallel` truly
-        // parallelizes the (single-threaded, GC-heavy) jsonDecode+walk across cores.
-        // Each subprocess gets a big heap (TLSOLVE_TABULATE_HEAP_MB, default 80 GB);
-        // the main grid process never holds a giant dump. Cells come back via a file
-        // (not stdout) so a big list never buffers through Process.run.
-        final outPath = '$dumpPath.cells.json';
-        final tabHeapMb = int.tryParse(
-                Platform.environment['TLSOLVE_TABULATE_HEAP_MB'] ?? '') ??
-            80000;
+        // re-derives the SPR bucket per street (flop vs the shallower
+        // turn/river after chips go in). dr2 → maxBoardLen 4; dr3 → 5.
         final packDir = emitPackRoot == null
             ? null
             : '$emitPackRoot/$kScenario/'
                 '${s.flop.replaceAll(' ', '')}_${s.spr}';
-        final res = await Process.run(Platform.resolvedExecutable, [
-          '--old_gen_heap_size=$tabHeapMb',
-          'run',
-          'tool/solver/tabulate_one.dart',
-          dumpPath,
-          outPath,
-          s.flop.replaceAll(' ', ''),
-          pot0.toString(),
-          effStack.toString(),
-          maxLen.toString(),
-          if (packDir != null) ...['--emit-pack', packDir, kScenario, s.spr],
-        ]);
-        if (res.exitCode != 0) {
-          throw StateError('tabulate_one exit ${res.exitCode}: '
-              '${(res.stderr as String).trim()}');
-        }
-        if (packDir != null) {
-          // Surface the subprocess's pack report (sizes/EV coverage/timings)
-          // in the grid log — it's the only visibility into pack output.
-          final report = (res.stdout as String).trim();
-          if (report.isNotEmpty) {
-            stdout.writeln(report
-                .split('\n')
-                .map((l) => '      $l')
-                .join('\n'));
-          }
-        }
-        final cells =
-            jsonDecode(File(outPath).readAsStringSync()) as List<dynamic>;
-        // --- atomic block (no await until the next loop turn) ---
-        final entry = <String, dynamic>{
-          'flop': s.flop,
-          'spr': s.spr,
-          // Stamp scenario/profile/dump-rounds so a library rebuild groups each
-          // spot under its scenario and folds in ONLY matching-profile spots — a
-          // results.json carried over from a different profile (e.g. v1 'multi')
-          // must not blend its cells into this library.
-          'scenario': kScenario,
-          'profile': kBetProfile,
-          'dump_rounds': kDumpRounds,
-          'exploitability': expl,
-          'wall_ms': wallMs,
-          'cells': cells,
-        };
-        // In keys-only (bulk) mode the map is never used for a library write —
-        // holding every solved entry would just accumulate the slice's cells
-        // in RAM for nothing. The shard append is the record either way.
-        if (!keysOnly) results[key] = entry;
-        _appendResult(key, entry);
-        solved++;
-        stdout.writeln('    ✓ [${s.flop} ${s.spr}] ${cells.length} cells · expl '
-            '${expl?.toStringAsFixed(2)}% · ${wallMs ~/ 1000}s');
+        // FIRE the tabulate detached and move on — ownership of the parse
+        // claim, the tabulate slot, and the dump dir transfers to the handler.
+        outstanding.add(tabulateAndRecord(s, key, fp, ds, spot.pot.toDouble(),
+            spot.effStack.toDouble(), kDumpRounds + 2, packDir));
+        ds = null;
+        heldGb = 0;
+        heldThreads = 0;
+        heldTabSlot = false;
       } catch (e) {
         failed++;
         stdout.writeln('    ✗ [${s.flop} ${s.spr}] $e');
       } finally {
         if (heldGb > 0 || heldThreads > 0) budget.release(heldGb, heldThreads);
-        ds?.cleanup(); // remove the dump temp dir (after tabulating, or on failure)
+        if (heldTabSlot) tabSlots.release();
+        ds?.cleanup(); // solve-phase failure only — success path transferred
       }
     }
   }
 
   await Future.wait([for (var w = 0; w < parallel; w++) worker()]);
+  // Every worker has fired its last tabulate before returning, so the list is
+  // complete — drain it before the summary/marker so counts are final.
+  stdout.writeln('… all solves dispatched; draining outstanding tabulates.');
+  await Future.wait(outstanding);
   sw.stop();
   stdout.writeln('\nGrid: solved $solved, skipped $skipped, failed $failed '
       'in ${sw.elapsed.inMinutes}m.');

@@ -20,4 +20,6 @@ range_calib_poc.log
 # GTO frequency-library grid cache (regenerable; the library JSON itself is force-added)
 freq_grid_results.json
 freq_grid_results.*.jsonl
+# Shard backups (paid campaign artifacts — belong on S3/external drive, never in git)
+freq_grid_results.*.jsonl.gz
 .remote-staging/
