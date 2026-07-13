@@ -19,6 +19,15 @@ Related: `GTO_LIBRARY_COVERAGE.md` (scope map — update after every cycle), `RE
 > seeding). This runbook's fast path stays the reference for CURATED (26-flop / pack)
 > cycles.
 
+> **TABULATOR (2026-07-13): TLSD tabulation is STREAMING by default** — nodes decode
+> on demand in walk order (bit-identical cells to the old eager tree; locked by tests),
+> so `-TabulateHeapMB` defaults to the grid's 16 GB and deep tabulates drop from
+> 20-40 min (saturated 64-core boxes) to low single-digit minutes. Tabulates also run
+> DETACHED from solve lanes (`TLSOLVE_MAX_PENDING_TABULATES`, default 32, bounds
+> /dev/shm dumps). Rollbacks: `TLSOLVE_TABULATE_EAGER=1` (+ `-TabulateHeapMB 80000`)
+> restores the eager path; `TLSOLVE_MAX_PENDING_TABULATES=1` re-serializes lanes.
+> JSON/`--emit-pack` runs are unaffected (JSON path unchanged).
+
 ---
 
 ## ⚡ Fast path — `tool/solver/vcpu-solve.ps1`

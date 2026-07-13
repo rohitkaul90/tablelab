@@ -119,6 +119,35 @@ SpotFootprint spotFootprint(double sprVal,
   return SpotFootprint(solveGb: 8, parseGb: json ? 6 : 1, estMinutes: 1);
 }
 
+/// Minimal counting semaphore (single-isolate, like [ResourceBudget]): the
+/// grid uses one to bound OUTSTANDING detached tabulates — each keeps its
+/// solver dump alive on /dev/shm until it completes, so an unbounded backlog
+/// would fill the tmpfs and kill the box's solves.
+class Semaphore {
+  int _free;
+  final _waiters = <Completer<void>>[];
+
+  Semaphore(this._free);
+
+  Future<void> acquire() {
+    if (_free > 0) {
+      _free--;
+      return Future.value();
+    }
+    final c = Completer<void>();
+    _waiters.add(c);
+    return c.future;
+  }
+
+  void release() {
+    if (_waiters.isNotEmpty) {
+      _waiters.removeAt(0).complete();
+    } else {
+      _free++;
+    }
+  }
+}
+
 /// Async admission controller over (RAM GB, CPU threads). Single-isolate:
 /// acquire/release run synchronously between awaits, so state mutations are
 /// atomic w.r.t. the grid's workers. First-fit with skip-ahead: a small claim

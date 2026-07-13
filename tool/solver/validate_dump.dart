@@ -79,8 +79,13 @@ Future<void> main(List<String> args) async {
 /// Solve ONE grid spot of the env-selected scenario with the dual-dump format
 /// and validate the pair — the full-pipeline flavor of the WS1c gate.
 Future<void> _solveAndValidate(List<String> args) async {
+  // --keep-dump: skip cleanup and print the dump paths — used to benchmark
+  // the streaming vs eager tabulator on a REAL dump (the grid always cleans
+  // its dumps, so this is the only way to retain one).
+  final keepDump = args.remove('--keep-dump');
   if (args.length < 2) {
-    stderr.writeln('usage: validate_dump --solve "<flop>" <sprName>');
+    stderr.writeln(
+        'usage: validate_dump --solve "<flop>" <sprName> [--keep-dump]');
     exit(64);
   }
   if ((Platform.environment['TLSOLVE_DUMP_FMT'] ?? '').toLowerCase() !=
@@ -112,7 +117,12 @@ Future<void> _solveAndValidate(List<String> args) async {
         effStack: sprVal * 10,
         maxBoardLen: kDumpRounds + 2);
   } finally {
-    solve.cleanup();
+    if (keepDump) {
+      stdout.writeln('kept dumps: ${solve.dumpPath} (json) + '
+          '${solve.dumpPath}.tlsd (bin) — delete the directory when done.');
+    } else {
+      solve.cleanup();
+    }
   }
 }
 

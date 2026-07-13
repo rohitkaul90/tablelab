@@ -72,21 +72,31 @@ three worktrees (boxes 2–4). Box 1 example — boxes 2–4 change only the
   -InstanceType r7a.16xlarge -Fallbacks @('r6a.16xlarge','r6i.16xlarge') `
   -Spot -AutoRelaunch -PullAndTerminate -SyncEveryMin 20 `
   -DumpFmt bin -Flops file:tool/solver/flops/slice_mod4_0.txt `
-  -CpuOversub 1.5 -HeapMB 48000 `
-  -GridArgs "--parallel 12 --no-write"
+  -DeepClaimGB 50 -CpuOversub 2.0 -HeapMB 48000 -TabulateHeapMB 16000 `
+  -GridArgs "--parallel 14 --no-write"
 ```
 
-Rationale: 512 GB box → 435 GB budget; `--parallel 12` = the CPU-side cap
-(64 × 1.5 ÷ 8). Deep concurrency depends on the deep claim in
-`spot_sched.dart:spotFootprint` (the slice-0/1 checkpoint decides whether it
-drops from 100 GB — see the scenario table below). Per-spot timeout stays
-7200 s. Stage-1's remainder: same command with `slice351_off2/3/4` on 3 boxes.
+Rationale (post streaming-tabulator + decoupling): solve lanes never wait on
+tabulates anymore (they fire detached; `TLSOLVE_MAX_PENDING_TABULATES`
+default 32 bounds /dev/shm dumps), and the streaming tabulator cuts a deep
+tabulate from 20-40 min to low single-digit minutes with a 16 GB heap
+(`-TabulateHeapMB 16000`; the eager rollback `TLSOLVE_TABULATE_EAGER=1`
+needs 80000). `-CpuOversub 2.0` (128-thread budget) leaves headroom so
+1-thread tabulate claims don't queue behind 8-thread solve claims;
+`--parallel 14` caps solve lanes near the CPU budget. Deep claim 50 GB =
+stage-1's validated scenario B (measured solver RSS peaks ~7.8 GB). Per-spot
+timeout stays 7200 s. Stage-1 remainder used `slice351_off2/3/4` on 3 boxes.
 
-| Deep claim | Deeps/box | Slice wall | Stage wall (4 boxes) | Stage cost |
-|---|---|---|---|---|
-| 100 GB (untuned) | 4 | ~25 h | ~25 h | ~$125 |
-| 50 GB (scenario B) | 8 | ~12.5 h | ~12.5 h | ~$63 |
-| 30 GB + oversub 2.0 (scenario D) | 12+ | ~9.5 h | ~9.5 h | ~$48 |
+Stage-1 measured (pre-tabulator-fix, for reference): scenario B ≈ 45
+spots/h/box (~$30/slice at 2c pricing); scenario D (claim 30, 28 workers) =
++8% throughput but +63% deep walls and 2 solver crashes → **B is the fleet
+config**. With the tabulator fix the modeled rate returns to ~90-100
+spots/h/box (validate on the stage-2 canary before fleet launch):
+
+| Config | Slice wall (439 flops) | Stage wall (4 boxes) | Stage cost |
+|---|---|---|---|
+| B, pre-fix (measured) | ~29 h | ~29 h | ~$145-180 |
+| B + streaming/decoupled (modeled) | ~13-16 h | ~13-16 h | ~$65-100 |
 
 ## End-of-stage checklist (every scenario)
 

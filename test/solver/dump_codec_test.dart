@@ -1,8 +1,10 @@
 // TLSD v1 codec tests: a hand-encoded byte fixture decoding to known
 // structure, and tabulation equivalence against the SAME tree expressed as a
 // JSON dump — the in-repo miniature of the WS1c dual-dump validation gate
-// (tool/solver/validate_dump.dart runs the real-solve version).
+// (tool/solver/validate_dump.dart runs the real-solve version). The streaming
+// group locks the lazy cursor BYTE-IDENTICAL to the eager tree path.
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -299,6 +301,150 @@ void main() {
       final cells = tabulateDumpFile(path,
           board: _b('Ks 9h 4c'), pot0: 10, effStack: 45);
       expect(cells, isNotEmpty);
+    });
+  });
+
+  group('streaming tabulation', () {
+    // The eager tree path is the in-process oracle: identical traversal order
+    // and identical u16→double math mean the streaming cursor must produce
+    // BYTE-IDENTICAL cell JSON, not merely within-tolerance.
+    String eagerJson(Uint8List bytes,
+            {List<int>? board, int maxBoardLen = 5}) =>
+        jsonEncode([
+          for (final c in tabulateTlsd(decodeTlsd(bytes),
+              board: board ?? _b('Ks 9h 4c'),
+              pot0: 10,
+              effStack: 45,
+              maxBoardLen: maxBoardLen))
+            c.toJson()
+        ]);
+    String streamJson(Uint8List bytes,
+        {List<int>? board, int maxBoardLen = 5}) {
+      final dir = Directory.systemTemp.createTempSync('tlsd_stream_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final path = '${dir.path}/dump.bin';
+      File(path).writeAsBytesSync(bytes);
+      return jsonEncode([
+        for (final c in tabulateTlsdStream(path,
+            board: board ?? _b('Ks 9h 4c'),
+            pot0: 10,
+            effStack: 45,
+            maxBoardLen: maxBoardLen))
+          c.toJson()
+      ]);
+    }
+
+    test('byte-identical to the eager path on the fixture', () {
+      expect(streamJson(_fixture()), eagerJson(_fixture()));
+    });
+
+    test('byte-identical with an EV section (skipped structurally)', () {
+      expect(streamJson(_fixture(withEv: true)),
+          eagerJson(_fixture(withEv: true)));
+    });
+
+    test('byte-identical under maxBoardLen truncation (chance early-return '
+        'leaves the turn subtree unconsumed — skip-to-sync realigns)', () {
+      expect(streamJson(_fixture(), maxBoardLen: 3),
+          eagerJson(_fixture(), maxBoardLen: 3));
+    });
+
+    test('skipped subtrees still intern action-table definitions', () {
+      // A subtree the WALK never enters (child of a strategy-less action node
+      // → isAction false → early return) DEFINES a new action string; a later
+      // consumed sibling references it BY ID. The streaming cursor's
+      // _skipNodeTree must intern while discarding, or the sibling's decode
+      // throws 'action id not yet defined'.
+      final e = _Enc();
+      e.header(board: _b('Ks 9h 4c'));
+      e.dict(['QcQd']); // player 0
+      e.dict(['AdAh']); // player 1
+      // Root: action p0, CHECK / BET 5.
+      e.u8(0);
+      e.u8(0);
+      e.u8(2);
+      e.actionRef('CHECK');
+      e.actionRef('BET 5');
+      e.u8(1); // strategy only
+      e.bitmap([true]);
+      e.freqRow([0.6, 0.4]);
+      //   Child 0 (CHECK): p1 action node WITHOUT strategy (flags=0) — the
+      //   walk visits it, sees isAction=false, returns; its child subtree is
+      //   never consumed by the walk.
+      e.u8(0);
+      e.u8(1);
+      e.u8(1);
+      e.actionRef('CHECK'); // id ref
+      e.u8(0); // flags: no strategy
+      //     Its single child (inside the SKIPPED bytes): defines 'RAISE 42'.
+      e.u8(0);
+      e.u8(0);
+      e.u8(2);
+      e.actionRef('RAISE 42'); // ← DEFINITION inside skipped subtree
+      e.actionRef('CHECK');
+      e.u8(1);
+      e.bitmap([true]);
+      e.freqRow([1.0, 0.0]);
+      e.u8(2); // omitted
+      e.u8(2); // omitted
+      //   Child 1 (BET 5): p1 action node whose action REFERENCES 'RAISE 42'
+      //   by id (the encoder reuses the table entry).
+      e.u8(0);
+      e.u8(1);
+      e.u8(1);
+      e.actionRef('RAISE 42'); // ← ID REFERENCE, defined in skipped bytes
+      e.u8(1);
+      e.bitmap([true]);
+      e.freqRow([1.0]);
+      e.u8(2); // its child: omitted
+      final bytes = e.bytes();
+
+      // Sanity: the reference really is an id ref, not a redefinition.
+      expect(String.fromCharCodes(bytes).indexOf('RAISE 42'),
+          String.fromCharCodes(bytes).lastIndexOf('RAISE 42'));
+
+      expect(streamJson(bytes), eagerJson(bytes));
+    });
+
+    test('finish() rejects trailing bytes after the root', () {
+      final junk = Uint8List.fromList([..._fixture(), 0xDE, 0xAD]);
+      final dir = Directory.systemTemp.createTempSync('tlsd_junk_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final path = '${dir.path}/dump.bin';
+      File(path).writeAsBytesSync(junk);
+      expect(
+          () => tabulateTlsdStream(path,
+              board: _b('Ks 9h 4c'), pot0: 10, effStack: 45),
+          throwsFormatException);
+    });
+
+    test('truncated stream throws instead of returning partial cells', () {
+      final good = _fixture();
+      final dir = Directory.systemTemp.createTempSync('tlsd_trunc_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final path = '${dir.path}/dump.bin';
+      File(path)
+          .writeAsBytesSync(Uint8List.sublistView(good, 0, good.length - 3));
+      expect(
+          () => tabulateTlsdStream(path,
+              board: _b('Ks 9h 4c'), pot0: 10, effStack: 45),
+          throwsA(anything));
+    });
+
+    test('default tabulateDumpFile dispatch equals both TLSD paths', () {
+      // The TLSOLVE_TABULATE_EAGER=1 hatch can't be exercised in-process
+      // (Platform.environment is immutable) — it's covered by the real-dump
+      // eager-vs-streaming diff in the rollout checklist.
+      final dir = Directory.systemTemp.createTempSync('tlsd_disp_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final path = '${dir.path}/dump.bin';
+      File(path).writeAsBytesSync(_fixture());
+      final viaDispatch = jsonEncode([
+        for (final c in tabulateDumpFile(path,
+            board: _b('Ks 9h 4c'), pot0: 10, effStack: 45))
+          c.toJson()
+      ]);
+      expect(viaDispatch, eagerJson(_fixture()));
     });
   });
 }
