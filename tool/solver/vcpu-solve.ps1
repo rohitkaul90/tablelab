@@ -60,6 +60,10 @@ param(
   # then auto-defaults the subprocess heap to 80000). Without this switch the
   # runbook's rollback recipe is unreachable from the launcher.
   [switch]$TabulateEager,
+  # Cap on FIRED detached tabulates (TLSOLVE_MAX_PENDING_TABULATES; grid
+  # default 16). The solve/tabulate rebalance lever: fewer solve lanes +
+  # a higher cap shifts CPU budget to the tabulate stage when it binds.
+  [string]$MaxPendingTabulates = '',
   # Solver worker threads (8 is the stable max - 16 raced/crashed on wet trees).
   [int]$Threads = 8,
   # Per-spot solver wall cap (s).
@@ -343,6 +347,7 @@ if ($DeepClaimGB) { $extraEnv += "TLSOLVE_DEEP_CLAIM_GB=$DeepClaimGB " }
 # 0 = let the grid pick its own default (16 GB streaming / 80 GB eager).
 if ($TabulateHeapMB -gt 0) { $extraEnv += "TLSOLVE_TABULATE_HEAP_MB=$TabulateHeapMB " }
 if ($TabulateEager) { $extraEnv += "TLSOLVE_TABULATE_EAGER=1 " }
+if ($MaxPendingTabulates) { $extraEnv += "TLSOLVE_MAX_PENDING_TABULATES=$MaxPendingTabulates " }
 # Bulk mode: skip the box-side --compact so the monolith stays frozen — the
 # .jsonl shards are the durable store and the launcher's shard sync/pull
 # captures them. Normal mode folds shards into the single results file.
