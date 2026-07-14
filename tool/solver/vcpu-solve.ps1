@@ -522,8 +522,8 @@ if ($PullAndTerminate) {
   function Invoke-Relaunch {
     # Promote the freshest staged shards into the repo (the relaunch seeds the
     # new box from them - only in-flight spots since the last sync re-solve),
-    # then re-invoke this script with the same parameters. The LAST attempt in
-    # the budget drops -Spot and runs on-demand.
+    # then re-invoke this script with the same parameters. All attempts stay
+    # on spot (no on-demand quota on this account - see below).
     if (Test-Path $staging) {
       Get-ChildItem $staging -Filter 'freq_grid_results.*' -ErrorAction SilentlyContinue |
         ForEach-Object {
@@ -551,10 +551,10 @@ if ($PullAndTerminate) {
     # function - see the capture at the top of the script).
     $params = @{} + $script:LaunchParams
     $params['RelaunchBudget'] = $RelaunchBudget - 1
-    if ($RelaunchBudget -le 1 -and $params.ContainsKey('Spot')) {
-      $params.Remove('Spot') | Out-Null
-      Write-Warning "Final relaunch attempt: falling back to ON-DEMAND."
-    }
+    # Final attempt STAYS ON SPOT (2026-07-14, operator decision): this
+    # account has NO on-demand vCPU quota, so the old drop-Spot fallback
+    # could never launch — it just burned the last attempt on guaranteed
+    # failures. Spot-only + an outer retry wrapper is the operating mode.
     Write-Host "Spot reclaimed - relaunching (attempts left after this: $($RelaunchBudget - 1))..."
     & $PSCommandPath @params
   }
