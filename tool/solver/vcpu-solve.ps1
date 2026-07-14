@@ -124,10 +124,15 @@ param(
   [int]$SyncEveryMin = 10,
   # On a detected SPOT RECLAIM (not a crash): promote the freshest staged
   # shards into the repo and relaunch this script with the same params, up to
-  # -RelaunchBudget times; the last attempt drops -Spot (on-demand). A crash
-  # still leaves the box up for triage - only reclaims relaunch.
+  # -RelaunchBudget times. ALL attempts stay on spot unless -OnDemandFinal.
+  # A crash still leaves the box up for triage - only reclaims relaunch.
   [switch]$AutoRelaunch,
   [int]$RelaunchBudget = 3,
+  # Opt-in: the LAST relaunch attempt drops -Spot and runs on-demand. Off by
+  # default because this account has NO on-demand vCPU quota (the attempt can
+  # never launch - it just burned the final try on guaranteed failures);
+  # accounts WITH quota can turn the last-resort lane back on.
+  [switch]$OnDemandFinal,
   # Optional box-side rescue: on the 2-minute IMDS interruption notice the box
   # copies its shards to this S3 URI (needs an instance role / creds on the
   # box - absent by default, so this is opt-in extra belt-and-braces; the
@@ -297,6 +302,7 @@ finally { Pop-Location }
 # 2026-07-14 launching 3 boxes at once — orphaned a provisioned box).
 scp -o StrictHostKeyChecking=accept-new -i $key $tgz "ubuntu@${pubip}:~/repo.tgz"
 if ($LASTEXITCODE -ne 0) { throw "scp repo.tgz failed" }
+Remove-Item $tgz -Force -ErrorAction SilentlyContinue  # PID-named: never self-overwrites, so clean up
 ssh @ssh 'mkdir -p ~/poker_tracker && tar -xzf ~/repo.tgz -C ~/poker_tracker && cd ~/poker_tracker && flutter pub get'
 if ($LASTEXITCODE -ne 0) { throw "remote extract / flutter pub get failed" }
 # Seed the local solve cache: it is GITIGNORED (git archive omits it), and without
@@ -307,7 +313,7 @@ if ($LASTEXITCODE -ne 0) { throw "remote extract / flutter pub get failed" }
 # cache-skip.) Seeding also makes the run resumable.
 $cache = Join-Path $repo 'tool\solver\freq_grid_results.json'
 if (Test-Path $cache) {
-  scp -C -i $key $cache "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.json"
+  scp -o StrictHostKeyChecking=accept-new -C -i $key $cache "ubuntu@${pubip}:~/poker_tracker/tool/solver/freq_grid_results.json"
   if ($LASTEXITCODE -ne 0) { throw "scp freq_grid_results.json (cache seed) failed" }
   Write-Host "Seeded solve cache from local freq_grid_results.json."
 }
@@ -325,7 +331,7 @@ if ($noWrite) {
   }
 }
 foreach ($sh in @($shards)) {
-  scp -C -i $key $sh.FullName "ubuntu@${pubip}:~/poker_tracker/tool/solver/$($sh.Name)"
+  scp -o StrictHostKeyChecking=accept-new -C -i $key $sh.FullName "ubuntu@${pubip}:~/poker_tracker/tool/solver/$($sh.Name)"
   if ($LASTEXITCODE -ne 0) { throw "scp $($sh.Name) (shard seed) failed" }
   Write-Host "Seeded shard $($sh.Name)."
 }
@@ -418,6 +424,7 @@ $localSh = Join-Path $env:TEMP "run-solve-$PID.sh"
 [IO.File]::WriteAllText($localSh, ($solveSh -replace "`r`n", "`n"))
 scp -o StrictHostKeyChecking=accept-new -i $key $localSh "ubuntu@${pubip}:~/run-solve.sh"
 if ($LASTEXITCODE -ne 0) { throw "scp run-solve.sh failed" }
+Remove-Item $localSh -Force -ErrorAction SilentlyContinue  # PID-named: clean up
 ssh @ssh 'tmux kill-session -t solve 2>/dev/null; tmux new -d -s solve "bash ~/run-solve.sh"'
 if ($LASTEXITCODE -ne 0) { throw "failed to start the tmux solve session" }
 Write-Host ""
@@ -466,7 +473,12 @@ if ($PullAndTerminate) {
     # a 120s-capped sync of a 1.4 GB seeded shard once left a 43% partial in
     # staging, and the reclaim promote then clobbered the repo shard with it
     # (4,601 entries -> 1,959; recovered from the gzip backup). Returns bool.
-    param([string]$RemoteGlob, [string]$DestDir, [int]$TimeoutSec = 300)
+    # -NoShrink: skip (with a warning) any pulled file SMALLER than its
+    # existing destination — the box copy is always seed + appends, so a
+    # genuine pull never shrinks (same invariant as the promote guard; a
+    # wrong-slice/reset box must not clobber real solved results).
+    param([string]$RemoteGlob, [string]$DestDir, [int]$TimeoutSec = 300,
+          [switch]$NoShrink)
     # Anchor relative dests (final pulls run under Push-Location $repo) to an
     # absolute path: the Start-Job runspace has its OWN cwd, so a relative
     # $tmp would land the scp output somewhere else entirely.
@@ -477,18 +489,37 @@ if ($PullAndTerminate) {
     New-Item -ItemType Directory -Force $tmp | Out-Null
     $sj = Start-Job -ScriptBlock {
       param($k, $ip, $glob, $dest)
-      scp -C -i $k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes `
-        "ubuntu@${ip}:$glob" $dest 2>$null
-      $LASTEXITCODE
+      # 2>&1: keep scp's stderr — on failure it is the ONLY diagnostic the
+      # operator gets (review finding: 2>$null left failed pulls causeless).
+      $out = scp -C -i $k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes `
+        "ubuntu@${ip}:$glob" $dest 2>&1
+      [pscustomobject]@{ Code = $LASTEXITCODE; Err = ($out | Out-String) }
     } -ArgumentList $key, $pubip, $RemoteGlob, $tmp
     $ok = $false
     if (Wait-Job $sj -Timeout $TimeoutSec) {
-      $code = Receive-Job $sj | Select-Object -Last 1
-      if ($code -eq 0) {
-        Get-ChildItem $tmp -ErrorAction SilentlyContinue | ForEach-Object {
-          Move-Item $_.FullName (Join-Path $DestDir $_.Name) -Force
-        }
+      $res = Receive-Job $sj | Select-Object -Last 1
+      if ($res -and $res.Code -eq 0) {
         $ok = $true
+        Get-ChildItem $tmp -ErrorAction SilentlyContinue | ForEach-Object {
+          $dest = Join-Path $DestDir $_.Name
+          if ($NoShrink -and (Test-Path $dest) -and $_.Length -lt (Get-Item $dest).Length) {
+            Write-Warning ("  pulled $($_.Name) is SMALLER than the local copy " +
+              "($($_.Length) vs $((Get-Item $dest).Length) bytes) - NOT replacing.")
+            return
+          }
+          # try/catch: under EAP=Stop a transient AV/handle lock on the move
+          # would otherwise throw out of the poll loop and kill the launcher
+          # (review finding) - fail THIS pull, not the whole watcher.
+          try {
+            Move-Item $_.FullName $dest -Force
+          } catch {
+            Write-Warning "  move of $($_.Name) failed ($_) - pull marked failed."
+            $script:__pullMoveFailed = $true
+          }
+        }
+        if ($script:__pullMoveFailed) { $ok = $false; $script:__pullMoveFailed = $false }
+      } elseif ($res -and $res.Err.Trim()) {
+        Write-Warning "  scp pull failed (exit $($res.Code)): $($res.Err.Trim())"
       }
     } else {
       Stop-Job $sj
@@ -551,10 +582,14 @@ if ($PullAndTerminate) {
     # function - see the capture at the top of the script).
     $params = @{} + $script:LaunchParams
     $params['RelaunchBudget'] = $RelaunchBudget - 1
-    # Final attempt STAYS ON SPOT (2026-07-14, operator decision): this
-    # account has NO on-demand vCPU quota, so the old drop-Spot fallback
-    # could never launch — it just burned the last attempt on guaranteed
-    # failures. Spot-only + an outer retry wrapper is the operating mode.
+    # Final attempt stays on spot UNLESS -OnDemandFinal (2026-07-14 operator
+    # decision: this account has no on-demand vCPU quota, so the old
+    # unconditional drop-Spot fallback just burned the last attempt on
+    # guaranteed failures; the switch keeps the lane for accounts with quota).
+    if ($OnDemandFinal -and $RelaunchBudget -le 1 -and $params.ContainsKey('Spot')) {
+      $params.Remove('Spot') | Out-Null
+      Write-Warning "Final relaunch attempt: falling back to ON-DEMAND (-OnDemandFinal)."
+    }
     Write-Host "Spot reclaimed - relaunching (attempts left after this: $($RelaunchBudget - 1))..."
     & $PSCommandPath @params
   }
@@ -583,7 +618,7 @@ if ($PullAndTerminate) {
       # Atomic + 300s: shards grow toward ~1.5 GB late in a bulk slice; the
       # old 120s cap killed scp mid-transfer and left a truncated file in
       # staging (see Invoke-AtomicScpPull's header for the incident).
-      if (Invoke-AtomicScpPull -RemoteGlob $syncGlob -DestDir $staging -TimeoutSec 300) {
+      if (Invoke-AtomicScpPull -RemoteGlob $syncGlob -DestDir $staging) {
         Write-Host "  [sync] staged checkpoint shards"
       } else {
         Write-Host "  [sync] shard pull failed/timed out - will retry next interval"
@@ -722,18 +757,18 @@ if ($PullAndTerminate) {
         # on failure, so a clean retry stays possible.
         $okCache = Invoke-AtomicScpPull `
           -RemoteGlob '~/poker_tracker/tool/solver/freq_grid_results.*.jsonl' `
-          -DestDir 'tool/solver' -TimeoutSec 900
+          -DestDir 'tool/solver' -TimeoutSec 3600 -NoShrink
       }
     } else {
       $okLib = Invoke-AtomicScpPull `
         -RemoteGlob '~/poker_tracker/assets/gto_freq_library.json' `
-        -DestDir 'assets' -TimeoutSec 900
+        -DestDir 'assets' -TimeoutSec 3600
       # Pull the compacted json AND any .jsonl shards in one glob: if the
       # box-side --compact failed, the shards ARE the run's results — a
       # json-only pull would discard them at terminate (review finding).
       $okCache = Invoke-AtomicScpPull `
         -RemoteGlob '~/poker_tracker/tool/solver/freq_grid_results.*' `
-        -DestDir 'tool/solver' -TimeoutSec 1800
+        -DestDir 'tool/solver' -TimeoutSec 7200 -NoShrink
     }
   } finally { Pop-Location }
   $okPacks = $true
@@ -757,8 +792,8 @@ if ($PullAndTerminate) {
     $okPacks = ($null -ne $tarR -and $tarR.Code -eq 0)
     if ($okPacks) {
       New-Item -ItemType Directory -Force $PackDest | Out-Null
-      $localTgz = Join-Path $env:TEMP 'tlpacks-pull.tgz'
-      scp -i $key "ubuntu@${pubip}:~/packs.tgz" $localTgz
+      $localTgz = Join-Path $env:TEMP "tlpacks-pull-$PID.tgz"
+      scp -o StrictHostKeyChecking=accept-new -i $key "ubuntu@${pubip}:~/packs.tgz" $localTgz
       $okPacks = ($LASTEXITCODE -eq 0)
       if ($okPacks) {
         tar -xzf $localTgz -C $PackDest
