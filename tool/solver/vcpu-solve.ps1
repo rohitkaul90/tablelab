@@ -285,7 +285,10 @@ if (-not $sshOk) { throw "SSH never came up on $pubip - instance $iid left runni
 
 # -- 4. Sync the branch over the baked-in repo, refresh deps ------------------
 Write-Host "Syncing branch '$Branch' -> box..."
-$tgz = Join-Path $env:TEMP 'vcpu-repo.tgz'
+# PID-unique: concurrent launchers (mass-reclaim relaunches, fleet starts)
+# sharing one temp path overwrote each other's archive mid-scp -> corrupt
+# tgz on the box, tar extract failed (hit 2026-07-14, 4-box mass relaunch).
+$tgz = Join-Path $env:TEMP "vcpu-repo-$PID.tgz"
 Push-Location $repo
 try { & git archive --format=tar.gz -o $tgz $Branch; if ($LASTEXITCODE -ne 0) { throw "git archive $Branch failed" } }
 finally { Pop-Location }
