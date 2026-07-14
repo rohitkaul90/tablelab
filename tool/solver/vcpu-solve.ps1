@@ -411,9 +411,12 @@ $compactLine
 echo "BATCH DONE"
 } 2>&1 | tee ~/solve.log
 "@
-$localSh = Join-Path $env:TEMP 'run-solve.sh'
+# PID-unique like the tgz: a shared temp path let a concurrent relaunch hand
+# THIS box ANOTHER launcher's script — box B solved box A's slice for 5 h
+# (2026-07-14 mass-relaunch storm). The remote name stays ~/run-solve.sh.
+$localSh = Join-Path $env:TEMP "run-solve-$PID.sh"
 [IO.File]::WriteAllText($localSh, ($solveSh -replace "`r`n", "`n"))
-scp -i $key $localSh "ubuntu@${pubip}:~/run-solve.sh"
+scp -o StrictHostKeyChecking=accept-new -i $key $localSh "ubuntu@${pubip}:~/run-solve.sh"
 if ($LASTEXITCODE -ne 0) { throw "scp run-solve.sh failed" }
 ssh @ssh 'tmux kill-session -t solve 2>/dev/null; tmux new -d -s solve "bash ~/run-solve.sh"'
 if ($LASTEXITCODE -ne 0) { throw "failed to start the tmux solve session" }
