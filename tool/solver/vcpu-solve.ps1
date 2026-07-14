@@ -289,7 +289,10 @@ $tgz = Join-Path $env:TEMP 'vcpu-repo.tgz'
 Push-Location $repo
 try { & git archive --format=tar.gz -o $tgz $Branch; if ($LASTEXITCODE -ne 0) { throw "git archive $Branch failed" } }
 finally { Pop-Location }
-scp -i $key $tgz "ubuntu@${pubip}:~/repo.tgz"
+# accept-new: concurrent launchers doing first-contact known_hosts writes race
+# on Windows; a bare scp then dies with 'Host key verification failed' (hit
+# 2026-07-14 launching 3 boxes at once — orphaned a provisioned box).
+scp -o StrictHostKeyChecking=accept-new -i $key $tgz "ubuntu@${pubip}:~/repo.tgz"
 if ($LASTEXITCODE -ne 0) { throw "scp repo.tgz failed" }
 ssh @ssh 'mkdir -p ~/poker_tracker && tar -xzf ~/repo.tgz -C ~/poker_tracker && cd ~/poker_tracker && flutter pub get'
 if ($LASTEXITCODE -ne 0) { throw "remote extract / flutter pub get failed" }
