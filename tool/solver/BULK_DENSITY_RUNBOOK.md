@@ -183,3 +183,53 @@ Same 4-box pattern with the same `slice_mod4_{0..3}` files — claims are
 | $/spot drifting above table | Stop launching; investigate util (`[cpu]` lines) + current spot quotes before spending more |
 | Launcher warns `staged ... SMALLER than the repo copy - NOT promoting` | A shard pull was truncated (reclaim mid-transfer). The repo copy is intact; the relaunch re-solves at most the sync window. If it recurs every sync, the shard has outgrown the sync timeout — raise `Invoke-AtomicScpPull`'s 300s or sync less often |
 | Repo shard suddenly tiny / box sees far fewer cached spots than expected | A truncated pull was promoted over the repo shard (pre-fix launcher). Restore from the stage-end gzip backup (`freq_grid_results.<sc>.jsonl.gz`), verify with `--sched-dry-run`, and re-seed any box launched with the bad shard |
+
+## Field lessons — 2026-07-14 storm day (stages 2–4, ~26 reclaims / 6 waves, 3 local task-kill incidents)
+
+**Treat the local launcher process as DISPOSABLE.** Boxes solve in tmux and
+survive launcher death; the launcher's unique jobs are periodic shard sync,
+reclaim auto-relaunch, and final pull+terminate — all replaceable by an
+operator. If a launcher dies POST-solve-start: nothing is lost; cover the box
+with the caretaker pattern below. If it dies MID-setup: ssh the box — no tmux
+`solve` session + no `~/solve.log` means an idle, billing box → terminate it
+and either relaunch or consolidate (below).
+
+**Caretaker pattern (launcher-less boxes).** A single loop that, every 20 min
+per box: (1) checks `grep -c 'BATCH DONE' ~/solve.log` (→ operator does final
+pull + terminate) and reports ssh failure as a reclaim signal; (2) scp-pulls
+the box's scenario shard to a SEPARATE side file
+(`freq_grid_results.<sc>.caretaker.jsonl`) guarded by never-shrink — never
+overwrite the real shard name while pulls may race a relaunch. **On box death,
+promote side→real iff side is bigger, THEN relaunch** — the relaunch seeds
+from the promoted shard and the loss is bounded by one pull interval. At
+campaign end, merge any remaining `.caretaker.jsonl` files like shards
+(concat; later-wins fold dedups). Reference impl: session scratchpad
+`caretaker.ps1` (2026-07-14).
+
+**Verify every (re)launch's first `Solving N … M cached` line** against the
+expected seed: N+M must equal the slice total, and M must match the shard you
+seeded. This is the ONLY cheap check that catches wrong-slice/wrong-scenario
+launches and seed races (it caught both in the field). Large expected cache
+but M≈0 → fix on-box: `tmux kill-session -t solve && tmux new-session -d -s
+solve 'bash ~/run-solve.sh'`.
+
+**Consolidate near-done tails instead of relaunching.** A slice ≥~90% done
+that loses its box is often cheaper to PARK: its remainder rides the
+end-of-stage `all1755` cleanup launch (cache skips solved) together with the
+✗ spots — one launch instead of two, no setup round-trip.
+
+**Measured scenario weights (r6a.16xlarge, config B)** — for planning stage
+walls and costs: `srp_early` ≈ 90–125 spots/h (shallow ~60–70s, deep
+~500–850s); `srp_middle` ≈ 40–55/h (deep ~1,050–1,360s); `srp_sb` ≈ 28–36/h
+(medium ~330–420s, deep up to ~1,900s ≈ 2.2× the 867s r7a baseline — the
+heaviest scenario; its tabulates peak ~2.0 GB RSS). r7a runs ≈ 2× r6a on
+deep-heavy scenarios (0.45–0.9× walls) — put r7a capacity on `srp_sb` when
+the pool is stable.
+
+**Spot-churn economics.** During a pool sweep, fresh r7a boxes can be
+reclaimed in <30 min repeatedly; each churn cycle costs ~12–15 min setup +
+≤1 sync window of re-solves. Rule of thumb: after ~3 rapid reclaims of the
+same type on one slice, relaunch r6a-first and accept slower walls. Whole-pool
+sweeps (all boxes of a type within ~1h) happened twice in one day — the sync
+layer, not relaunch speed, is what bounds losses (~$12–15 total across ~26
+reclaims on this campaign).
