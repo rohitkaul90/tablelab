@@ -67,7 +67,25 @@ jobs:
           git add docs/
           if git diff --staged --quiet; then
             echo "No changes to deploy"
+            echo "DEPLOYED=0" >> "$GITHUB_ENV"
           else
             git commit -m "Deploy web build [skip ci]"
             git push
+            echo "DEPLOYED=1" >> "$GITHUB_ENV"
           fi
+
+      # IndexNow: notify Bing/Yandex/etc. of changed pages after each deploy.
+      # Submits every sitemap URL (site is 9 URLs — resubmitting all is within quota
+      # and simpler than diffing). Key file lives at web/<key>.txt → served at the root.
+      # Non-fatal: never fail the deploy over a ping.
+      - name: Ping IndexNow
+        if: env.DEPLOYED == '1'
+        run: |
+          KEY=757770f831bc0fc89f2c1163553715e0
+          URLS=$(grep -oP '(?<=<loc>)[^<]+' web/sitemap.xml | jq -R . | jq -s .)
+          jq -n --arg key "$KEY" --argjson urls "$URLS" \
+            '{host:"tablelab.app", key:$key, keyLocation:("https://tablelab.app/" + $key + ".txt"), urlList:$urls}' \
+            | curl -s -o /dev/null -w "IndexNow HTTP %{http_code}\n" \
+              -X POST "https://api.indexnow.org/indexnow" \
+              -H "Content-Type: application/json; charset=utf-8" \
+              -d @- || echo "IndexNow ping failed (non-fatal)"
