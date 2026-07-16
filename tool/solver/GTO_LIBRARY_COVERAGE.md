@@ -10,10 +10,24 @@ the library covers and what's left, so we can scope solve cycles and judge ROI.
 > command below, refresh the tables, and add a row to the Changelog. Keep it honest —
 > coverage is a credibility instrument, like the eval baseline.
 
-> **FULL-DENSITY BULK CAMPAIGN (planned 2026-07-11):** all 1,755 flops × the 5 live
-> scenarios, staged by value — see `BULK_DENSITY_RUNBOOK.md`. During the campaign the
-> library asset stays at its committed build and `freq_grid_results.json` stays FROZEN
-> (per-scenario `.jsonl` shards are the durable store; do not `--compact` until the end).
+> **✅ FULL-DENSITY BULK CAMPAIGN — SOLVE PHASE COMPLETE 2026-07-16 22:35 UTC.**
+> All 5 live scenarios solved at **full density: 1,755 flops × 3 SPR regimes =
+> 5,265/5,265 spots EACH (26,325 total), every spot ≤0.5% exploitability,
+> zero-pending dry-run GREEN per scenario.** The solved data lives in the
+> per-scenario `.jsonl` shards (+ `.gz` backups): srp_late / srp_middle / 3bp /
+> srp_early / **srp_sb (union 6,005 lines, 1.88 GB)** all consolidated in the
+> PRIMARY repo `tool/solver/`. `freq_grid_results.json` stayed FROZEN throughout.
+> **✅ ASSEMBLED 2026-07-16 (~23:55 UTC): the working-tree
+> `assets/gto_freq_library.json` is now the DENSITY build — 59,277 cells /
+> 26,700 spots / 23.1 MB, eligibility 98–100% per scenario (was 82–97%), all
+> streets + SPR regimes + 48/48 textures preserved.** One r6a.16xlarge spot box,
+> 5-scenario batch `--write`, ~1.2 h / ~$1.50. UNCOMMITTED pending step 4
+> (fixture re-bake + tests) and step 5 (eval re-baseline) — the snapshot tables
+> below still describe the pre-density 54,778-cell committed asset until the
+> re-baseline lands and this doc's tables are regenerated.
+> **⚠️ Explorer packs were NOT emitted this campaign** — Study-tab board
+> expansion requires fresh `--emit-pack` solves (~$60–80/scenario at one SPR;
+> see memory). Future runbooks must state which user-facing surface they serve.
 
 Related: design = `launch/GTO_FREQUENCY_LIBRARY.md` (gitignored, local); tooling =
 `tool/solver/freq_grid.dart` (solve) + `freq_tabulate.dart` (tabulate) +
@@ -116,6 +130,13 @@ SRP is the most common HU postflop spot).
 **Now that BTN-vs-BB is complete across all three streets and all SPR regimes, the next
 solve cycles are all about WIDTH (new scenarios), not DEPTH — see the roadmap.**
 
+**DENSITY (2026-07-16): the flop-sampling gap is CLOSED for all 5 scenarios.** Every
+scenario is solved on all 1,755 real flops (not 26–78 texture representatives) × 3 SPR
+regimes. Once assembled, texture generalization inside the covered scenarios stops being
+an approximation — a live board maps to a cell solved on that exact flop class at density.
+Remaining structural gaps are unchanged in kind: new scenarios (IP-caller SRPs, 4-bet,
+limped), multiway, ICM.
+
 ---
 
 ## Roadmap & compute (next solve cycles)
@@ -184,5 +205,7 @@ PY
 | 2026-07-01 | river | **+ river cells** ('river' profile / dump_rounds 3 — river check-raise faithful); full re-solve of all 78 BTN-vs-BB SRP spots (all SPR incl. deep) on a 128-vCPU / 1 TB r7a.32xlarge (us-east-1), `--parallel 5`, ~6 h, 0 failures, all ≤0.5% expl; **11,764 cells (11,400 eligible, 97%)**; river ≈ 23% of eligible. Full postflop (flop+turn+river) for BTN-vs-BB now complete. Enabled by the per-spot **subprocess tabulator** (commit 0130619) — the old Isolate.run shared-GC stalled deep river parses. **Eval re-baseline + `gen_gto_spots.dart --write` (fires the 4 river eval templates) NOT yet run — pending.** |
 | 2026-07-03/04 | opener SRPs (Cycle B) | **+ scenarios `srp_early_v_bb` (UTG-class open, 10,723 cells) and `srp_middle_v_bb` (CO-class, 11,688)**, + full `srp_late_v_bb` re-solve with explorer packs — one 3-scenario batch on an r7a.32xlarge (us-east-1, `--parallel 5`, 611 min, **234 spots, 0 failures**, ≤0.5% expl). Library **19,791 → 42,202 cells (312 spots)**; ~51 GB explorer packs now cover ALL SRP scenarios + 3bp. All 10 `gto-e-*`/`gto-m-*` eval specs fire (41/43 overall). Ops note: the solve was perfect but the launcher's batch health check false-negatived on a PowerShell array-stringify bug and left the box running — pulls were manual; `Invoke-SshTimed` now newline-joins output. **Consolidated eval re-baseline still pending (gates the merge).** |
 | 2026-07-02 | 3-bet (Cycle A) | **+ scenario `3bp_bb_v_btn`** (BTN open → BB 3-bet → BTN call; aggressor OOP) — the library's first WIDTH cycle. 78 spots (26 flops × committed/shallow/medium), 'river' profile, r7a.8xlarge us-east-1, `--parallel 4`, **41 min, 0 failures, ≤0.5% expl**; **+8,027 cells (6,564 eligible, 82%)** → library total 19,791. First solve with the live-compatible faced-ALL-IN labels AND with **explorer packs emitted in the same pass** (`--emit-pack`; 2.3 GB → ~/tlpacks). 7 `gto-3bp-*` eval specs all fire (31/33 total; the 2 ✗ are the pre-existing SRP flop size-seam templates). **Consolidated eval re-baseline still pending (gates the merge).** |
+| 2026-07-16 | **DENSITY CAMPAIGN COMPLETE (solve phase)** | **All 5 scenarios certified zero-pending at FULL density — 5,265/5,265 each, 26,325 spots total, all ≤0.5% expl.** Final scenario `srp_sb_v_bb` closed 22:35 UTC after a brutal spot-market day: **18 storms / ~43 reclaims campaign-wide** (incl. two whole-fleet sweeps), survived by launcher staging + 15-min watcher syncs + never-shrink promotion — aggregate banked loss **<30 spots (~0.1%)**. Key ops inventions this campaign: s3 tail-split (3-way slice of one box's pending set without stopping it), **union re-seed** (merged-shard cache push cut s3's remaining work from ~530 dup spots to 115 real gaps), watcher-v2 auto-relaunch handoff (spawns a full launcher on confirmed reclaim). The one residual spot (Tc 9d 2c shallow) solved locally free. Instance economics: r6a ≈ stability king, r7a fastest-but-churniest, r6i survived sweeps that killed r7a (deep pace ~⅔ of r7a). Fleet spend Jul 15–16 ≈ $150; campaign-to-date ~$660–690 est (final CE pull pending, charges post ~Jul 18) vs ~$2,000 on-demand counterfactual. **Library asset UNCHANGED (54,778 cells) — cloud `--write` assembly + fixture re-bake + consolidated eval re-baseline are the remaining gates before the density build ships.** |
+| 2026-07-13/15 | DENSITY stages 2–4 (middle, 3bp, early) | **`srp_middle_v_bb`, `3bp_bb_v_btn`, `srp_early_v_bb` each solved to 5,265/5,265** across mixed r6a/r7a spot fleets (storms #1–#13 era; middle+3bp certified 2026-07-15 morning, early closed 13:45 UTC 2026-07-15 after a 2-rider cleanup box; 3bp's 23 riders likewise closed on an ~8-min spot box ~$0.25). Shards + .gz consolidated in the primary repo (early 2.80 GB / middle 2.40 GB / 3bp 0.85 GB). Crash-class confirmed as CPU/RAM contention, not solver bugs — riders re-solved clean on idle boxes. |
 | 2026-07-12/13 | DENSITY stage 1 (srp_late) | **srp_late_v_bb solved at FULL density: all 1,755 flops × 3 SPR — **5,265/5,265 COMPLETE** (the 2 crash-recovery spots solved clean on a solo-idle on-demand box 2026-07-13, expl 0.46/0.47% — the stage-1 crashes were CPU/RAM-contention casualties, NOT a solver bug; Ac 8d 3d exonerated)** — 4,600 new spots this stage into the srp_late shard (pending final commit; frozen-monolith campaign mode). Boxes: 2× r7a.32xlarge (slices 0/1, $107) + 3× r7a.16xlarge (slices 2-4, ~$90); ~$197 stage total. Ops findings: solver RSS peaks ~7.8 GB (100 GB claim was 13× oversized — TLSOLVE_DEEP_CLAIM_GB added, PR #50); **single-threaded TABULATE is the throughput ceiling on 64-core boxes** (20-40 min/deep under saturation; total tabulate work > solve work — worker-count workaround shipped mid-stage, real fix = parallel tabulator); claim-30+oversub-2.0 canary: +8% throughput, +63% deep walls, 2 solver crashes (SIGABRT+SIGSEGV under load ~100/64) → **scenario B (claim 50, oversub 2.0, ~24 workers) adopted for stages 2-4**. Zero-pending green ×5 slices. |
 | 2026-07-11 | blind-vs-blind (Cycle C) | **+ scenario `srp_sb_v_bb`** (SB open vs BB call — the FIRST scenario whose opener is OOP; SB RFI = the solver's OOP player so the physical ip/oop keys stay correct). 78 spots (26 flops × shallow/medium/deep), 'river' profile, TLSD dumps, one r7i.8xlarge us-east-2 spot box, `--parallel 8`, **~3.5 h, 0 failures, ≤0.5% expl**; **+11,710 cells** → library **54,778 cells / 1,050 spots** (incl. the 2026-07-10 calibration+tune srp_late density slices, 312→972 spots before this cycle). No packs emitted (TLSD run — BvB explorer packs deferred). Live mapping + explorer trail wiring + 6 `gto-bvb-*` eval specs (all fire, 47/49 overall; fixtures re-baked to 364) on **PR #47**. Box-class lesson: deep is RAM-bound — big-RAM box FIRST next time (16xlarge = 4 concurrent deeps vs 2 on this 256 GB box; ~2× wall clock at the same cost). **Eval re-baseline PASSED (99.5/90.1/95.5/86.8, 364 spots) — library + baseline committed, merged to main (PR #47) 2026-07-11.** |

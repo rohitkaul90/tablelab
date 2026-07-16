@@ -23,6 +23,7 @@ import '../explorer/pack_codec.dart';
 import '../explorer/pack_manifest.dart';
 import '../explorer/pack_source.dart';
 import '../explorer/root_equity.dart';
+import '../services/analytics_service.dart';
 
 class ExplorerState {
   final bool scanning; // initial spot discovery in flight
@@ -176,10 +177,12 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     if (spots.isEmpty) spots = await (kDebugMode ? hosted() : local());
 
     state = state.copyWith(scanning: false, spots: spots);
-    if (spots.isNotEmpty) await selectSpot(spots.first);
+    // The app-start default load is NOT user engagement — don't count it.
+    if (spots.isNotEmpty) await selectSpot(spots.first, userInitiated: false);
   }
 
-  Future<void> selectSpot(ExplorerSpotRef spot) async {
+  Future<void> selectSpot(ExplorerSpotRef spot,
+      {bool userInitiated = true}) async {
     state = state.copyWith(
         spot: spot,
         loading: true,
@@ -204,6 +207,10 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
       _rootOppSpot = null;
       state =
           state.copyWith(manifest: manifest, flopNodes: nodes, loading: false);
+      if (userInitiated) {
+        AnalyticsService.explorerSpotLoaded(
+            scenario: spot.scenario, spr: spot.spr);
+      }
     } catch (e) {
       if (!mounted || state.spot != spot) return;
       _client = null;

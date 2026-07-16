@@ -230,6 +230,31 @@ class AnalyticsService {
         properties: varianceCalculatorUsedProps(mode));
   }
 
+  // ── Study / GTO Explorer ────────────────────────────────────────────────────
+
+  static void studyTabOpened() {
+    if (!_analyticsSupported) return;
+    Posthog().capture(eventName: 'study_tab_opened');
+  }
+
+  @visibleForTesting
+  static Map<String, Object> explorerSpotLoadedProps(
+          {required String scenario, required String spr}) =>
+      {'scenario': scenario, 'spr': spr};
+
+  /// Fired when a Study spot pack loads after a USER action (spot picker,
+  /// board change, SPR/regime switch) — the app-start auto-select of the
+  /// default spot must not count (it fires on every launch whether or not
+  /// the user ever opens Study).
+  static void explorerSpotLoaded(
+      {required String scenario, required String spr}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'explorer_spot_loaded',
+      properties: explorerSpotLoadedProps(scenario: scenario, spr: spr),
+    );
+  }
+
   // ── Reads ───────────────────────────────────────────────────────────────────
 
   @visibleForTesting

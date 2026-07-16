@@ -214,7 +214,14 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         maxScaleFactor: 1.0,
         child: NavigationBar(
           selectedIndex: index,
-          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          onDestinationSelected: (i) {
+            // Study is always the LAST destination when visible; count only
+            // real tab switches (not re-taps of the already-open tab).
+            if (showStudy && i == tabs.length - 1 && i != index) {
+              AnalyticsService.studyTabOpened();
+            }
+            setState(() => _currentIndex = i);
+          },
           destinations: [
             const NavigationDestination(
               icon: Icon(Icons.dashboard_outlined),

@@ -168,4 +168,14 @@ void main() {
           {'mode': 'tournament'});
     });
   });
+
+  group('explorerSpotLoadedProps', () {
+    test('carries scenario and spr regime', () {
+      expect(
+        AnalyticsService.explorerSpotLoadedProps(
+            scenario: 'srp_late_v_bb', spr: 'deep'),
+        {'scenario': 'srp_late_v_bb', 'spr': 'deep'},
+      );
+    });
+  });
 }
