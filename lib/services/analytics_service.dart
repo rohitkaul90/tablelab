@@ -4,9 +4,18 @@ import 'package:posthog_flutter/posthog_flutter.dart';
 // PostHog Flutter SDK supports Android, iOS, Web, macOS, Linux.
 // Windows desktop is not supported — all calls are no-ops there.
 bool get _analyticsSupported =>
-    kIsWeb || defaultTargetPlatform != TargetPlatform.windows;
+    !AnalyticsService.debugDisableForTests &&
+    (kIsWeb || defaultTargetPlatform != TargetPlatform.windows);
 
 class AnalyticsService {
+  /// Test seam: unit tests that drive analytics-capturing code paths directly
+  /// (e.g. the explorer nav-state tests calling `selectSpot`) set this true so
+  /// no method-channel call is attempted. posthog_flutter only no-ops on
+  /// Windows/Linux hosts — on macOS an unregistered channel throws an async
+  /// MissingPluginException into the test zone.
+  @visibleForTesting
+  static bool debugDisableForTests = false;
+
   static Future<void> identify(
     String userId, {
     String? email,

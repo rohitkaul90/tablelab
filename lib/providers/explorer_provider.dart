@@ -177,12 +177,15 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     if (spots.isEmpty) spots = await (kDebugMode ? hosted() : local());
 
     state = state.copyWith(scanning: false, spots: spots);
-    // The app-start default load is NOT user engagement — don't count it.
-    if (spots.isNotEmpty) await selectSpot(spots.first, userInitiated: false);
+    if (spots.isNotEmpty) await selectSpot(spots.first);
   }
 
+  /// [userInitiated] gates the `explorer_spot_loaded` analytics event and
+  /// FAILS CLOSED: it defaults to false so only the explicit user actions
+  /// (spot picker, board change, SPR/regime switch) count as engagement —
+  /// the app-start auto-select and the error-screen Retry must not.
   Future<void> selectSpot(ExplorerSpotRef spot,
-      {bool userInitiated = true}) async {
+      {bool userInitiated = false}) async {
     state = state.copyWith(
         spot: spot,
         loading: true,

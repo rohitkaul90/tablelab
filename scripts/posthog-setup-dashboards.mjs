@@ -26,75 +26,9 @@ if (!PROJECT || !KEY) {
   process.exit(1);
 }
 
-const base = `${HOST}/api/projects/${PROJECT}`;
-const headers = { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };
+import { makeApi, ev, prop, trends, funnel, retention } from './posthog-lib.mjs';
 
-async function api(method, path, body) {
-  const res = await fetch(`${base}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  let json;
-  try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
-  if (!res.ok) {
-    throw new Error(`${method} ${path} → ${res.status}\n${JSON.stringify(json, null, 2)}`);
-  }
-  return json;
-}
-
-// ── Query builders (PostHog node/InsightVizNode format) ──────────────────────
-
-const ev = (event, { math, properties, name } = {}) => ({
-  kind: 'EventsNode',
-  event,
-  name: name || event,
-  ...(math ? { math } : {}),
-  ...(properties ? { properties } : {}),
-});
-
-const prop = (key, value, type = 'event') => ({ key, value, operator: 'exact', type });
-
-const trends = (series, { interval = 'week', breakdown, dateFrom = '-30d' } = {}) => ({
-  kind: 'InsightVizNode',
-  source: {
-    kind: 'TrendsQuery',
-    series,
-    interval,
-    dateRange: { date_from: dateFrom },
-    trendsFilter: {},
-    ...(breakdown
-      ? { breakdownFilter: { breakdown: breakdown.key, breakdown_type: breakdown.type || 'event' } }
-      : {}),
-  },
-});
-
-const funnel = (series, { windowInterval = 14, windowUnit = 'day', breakdown, dateFrom = '-30d' } = {}) => ({
-  kind: 'InsightVizNode',
-  source: {
-    kind: 'FunnelsQuery',
-    series,
-    dateRange: { date_from: dateFrom },
-    funnelsFilter: { funnelWindowInterval: windowInterval, funnelWindowIntervalUnit: windowUnit },
-    ...(breakdown
-      ? { breakdownFilter: { breakdown: breakdown.key, breakdown_type: breakdown.type || 'event' } }
-      : {}),
-  },
-});
-
-const retention = (event, { period = 'Week' } = {}) => ({
-  kind: 'InsightVizNode',
-  source: {
-    kind: 'RetentionQuery',
-    retentionFilter: {
-      targetEntity: { id: event, name: event, type: 'events' },
-      returningEntity: { id: event, name: event, type: 'events' },
-      period,
-      retentionType: 'retention_first_time',
-    },
-  },
-});
+const api = makeApi({ host: HOST, project: PROJECT, key: KEY });
 
 // ── Insight definitions (the 10-insight spec) ────────────────────────────────
 
