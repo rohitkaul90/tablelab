@@ -23,9 +23,15 @@ the library covers and what's left, so we can scope solve cycles and judge ROI.
 > streets + SPR regimes + 48/48 textures preserved.** One r6a.16xlarge spot box,
 > 5-scenario batch `--write`, ~1.2 h / ~$1.50. **Committed on PR #53**
 > (`feature/gto-density-library`) with the step-4 fixture re-bake (364 baked,
-> 638/638 tests green); **the consolidated eval re-baseline (step 5) GATES the
-> merge** — the snapshot tables below still describe the pre-density
-> 54,778-cell build on `main` and get regenerated when the re-baseline lands.
+> 638/638 tests green). **Eval re-baseline (2026-07-17, 364 spots): card-logic
+> 98.6 / verdict 89.6 / forced 100 / freq-agreement 90.4. ACCEPTED by user
+> decision with verdict 0.4pt under the 90 gate: churn was 28 regressed / 26
+> improved (documented temp-0 noise band), the density library is exonerated
+> (FACT coverage 204→208; freq-agreement +3.6, forced perfect), and ALL 38
+> misses are ONE failure mode — keyMistake names an error while every street
+> reads wasGto:true ('mistake-without-nongto-street'). QUEUED next prompt
+> cycle: a schema-contract rule (keyMistake must name a wasGto:false street)
+> targeting 100% of the miss class; eval-gated as usual.**
 > **⚠️ Explorer packs were NOT emitted this campaign** — Study-tab board
 > expansion requires fresh `--emit-pack` solves (~$60–80/scenario at one SPR;
 > see memory). Future runbooks must state which user-facing surface they serve.
