@@ -23,6 +23,7 @@ import '../explorer/pack_codec.dart';
 import '../explorer/pack_manifest.dart';
 import '../explorer/pack_source.dart';
 import '../explorer/root_equity.dart';
+import '../services/analytics_service.dart';
 
 class ExplorerState {
   final bool scanning; // initial spot discovery in flight
@@ -179,7 +180,12 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     if (spots.isNotEmpty) await selectSpot(spots.first);
   }
 
-  Future<void> selectSpot(ExplorerSpotRef spot) async {
+  /// [userInitiated] gates the `explorer_spot_loaded` analytics event and
+  /// FAILS CLOSED: it defaults to false so only the explicit user actions
+  /// (spot picker, board change, SPR/regime switch) count as engagement —
+  /// the app-start auto-select and the error-screen Retry must not.
+  Future<void> selectSpot(ExplorerSpotRef spot,
+      {bool userInitiated = false}) async {
     state = state.copyWith(
         spot: spot,
         loading: true,
@@ -204,6 +210,10 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
       _rootOppSpot = null;
       state =
           state.copyWith(manifest: manifest, flopNodes: nodes, loading: false);
+      if (userInitiated) {
+        AnalyticsService.explorerSpotLoaded(
+            scenario: spot.scenario, spr: spot.spr);
+      }
     } catch (e) {
       if (!mounted || state.spot != spot) return;
       _client = null;

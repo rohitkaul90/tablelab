@@ -4,9 +4,18 @@ import 'package:posthog_flutter/posthog_flutter.dart';
 // PostHog Flutter SDK supports Android, iOS, Web, macOS, Linux.
 // Windows desktop is not supported — all calls are no-ops there.
 bool get _analyticsSupported =>
-    kIsWeb || defaultTargetPlatform != TargetPlatform.windows;
+    !AnalyticsService.debugDisableForTests &&
+    (kIsWeb || defaultTargetPlatform != TargetPlatform.windows);
 
 class AnalyticsService {
+  /// Test seam: unit tests that drive analytics-capturing code paths directly
+  /// (e.g. the explorer nav-state tests calling `selectSpot`) set this true so
+  /// no method-channel call is attempted. posthog_flutter only no-ops on
+  /// Windows/Linux hosts — on macOS an unregistered channel throws an async
+  /// MissingPluginException into the test zone.
+  @visibleForTesting
+  static bool debugDisableForTests = false;
+
   static Future<void> identify(
     String userId, {
     String? email,
@@ -228,6 +237,31 @@ class AnalyticsService {
     Posthog().capture(
         eventName: 'variance_calculator_used',
         properties: varianceCalculatorUsedProps(mode));
+  }
+
+  // ── Study / GTO Explorer ────────────────────────────────────────────────────
+
+  static void studyTabOpened() {
+    if (!_analyticsSupported) return;
+    Posthog().capture(eventName: 'study_tab_opened');
+  }
+
+  @visibleForTesting
+  static Map<String, Object> explorerSpotLoadedProps(
+          {required String scenario, required String spr}) =>
+      {'scenario': scenario, 'spr': spr};
+
+  /// Fired when a Study spot pack loads after a USER action (spot picker,
+  /// board change, SPR/regime switch) — the app-start auto-select of the
+  /// default spot must not count (it fires on every launch whether or not
+  /// the user ever opens Study).
+  static void explorerSpotLoaded(
+      {required String scenario, required String spr}) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'explorer_spot_loaded',
+      properties: explorerSpotLoadedProps(scenario: scenario, spr: spr),
+    );
   }
 
   // ── Reads ───────────────────────────────────────────────────────────────────

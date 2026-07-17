@@ -194,6 +194,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       const ReadsScreen(),
       if (showStudy) const GtoExplorerScreen(),
     ];
+    // Computed HERE, next to the tabs list, so the analytics hook below can't
+    // silently drift if a tab is ever appended after Study.
+    final studyIndex = showStudy ? tabs.length - 1 : -1;
     // Keep the selection in range if Study disappears while it was selected.
     final index = _currentIndex.clamp(0, tabs.length - 1);
 
@@ -214,7 +217,13 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         maxScaleFactor: 1.0,
         child: NavigationBar(
           selectedIndex: index,
-          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          onDestinationSelected: (i) {
+            // Count only real tab switches (not re-taps of the open tab).
+            if (i == studyIndex && i != index) {
+              AnalyticsService.studyTabOpened();
+            }
+            setState(() => _currentIndex = i);
+          },
           destinations: [
             const NavigationDestination(
               icon: Icon(Icons.dashboard_outlined),

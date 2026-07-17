@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/explorer/pack_source.dart';
 import 'package:tablelab/providers/explorer_provider.dart';
+import 'package:tablelab/services/analytics_service.dart';
 
 import '../../tool/solver/explorer_pack.dart';
 
@@ -102,6 +103,10 @@ void main() {
   late ExplorerSpotRef spot;
 
   setUpAll(() {
+    // These tests drive selectSpot directly; without this the analytics
+    // capture hits an unregistered method channel on macOS hosts (posthog
+    // only no-ops on Windows/Linux) and throws into the test zone.
+    AnalyticsService.debugDisableForTests = true;
     tmp = Directory.systemTemp.createTempSync('navtest_');
     generatePack(
       _dump(),

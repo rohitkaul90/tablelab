@@ -397,7 +397,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       _preflopInspect = -1;
     });
     if (!identical(target.first, spot)) {
-      ref.read(explorerProvider.notifier).selectSpot(target.first);
+      ref.read(explorerProvider.notifier)
+          .selectSpot(target.first, userInitiated: true);
     }
   }
 
@@ -481,7 +482,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     if (st.spot?.scenario == sc) return;
     final candidates = st.spots.where((s) => s.scenario == sc).toList();
     if (candidates.isNotEmpty) {
-      ref.read(explorerProvider.notifier).selectSpot(candidates.first);
+      ref.read(explorerProvider.notifier)
+          .selectSpot(candidates.first, userInitiated: true);
     }
   }
 
@@ -529,7 +531,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   final pick = forFlop.firstWhere((s) => s.spr == regime,
                       orElse: () => forFlop.first);
                   setState(() => _preflopInspect = -1);
-                  ref.read(explorerProvider.notifier).selectSpot(pick);
+                  ref
+                      .read(explorerProvider.notifier)
+                      .selectSpot(pick, userInitiated: true);
                 },
               ),
           ],
