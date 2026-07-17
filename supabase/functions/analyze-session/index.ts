@@ -181,6 +181,9 @@ function computeDrawSummary(holeCards: string[], boardCards: string[]): string {
   const allCards = [...holeCards, ...boardCards];
   const cRank = (c: string) => c.slice(0, -1);
   const cSuit = (c: string) => c.slice(-1);
+  // A 5-card board is complete: no cards to come, so no draw exists — only
+  // made hands. Keep in sync with analyze-hand/prompt.ts computeDrawSummary.
+  const boardComplete = boardCards.length >= 5;
 
   const holeRanks = holeCards.map(cRank);
   const boardRanks = boardCards.map(cRank);
@@ -210,6 +213,9 @@ function computeDrawSummary(holeCards: string[], boardCards: string[]): string {
   let straightLine: string;
   if (madeStraight) {
     straightLine = "STRAIGHT (made)";
+  } else if (boardComplete) {
+    straightLine =
+      "no straight — the board is COMPLETE (river): no draws, outs, or cards to come exist";
   } else if (completingVals.size === 0) {
     straightLine = "no straight draw";
   } else {
@@ -231,10 +237,14 @@ function computeDrawSummary(holeCards: string[], boardCards: string[]): string {
   const flushParts: string[] = [];
   for (const [s, cards] of Object.entries(suitCards)) {
     if (cards.length >= 5) { madeFlush = true; flushParts.push(`FLUSH made (${suitName[s]})`); }
-    else if (cards.length === 4) flushParts.push(`FLUSH DRAW (${suitName[s]}, 9 outs) [${cards.join(" ")}]`);
-    else if (cards.length === 3) flushParts.push(`backdoor flush draw only (${suitName[s]}) [${cards.join(" ")}]`);
+    else if (cards.length === 4 && !boardComplete) flushParts.push(`FLUSH DRAW (${suitName[s]}, 9 outs) [${cards.join(" ")}]`);
+    else if (cards.length === 3 && !boardComplete) flushParts.push(`backdoor flush draw only (${suitName[s]}) [${cards.join(" ")}]`);
   }
-  const flushLine = flushParts.length ? flushParts.join("; ") : "no flush draw";
+  const flushLine = flushParts.length
+    ? flushParts.join("; ")
+    : boardComplete
+      ? "no flush — the board is COMPLETE (river): no flush draw exists"
+      : "no flush draw";
 
   // ── Made hand ─────────────────────────────────────────────────────────────
   const rankCnt: Record<string, number> = {};
