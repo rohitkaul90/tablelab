@@ -71,7 +71,10 @@ dev_dependencies:
 
 flutter_native_splash:
   color: "#111811"
-  image: assets/icon/app_icon.png
+  # Full-res master lives outside assets/icon/ (a bundled dir) — build-time-only
+  # input; the runtime asset at assets/icon/app_icon.png is a 384px resize so the
+  # web bundle doesn't ship the 1MB original (it's only ever displayed at ≤96px).
+  image: flutter_native_splash/app_icon.png
   android_12:
     # Android 12+ masks the splash icon into a circle showing only the inner ~2/3
     # of the canvas, so the full-bleed app_icon (wide table logo) gets clipped on
@@ -90,8 +93,8 @@ flutter_launcher_icons:
   ios: false
   web:
     generate: true
-    image_path: "assets/icon/app_icon.png"
-  image_path: "assets/icon/app_icon.png"
+    image_path: "flutter_native_splash/app_icon.png"
+  image_path: "flutter_native_splash/app_icon.png"
   adaptive_icon_background: "#111811"
   adaptive_icon_foreground: "assets/icon/app_icon.png"
 
