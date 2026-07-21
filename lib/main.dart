@@ -26,11 +26,17 @@ import 'widgets/app_drawer.dart';
 /// asynchronously during `recoverSession()` on cold start (Crashlytics issue
 /// "Invalid Refresh Token: Refresh Token Not Found"): the SDK signs the user
 /// out and `AuthGate` shows the login screen — the user simply re-authenticates.
+/// A second case (crash-issues-13) is a transient network timeout during that
+/// same startup auto-refresh — `AuthRetryableFetchException` wrapping a
+/// `SocketException`/timeout — which the SDK retries and which likewise must not
+/// count as a fatal crash (the message says "…refresh_token…" with an underscore,
+/// so the string checks below don't catch it; the type check does).
 bool _isRecoverableAuthError(Object error) {
   if (error is! AuthException) return false;
   final code = error.code?.toLowerCase() ?? '';
   final message = error.message.toLowerCase();
   return error is AuthSessionMissingException ||
+      error is AuthRetryableFetchException ||
       code.contains('refresh_token') ||
       message.contains('refresh token');
 }
