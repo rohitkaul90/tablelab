@@ -14,8 +14,14 @@
   </url>
   <url>
     <loc>https://tablelab.app/blog/</loc>
-    <lastmod>2026-07-14</lastmod>
+    <lastmod>2026-07-21</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tablelab.app/blog/how-to-read-players-without-a-hud</loc>
+    <lastmod>2026-07-21</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
