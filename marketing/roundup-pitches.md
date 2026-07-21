@@ -7,7 +7,9 @@ Goal: get TableLab included in the tracker/tools roundup articles that actually 
 **How to send:**
 - Send as yourself ("Rohit Kaul"), from your personal Gmail — these are person-to-person
   editorial asks, not corporate outreach. Plain text, no images, no attachments.
-- One at a time; start with Geoff Fisk (best contactability + one relationship covers four outlets).
+- Lead the clean-email sends with Pokerfuse (#2) and GTO Gecko (#3) — don't gate the campaign on
+  Fisk, whose personal site + @geofffisk X are both dead now. Pursue Fisk in parallel via LinkedIn
+  (see #1 for the working route); his four-outlet reach still makes him worth the slower channel.
 - If no reply after ~7–10 days, one short follow-up ("bumping this once — no worries either way"). Then drop it.
 - Never offer payment in the first email. If they reply with a rate card, decide then (Cardplayer
   Lifestyle and PokerNews likely will; Pokerfuse and Fisk likely won't).
@@ -31,12 +33,19 @@ Links to paste:
 
 ---
 
-## 1. Geoff Fisk — Upswing "5 Useful Tools for Live Poker Players" (SEND FIRST)
+## 1. Geoff Fisk — Upswing "5 Useful Tools for Live Poker Players" (PARALLEL TRACK — LinkedIn)
 
-**Send via:** https://www.geofffisk.com/contact/ (his personal site form), or DM @GeoffFisk on X.
+**Send via:** LinkedIn — https://www.linkedin.com/in/geoff-fisk-554710141/ (actively maintained;
+he lists a current "Senior Copywriter at Bellota Labs" role). Connect with a short note, or InMail.
+Backup: the alternate X handle @FiskGeoff (https://x.com/fiskgeoff) — distinct from the dead
+@geofffisk. Note his personal site (geofffisk.com/contact) and @geofffisk X are BOTH offline as of
+2026-07-21, so LinkedIn is the primary route now. He's also an Editor at PokerNews and writes for
+Poker.org — so pitch #4 (PokerNews form) can double as a way to reach him.
 **Why him:** byline on the Upswing piece (Feb 2023, now 3 years stale, ranks page 1 for
 "tools for live poker players"; it's the only target that links to apps' own websites). He also
 writes for PokerNews, Poker.org, and Cardplayer Lifestyle — one relationship, four outlets.
+Because LinkedIn is a slower, lower-certainty channel than a clean editorial email, don't hold the
+rest of the campaign for him — send Pokerfuse/GTO Gecko now and work Fisk in parallel.
 
 **Subject:** Your Upswing live-poker tools piece — a newer free tracker worth a look?
 
@@ -59,6 +68,12 @@ built — and if it's not a fit, no worries at all.
 
 Rohit Kaul
 tablelab.app
+
+**LinkedIn connection-note version (<200 chars — the connect-request limit; the full email won't fit):**
+
+Hi Geoff — I'm a live cash player who built a free bankroll tracker, TableLab (tablelab.app). Loved your Upswing live-tools piece; would love your take if you refresh it. No agenda.
+
+(Once connected, follow up with the full email above as a message.)
 
 ---
 
@@ -243,4 +258,9 @@ tablelab.app
 
 | Date sent | Target | Route | Reply? | Result |
 |---|---|---|---|---|
-| | | | | |
+| 2026-07-21 | Geoff Fisk | LinkedIn connect note | — | awaiting; follow-up ~2026-07-31 |
+| 2026-07-21 | Pokerfuse | contact form | — | awaiting; follow-up ~2026-07-31 |
+| 2026-07-21 | GTO Gecko | info@gtogecko.com | — | awaiting; follow-up ~2026-07-31 |
+| 2026-07-21 | PokerNews | contact form (partnership) | — | awaiting; follow-up ~2026-07-31 |
+| 2026-07-21 | Cardplayer Lifestyle | contact form (Robbie) | — | awaiting; follow-up ~2026-07-31 |
+| 2026-07-21 | PokerListings | contact form (Cameron) | — | awaiting; follow-up ~2026-07-31 |
