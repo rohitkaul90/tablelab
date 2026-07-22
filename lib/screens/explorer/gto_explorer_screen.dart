@@ -299,6 +299,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                 color: scheme.onSurfaceVariant, letterSpacing: 1.2));
         return SafeArea(
           child: StatefulBuilder(builder: (ctx, setSheet) {
+            // The sheet route can outlive this screen; its rebuilds read the
+            // screen's ref/fields, which throw on a defunct State.
+            if (!mounted) return const SizedBox.shrink();
             final scenario = ref.read(explorerProvider).spot?.scenario ??
                 _trail.scenarioKey;
             final depths = (scenario != null && !_trail.trn)
@@ -381,6 +384,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// the preference when a pack actually exists for that board at that regime —
   /// otherwise the depth control would desync from the data still on screen.
   void _setDepth(String regime) {
+    if (!mounted) return; // reachable from sheet closures after disposal
     final st = ref.read(explorerProvider);
     final spot = st.spot;
     final target = spot == null
@@ -472,6 +476,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// Apply a trail change: inspect the decision it creates, and re-target the
   /// postflop spot when the mapped scenario changed and packs exist for it.
   void _setTrail(PreflopTrail t, {int inspect = -1}) {
+    if (!mounted) return; // reachable from sheet closures after disposal
     setState(() {
       _trail = t;
       _preflopInspect = inspect;
@@ -526,6 +531,10 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                 selected: state.spot?.flop == flop,
                 onTap: () {
                   Navigator.of(sheetContext).pop();
+                  // The sheet is its own route and can outlive this screen
+                  // (conditional Study tab regated, auth swap) — a tap then
+                  // reaches a defunct State, where setState/ref throw.
+                  if (!mounted) return;
                   final forFlop =
                       candidates.where((s) => s.flop == flop).toList();
                   final pick = forFlop.firstWhere((s) => s.spr == regime,
@@ -1209,6 +1218,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           available: available,
           onPick: (c) {
             Navigator.of(sheetContext).pop();
+            if (!mounted) return; // sheet route can outlive this screen
             ref
                 .read(explorerProvider.notifier)
                 .setPinnedCard(river: river, card: c);

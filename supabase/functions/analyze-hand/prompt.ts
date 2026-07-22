@@ -127,6 +127,11 @@ function computeDrawSummary(holeCards: string[], boardCards: string[]): string {
   const allCards = [...holeCards, ...boardCards];
   const cRank = (c: string) => c.slice(0, -1);
   const cSuit = (c: string) => c.slice(-1);
+  // A 5-card board is complete: no cards are to come, so no draw of any kind
+  // exists — only made hands. Without this gate the river FACT reported
+  // "GUTSHOT — needs J (4 outs)" on a finished board and the coaching parroted
+  // a draw that could never be completed.
+  const boardComplete = boardCards.length >= 5;
 
   const holeRanks = holeCards.map(cRank);
   const boardRanks = boardCards.map(cRank);
@@ -184,6 +189,9 @@ function computeDrawSummary(holeCards: string[], boardCards: string[]): string {
     const holeInStraight = straightCards.filter((c) => holeCards.includes(c));
     const boardInStraight = straightCards.filter((c) => boardCards.includes(c));
     straightLine = `STRAIGHT (made: ${straightCards.join("-")}; hero's hole cards in straight: ${holeInStraight.join(" ")}; board cards in straight: ${boardInStraight.join(" ")})`;
+  } else if (boardComplete) {
+    straightLine =
+      "no straight — the board is COMPLETE (river): no draws, outs, or cards to come exist";
   } else if (completingVals.size === 0) {
     straightLine = "no straight draw";
   } else {
@@ -207,10 +215,14 @@ function computeDrawSummary(holeCards: string[], boardCards: string[]): string {
   for (const [s, cards] of Object.entries(suitCards)) {
     const holeOfSuit = holeCards.filter((c) => cSuit(c) === s);
     if (cards.length >= 5) { madeFlush = true; flushParts.push(`FLUSH made (${suitName[s]}; hero's hole cards: ${holeOfSuit.join(" ")})`); }
-    else if (cards.length === 4) flushParts.push(`FLUSH DRAW (${suitName[s]}, 9 outs; hero's hole cards of this suit: ${holeOfSuit.join(" ")}) [all: ${cards.join(" ")}]`);
-    else if (cards.length === 3) flushParts.push(`backdoor flush draw only (${suitName[s]}; hero's hole cards of this suit: ${holeOfSuit.join(" ")}) [all: ${cards.join(" ")}]`);
+    else if (cards.length === 4 && !boardComplete) flushParts.push(`FLUSH DRAW (${suitName[s]}, 9 outs; hero's hole cards of this suit: ${holeOfSuit.join(" ")}) [all: ${cards.join(" ")}]`);
+    else if (cards.length === 3 && !boardComplete) flushParts.push(`backdoor flush draw only (${suitName[s]}; hero's hole cards of this suit: ${holeOfSuit.join(" ")}) [all: ${cards.join(" ")}]`);
   }
-  const flushLine = flushParts.length ? flushParts.join("; ") : "no flush draw";
+  const flushLine = flushParts.length
+    ? flushParts.join("; ")
+    : boardComplete
+      ? "no flush — the board is COMPLETE (river): no flush draw exists"
+      : "no flush draw";
 
   // ── Made hand ─────────────────────────────────────────────────────────────
   const rankCnt: Record<string, number> = {};
@@ -341,7 +353,7 @@ function computeBoardSummary(boardCards: string[]): string {
       ? "the board is DOUBLE-PAIRED — a full house is possible (and quads with the case card)"
       : "the board is PAIRED — a full house (a set plus the board pair) or quads is possible");
   } else {
-    parts.push("the board is UNPAIRED — NO full house and NO quads is possible for ANY hand; a set does NOT improve to a full house here");
+    parts.push("the board is UNPAIRED — NO full house and NO quads is possible for ANY hand; a set does NOT improve to a full house here (but a SET — a pocket pair matching a board rank — IS still possible and beats two pair)");
   }
 
   if (maxSuit >= 5) {
