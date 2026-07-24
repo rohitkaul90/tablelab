@@ -78,3 +78,5 @@ crash_reports/
 
 # Launcher atomic-pull scratch dirs (a killed pull can strand one under assets/)
 .pull-tmp-*/
+
+marketing/
