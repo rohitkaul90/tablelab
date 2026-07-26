@@ -53,8 +53,18 @@
   var menu = document.querySelector('details.nav-menu');
   if (menu) {
     var panel = menu.querySelector('nav');
-    document.querySelectorAll('.site-nav > a.link').forEach(function (a) {
-      var copy = a.cloneNode(true);
+    // Walk the plain .link anchors AND the Tools dropdown together, so the ☰
+    // panel mirrors the desktop nav in the same order (querySelectorAll returns
+    // document order). The dropdown itself is display:none under 560px, so its
+    // calculator links have to be flattened in here or they'd be unreachable.
+    document.querySelectorAll('.site-nav > a.link, .site-nav > .nav-dropdown').forEach(function (el) {
+      if (el.classList.contains('nav-dropdown')) {
+        el.querySelectorAll('nav a').forEach(function (a) {
+          panel.appendChild(a.cloneNode(true));
+        });
+        return;
+      }
+      var copy = el.cloneNode(true);
       copy.classList.remove('link'); // the .link class is display:none on mobile
       panel.appendChild(copy);
     });
@@ -67,6 +77,27 @@
       if (!inside || (t.closest && t.closest('.nav-menu nav a'))) {
         menu.removeAttribute('open');
       }
+    });
+  }
+
+  // Tools dropdown: <details> handles open/close and keyboard on its own; this
+  // just adds the two behaviours it doesn't give you — closing when you click
+  // away or pick a link, and closing on Escape (returning focus to the summary).
+  var dropdown = document.querySelector('details.nav-dropdown');
+  if (dropdown) {
+    document.addEventListener('click', function (e) {
+      if (!dropdown.hasAttribute('open')) return;
+      var t = e.target;
+      var inside = t && t.closest ? t.closest('details.nav-dropdown') : null;
+      if (!inside || (t.closest && t.closest('.nav-dropdown nav a'))) {
+        dropdown.removeAttribute('open');
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || !dropdown.hasAttribute('open')) return;
+      dropdown.removeAttribute('open');
+      var summary = dropdown.querySelector('summary');
+      if (summary) summary.focus();
     });
   }
 })();

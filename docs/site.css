@@ -147,6 +147,59 @@ a:hover { text-decoration: underline; }
 }
 .nav-menu > nav a:hover { background: var(--surface); color: var(--text); text-decoration: none; }
 
+/* ── Tools dropdown ───────────────────────────────────────────────────────────
+   "Tools" used to be a plain link straight to /variance-calculator, which
+   silently picked one of two calculators for the visitor. It's now a <details>
+   disclosure listing both. Native <details> gives keyboard support and works
+   with JS disabled; site.js only adds click-outside/Escape closing and mirrors
+   these links into the ☰ panel under 560px (where this is hidden). */
+.nav-dropdown { position: relative; }
+.nav-dropdown > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+.nav-dropdown > summary::-webkit-details-marker { display: none; }
+.nav-dropdown > summary:hover,
+.nav-dropdown[open] > summary { color: var(--text); }
+.nav-dropdown > summary .caret {
+  width: 10px;
+  height: 10px;
+  transition: transform 0.18s ease;
+}
+.nav-dropdown[open] > summary .caret { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .nav-dropdown > summary .caret { transition: none; }
+}
+.nav-dropdown > nav {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 12px);
+  min-width: 196px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+}
+.nav-dropdown > nav a {
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  padding: 9px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.nav-dropdown > nav a:hover { background: var(--surface); color: var(--text); text-decoration: none; }
+.nav-dropdown > nav a[aria-current="page"] { background: var(--surface); color: var(--text); }
+
 .btn {
   display: inline-block;
   padding: 11px 22px;
@@ -388,6 +441,7 @@ table.compare tbody tr:last-child td { border-bottom: none; }
   .hero h1 { font-size: 2rem; }
   .features, .steps { grid-template-columns: 1fr; }
   .site-nav .link { display: none; }
+  .nav-dropdown { display: none; }   /* its links are mirrored into the ☰ panel */
   .nav-menu { display: block; }
   .site-nav { gap: 12px; }
 }
