@@ -15,6 +15,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # Cloudflare caches /site.css and /site.js for 4h while the HTML is only
+      # 600s, so a changed asset keeps serving stale to visitors unless its
+      # ?v=<hash> is refreshed. Fails the build if someone edits either file
+      # without re-running the script — without this guard the versioning
+      # scheme silently rots back into the bug it exists to prevent.
+      - name: Check marketing asset versions are current
+        run: python3 scripts/version-assets.py --check
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
