@@ -149,6 +149,36 @@
       100% { left: 100%; }
     }
   </style>
+
+  <!-- No-JS styling. The splash is position:fixed/z-index:9999 and only fades on the
+       'flutter-first-frame' event, which never fires without JS — so it must be hidden
+       here or it would cover the <noscript> content in the body. -->
+  <noscript>
+    <style>
+      #splash, #splash-bar-track { display: none !important; }
+      .nojs {
+        max-width: 60ch;
+        margin: 0 auto;
+        padding: 48px 22px 64px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #E8EFE6;
+        line-height: 1.65;
+      }
+      .nojs h1 { font-size: 28px; line-height: 1.25; margin-bottom: 14px; }
+      .nojs h2 { font-size: 17px; margin: 28px 0 10px; color: #FFFFFF; }
+      .nojs p { margin-bottom: 14px; color: #C3CFC0; }
+      .nojs ul { margin: 0 0 14px 20px; color: #C3CFC0; }
+      .nojs li { margin-bottom: 6px; }
+      .nojs a { color: #4CAF50; }
+      .nojs .lede { font-size: 17px; color: #E8EFE6; }
+      .nojs .note {
+        margin-top: 28px; padding: 14px 16px;
+        border: 1px solid #2A342B; border-left: 3px solid #4CAF50;
+        border-radius: 6px; font-size: 14px; color: #C3CFC0;
+      }
+      .nojs footer { margin-top: 28px; font-size: 13px; color: #8A968A; }
+    </style>
+  </noscript>
 </head>
 <body>
   <!-- Branded splash shown while Flutter initialises -->
@@ -162,6 +192,63 @@
       <div id="splash-bar"></div>
     </div>
   </div>
+
+  <!-- Crawlable fallback. The app above is client-rendered, so without this a non-JS
+       crawler (and several AI engines) sees nothing at this URL but a splash screen.
+       Mirrors what the app and /about actually offer — keep the two in sync. -->
+  <noscript>
+    <main class="nojs">
+      <h1>TableLab — track your poker, fix your leaks</h1>
+
+      <p class="lede">
+        TableLab is a <strong>free poker bankroll tracker and study tool</strong> for cash games and
+        tournaments. It records your sessions and hands, turns them into real statistics, and gives
+        you AI hand coaching grounded in solver-derived GTO data — so you can find the leak that is
+        quietly costing you money, and fix it.
+      </p>
+
+      <h2>What you can do with it</h2>
+      <ul>
+        <li><strong>Track sessions</strong> — cash games and tournaments, live or logged after the fact, in any currency.</li>
+        <li><strong>See your real numbers</strong> — win rate, BB/100, ROI, ITM, variance and bankroll over time.</li>
+        <li><strong>Record and replay hands</strong> — step through any hand on a visual table.</li>
+        <li><strong>Get AI hand coaching</strong> — grounded in a solver-derived GTO frequency library, with an independent equity cross-check.</li>
+        <li><strong>Study solved spots</strong> — browse real solver output in the GTO Explorer.</li>
+        <li><strong>Run the numbers</strong> — equity, ICM and variance calculators, all free.</li>
+        <li><strong>Keep notes on opponents</strong> — player reads with tendency tags.</li>
+        <li><strong>Bring your history with you</strong> — import sessions from other poker apps by CSV or Excel.</li>
+      </ul>
+
+      <h2>Read more</h2>
+      <ul>
+        <li><a href="/about">About TableLab — full feature list and FAQ</a></li>
+        <li><a href="/blog/">The TableLab blog</a></li>
+        <li><a href="/blog/poker-bankroll-management">Poker bankroll management: how many buy-ins you actually need</a></li>
+        <li><a href="/blog/can-ai-solve-poker">Can AI solve poker?</a></li>
+        <li><a href="/blog/how-to-read-players-without-a-hud">How to read players without a HUD</a></li>
+      </ul>
+
+      <h2>Free calculators — no sign-up</h2>
+      <ul>
+        <li><a href="/variance-calculator">Poker variance &amp; risk-of-ruin calculator</a></li>
+        <li><a href="/icm-calculator">ICM calculator</a></li>
+      </ul>
+
+      <p class="note">
+        <strong>The TableLab app itself needs JavaScript to run.</strong> Enable JavaScript to use it
+        in this browser, or get the Android app on
+        <a href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker">Google Play</a>.
+        The pages linked above are plain HTML and work without it.
+      </p>
+
+      <footer>
+        TableLab is made by MagpiQ, an independent software studio in Ontario, Canada.
+        <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> ·
+        <a href="mailto:support@tablelab.app">support@tablelab.app</a><br>
+        Play responsibly. 18+ (19+ in some provinces and states).
+      </footer>
+    </main>
+  </noscript>
 
   <script>
     // Fade out the HTML splash as soon as Flutter renders its first frame.
