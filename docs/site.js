@@ -147,6 +147,38 @@
 
   if (!readConsent()) showConsentBar();
 
+  // ── Conversion clicks ──────────────────────────────────────────────────────
+  // Two clicks count as converting on the marketing site: heading to the Play
+  // Store, and opening the web app. Enhanced Measurement would catch the Play
+  // Store one on its own (it is outbound), but the "Open the App" link is
+  // SAME-DOMAIN and the app root is deliberately untagged — so without this the
+  // more important of the two conversions is completely invisible. Tracking both
+  // explicitly also keeps them comparable and independent of whatever Enhanced
+  // Measurement happens to be set to.
+  //
+  // If consent was declined these fire as unreported cookieless pings, which is
+  // the intended behaviour — declined visitors are not measured.
+  document.addEventListener('click', function (e) {
+    if (typeof window.gtag !== 'function') return;
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+
+    var href = a.getAttribute('href') || '';
+    var name = null;
+    if (href.indexOf('play.google.com') !== -1) {
+      name = 'play_store_click';
+    } else if (href === '/' || /^https?:\/\/(www\.)?tablelab\.app\/(\?|$)/.test(href)) {
+      name = 'open_app_click';
+    }
+    if (!name) return;
+
+    // gtag uses sendBeacon where available, so the hit survives the navigation.
+    window.gtag('event', name, {
+      link_url: href,
+      source_page: location.pathname
+    });
+  });
+
   // Let the choice be revisited. Injected rather than hand-added to ten duplicated
   // footers, so there is one copy to maintain.
   var footerLinks = document.querySelector('footer a[href="/terms"]');
