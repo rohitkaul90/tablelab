@@ -39,7 +39,14 @@ PATTERNS = {
 
 
 def short_hash(path: pathlib.Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:10]
+    """Content hash that is stable across platforms.
+
+    Line endings MUST be normalised first. Git checks these files out as CRLF on
+    Windows and LF on the Linux CI runner, so hashing the raw bytes yields a
+    different version on each and the --check guard could never pass in CI.
+    """
+    data = path.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(data).hexdigest()[:10]
 
 
 def html_files() -> list[pathlib.Path]:
