@@ -29,23 +29,23 @@
   <link rel="apple-touch-icon" href="/icons/Icon-192.png">
   <link rel="stylesheet" href="/site.css">
   <script src="/site.js" defer></script>
-  <!-- Google Analytics 4 (G-H4D9DBVXDD) - cookieless by design.
-       Consent Mode v2 defaults every storage type to 'denied', so NO analytics or
-       ads cookies are set and no consent banner is legally required. GA4 still
-       records sessions, geography, device and - the reason it is here - traffic
-       source / medium / campaign / content, which is what the UTM'd social links
-       feed. If richer returning-visitor data is ever needed, flip analytics_storage
-       to 'granted' from a real consent banner; do NOT just delete these defaults,
-       or the site starts setting cookies with no consent mechanism behind it. -->
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
     gtag('consent', 'default', {
       ad_storage: 'denied',
       ad_user_data: 'denied',
       ad_personalization: 'denied',
-      analytics_storage: 'denied'
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
     });
     gtag('js', new Date());
     gtag('config', 'G-H4D9DBVXDD');
@@ -104,15 +104,18 @@
     <li><strong>Usage analytics:</strong> Anonymous product analytics via PostHog — which
     features are used and how often. These events are not linked to your account identity,
     and analytics are disabled on Windows desktop.</li>
-    <li><strong>Website analytics (marketing pages only):</strong> Google Analytics 4 on our
-    public web pages — this page, <a href="/about">/about</a>, the blog, and the free
-    calculators — to understand how many people visit and which link or search brought them.
-    It is configured in a <strong>cookieless</strong> mode: Google Consent Mode is set to deny
-    analytics and advertising storage, so <strong>no analytics or advertising cookies are placed
-    on your device</strong> and you are not tracked across sites or over time. We receive only
-    aggregate counts (pages viewed, approximate country, device type, referring source) and
-    nothing that identifies you. This runs on the marketing pages only — the TableLab app
-    itself does not load Google Analytics.</li>
+    <li><strong>Website analytics (marketing pages only, and only if you agree):</strong>
+    Google Analytics 4 runs on our public web pages — this page, <a href="/about">/about</a>,
+    the blog, and the free calculators — to count visits and see which link or search brought
+    you here. <strong>Nothing is stored until you choose.</strong> On your first visit we ask,
+    and analytics stay switched off unless you press Accept. If you accept, Google Analytics
+    sets one first-party cookie so repeat visits are not double-counted; we receive aggregate
+    figures only (pages viewed, approximate country, device type, referring source) and nothing
+    that identifies you personally. If you decline, no analytics cookie is set and no analytics
+    data is collected. You can change your mind at any time using the <em>Cookie choices</em>
+    link in the footer of any page. We never use this data for advertising or share it for
+    marketing. This runs on the marketing pages only — the TableLab app itself does not
+    load Google Analytics.</li>
   </ul>
 
   <h2>2. How We Use Your Information</h2>

@@ -200,6 +200,57 @@ a:hover { text-decoration: underline; }
 .nav-dropdown > nav a:hover { background: var(--surface); color: var(--text); text-decoration: none; }
 .nav-dropdown > nav a[aria-current="page"] { background: var(--surface); color: var(--text); }
 
+/* ── Cookie consent bar ───────────────────────────────────────────────────────
+   GA4 defaults to denied in each page's inline snippet; this asks once and
+   site.js updates Consent Mode live. Accept and Decline are given deliberately
+   equal visual weight — no dark pattern. */
+.consent-bar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  margin: 0 auto;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+.consent-bar p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+.consent-bar a { color: var(--accent, #4CAF50); }
+.consent-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.consent-actions button {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+  white-space: nowrap;
+}
+.consent-actions button:hover { border-color: var(--text-muted); background: var(--surface); }
+/* Accept and Decline are styled IDENTICALLY on purpose. Refusing must be exactly
+   as easy and as prominent as accepting — no visual nudge toward consent. */
+.consent-actions button:focus-visible { outline: 2px solid var(--accent, #4CAF50); outline-offset: 2px; }
+
+@media (max-width: 560px) {
+  .consent-bar { flex-direction: column; align-items: stretch; gap: 12px; bottom: 10px; }
+  .consent-actions button { flex: 1; }
+}
+
 .btn {
   display: inline-block;
   padding: 11px 22px;

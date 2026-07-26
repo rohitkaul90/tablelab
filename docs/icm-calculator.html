@@ -93,23 +93,23 @@
     ]
   }
   </script>
-  <!-- Google Analytics 4 (G-H4D9DBVXDD) - cookieless by design.
-       Consent Mode v2 defaults every storage type to 'denied', so NO analytics or
-       ads cookies are set and no consent banner is legally required. GA4 still
-       records sessions, geography, device and - the reason it is here - traffic
-       source / medium / campaign / content, which is what the UTM'd social links
-       feed. If richer returning-visitor data is ever needed, flip analytics_storage
-       to 'granted' from a real consent banner; do NOT just delete these defaults,
-       or the site starts setting cookies with no consent mechanism behind it. -->
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
     gtag('consent', 'default', {
       ad_storage: 'denied',
       ad_user_data: 'denied',
       ad_personalization: 'denied',
-      analytics_storage: 'denied'
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
     });
     gtag('js', new Date());
     gtag('config', 'G-H4D9DBVXDD');

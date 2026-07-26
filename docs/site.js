@@ -100,4 +100,66 @@
       if (summary) summary.focus();
     });
   }
+
+  // ── Cookie consent ─────────────────────────────────────────────────────────
+  // Each page's inline GA4 snippet defaults Consent Mode to DENIED and restores a
+  // stored 'granted' before gtag('config') runs. This asks the question once,
+  // records the answer in localStorage (not a cookie — storing the consent choice
+  // itself is exempt), and updates Consent Mode live so the current page starts
+  // being measured immediately rather than only from the next navigation.
+  var CONSENT_KEY = 'tl-consent';
+
+  function readConsent() {
+    try { return localStorage.getItem(CONSENT_KEY); } catch (e) { return null; }
+  }
+
+  function setConsent(value) {
+    try { localStorage.setItem(CONSENT_KEY, value); } catch (e) { /* private mode */ }
+    if (typeof window.gtag === 'function') {
+      window.gtag('consent', 'update', {
+        analytics_storage: value === 'granted' ? 'granted' : 'denied'
+      });
+    }
+  }
+
+  function showConsentBar() {
+    if (document.querySelector('.consent-bar')) return;
+    var bar = document.createElement('div');
+    bar.className = 'consent-bar';
+    bar.setAttribute('role', 'dialog');
+    bar.setAttribute('aria-label', 'Cookie choices');
+    bar.innerHTML =
+      '<p>We use Google Analytics to count visits and see which link brought you here. ' +
+      'Accepting sets one cookie. Decline and nothing is stored. ' +
+      '<a href="/privacy">Privacy policy</a></p>' +
+      '<div class="consent-actions">' +
+        '<button type="button" data-consent="denied">Decline</button>' +
+        '<button type="button" data-consent="granted">Accept</button>' +
+      '</div>';
+    bar.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('button[data-consent]') : null;
+      if (!btn) return;
+      setConsent(btn.getAttribute('data-consent'));
+      bar.remove();
+    });
+    document.body.appendChild(bar);
+  }
+
+  if (!readConsent()) showConsentBar();
+
+  // Let the choice be revisited. Injected rather than hand-added to ten duplicated
+  // footers, so there is one copy to maintain.
+  var footerLinks = document.querySelector('footer a[href="/terms"]');
+  if (footerLinks && footerLinks.parentNode) {
+    var sep = document.createTextNode(' · ');
+    var link = document.createElement('a');
+    link.href = '#';
+    link.textContent = 'Cookie choices';
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      showConsentBar();
+    });
+    footerLinks.parentNode.insertBefore(sep, footerLinks.nextSibling);
+    footerLinks.parentNode.insertBefore(link, sep.nextSibling);
+  }
 })();
