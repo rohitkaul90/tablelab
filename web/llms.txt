@@ -31,6 +31,7 @@
 - [Can AI Solve Poker?](https://tablelab.app/blog/can-ai-solve-poker): What LLMs do vs. what solvers do, and how to spot AI hype.
 - [Poker Bankroll Management](https://tablelab.app/blog/poker-bankroll-management): How many buy-ins you need for live cash and tournaments, the risk-of-ruin math, and why live differs from online.
 - [How to Read Players Without a HUD](https://tablelab.app/blog/how-to-read-players-without-a-hud): Building live poker reads by hand without a HUD — what a HUD measures, why sample size makes it impossible to replicate live, population reads, the four signals to track, and why betting patterns beat physical tells.
+- [Poker Tournament Variance](https://tablelab.app/blog/poker-tournament-variance): How large a sample a tournament ROI actually needs — why standard deviation is a consequence of field size rather than a fixed input, simulated confidence bands on measured ROI, typical downswing depth, bankroll and risk of ruin by field size, why ITM% is a weak edge signal, and where the normal model understates real tail risk.
 - [Privacy Policy](https://tablelab.app/privacy): Data collection, processors, and user rights.
 - [Terms of Service](https://tablelab.app/terms): Terms governing use of TableLab.
 

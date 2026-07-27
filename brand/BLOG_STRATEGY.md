@@ -67,6 +67,62 @@ Hub-and-spoke; every spoke links to the pillar and to ≥2 sibling spokes.
 
 **Internal-linking rule:** the two pillar pages cross-link (bankroll discipline ↔ honest strategy). B3 (multiway) links to the Pillar 2 leaks piece. A3 (variance) and the leaks piece both link to product how-tos. Anchor text = descriptive keyword phrases, never "click here."
 
+## Trend & Freshness Layer
+
+> Added 2026-07-27. The cluster roadmap above is entirely evergreen, which left us unable to catch the search spikes that drive most poker traffic and forfeited the freshness signals that help both rankings and AI-engine citation. This layer is **additive** — it does not displace cluster work.
+
+**Mix: ~70% evergreen cluster / ~30% trend-pegged.**
+
+### The news-peg rule (non-negotiable)
+
+Every trend post must **land in an existing cluster and target an evergreen keyword.** The news lives in the intro, the hero banner, and *one* clearly-scoped section — **never** in the H1, the slug, or the target keyword. When the news decays, the page must still rank on its evergreen query.
+
+We are not a news aggregator. We are a tracker that reads the news through a bankroll, variance, or honesty lens. If a story has no such lens, we skip it — traffic alone is not a reason to publish.
+
+### Monthly trend scan
+
+Named sources, checked once a month: **PokerNews**, **pokerfuse** (especially "The Rail" community roundup), **poker.org**, **WSOP.com**, **arXiv** (cs.AI / cs.GT poker papers), **GTO Wizard blog**. Log each candidate with a fit score against Clusters A and B, plus a note on shelf life.
+
+### Seasonal calendar
+
+Plan for the peaks instead of reacting to them:
+
+| Window | Event |
+|---|---|
+| May–Jul | WSOP (final-table timing varies — 2026 moved the Main Event FT to Aug 3–5 under a new ESPN deal) |
+| Aug–Sep | WSOP Online (2026: Aug 16 – Sep 29) |
+| Sep | WCOOP |
+| Rolling | Triton stops |
+| Dec–Jan | Year-in-review / resolutions-and-bankroll angle |
+
+### Verification gate (higher bar than evergreen posts)
+
+Breaking coverage is error-prone and poker SEO content farms recycle stale claims as current news. Every figure in a trend post is verified against a **primary or tier-1 source fetched directly** — never a secondary SEO page, and never an aggregator's summary of a primary source.
+
+**Corrected-misinformation log** — verified false, do not reintroduce:
+
+- ❌ "PokerStars partnered with GTO Wizard for Fair Play Check in 2026." → It was **GGPoker**, announced **March 2025** (PokerNews, 2025-03-06).
+- ❌ "PokerTracker / Hold'em Manager merger" presented as current news. → That merger is from **August 2014**.
+- ⚠️ At least one PokerNews page summary garbles the 2026 vs 2025 WSOP Main Event field comparison. The 2026 field (**9,208**) was **smaller** than 2025 (**9,735**); the record remains 2024 (**10,112**). Total WSOP entries hit a record while the Main Event field and total prize money both fell — always state that divergence correctly.
+
+### Decay policy
+
+Review every trend post at **90 days**: either refresh the peg with current figures (updating `article:modified_time`, JSON-LD `dateModified`, and `sitemap.xml` `lastmod` together) or let the evergreen body carry the page unchanged.
+
+**90 days is the default, not the rule — set the review date from the peg's own expiry.** A post pegged to a scheduled future event goes stale the day after it happens, not in three months.
+
+| Post | Review by | Why |
+|---|---|---|
+| `/blog/poker-tournament-variance` | **2026-08-06** | Written before the WSOP Main Event final table (Aug 3–5). Its intro, conclusion, and FAQ #5 use future tense about a result that will exist by Aug 6. Swap to past tense, name the champion, and consider replacing the pure-news FAQ with an evergreen question. |
+
+### Trend backlog
+
+| Candidate | Cluster | Peg | Shelf life |
+|---|---|---|---|
+| **LLMs vs GTO: the 2026 scoreboard** — PokerSkill (arXiv 2605.30094, 2026-05-28) has LLMs playing near-solver poker with no training and no solver, yet still **losing** to the GTO Wizard benchmark: GPT‑5.5 XHigh −57 ± 21 mbb/hand, Claude Opus 4.6 −80 ± 29, Opus 4.7 −87 ± 64. "Expert-level" in the title ≠ beating GTO. | B | arXiv paper | High |
+| **Which poker tools are actually allowed in 2026** — RTA/HUD policy split; GGPoker × GTO Wizard integrity partnership, 31 accounts banned, Fair Play Check timestamp forensics. Defines the line TableLab sits on. | New (Pillar 2) | RTA arms race | High |
+| **WSOP Online series** (Aug 16 – Sep 29, 2026) | A | Calendar | Low |
+
 ## AI-Citation / GEO Surface Strategy
 
 Primary goal — so this is weighted heavily.

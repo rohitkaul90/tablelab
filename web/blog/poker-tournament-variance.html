@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poker Tournament Variance: How Big a Sample Do You Need? — TableLab</title>
+  <meta name="description" content="9,208 entered the 2026 WSOP Main Event; 1,382 cashed. Our simulations show why 1,000 tournaments still can't prove you're a winner — and what sample actually can.">
+  <link rel="canonical" href="https://tablelab.app/blog/poker-tournament-variance">
+  <meta property="og:title" content="Poker Tournament Variance: How Big a Sample Do You Need?">
+  <meta property="og:description" content="We ran our own variance engine on real field sizes. At 2,000 runners, a genuine 20% ROI winner still has a 30% chance of showing a loss after 1,000 tournaments.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://tablelab.app/blog/poker-tournament-variance">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Poker Tournament Variance: How Big a Sample Do You Need?">
+  <meta name="twitter:description" content="1,382 of 9,208 cashed the WSOP Main Event. Here's the sample size your tournament ROI actually needs — with the simulations to back it.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta property="article:published_time" content="2026-07-27">
+  <meta property="article:modified_time" content="2026-07-27">
+  <meta name="author" content="Rohit Kaul">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="stylesheet" href="/site.css?v=495db8e391">
+  <script src="/site.js?v=7c350f7df0" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://tablelab.app/blog/poker-tournament-variance#article",
+        "headline": "Poker Tournament Variance: How Big a Sample Before Your ROI Means Anything?",
+        "description": "How large a sample a tournament ROI actually needs, using simulations from TableLab's own variance engine: why standard deviation is a consequence of field size, why a genuine winner can show a loss over 1,000 tournaments, what a normal downswing looks like, and where the normal model understates real risk.",
+        "datePublished": "2026-07-27",
+        "dateModified": "2026-07-27",
+        "author": { "@id": "https://tablelab.app/#rohit" },
+        "publisher": { "@id": "https://tablelab.app/#organization" },
+        "image": { "@id": "https://tablelab.app/blog/poker-tournament-variance#primaryimage" },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://tablelab.app/blog/poker-tournament-variance" },
+        "isPartOf": { "@id": "https://tablelab.app/blog#blog" },
+        "wordCount": 2400,
+        "keywords": ["poker tournament variance", "tournament ROI sample size", "MTT variance", "poker downswing", "tournament bankroll", "ITM vs ROI", "risk of ruin poker"],
+        "articleSection": "Bankroll & Variance"
+      },
+      {
+        "@type": "Blog",
+        "@id": "https://tablelab.app/blog#blog",
+        "name": "The TableLab Blog",
+        "url": "https://tablelab.app/blog/",
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com", "https://www.youtube.com/channel/UCaslEsv-BMGKuOY4ssKQqVQ"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://tablelab.app/#rohit",
+        "name": "Rohit Kaul",
+        "givenName": "Rohit",
+        "description": "Live cash-game poker player and data-analytics professional; maker of TableLab. Around 20 years playing poker, focused on live cash as a winning player, with over a decade building quantitative models in Python.",
+        "jobTitle": "Founder",
+        "worksFor": { "@id": "https://tablelab.app/#organization" },
+        "knowsAbout": ["Poker strategy", "Cash game poker", "Game theory optimal (GTO) poker", "Poker bankroll management", "Data analytics", "Quantitative modeling"],
+        "alumniOf": [
+          { "@type": "CollegeOrUniversity", "name": "Purdue University" },
+          { "@type": "CollegeOrUniversity", "name": "University of Mumbai" }
+        ],
+        "sameAs": [
+          "https://www.linkedin.com/in/rohit-kaul-a761171a2",
+          "https://x.com/RohitKaul90",
+          "https://www.youtube.com/@rohitkaul1990",
+          "https://pokerdb.thehendonmob.com/player.php?a=r&n=877305"
+        ]
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://tablelab.app/blog/poker-tournament-variance#primaryimage",
+        "url": "https://tablelab.app/og-cover.png",
+        "width": 2400,
+        "height": 1260
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/blog/poker-tournament-variance#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tablelab.app" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://tablelab.app/blog/" },
+          { "@type": "ListItem", "position": 3, "name": "Poker Tournament Variance", "item": "https://tablelab.app/blog/poker-tournament-variance" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/blog/poker-tournament-variance#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "How many tournaments do you need to know your true ROI?", "acceptedAnswer": { "@type": "Answer", "text": "Far more than most players assume. In our simulations, a player with a genuine 20% ROI in roughly 2,000-runner fields still sees a 95% range of about minus 54% to plus 94% after 1,000 tournaments. Narrowing that measured ROI to within 5 percentage points of the truth would take over 200,000 events. Tournament ROI is best treated as a rough estimate, not a measurement." } },
+          { "@type": "Question", "name": "Why is tournament variance so much higher than cash game variance?", "acceptedAnswer": { "@type": "Answer", "text": "Because tournament prize pools are top-heavy. You lose most of the time and are paid back in rare, very large scores, so results are heavily right-skewed. Standard deviation is not a fixed property of a player either. It is a consequence of field size and payout shape, rising roughly with the square root of the number of entries." } },
+          { "@type": "Question", "name": "Is ITM percentage a good measure of tournament skill?", "acceptedAnswer": { "@type": "Answer", "text": "No. Two players can share an identical in-the-money rate with vastly different edges. In a 6,000-player field a 10% ITM rate comes with roughly a 0.0167% chance of winning, while a 100-player field with the same 10% ITM gives a 1% chance (PokerCoaching). Min-cashing is also barely profitable: the 2026 WSOP Main Event paid $15,000 on a $10,000 buy-in, a net of half a buy-in." } },
+          { "@type": "Question", "name": "How many buy-ins do you need for a tournament bankroll?", "acceptedAnswer": { "@type": "Answer", "text": "It depends almost entirely on field size. Our engine puts the bankroll needed to hold lifetime risk of ruin at 5% near 279 buy-ins for 300-runner fields at a 20% ROI, and above 1,000 buy-ins for 2,000-runner fields. Published work reaches similar conclusions: a $10,000 roll, about 92 buy-ins at a $109 buy-in, carried an 86.5% risk of ruin in a 7,000-runner field (O'Kearney and Carter). Most players are underrolled for the fields they play." } },
+          { "@type": "Question", "name": "Was the 2026 WSOP Main Event the biggest ever?", "acceptedAnswer": { "@type": "Answer", "text": "No. The 2026 Main Event drew 9,208 entries, the fourth-largest field in the event's 57-year history, behind 2024 with 10,112, 2023 with 10,043 and 2025 with 9,735. It was 527 entries smaller than 2025, a decline of 5.4%, even though total WSOP live attendance set a record of 251,899 entries across all bracelet events." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-H4D9DBVXDD');
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/about">About</a>
+            <details class="nav-dropdown">
+        <summary>Tools<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <nav aria-label="Free poker calculators">
+          <a href="/variance-calculator">Variance Calculator</a>
+          <a href="/icm-calculator">ICM Calculator</a>
+        </nav>
+      </details>
+      <a class="link" href="/privacy">Privacy</a>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Poker Tournament Variance</div>
+
+      <h1>Poker Tournament Variance: How Big a Sample Before Your ROI Means Anything?</h1>
+      <p class="byline">By Rohit Kaul · July 27, 2026 · 11 min read</p>
+
+      <div class="hero-banner">
+        <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="9,208 players entered the 2026 WSOP Main Event, 1,382 of them cashed, and one bracelet will be awarded. Your tournament ROI needs a bigger sample than you think.">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0d130d"/>
+              <stop offset="1" stop-color="#16201a"/>
+            </linearGradient>
+          </defs>
+          <rect width="1200" height="380" fill="url(#bg)"/>
+          <rect x="0" y="0" width="6" height="380" fill="#4CAF50"/>
+          <text x="70" y="86" fill="#81C784" font-size="22" letter-spacing="3" font-family="sans-serif">BANKROLL &amp; VARIANCE</text>
+          <text x="68" y="170" fill="#ffffff" font-size="60" font-weight="700" font-family="sans-serif">Your ROI needs a</text>
+          <text x="68" y="242" fill="#ffffff" font-size="60" font-weight="700" font-family="sans-serif">bigger sample.</text>
+          <text x="70" y="300" fill="#b0bec5" font-size="26" font-family="sans-serif">A thousand tournaments still won't prove you're a winner.</text>
+          <rect x="70" y="324" width="560" height="40" rx="8" fill="rgba(76,175,80,0.14)" stroke="#4CAF50" stroke-opacity="0.5"/>
+          <text x="86" y="351" fill="#eceff1" font-size="20" font-family="sans-serif"><tspan fill="#81C784" font-weight="700">9,208 entries</tspan>  ·  1,382 cashed  ·  1 bracelet</text>
+        </svg>
+      </div>
+
+      <p>On July 13, nine players bagged chips in the World Series of Poker Main Event and went home. They come back on August 3 &mdash; a three-week gap the WSOP built in so ESPN can air the finale unspoiled (<a href="https://www.espn.com/poker/story/_/id/49356117/2026-world-series-poker-main-event-final-table-set">ESPN</a>). As we publish this, no champion has been crowned. What we do know is the arithmetic that got them there: 9,208 entries, 1,382 paid, one bracelet (<a href="https://www.reviewjournal.com/sports/poker/wsop-main-event-is-4th-largest-in-history-features-10m-top-prize-3847777/">Las Vegas Review-Journal</a>).</p>
+
+      <p>That shape &mdash; a huge field, a thin payout tail, one winner &mdash; is what makes tournament results so hard to read. It's why a genuinely skilled player can grind for years and still not be able to prove it from their own numbers. So we ran the math ourselves, using the same variance engine that powers <a href="/variance-calculator">our variance calculator</a>, on field sizes drawn from published simulations. The results are worse than most players expect.</p>
+
+      <div class="tldr">
+        <p><strong>TL;DR:</strong> Tournament swings aren't a fixed quantity you can look up. They're a consequence of the field you sit down in, growing roughly with the square root of the number of entries (<a href="https://upswingpoker.com/tournament-player-mistakes-career-ending-mtt/">Anttonen</a>; <a href="https://jaredtendler.com/why-playing-smaller-field-mtts-is-good-for-your-mental-game/">O'Kearney and Carter</a>). Feed realistic field sizes into our variance engine and the conclusion is blunt: <strong>a genuinely good tournament player can grind a thousand events and still be looking at a losing graph</strong>, with better than a one-in-four chance of exactly that. Getting a reliable read on your own win rate would take a couple of hundred thousand tournaments &mdash; more than anyone will ever play. Cashing often doesn't rescue it either, and the standard model everyone relies on, ours included, is too kind to big fields. We measured our own to find out by how much.</p>
+      </div>
+
+      <h2>What did the 2026 WSOP actually show?</h2>
+
+      <p>Two things at once, pulling in opposite directions. More people played the WSOP than ever &mdash; a record 251,899 entries across its live bracelet events &mdash; and yet the total prize money <em>fell</em> by about 2.5% (<a href="https://pokerfuse.com/latest-news/2026/7/heres-how-much-2026-wsop-generated-prize-money/">pokerfuse</a>). The growth all happened in the cheaper events.</p>
+
+      <p>The Main Event ran against the same current. Its field was the fourth-largest in 57 years, but it still came in smaller than the year before, and well short of the 2024 record. The WSOP pointed to inflation, tax-law changes and weaker international turnout (Review-Journal). Online bracelets fell harder still, shedding close to a fifth of their prize money in a second consecutive annual decline (<a href="https://pokerfuse.com/latest-news/2026/7/2026-wsop-online-bracelets-numbers-behind/">pokerfuse</a>).</p>
+
+      <figure>
+        <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Slope chart comparing 2025 and 2026 World Series of Poker figures: live entries rose about 2 percent from 246,960 to 251,899, live prize money fell about 2.5 percent from 481.7 to 469.9 million dollars, and online bracelet prize pools fell about 18 percent from roughly 30 to 24.5 million dollars." style="max-width:100%;height:auto">
+          <text x="20" y="24" fill="#eceff1" font-size="14">More players, less money: WSOP 2025 to 2026</text>
+          <line x1="150" y1="50" x2="150" y2="200" stroke="#455a64" stroke-width="1"/>
+          <line x1="420" y1="50" x2="420" y2="200" stroke="#455a64" stroke-width="1"/>
+          <text x="150" y="220" fill="#90a4ae" font-size="12" text-anchor="middle">2025</text>
+          <text x="420" y="220" fill="#90a4ae" font-size="12" text-anchor="middle">2026</text>
+          <!-- live entries: up -->
+          <line x1="150" y1="105" x2="420" y2="88" stroke="#4CAF50" stroke-width="2.5"/>
+          <circle cx="150" cy="105" r="4" fill="#4CAF50"/><circle cx="420" cy="88" r="4" fill="#4CAF50"/>
+          <text x="142" y="109" fill="#cfd8dc" font-size="11" text-anchor="end">246,960</text>
+          <text x="430" y="86" fill="#4CAF50" font-size="11">251,899 entries  +2%</text>
+          <!-- live prize money: down -->
+          <line x1="150" y1="135" x2="420" y2="150" stroke="#ffd54f" stroke-width="2.5"/>
+          <circle cx="150" cy="135" r="4" fill="#ffd54f"/><circle cx="420" cy="150" r="4" fill="#ffd54f"/>
+          <text x="142" y="139" fill="#cfd8dc" font-size="11" text-anchor="end">$481.7M</text>
+          <text x="430" y="154" fill="#ffd54f" font-size="11">$469.9M prizes  &minus;2.5%</text>
+          <!-- online: down hard -->
+          <line x1="150" y1="165" x2="420" y2="192" stroke="#ef9a9a" stroke-width="2.5"/>
+          <circle cx="150" cy="165" r="4" fill="#ef9a9a"/><circle cx="420" cy="192" r="4" fill="#ef9a9a"/>
+          <text x="142" y="169" fill="#cfd8dc" font-size="11" text-anchor="end">~$30M</text>
+          <text x="430" y="196" fill="#ef9a9a" font-size="11">$24.5M online  &minus;18%</text>
+          <text x="20" y="248" fill="#90a4ae" font-size="11">Source: pokerfuse, July 2026. Live figures cover all WSOP bracelet events.</text>
+        </svg>
+        <figcaption>Record attendance and falling prize money in the same summer. Volume moved down the buy-in ladder, and online kept shrinking.</figcaption>
+      </figure>
+
+      <h2>Why is tournament variance so much bigger than cash variance?</h2>
+
+      <p>Because of where the money sits. A cash game pays you roughly in proportion to how well you play each hand. A tournament pays almost nothing to most finishers and enormous sums to a few. The 2026 Main Event is a clean illustration. Around one player in seven cashed, and the minimum cash paid $15,000 on a $10,000 entry (<a href="https://www.wsop.com/news/wsop-updates-2026-the-main-event-bubble-set-to-pop-today/">WSOP.com</a>). <strong>Outlast nearly eight thousand people and you've earned half a buy-in.</strong> First place is worth a thousand times the entry fee (<a href="https://www.reviewjournal.com/sports/poker/wsop-main-event-is-4th-largest-in-history-features-10m-top-prize-3847777/">Review-Journal</a>). Nearly all of the money sits at the very top, which is another way of saying nearly all of it is out of reach on any given night.</p>
+
+      <p>That top-heaviness is the whole story. You lose most of the time, and you're repaid in rare, gigantic scores. Statisticians call the resulting distribution right-skewed; players call it running bad for six months. Jordan "BBZ" Drummond makes the point sharply: a <strong>2,000-tournament sample can hinge on roughly 20 deep runs</strong> (<a href="https://bbzpoker.com/the-truth-about-variance-in-mtts-lessons-from-bbzs-toy-game/">BBZ Poker</a>). Twenty. Out of two thousand.</p>
+
+      <p>Here's the part that surprised us most while researching this. <strong>Tournament standard deviation is not a number you look up.</strong> Primedope's tournament variance calculator &mdash; the tool nearly every published MTT variance figure traces back to &mdash; doesn't accept standard deviation as an input at all. It <em>derives</em> variance by simulating the payout structure (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>). Standard deviation is an output, a consequence of the field you chose to play.</p>
+
+      <p>So we back-derived it from published simulation results. Converting the totals reported by <a href="https://upswingpoker.com/tournament-player-mistakes-career-ending-mtt/">Anttonen at Upswing</a> and by <a href="https://jaredtendler.com/why-playing-smaller-field-mtts-is-good-for-your-mental-game/">O'Kearney and Carter</a> into a per-tournament figure gives a swing of under four buy-ins in a hundred-runner field, and more than thirty in a seven-thousand-runner one. Fit a curve through those points and <strong>the swing grows with about the square root of the field</strong>. That one relationship is why big-field specialists live in a different universe from sit-and-go regulars, and why a bankroll rule that ignores field size can't be right.</p>
+
+      <div class="callout"><p><strong>Our method, stated plainly:</strong> those per-tournament figures are our arithmetic on someone else's published totals (SD divided by the square root of the sample, divided by the buy-in), not numbers any source printed. And both source chains run through the same upstream simulator, so treat them as one methodology, not two independent confirmations. Nobody we could find has published a measured standard deviation from a real results database.</p></div>
+
+      <h2>How many tournaments before your ROI means anything?</h2>
+
+      <p>We ran it. Take a player whose <em>true</em> edge is a strong 20% return per tournament, sit them in fields of roughly 2,000 runners, and ask what their results would actually look like along the way. The table below is the range their <em>measured</em> return falls into, 95 times out of 100.</p>
+
+      <figure>
+        <svg viewBox="0 0 580 290" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Range chart of measured ROI after different sample sizes for a player whose true ROI is 20 percent, at 12 buy-ins standard deviation. After 200 tournaments the 95 percent range is minus 146 to plus 186 percent. After 500 it is minus 85 to plus 125. After 1,000 it is minus 54 to plus 94. After 2,000 it is minus 33 to plus 73. After 5,000 it is minus 13 to plus 53. The range still includes zero at every sample size shown." style="max-width:100%;height:auto">
+          <text x="20" y="22" fill="#eceff1" font-size="14">Measured ROI after N tournaments (true ROI = 20%, SD = 12 BI)</text>
+          <!-- zero line -->
+          <line x1="196" y1="44" x2="196" y2="236" stroke="#ef9a9a" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="196" y="256" fill="#ef9a9a" font-size="11" text-anchor="middle">breakeven</text>
+          <!-- true ROI line: 20% -> x = 196 + 20*0.72 = 210.4 -->
+          <line x1="210" y1="44" x2="210" y2="236" stroke="#4CAF50" stroke-width="1"/>
+          <text x="248" y="42" fill="#4CAF50" font-size="11" text-anchor="middle">true ROI 20%</text>
+          <!-- scale: 0.72 px per percentage point, origin x=196 -->
+          <!-- N=200: -146.3 .. +186.3 -->
+          <text x="88" y="72" fill="#cfd8dc" font-size="12" text-anchor="end">200</text>
+          <rect x="91" y="61" width="239" height="14" rx="3" fill="#ef9a9a" fill-opacity="0.55"/>
+          <text x="350" y="72" fill="#90a4ae" font-size="11">&minus;146% to +186%</text>
+          <!-- N=500: -85.2 .. +125.2 -->
+          <text x="88" y="106" fill="#cfd8dc" font-size="12" text-anchor="end">500</text>
+          <rect x="135" y="95" width="151" height="14" rx="3" fill="#ffd54f" fill-opacity="0.55"/>
+          <text x="350" y="106" fill="#90a4ae" font-size="11">&minus;85% to +125%</text>
+          <!-- N=1000: -54.4 .. +94.4 -->
+          <text x="88" y="140" fill="#cfd8dc" font-size="12" text-anchor="end">1,000</text>
+          <rect x="157" y="129" width="107" height="14" rx="3" fill="#ffd54f" fill-opacity="0.75"/>
+          <text x="350" y="140" fill="#90a4ae" font-size="11">&minus;54% to +94%</text>
+          <!-- N=2000: -32.6 .. +72.6 -->
+          <text x="88" y="174" fill="#cfd8dc" font-size="12" text-anchor="end">2,000</text>
+          <rect x="173" y="163" width="76" height="14" rx="3" fill="#81C784" fill-opacity="0.8"/>
+          <text x="350" y="174" fill="#90a4ae" font-size="11">&minus;33% to +73%</text>
+          <!-- N=5000: -13.3 .. +53.3 -->
+          <text x="88" y="208" fill="#cfd8dc" font-size="12" text-anchor="end">5,000</text>
+          <rect x="186" y="197" width="48" height="14" rx="3" fill="#4CAF50" fill-opacity="0.9"/>
+          <text x="350" y="208" fill="#90a4ae" font-size="11">&minus;13% to +53%</text>
+          <text x="20" y="232" fill="#cfd8dc" font-size="12">tournaments played</text>
+          <text x="20" y="278" fill="#90a4ae" font-size="11">TableLab simulation, variance_math.dart. Every band still crosses breakeven.</text>
+        </svg>
+        <figcaption>Five thousand tournaments in, a genuine 20% winner still can't statistically rule out being a losing player.</figcaption>
+      </figure>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption>Measured ROI after N tournaments when the true ROI is 20% and standard deviation is 12 buy-ins (roughly 2,000-runner fields). TableLab simulation.</caption>
+          <thead>
+            <tr><th>Tournaments</th><th>95% range of measured ROI</th><th>Range width</th><th>Chance of showing a loss</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>200</td><td>&minus;146% to +186%</td><td>333 pts</td><td>40.7%</td></tr>
+            <tr><td>500</td><td>&minus;85% to +125%</td><td>210 pts</td><td>35.5%</td></tr>
+            <tr><td>1,000</td><td>&minus;54% to +94%</td><td>149 pts</td><td>29.9%</td></tr>
+            <tr><td>2,000</td><td>&minus;33% to +73%</td><td>105 pts</td><td>22.8%</td></tr>
+            <tr><td>5,000</td><td>&minus;13% to +53%</td><td>67 pts</td><td>11.9%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Read the thousand-tournament row again. That's a very good player, and after a thousand events their results are still consistent with anything from a heavy loss to a spectacular win. Close to one in three of them will simply be down money at that point &mdash; staring at a losing graph that says almost nothing about how well they played.</p>
+
+      <p>How much volume would actually pin the number down? In those fields, narrowing your measured return to within five points of the truth takes north of two hundred thousand tournaments. Even in gentle hundred-runner fields it runs to tens of thousands. Play every day for a decade and you won't come close. For all practical purposes, <strong>nobody has a statistically meaningful tournament ROI</strong> &mdash; not the winners, and not the losers who think a bad year proves something.</p>
+
+      <p>One clarification, because it affects how much weight to give this. Working the same scenario by hand gives a standard error of about 38 percentage points, and the same &minus;54% to +94% band. That agreement checks our <em>arithmetic</em>, not our model &mdash; both routes run the identical formula. The model itself gets tested against outside numbers further down.</p>
+
+      <h2>What does a normal tournament downswing look like?</h2>
+
+      <p>Ugly, and longer than your bankroll plan assumes. We simulated 20,000 careers at each sample size, one step per tournament, tracking the worst peak-to-trough drawdown each career suffered. These are <em>winning</em> players throughout &mdash; true ROI 20%.</p>
+
+      <figure>
+        <svg viewBox="0 0 580 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Grouped bar chart of maximum peak-to-trough drawdown in buy-ins for a winning player with 20 percent ROI over 1,000 tournaments. At 300-runner fields with 6.1 buy-ins standard deviation, the median worst drawdown is 154 buy-ins and the 95th percentile is 300. At 2,000-runner fields with 12 buy-ins standard deviation, median 352 and 95th percentile 703. At 7,000-runner fields with 33.7 buy-ins standard deviation, median 1,100 and 95th percentile 2,206." style="max-width:100%;height:auto">
+          <text x="20" y="22" fill="#eceff1" font-size="14">Worst drawdown over 1,000 tournaments (true ROI = 20%)</text>
+          <line x1="150" y1="46" x2="150" y2="196" stroke="#455a64" stroke-width="1"/>
+          <!-- scale: 2206 max -> 380px, 0.1723 px per BI -->
+          <!-- 300 runners -->
+          <text x="142" y="64" fill="#cfd8dc" font-size="12" text-anchor="end">300 runners</text>
+          <text x="142" y="78" fill="#78909c" font-size="10" text-anchor="end">SD 6.1 BI</text>
+          <rect x="150" y="54" width="27" height="12" fill="#4CAF50"/>
+          <rect x="150" y="68" width="52" height="12" fill="#4CAF50" fill-opacity="0.45"/>
+          <text x="212" y="64" fill="#90a4ae" font-size="11">154 BI median</text>
+          <text x="212" y="78" fill="#90a4ae" font-size="11">300 BI at the 95th percentile</text>
+          <!-- 2000 runners -->
+          <text x="142" y="112" fill="#cfd8dc" font-size="12" text-anchor="end">2,000 runners</text>
+          <text x="142" y="126" fill="#78909c" font-size="10" text-anchor="end">SD 12 BI</text>
+          <rect x="150" y="102" width="61" height="12" fill="#ffd54f"/>
+          <rect x="150" y="116" width="121" height="12" fill="#ffd54f" fill-opacity="0.45"/>
+          <text x="284" y="112" fill="#90a4ae" font-size="11">352 BI median</text>
+          <text x="284" y="126" fill="#90a4ae" font-size="11">703 BI at the 95th percentile</text>
+          <!-- 7000 runners -->
+          <text x="142" y="160" fill="#cfd8dc" font-size="12" text-anchor="end">7,000 runners</text>
+          <text x="142" y="174" fill="#78909c" font-size="10" text-anchor="end">SD 33.7 BI</text>
+          <rect x="150" y="150" width="190" height="12" fill="#ef9a9a"/>
+          <rect x="150" y="164" width="380" height="12" fill="#ef9a9a" fill-opacity="0.45"/>
+          <text x="348" y="160" fill="#90a4ae" font-size="11">1,100 BI median</text>
+          <text x="150" y="192" fill="#90a4ae" font-size="11">2,206 BI at the 95th percentile</text>
+          <text x="20" y="222" fill="#90a4ae" font-size="11">TableLab simulation, 20,000 careers per row, one step per tournament. Solid = median, faded = 95th percentile.</text>
+          <text x="20" y="238" fill="#90a4ae" font-size="11">Field sizes map to derived SD; see the method note above.</text>
+        </svg>
+        <figcaption>A typical &mdash; not worst-case &mdash; downswing for a winning player in 2,000-runner fields runs 352 buy-ins deep.</figcaption>
+      </figure>
+
+      <p>A median drawdown of 352 buy-ins is not a disaster scenario. It's the middle outcome. Half of all winning players in those fields experience worse. If you're playing $100 tournaments, that's a $35,200 trough on the way to a profitable career &mdash; and the 95th percentile is double it.</p>
+
+      <p>Granularity matters here in a way it doesn't for the other tables, so it's worth stating what we did. These careers are walked one tournament at a time. An earlier run of ours used a coarser grid of 200 checkpoints, which quietly smoothed over troughs inside each block and reported drawdowns 3 to 5% shallower. Sampling resolution is an easy place for a simulation to flatter itself.</p>
+
+      <h2>So how many buy-ins do you actually need?</h2>
+
+      <p>More than the folklore numbers, and the requirement climbs steeply with field size. To keep a winning player's lifetime risk of going broke down to one in twenty, our engine wants a few hundred buy-ins in small fields and roughly a thousand in 2,000-runner ones. Published work arrives from the other direction and lands in the same place: one bankroll that faced only a modest risk of ruin in a 300-runner field carried an 86.5% risk in the 7,000-runner Sunday Million &mdash; same buy-in, same player (<a href="https://jaredtendler.com/why-playing-smaller-field-mtts-is-good-for-your-mental-game/">O'Kearney and Carter</a>). Anttonen recommends 500 buy-ins for large fields.</p>
+
+      <p>That needs squaring with the number everyone quotes. The widely cited <strong>100-buy-in MTT minimum is a floor, not a target</strong>, and it holds up best in small and mid-sized fields. In 2,000-runner fields it isn't close. Our own <a href="/blog/poker-bankroll-management">guide to how many buy-ins you actually need</a> draws the same line: 100 as the survival minimum, 200 to 500 for conservative or large-field players. The simulations here are what that range looks like once you attach a specific field size to it.</p>
+
+      <p>The practical reading isn't "go get a thousand buy-ins." It's that <strong>field size, not stakes, is the dominant risk lever</strong> in tournaments. Dropping from 2,000-runner fields to 300-runner fields cuts required bankroll by roughly three quarters at the same buy-in. Game selection <em>is</em> bankroll management here.</p>
+
+      <h2>Why these numbers still understate your risk</h2>
+
+      <p>Now the honest part. Everything above is a normal approximation of a random walk with drift &mdash; the standard model, and the one inside our calculator. Tournament results are heavily right-skewed, so that model is known to <em>understate</em> tail risk. We wanted to know by how much, so we ran the published scenarios through our own engine and compared.</p>
+
+      <p>Each comparison below runs at that scenario's own published inputs, not the 20% ROI and 1,000 tournaments used earlier. On the 300-runner field (25% ROI over 520 events) we get a 17.5% chance of losing money against <a href="https://jaredtendler.com/why-playing-smaller-field-mtts-is-good-for-your-mental-game/">O'Kearney and Carter's</a> published 17.3%. On a 2,000-runner field (30% ROI over 1,000 events) we get 21.5% against <a href="https://upswingpoker.com/tournament-player-mistakes-career-ending-mtt/">Anttonen's</a> 23%. But on the most top-heavy scenario &mdash; the 7,000-runner Sunday Million at 25% ROI over 520 events &mdash; we get 43.3% where their structure-aware simulation gives 56.9% (O'Kearney and Carter). Our model is optimistic by 13.6 percentage points exactly where the payout tail is thinnest.</p>
+
+      <div class="callout"><p><strong>Our read:</strong> use the normal model for small and mid-sized fields, and treat it as a floor for big ones. The larger and more top-heavy the field, the more the real distribution punishes you beyond what the formula admits. One caveat on the comparison itself: we derived our standard-deviation inputs from those same published totals, so the standard deviations agree by construction &mdash; that part isn't independent. The probabilities are what's being tested.</p></div>
+
+      <p>This is also why <strong>your in-the-money rate deserves less respect than it gets</strong>. Two players can cash at exactly the same rate with completely different edges. Cashing one time in ten means something very different in a hundred-player field than in a six-thousand-player one, where the odds of actually winning are some sixty times slimmer (<a href="https://pokercoaching.com/blog/beginners-guide-to-tournament-selection-part-2/">PokerCoaching</a>). ITM tells you how often you outlast the field. It tells you almost nothing about whether you're beating it.</p>
+
+      <h2>Putting this to work on your own numbers</h2>
+
+      <p>Stop treating your ROI as a verdict and start treating it as a wide, slow-moving estimate. Three things follow from that.</p>
+
+      <ul>
+        <li><strong>Log everything, including the buy-in structure.</strong> A tournament ROI is meaningless without the field sizes behind it. Fifty $50 turbos and fifty $500 deep-stacks are not one sample.</li>
+        <li><strong>Judge decisions, not results.</strong> If 20 deep runs can swing a 2,000-tournament sample, your last month tells you nothing about your play. Review hands on their merits &mdash; that's the honest feedback loop, and it's why we built <a href="/about#features">hand review into TableLab</a> rather than leaning on results alone.</li>
+        <li><strong>Size your roll to the field, and know your deal equity.</strong> If you do reach a final table, chip counts stop mapping to money &mdash; our <a href="/icm-calculator">ICM calculator</a> shows what your stack is actually worth in a deal.</li>
+      </ul>
+
+      <p>You can reproduce every figure in this article. Drop a 20% ROI, a 12 buy-in standard deviation and 1,000 tournaments into <a href="/variance-calculator">our variance calculator</a> and you'll get the same bands, because it runs the same math. Or feed it your own tracked results instead of our assumptions &mdash; that's the version that actually tells you something.</p>
+
+      <h2>The bottom line</h2>
+
+      <ul>
+        <li>Your swings are set by the <strong>size of the field you play</strong>, not by your stakes. They grow with roughly the square root of the entries, so the same buy-in can demand three or four times the bankroll depending on the room.</li>
+        <li>A genuinely good tournament player can play <strong>a thousand events and still show a loss</strong> &mdash; better than a one-in-four chance of it.</li>
+        <li>Your tournament ROI is an estimate, and it will stay one. The volume needed to make it trustworthy runs into the hundreds of thousands of events.</li>
+        <li>The <em>typical</em> downswing for a winner in big fields runs to hundreds of buy-ins. That's the middle outcome, not the nightmare.</li>
+        <li>Cashing often is not evidence of an edge. Where you finish matters far more than how often you finish in the money.</li>
+        <li><strong>The standard variance model is too optimistic about big fields</strong>, ours included &mdash; we measured it understating the risk of losing by around thirteen points.</li>
+      </ul>
+
+      <p>When the Main Event final table reconvenes on August 3, one of nine players will win $10 million and eight won't, and the difference between them will be mostly cards. That's not cynicism &mdash; it's the same math that makes your own tournament graph so hard to read. The players who last are the ones who stopped asking their results whether they're any good, and started asking their decisions. <a href="/">Start logging yours</a>, or read our <a href="/blog/can-ai-solve-poker">honest take on what AI can and can't tell you</a> about them.</p>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>How many tournaments do you need to know your true ROI?</summary>
+          <p>Far more than most players assume. In our simulations, a player with a genuine 20% ROI in roughly 2,000-runner fields still sees a 95% range of &minus;54% to +94% after 1,000 tournaments. Narrowing that to within 5 percentage points of the truth would take over 200,000 events. Treat tournament ROI as a rough estimate, not a measurement.</p>
+        </details>
+        <details>
+          <summary>Why is tournament variance so much higher than cash game variance?</summary>
+          <p>Because prize pools are top-heavy. You lose most of the time and get repaid in rare, very large scores, so results are heavily right-skewed. Standard deviation also isn't a fixed property of a player &mdash; it's a consequence of field size and payout shape, rising roughly with the square root of entries.</p>
+        </details>
+        <details>
+          <summary>Is ITM percentage a good measure of tournament skill?</summary>
+          <p>No. Two players can share an identical in-the-money rate with very different edges. In a 6,000-player field a 10% ITM rate comes with roughly a 0.0167% chance of winning, while a 100-player field with the same 10% ITM gives a 1% chance (<a href="https://pokercoaching.com/blog/beginners-guide-to-tournament-selection-part-2/">PokerCoaching</a>). Min-cashing is barely profitable anyway: the 2026 WSOP Main Event paid $15,000 on a $10,000 buy-in.</p>
+        </details>
+        <details>
+          <summary>How many buy-ins do you need for a tournament bankroll?</summary>
+          <p>It depends almost entirely on field size. Our engine puts the bankroll for a 5% lifetime risk of ruin near 279 buy-ins in 300-runner fields at a 20% ROI, and above 1,000 buy-ins at 2,000 runners. Published work agrees: a $10,000 roll &mdash; about 92 buy-ins at the $109 buy-in &mdash; carried an 86.5% risk of ruin in a 7,000-runner field (<a href="https://jaredtendler.com/why-playing-smaller-field-mtts-is-good-for-your-mental-game/">O'Kearney and Carter</a>).</p>
+        </details>
+        <details>
+          <summary>Was the 2026 WSOP Main Event the biggest ever?</summary>
+          <p>No. Its 9,208 entries made the fourth-largest field in 57 years, behind 2024 (10,112), 2023 (10,043) and 2025 (9,735) (<a href="https://www.reviewjournal.com/sports/poker/wsop-main-event-is-4th-largest-in-history-features-10m-top-prize-3847777/">Review-Journal</a>). It was 527 entries smaller than 2025, a 5.4% decline &mdash; even though total WSOP live attendance set a record of 251,899 entries across all bracelet events (<a href="https://pokerfuse.com/latest-news/2026/7/heres-how-much-2026-wsop-generated-prize-money/">pokerfuse</a>).</p>
+        </details>
+      </section>
+
+      <h3>Sources</h3>
+      <ul class="sources">
+        <li>Vinson, D., "WSOP Main Event is 4th largest in history, features $10M top prize," <em>Las Vegas Review-Journal</em>, 2026-07-07, <a href="https://www.reviewjournal.com/sports/poker/wsop-main-event-is-4th-largest-in-history-features-10m-top-prize-3847777/">reviewjournal.com</a></li>
+        <li>ESPN, "2026 World Series of Poker Main Event final table set," 2026-07-14, <a href="https://www.espn.com/poker/story/_/id/49356117/2026-world-series-poker-main-event-final-table-set">espn.com</a></li>
+        <li>pokerfuse, "Here's how much the 2026 WSOP generated in prize money," 2026-07-17, <a href="https://pokerfuse.com/latest-news/2026/7/heres-how-much-2026-wsop-generated-prize-money/">pokerfuse.com</a></li>
+        <li>pokerfuse, "2026 WSOP online bracelets: the numbers behind," 2026-07-21, <a href="https://pokerfuse.com/latest-news/2026/7/2026-wsop-online-bracelets-numbers-behind/">pokerfuse.com</a></li>
+        <li>WSOP.com, "WSOP Updates 2026: The Main Event bubble set to pop today," 2026, <a href="https://www.wsop.com/news/wsop-updates-2026-the-main-event-bubble-set-to-pop-today/">wsop.com</a></li>
+        <li>O'Kearney, D. &amp; Carter, B., <em>Endgame Poker Strategy: The ICM Book</em>, excerpted in "Why Playing Smaller Field MTTs is Good For Your Mental Game," Jared Tendler, 2021-12-16, <a href="https://jaredtendler.com/why-playing-smaller-field-mtts-is-good-for-your-mental-game/">jaredtendler.com</a></li>
+        <li>Anttonen, M., "The 4 Dumbest Career-Ending Mistakes Tournament Players Make," Upswing Poker, 2017-03-17, <a href="https://upswingpoker.com/tournament-player-mistakes-career-ending-mtt/">upswingpoker.com</a></li>
+        <li>Primedope, "Poker Tournament Variance Calculator," retrieved 2026-07-27, <a href="https://www.primedope.com/tournament-variance-calculator/">primedope.com</a></li>
+        <li>Drummond, J. (BBZ), "The Truth About Variance in MTTs: Lessons from BBZ's Toy Game," BBZ Poker, 2025-10-07, <a href="https://bbzpoker.com/the-truth-about-variance-in-mtts-lessons-from-bbzs-toy-game/">bbzpoker.com</a></li>
+        <li>Jarvis, E., "Beginner's Guide to Tournament Selection, Part 2," PokerCoaching.com, 2021-03-05, <a href="https://pokercoaching.com/blog/beginners-guide-to-tournament-selection-part-2/">pokercoaching.com</a></li>
+        <li>Simulation code: <code>lib/utils/variance_math.dart</code> and <code>tool/variance_report.dart</code> in the TableLab repository &mdash; seeded, so every figure above reproduces exactly.</li>
+      </ul>
+
+      <p class="disclaimer-line">These are simulations built on assumed inputs, not measurements of your game. The standard-deviation figures are derived from published simulation output rather than a real results database, and the underlying normal model understates tail risk in large fields &mdash; by our own measurement. Treat every number here as an estimate, and verify big bankroll decisions against your own tracked results.</p>
+
+      <aside class="author-box">
+        <h3>About the author</h3>
+        <p><strong>Rohit Kaul</strong> is a winning live cash-game player and a data-analytics
+        professional (Master's in Business Analytics, Purdue) who builds the quantitative models behind
+        TableLab &mdash; profitable every year since 2023, across roughly 3,200 hours of tracked live cash.
+        Find him on
+        <a href="https://www.linkedin.com/in/rohit-kaul-a761171a2" rel="me noopener" target="_blank">LinkedIn</a>,
+        <a href="https://www.youtube.com/@rohitkaul1990" rel="me noopener" target="_blank">YouTube</a>, and
+        <a href="https://pokerdb.thehendonmob.com/player.php?a=r&amp;n=877305" rel="me noopener" target="_blank">The Hendon Mob</a>.</p>
+      </aside>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+</body>
+</html>
