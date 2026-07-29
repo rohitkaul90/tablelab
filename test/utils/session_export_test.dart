@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/models/session_model.dart';
+import 'package:tablelab/screens/import_mapping_screen.dart'
+    show kTableLabImportColumns;
 import 'package:tablelab/utils/session_export.dart';
 
 SessionModel _session({
@@ -102,6 +104,26 @@ void main() {
     test('headers contain no duplicates', () {
       expect(kSessionExportHeaders.toSet().length,
           kSessionExportHeaders.length);
+    });
+  });
+
+  group('export→import round-trip invariant', () {
+    test('every TableLab import-preset pattern is a header the export emits',
+        () {
+      // The lossless round-trip guarantee: each importable field in the
+      // TableLab preset must map to a real exported column. A preset entry
+      // pointing at a header the export doesn't emit means silent data loss
+      // on re-import (the original currency/country/hands_per_hour bug).
+      for (final entry in kTableLabImportColumns.entries) {
+        for (final pattern in entry.value) {
+          expect(
+            kSessionExportHeaders.contains(pattern),
+            isTrue,
+            reason: "TableLab preset field '${entry.key}' maps pattern "
+                "'$pattern', which is not an exported header",
+          );
+        }
+      }
     });
   });
 }

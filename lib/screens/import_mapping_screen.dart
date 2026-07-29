@@ -5,6 +5,7 @@ import '../data/poker_rooms.dart';
 import '../services/analytics_service.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
+import 'log_session_screen.dart' show kCurrencies;
 
 // ─── Field definitions ────────────────────────────────────────────────────────
 
@@ -54,33 +55,40 @@ class _Preset {
   const _Preset({required this.id, required this.name, required this.columns});
 }
 
+/// TableLab's own export → import mapping. Every pattern here must be a header
+/// the export actually emits (`kSessionExportHeaders` in session_export.dart)
+/// — that's the lossless round-trip invariant, guarded by
+/// `session_export_test.dart`. Public (not `_`) so the test can import it.
+@visibleForTesting
+const kTableLabImportColumns = <String, List<String>>{
+  'date':             ['date'],
+  'buy_in':           ['buy_in'],
+  'game_type':        ['game_type'],
+  'stakes':           ['stakes'],
+  'cash_out':         ['cash_out'],
+  'prize_won':        ['prize_won'],
+  'profit_loss':      ['profit_loss'],
+  'duration_minutes': ['duration_minutes'],
+  'start_time':       ['start_time'],
+  'end_time':         ['end_time'],
+  'location':         ['location'],
+  'currency':         ['currency'],
+  'country':          ['country'],
+  'table_size':       ['table_size'],
+  'hands_per_hour':   ['hands_per_hour'],
+  'notes':            ['notes'],
+  'rake_paid':        ['rake_paid'],
+  'finish_position':  ['finish_position'],
+  'total_entrants':   ['total_entrants'],
+  'table_quality':    ['table_quality'],
+};
+
 const _presets = [
   // ── TableLab own export ──────────────────────────────────────────────────
   _Preset(
     id: 'tablelab',
     name: 'TableLab',
-    columns: {
-      'date':             ['date'],
-      'buy_in':           ['buy_in'],
-      'game_type':        ['game_type'],
-      'stakes':           ['stakes'],
-      'cash_out':         ['cash_out'],
-      'prize_won':        ['prize_won'],
-      'profit_loss':      ['profit_loss'],
-      'duration_minutes': ['duration_minutes'],
-      'start_time':       ['start_time'],
-      'end_time':         ['end_time'],
-      'location':         ['location'],
-      'currency':         ['currency'],
-      'country':          ['country'],
-      'table_size':       ['table_size'],
-      'hands_per_hour':   ['hands_per_hour'],
-      'notes':            ['notes'],
-      'rake_paid':        ['rake_paid'],
-      'finish_position':  ['finish_position'],
-      'total_entrants':   ['total_entrants'],
-      'table_quality':    ['table_quality'],
-    },
+    columns: kTableLabImportColumns,
   ),
 
   // ── Mobile / web bankroll tracking apps ──────────────────────────────────
@@ -820,12 +828,13 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
           }
         }
 
-        // Currency
-        const validCurrencies = ['CAD', 'USD', 'GBP', 'EUR', 'AUD', 'NZD', 'INR'];
+        // Currency — validated against the app's single source of currency
+        // truth (kCurrencies), NOT a local copy: a currency added to the app
+        // but missing here would silently coerce on re-import.
         String currency;
         final currencyRaw =
             cell(currencyIdx).toUpperCase().replaceAll(RegExp(r'\s'), '');
-        if (validCurrencies.contains(currencyRaw)) {
+        if (kCurrencies.contains(currencyRaw)) {
           currency = currencyRaw;
         } else {
           final fromCountry = currencyFromCountry(country);
