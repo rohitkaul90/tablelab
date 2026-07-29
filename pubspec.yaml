@@ -51,6 +51,9 @@ dependencies:
   posthog_flutter: ^4.0.0
   package_info_plus: ^8.0.0
   shared_preferences: ^2.3.2
+  # Direct dep for the web export download path (save_bytes_web.dart) — was
+  # already resolved transitively at this version, so the lockfile is unchanged.
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

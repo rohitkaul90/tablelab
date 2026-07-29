@@ -962,4 +962,31 @@ void main() {
       });
     });
   });
+
+  group('parseTableSize', () {
+    test('plain numbers in range', () {
+      expect(parseTableSize('6'), 6);
+      expect(parseTableSize('2'), 2);
+      expect(parseTableSize('9'), 9);
+    });
+
+    test('common labels', () {
+      expect(parseTableSize('6-max'), 6);
+      expect(parseTableSize('9 handed'), 9);
+      expect(parseTableSize('Full ring (9)'), 9);
+    });
+
+    test('xlsx numeric cells read back as doubles', () {
+      expect(parseTableSize('9.0'), 9);
+      expect(parseTableSize('6.0'), 6);
+    });
+
+    test('out-of-range and numberless values return null', () {
+      expect(parseTableSize('10-max'), isNull);
+      expect(parseTableSize('1'), isNull);
+      expect(parseTableSize('0'), isNull);
+      expect(parseTableSize('heads-up'), isNull);
+      expect(parseTableSize(''), isNull);
+    });
+  });
 }

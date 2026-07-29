@@ -103,7 +103,16 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
     List<List<dynamic>> rows;
 
     if (ext == 'csv') {
-      var content = String.fromCharCodes(file.bytes!);
+      // Decode as UTF-8 (our own export + virtually every modern app);
+      // String.fromCharCodes would mojibake multi-byte chars (é → Ã©) and
+      // turn a UTF-8 BOM into three junk chars the strip below can't see.
+      String content;
+      try {
+        content = utf8.decode(file.bytes!);
+      } on FormatException {
+        // Not valid UTF-8 — legacy single-byte encoding; decode byte-per-char.
+        content = String.fromCharCodes(file.bytes!);
+      }
       if (content.startsWith('﻿')) content = content.substring(1);
       final delimiter = _detectDelimiter(content);
       final all = CsvToListConverter(
