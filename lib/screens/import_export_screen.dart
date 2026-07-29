@@ -1,7 +1,11 @@
+import 'dart:convert' show utf8;
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +23,14 @@ class ImportExportScreen extends ConsumerStatefulWidget {
 
 class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
   bool _busy = false;
+
+  /// On Android/iOS, `FilePicker.saveFile` REQUIRES `bytes` and writes the
+  /// file itself (Storage Access Framework); on web it triggers a download.
+  /// Only desktop returns a plain path for us to write manually.
+  static bool get _pluginWritesFile =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   // ─── Export ───────────────────────────────────────────────────────────────
 
@@ -74,15 +86,19 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
       }
       final rows = [_csvHeaders, ...sessions.map(_sessionToRow)];
       final csv = const ListToCsvConverter().convert(rows);
+      final bytes = Uint8List.fromList(utf8.encode(csv));
       final path = await FilePicker.platform.saveFile(
         dialogTitle: 'Export sessions as CSV',
         fileName:
             'poker_sessions_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
         type: FileType.custom,
         allowedExtensions: ['csv'],
+        bytes: bytes,
       );
       if (path != null) {
-        await File(path).writeAsString(csv);
+        if (!_pluginWritesFile) {
+          await File(path).writeAsBytes(bytes);
+        }
         _showSnack('Exported ${sessions.length} sessions to CSV.');
       }
     } catch (e) {
@@ -126,19 +142,25 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
           }
         }
       }
+      final encoded = excel.encode();
+      if (encoded == null) {
+        _showSnack('Export failed: could not encode Excel file.');
+        return;
+      }
+      final bytes = Uint8List.fromList(encoded);
       final path = await FilePicker.platform.saveFile(
         dialogTitle: 'Export sessions as Excel',
         fileName:
             'poker_sessions_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx',
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
+        bytes: bytes,
       );
       if (path != null) {
-        final bytes = excel.encode();
-        if (bytes != null) {
+        if (!_pluginWritesFile) {
           await File(path).writeAsBytes(bytes);
-          _showSnack('Exported ${sessions.length} sessions to Excel.');
         }
+        _showSnack('Exported ${sessions.length} sessions to Excel.');
       }
     } catch (e) {
       _showSnack('Export failed: $e');
