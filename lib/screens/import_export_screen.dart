@@ -9,8 +9,9 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../models/session_model.dart';
 import '../providers/providers.dart';
+import '../services/analytics_service.dart';
+import '../utils/save_bytes.dart';
 import '../utils/session_export.dart';
 import 'import_source_screen.dart';
 
@@ -25,21 +26,46 @@ class ImportExportScreen extends ConsumerStatefulWidget {
 class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
   bool _busy = false;
 
-  /// On Android/iOS, `FilePicker.saveFile` REQUIRES `bytes` and writes the
-  /// file itself (Storage Access Framework); on web it triggers a download.
-  /// Only desktop returns a plain path for us to write manually.
-  static bool get _pluginWritesFile =>
-      kIsWeb ||
-      defaultTargetPlatform == TargetPlatform.android ||
-      defaultTargetPlatform == TargetPlatform.iOS;
-
   // ─── Export ───────────────────────────────────────────────────────────────
-
   // Headers + row shape live in lib/utils/session_export.dart (pure,
   // unit-tested); keep importable fields mirrored in the TableLab preset.
-  List<String> get _csvHeaders => kSessionExportHeaders;
 
-  List<dynamic> _sessionToRow(SessionModel s) => sessionExportRow(s);
+  /// Saves [bytes] as a file on every platform. Returns true when saved,
+  /// false when the user cancelled the dialog.
+  ///
+  /// - **Web**: `file_picker` 8.x has NO web `saveFile` (throws
+  ///   `UnimplementedError`), so we trigger a browser download directly.
+  /// - **Android/iOS**: `saveFile` REQUIRES `bytes` and writes the file
+  ///   itself via the Storage Access Framework (the returned path may be a
+  ///   content URI — never write to it manually).
+  /// - **Desktop**: `saveFile` only shows the dialog and returns a plain
+  ///   path; we do the write.
+  Future<bool> _saveExportFile({
+    required Uint8List bytes,
+    required String fileName,
+    required String extension,
+    required String mimeType,
+    required String dialogTitle,
+  }) async {
+    if (kIsWeb) {
+      downloadBytesWeb(bytes, fileName, mimeType);
+      return true;
+    }
+    final path = await FilePicker.platform.saveFile(
+      dialogTitle: dialogTitle,
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: [extension],
+      bytes: bytes,
+    );
+    if (path == null) return false;
+    final pluginWroteFile = defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+    if (!pluginWroteFile) {
+      await File(path).writeAsBytes(bytes);
+    }
+    return true;
+  }
 
   Future<void> _exportCsv() async {
     setState(() => _busy = true);
@@ -53,21 +79,21 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
         _showSnack('No sessions to export.');
         return;
       }
-      final rows = [_csvHeaders, ...sessions.map(_sessionToRow)];
+      final rows = [kSessionExportHeaders, ...sessions.map(sessionExportRow)];
       final csv = const ListToCsvConverter().convert(rows);
-      final bytes = Uint8List.fromList(utf8.encode(csv));
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: 'Export sessions as CSV',
+      // UTF-8 BOM so desktop Excel decodes £/€/₹/accents correctly on a
+      // double-click open (BOM-less UTF-8 is read as ANSI and mojibakes).
+      final bytes = Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(csv)]);
+      final saved = await _saveExportFile(
+        bytes: bytes,
         fileName:
             'poker_sessions_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-        bytes: bytes,
+        extension: 'csv',
+        mimeType: 'text/csv',
+        dialogTitle: 'Export sessions as CSV',
       );
-      if (path != null) {
-        if (!_pluginWritesFile) {
-          await File(path).writeAsBytes(bytes);
-        }
+      if (saved) {
+        AnalyticsService.exportTriggered(format: 'csv');
         _showSnack('Exported ${sessions.length} sessions to CSV.');
       }
     } catch (e) {
@@ -91,13 +117,13 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
       final excel = Excel.createExcel();
       final sheet = excel['Sessions'];
       excel.setDefaultSheet('Sessions');
-      for (int i = 0; i < _csvHeaders.length; i++) {
+      for (int i = 0; i < kSessionExportHeaders.length; i++) {
         sheet
             .cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
-            .value = TextCellValue(_csvHeaders[i]);
+            .value = TextCellValue(kSessionExportHeaders[i]);
       }
       for (int r = 0; r < sessions.length; r++) {
-        final row = _sessionToRow(sessions[r]);
+        final row = sessionExportRow(sessions[r]);
         for (int c = 0; c < row.length; c++) {
           final cell = sheet.cell(
               CellIndex.indexByColumnRow(columnIndex: c, rowIndex: r + 1));
@@ -116,19 +142,17 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
         _showSnack('Export failed: could not encode Excel file.');
         return;
       }
-      final bytes = Uint8List.fromList(encoded);
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: 'Export sessions as Excel',
+      final saved = await _saveExportFile(
+        bytes: Uint8List.fromList(encoded),
         fileName:
             'poker_sessions_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx',
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        bytes: bytes,
+        extension: 'xlsx',
+        mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        dialogTitle: 'Export sessions as Excel',
       );
-      if (path != null) {
-        if (!_pluginWritesFile) {
-          await File(path).writeAsBytes(bytes);
-        }
+      if (saved) {
+        AnalyticsService.exportTriggered(format: 'xlsx');
         _showSnack('Exported ${sessions.length} sessions to Excel.');
       }
     } catch (e) {

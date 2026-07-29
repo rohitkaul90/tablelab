@@ -69,6 +69,11 @@ const kTableLabImportColumns = <String, List<String>>{
   'prize_won':        ['prize_won'],
   'profit_loss':      ['profit_loss'],
   'duration_minutes': ['duration_minutes'],
+  // Empty = explicitly UNMAPPED (suppresses the _autoMap fallback): the
+  // 'duration' auto-candidate prefix-matches our own 'duration_minutes'
+  // header and would pre-select Duration (hours) → duration_minutes — a
+  // ×60 corruption path if the user then clears the minutes mapping.
+  'duration_hours':   [],
   'start_time':       ['start_time'],
   'end_time':         ['end_time'],
   'location':         ['location'],
@@ -451,11 +456,16 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       return {for (final f in _appFields) f.key: _autoMap(f.key)};
     }
     final preset = _presets.firstWhere((p) => p.id == presetId);
+    // An EMPTY pattern list means the preset explicitly leaves the field
+    // unmapped — no _autoMap fallback (see kTableLabImportColumns
+    // 'duration_hours'). Absent key = field unknown to the preset → auto-map.
     return {
       for (final f in _appFields)
-        f.key: preset.columns.containsKey(f.key)
-            ? (_matchHeader(preset.columns[f.key]!) ?? _autoMap(f.key))
-            : _autoMap(f.key),
+        f.key: switch (preset.columns[f.key]) {
+          null => _autoMap(f.key),
+          [] => null,
+          final patterns => _matchHeader(patterns) ?? _autoMap(f.key),
+        },
     };
   }
 
@@ -941,14 +951,9 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
         final hph = hphIdx >= 0 && cell(hphIdx).isNotEmpty
             ? int.tryParse(cell(hphIdx))
             : null;
-        // Accept "6", "6-max", "9 handed" etc.; only 2–9 is a valid table size
-        // (matches the recording dropdown) — anything else imports as null.
-        int? tsize;
-        if (tsizeIdx >= 0 && cell(tsizeIdx).isNotEmpty) {
-          final m = RegExp(r'\d+').firstMatch(cell(tsizeIdx));
-          final parsed = m != null ? int.tryParse(m.group(0)!) : null;
-          if (parsed != null && parsed >= 2 && parsed <= 9) tsize = parsed;
-        }
+        final tsize = tsizeIdx >= 0 && cell(tsizeIdx).isNotEmpty
+            ? parseTableSize(cell(tsizeIdx))
+            : null;
 
         sessions.add({
           'date': dateStr,
@@ -973,7 +978,10 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
           'table_quality': tq,
           'hands_per_hour': hph,
           'country': country,
-          'table_size': tsize,
+          // Cash-only, mirroring the session form (log_session_screen nulls
+          // table_size for tournaments) — keeps imported rows shaped like
+          // app-created ones so the Stats "Table" factor stays cash-scoped.
+          'table_size': isTournamentType(gameType) ? null : tsize,
         });
       }
 

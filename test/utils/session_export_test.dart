@@ -108,6 +108,17 @@ void main() {
   });
 
   group('export→import round-trip invariant', () {
+    // Exported columns that are DELIBERATELY not importable: event lists
+    // (rebuys/expenses) can't be reconstructed from totals, and break_minutes
+    // is live-recorder metadata. Appending a new importable column forces a
+    // conscious edit here or the converse test below fails.
+    const exportOnlyHeaders = {
+      'total_expenses',
+      'net_after_expenses',
+      'break_minutes',
+      'buyin_count',
+    };
+
     test('every TableLab import-preset pattern is a header the export emits',
         () {
       // The lossless round-trip guarantee: each importable field in the
@@ -124,6 +135,56 @@ void main() {
           );
         }
       }
+    });
+
+    test('every importable exported header has a TableLab preset entry', () {
+      // The CONVERSE direction — the one the original bug lived in: export
+      // emitted currency/country/hands_per_hour but the preset didn't map
+      // them, so a TableLab re-import silently dropped them. Any exported
+      // header that isn't explicitly export-only must be preset-mapped.
+      for (final header in kSessionExportHeaders) {
+        if (exportOnlyHeaders.contains(header)) continue;
+        expect(
+          kTableLabImportColumns.containsKey(header),
+          isTrue,
+          reason: "exported header '$header' has no TableLab preset entry — "
+              'it will silently fall back to heuristic auto-mapping (or be '
+              'dropped) on re-import. Add it to kTableLabImportColumns, or '
+              'to exportOnlyHeaders if deliberately not importable.',
+        );
+      }
+    });
+
+    test('column order is frozen — appending is the only legal edit', () {
+      // External consumers are position-keyed: reordering or inserting
+      // mid-list breaks their spreadsheets even though every other test
+      // stays green. This golden list only ever grows at the end.
+      expect(kSessionExportHeaders, const [
+        'date',
+        'game_type',
+        'stakes',
+        'buy_in',
+        'cash_out',
+        'prize_won',
+        'profit_loss',
+        'start_time',
+        'end_time',
+        'duration_minutes',
+        'location',
+        'notes',
+        'rake_paid',
+        'finish_position',
+        'total_entrants',
+        'table_quality',
+        'currency',
+        'country',
+        'table_size',
+        'hands_per_hour',
+        'total_expenses',
+        'net_after_expenses',
+        'break_minutes',
+        'buyin_count',
+      ]);
     });
   });
 }

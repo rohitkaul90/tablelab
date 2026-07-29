@@ -212,6 +212,17 @@ String tableSizeLabel(int n) => switch (n) {
       _ => '$n-handed',
     };
 
+/// Parses a table-size cell from an imported file: accepts "6", "6-max",
+/// "9 handed", "9.0" (xlsx numeric cell) — anything whose first number is a
+/// valid 2–9 player count. Out-of-range ("10-max") or numberless
+/// ("heads-up") values return null; the session imports without a size.
+int? parseTableSize(String raw) {
+  final m = RegExp(r'\d+').firstMatch(raw);
+  if (m == null) return null;
+  final n = int.tryParse(m.group(0)!);
+  return (n != null && n >= 2 && n <= 9) ? n : null;
+}
+
 String timeOfDayBucket(String startTime) {
   final hour = int.tryParse(startTime.split(':')[0]) ?? 0;
   if (hour >= 6 && hour < 12) return 'Morning (6am–12pm)';
