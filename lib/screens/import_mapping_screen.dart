@@ -33,6 +33,7 @@ const _appFields = [
   _AppField('currency',         'Currency',               hint: 'CAD, USD, GBP…'),
   _AppField('country',          'Country',                hint: 'Canada, USA, UK…'),
   _AppField('hands_per_hour',   'Hands per Hour'),
+  _AppField('table_size',       'Table Size',             hint: '2–9 players'),
   _AppField('notes',            'Notes'),
   _AppField('rake_paid',        'Rake / Fees'),
   _AppField('finish_position',  'Finish Position'),
@@ -72,6 +73,8 @@ const _presets = [
       'location':         ['location'],
       'currency':         ['currency'],
       'country':          ['country'],
+      'table_size':       ['table_size'],
+      'hands_per_hour':   ['hands_per_hour'],
       'notes':            ['notes'],
       'rake_paid':        ['rake_paid'],
       'finish_position':  ['finish_position'],
@@ -503,9 +506,12 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
           'variant', 'gameformat', 'pokertype',
         ];
       case 'stakes':
+        // 'tablesize' deliberately NOT a candidate here — it belongs to the
+        // table_size field (it used to be listed and would mis-grab a
+        // table-size column on files with no stakes header).
         return [
           'stakes', 'level', 'blinds', 'limit', 'gamestakes', 'game',
-          'gamelevel', 'tablesize', 'smallblind', 'structure',
+          'gamelevel', 'smallblind', 'structure',
         ];
       case 'cash_out':
         return [
@@ -559,6 +565,11 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
         return ['country', 'nation', 'locationcountry', 'country_played', 'jurisdiction'];
       case 'hands_per_hour':
         return ['handsperhour', 'hands_per_hour', 'hph', 'handshr', 'handrate'];
+      case 'table_size':
+        return [
+          'tablesize', 'table_size', 'seats', 'maxplayers', 'handed',
+          'playersattable', 'tableseats',
+        ];
       case 'notes':
         return [
           'notes', 'note', 'comments', 'memo', 'comment',
@@ -739,6 +750,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       final currencyIdx  = colIdx(_mapping['currency']);
       final countryIdx   = colIdx(_mapping['country']);
       final hphIdx       = colIdx(_mapping['hands_per_hour']);
+      final tsizeIdx     = colIdx(_mapping['table_size']);
       final notesIdx     = colIdx(_mapping['notes']);
       final rakeIdx      = colIdx(_mapping['rake_paid']);
       final fpIdx        = colIdx(_mapping['finish_position']);
@@ -920,6 +932,14 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
         final hph = hphIdx >= 0 && cell(hphIdx).isNotEmpty
             ? int.tryParse(cell(hphIdx))
             : null;
+        // Accept "6", "6-max", "9 handed" etc.; only 2–9 is a valid table size
+        // (matches the recording dropdown) — anything else imports as null.
+        int? tsize;
+        if (tsizeIdx >= 0 && cell(tsizeIdx).isNotEmpty) {
+          final m = RegExp(r'\d+').firstMatch(cell(tsizeIdx));
+          final parsed = m != null ? int.tryParse(m.group(0)!) : null;
+          if (parsed != null && parsed >= 2 && parsed <= 9) tsize = parsed;
+        }
 
         sessions.add({
           'date': dateStr,
@@ -944,6 +964,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
           'table_quality': tq,
           'hands_per_hour': hph,
           'country': country,
+          'table_size': tsize,
         });
       }
 

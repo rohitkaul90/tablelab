@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/session_model.dart';
 import '../providers/providers.dart';
+import '../utils/session_export.dart';
 import 'import_source_screen.dart';
 
 class ImportExportScreen extends ConsumerStatefulWidget {
@@ -34,43 +35,11 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
 
   // ─── Export ───────────────────────────────────────────────────────────────
 
-  List<String> get _csvHeaders => [
-        'date',
-        'game_type',
-        'stakes',
-        'buy_in',
-        'cash_out',
-        'prize_won',
-        'profit_loss',
-        'start_time',
-        'end_time',
-        'duration_minutes',
-        'location',
-        'notes',
-        'rake_paid',
-        'finish_position',
-        'total_entrants',
-        'table_quality',
-      ];
+  // Headers + row shape live in lib/utils/session_export.dart (pure,
+  // unit-tested); keep importable fields mirrored in the TableLab preset.
+  List<String> get _csvHeaders => kSessionExportHeaders;
 
-  List<dynamic> _sessionToRow(SessionModel s) => [
-        s.date,
-        s.gameType,
-        s.stakes,
-        s.buyIn,
-        s.cashOut,
-        s.prizeWon ?? '',
-        s.profitLoss,
-        s.startTime,
-        s.endTime,
-        s.durationMinutes,
-        s.location ?? '',
-        s.notes ?? '',
-        s.rakePaid ?? '',
-        s.finishPosition ?? '',
-        s.totalEntrants ?? '',
-        s.tableQuality ?? '',
-      ];
+  List<dynamic> _sessionToRow(SessionModel s) => sessionExportRow(s);
 
   Future<void> _exportCsv() async {
     setState(() => _busy = true);
