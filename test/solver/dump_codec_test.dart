@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/equity/card.dart';
 
 import '../../tool/solver/dump_codec.dart';
+import '../../tool/solver/explorer_pack.dart';
 import '../../tool/solver/freq_tabulate.dart';
 
 List<int> _b(String s) =>
@@ -469,6 +470,99 @@ void main() {
           c.toJson()
       ]);
       expect(viaDispatch, eagerJson(_fixture()));
+    });
+  });
+
+  group('cross-format pack oracle (TLSD pack port)', () {
+    // Generate the SAME spot's explorer pack from the JSON dump (the original
+    // Map-walk path, now a wrapper), the eager TLSD tree, and the streaming
+    // TLSD cursor — chunk bytes and manifests must be identical. This is the
+    // in-repo miniature of tool/solver/pack_oracle.dart's real-solve gate.
+    Map<String, String> packFiles(String outDir) {
+      final out = <String, String>{};
+      for (final f in Directory(outDir).listSync(recursive: true)) {
+        if (f is! File) continue;
+        final rel = f.path
+            .substring(outDir.length + 1)
+            .replaceAll('\\', '/');
+        out[rel] = base64Encode(f.readAsBytesSync());
+      }
+      return out;
+    }
+
+    Map<String, String> genJson(Map<String, dynamic> dump, String dir) {
+      generatePack(dump,
+          board: _b('Ks 9h 4c'),
+          pot0: 10,
+          effStack: 45,
+          scenario: 'test_scenario',
+          sprName: 'medium',
+          outDir: dir);
+      return packFiles(dir);
+    }
+
+    test('eager TLSD pack is byte-identical to the JSON pack', () {
+      final dir = Directory.systemTemp.createTempSync('pack_oracle_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final jsonPack = genJson(_jsonDump(), '${dir.path}/json');
+
+      final dump = decodeTlsd(_fixture());
+      generatePackFromView(TlsdNodeView(dump.root!, dump.dicts),
+          board: _b('Ks 9h 4c'),
+          pot0: 10,
+          effStack: 45,
+          scenario: 'test_scenario',
+          sprName: 'medium',
+          outDir: '${dir.path}/tlsd',
+          ipSeedKeys: dump.dicts[1].keys);
+      expect(packFiles('${dir.path}/tlsd'), jsonPack);
+    });
+
+    test('STREAMING TLSD pack is byte-identical to the JSON pack', () {
+      final dir = Directory.systemTemp.createTempSync('pack_oracle_s_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final jsonPack = genJson(_jsonDump(), '${dir.path}/json');
+
+      final stream = openTlsdStream(_fixture());
+      generatePackFromView(stream.root!,
+          board: _b('Ks 9h 4c'),
+          pot0: 10,
+          effStack: 45,
+          scenario: 'test_scenario',
+          sprName: 'medium',
+          outDir: '${dir.path}/tlsd',
+          ipSeedKeys: stream.dicts[1].keys);
+      stream.finish();
+      expect(packFiles('${dir.path}/tlsd'), jsonPack);
+    });
+
+    test('EV sections survive the port (withEv fixture vs JSON twin + ev)',
+        () {
+      final dir = Directory.systemTemp.createTempSync('pack_oracle_ev_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final jsonDump = _jsonDump();
+      jsonDump['ev'] = {
+        'Qc Qd': [1.5, 2.5, -0.5],
+      };
+      final jsonPack = genJson(jsonDump, '${dir.path}/json');
+
+      final stream = openTlsdStream(_fixture(withEv: true));
+      generatePackFromView(stream.root!,
+          board: _b('Ks 9h 4c'),
+          pot0: 10,
+          effStack: 45,
+          scenario: 'test_scenario',
+          sprName: 'medium',
+          outDir: '${dir.path}/tlsd',
+          ipSeedKeys: stream.dicts[1].keys);
+      stream.finish();
+      final tlsdPack = packFiles('${dir.path}/tlsd');
+      expect(tlsdPack, jsonPack);
+      // Sanity: the EV actually landed (root chunk decodes with a non-NA ev).
+      final manifest = jsonDecode(
+              File('${dir.path}/tlsd/manifest.json').readAsStringSync())
+          as Map<String, dynamic>;
+      expect(manifest['chunks'], contains('flop'));
     });
   });
 }

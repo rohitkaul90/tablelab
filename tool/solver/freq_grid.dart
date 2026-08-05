@@ -58,9 +58,15 @@
 //     big-RAM deep-only box.
 //   … --emit-pack <dir>                             # ALSO write a GTO Explorer
 //     pack per solved spot to <dir>/<scenario>/<flop>_<spr>/ (same parse pass —
-//     see explorer_pack.dart / launch/GTO_EXPLORER.md). Only NEWLY-SOLVED spots
-//     get packs: a cached spot is skipped entirely, so to pack it, delete its
-//     results.json entry and let it re-solve (the run warns when this applies).
+//     see explorer_pack.dart / launch/GTO_EXPLORER.md). Works with BOTH dump
+//     formats since the TLSD pack port (2026-08-05). Only NEWLY-SOLVED spots
+//     get packs: a cached spot is skipped entirely — pair with --ignore-cache
+//     to re-solve library-cached spots for pack emission (the run warns when
+//     cached spots are silently packless).
+//   … --ignore-cache                                # solve every grid spot even
+//     if its key is already in the results shards (pack fleet runs: the density
+//     campaign cached all 26,325 library spots, but packs need fresh solves).
+//     Pair with --no-write so re-solves never touch the shipped library.
 
 import 'dart:convert';
 import 'dart:io';
@@ -818,25 +824,16 @@ Future<void> main(List<String> args) async {
     exitCode = 64;
     return;
   }
-  // Pack emission walks the JSON dump (explorer_pack is not TLSD-adapted —
-  // packs are only emitted on curated 26-flop runs, never the full-density
-  // bulk). An EXPLICIT bin + packs is an intent conflict → fail fast; with
-  // packs on, the solve below forces JSON regardless of the format default
-  // (forceJsonDump), so a flipped default can't silently break pack runs.
-  if (emitPackRoot != null && solverDumpFmt() == 'bin' &&
-      (Platform.environment['TLSOLVE_DUMP_FMT'] ?? '').isNotEmpty) {
-    stderr.writeln('--emit-pack requires the JSON dump: unset '
-        'TLSOLVE_DUMP_FMT=bin (use json or both) when emitting packs.');
-    exitCode = 64;
-    return;
-  }
+  // Pack emission works on BOTH dump formats since the TLSD pack port
+  // (explorer_pack walks DumpNodeView; tabulate_one runs a second streaming
+  // pass for the pack) — TLSD is the economic default for pack fleets.
   // The effective format of THIS run's dumps — drives the parse footprints
   // (JSON parses need the giant heap; TLSD a few GB).
-  final dumpFmtEnv = emitPackRoot != null ? 'json' : solverDumpFmt();
+  final dumpFmtEnv = solverDumpFmt();
   // Whether tabulate_one will EAGERLY materialize its input: true for any
-  // JSON dump (--emit-pack or TLSOLVE_DUMP_FMT=json/both — with 'both' the
-  // dump handed to tabulate_one is the JSON file) and for the eager TLSD
-  // rollback. Drives BOTH the subprocess heap default and the parse-phase RAM
+  // JSON dump (TLSOLVE_DUMP_FMT=json/both — with 'both' the dump handed to
+  // tabulate_one is the JSON file) and for the eager TLSD rollback. Drives
+  // BOTH the subprocess heap default and the parse-phase RAM
   // claims (spotFootprint) — a streaming tabulate claiming the eager
   // footprint would starve solve admissions for nothing.
   final eagerTabulate =
@@ -850,10 +847,17 @@ Future<void> main(List<String> args) async {
   // box takes deep (the split is pure env policy; see spot_sched.dart).
   final maxSpotGb =
       double.tryParse(Platform.environment['TLSOLVE_MAX_SPOT_GB'] ?? '');
+  final ignoreCache = args.contains('--ignore-cache');
+  if (ignoreCache) {
+    stdout.writeln('--ignore-cache: results-shard cache keys are IGNORED — '
+        'every grid spot solves fresh (library-cached spots included). '
+        '${noWrite ? '' : '⚠ without --no-write these re-solves would '
+            'rewrite library entries — pack fleets should pass --no-write.'}');
+  }
   final pending = <({String flop, String spr, double sprVal})>[];
   var skipped = 0, skippedTooBig = 0;
   for (final s in spots) {
-    if (isCachedSpot(s.flop, s.spr)) {
+    if (!ignoreCache && isCachedSpot(s.flop, s.spr)) {
       skipped++;
     } else if (maxSpotGb != null &&
         spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv).solveGb > maxSpotGb) {
@@ -933,8 +937,8 @@ Future<void> main(List<String> args) async {
   }
   if (emitPackRoot != null && skipped > 0) {
     stdout.writeln('⚠ --emit-pack: $skipped cached spot(s) will NOT get packs '
-        '(only newly-solved spots do) — delete their results.json entries to '
-        're-solve them with pack emission.');
+        '(only newly-solved spots do) — pass --ignore-cache (with --no-write) '
+        'to re-solve them with pack emission.');
   }
 
   // PIPELINE (tabulate-decoupling, stage-1 lesson): each worker drains the
@@ -1090,12 +1094,10 @@ Future<void> main(List<String> args) async {
         stdout.writeln('[$n/$total] solving ${s.flop} SPR ${s.spr} '
             '(${fp.solveGb.toStringAsFixed(0)} GB claim) …');
         final spot = gridSpot(s.flop, s.sprVal, ranges.ip, ranges.oop);
-        // Pack runs force JSON (explorer_pack walks the Map tree) no matter
-        // what TLSOLVE_DUMP_FMT/its default says.
+        // Dump format follows TLSOLVE_DUMP_FMT/its default for pack and
+        // non-pack runs alike (the TLSD pack port removed the JSON coupling).
         ds = await solveToFile(spot,
-            dumpRounds: kDumpRounds,
-            betProfile: kBetProfile,
-            forceJsonDump: emitPackRoot != null);
+            dumpRounds: kDumpRounds, betProfile: kBetProfile);
         // Solve finished — swap this lane down to the tabulate's claim (slot
         // first: it's the cheap resource and keeps acquire order uniform
         // across workers, so the two gates can't deadlock).

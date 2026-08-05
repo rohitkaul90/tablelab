@@ -310,6 +310,24 @@ abstract class _TlsdReaderBase {
     _p += n;
     if (_p > _b.length) throw const FormatException('TLSD: truncated file');
   }
+
+  /// Decode an EV/passive-EV section: bitmap over the player dict + per
+  /// present combo a u8 length + f32 vector. Shared by the eager parser and
+  /// the streaming cursor's open path (pack generation retains EVs; the
+  /// cursor's skip paths still discard them via `_skipEvSection`).
+  Map<int, Float32List> _evSection(int dictLen) {
+    final present = _bitmap(dictLen);
+    final out = <int, Float32List>{};
+    for (final idx in present) {
+      final len = _u8();
+      final v = Float32List(len);
+      for (var i = 0; i < len; i++) {
+        v[i] = _f32();
+      }
+      out[idx] = v;
+    }
+    return out;
+  }
 }
 
 class _TlsdParser extends _TlsdReaderBase {
@@ -392,20 +410,6 @@ class _TlsdParser extends _TlsdReaderBase {
     }
     return TlsdNode.chance(dealCards: cards, dealChildren: children);
   }
-
-  Map<int, Float32List> _evSection(int dictLen) {
-    final present = _bitmap(dictLen);
-    final out = <int, Float32List>{};
-    for (final idx in present) {
-      final len = _u8();
-      final v = Float32List(len);
-      for (var i = 0; i < len; i++) {
-        v[i] = _f32();
-      }
-      out[idx] = v;
-    }
-    return out;
-  }
 }
 
 // ── Walk abstraction ─────────────────────────────────────────────────────────
@@ -446,13 +450,41 @@ abstract class DumpNodeView {
 
   /// Child reached by taking action [actionIdx], or null if missing/terminal.
   DumpNodeView? child(int actionIdx);
+
+  // ── Pack-generation surface (defaults = "not available") ──────────────────
+  // freq_tabulate ignores everything below; explorer_pack consumes it. The
+  // defaults keep the interface additive: a view that doesn't override them
+  // simply produces packs with NA EVs (and no dict-based seeding).
+
+  /// The acting player's dictionary index at this node (TLSD), or null (JSON
+  /// has no player dictionaries). Pack generation uses the ROOT node's value
+  /// to pick which TLSD dict seeds the OOP vs IP combo registries.
+  int? get playerIndex => null;
+
+  /// Whether this node carries a non-empty per-combo EV / passive-EV section
+  /// (our C++ EV patch emits them at flop action nodes only).
+  bool get hasEv => false;
+  bool get hasEvPassive => false;
+
+  /// Per-action EVs / first-element passive EV for combo [i], or null when the
+  /// node has no section or the combo isn't in it. Semantics mirror the JSON
+  /// pack path's `_vecByCkey(node['ev'])[ckey]` lookups exactly.
+  List<double>? comboEv(int i) => null;
+  List<double>? comboEvPassive(int i) => null;
+}
+
+/// Canonical combo key from two card ints (order-independent) — the reach-map
+/// key convention shared by freq_tabulate and explorer_pack.
+String comboCkey(List<int> cards) {
+  final a = cards[0], b = cards[1];
+  return a <= b ? '${a}_$b' : '${b}_$a';
 }
 
 /// View over the JSON dump's `Map<String, dynamic>` tree — byte-for-byte the
 /// same semantics as the pre-refactor freq_tabulate walk (incl. the
 /// `childrens`-as-dealcards fallback the synthetic unit-test dumps rely on and
 /// the case/prefix-tolerant child key matching).
-class JsonNodeView implements DumpNodeView {
+class JsonNodeView extends DumpNodeView {
   final Map<String, dynamic> node;
 
   JsonNodeView(this.node);
@@ -544,10 +576,62 @@ class JsonNodeView implements DumpNodeView {
     final child = children[key];
     return child is Map<String, dynamic> ? JsonNodeView(child) : null;
   }
+
+  // EV sections, parsed lazily with EXACTLY the JSON pack path's `_vecByCkey`
+  // semantics: skip non-List vectors and unparseable keys; an empty/absent map
+  // is null (so `hasEv` mirrors the old `evBy != null` node stat).
+  bool _evDone = false, _pasDone = false;
+  Map<String, List<double>>? _evByCkey, _pasByCkey;
+
+  Map<String, List<double>>? _vecByCkey(Object? raw) {
+    if (raw is! Map<String, dynamic> || raw.isEmpty) return null;
+    final out = <String, List<double>>{};
+    raw.forEach((k, v) {
+      if (v is! List) return;
+      final c = parseComboKey(k);
+      if (c == null) return;
+      out[comboCkey(c)] = [for (final x in v) (x as num).toDouble()];
+    });
+    return out.isEmpty ? null : out;
+  }
+
+  Map<String, List<double>>? get _ev {
+    if (!_evDone) {
+      _evByCkey = _vecByCkey(node['ev']);
+      _evDone = true;
+    }
+    return _evByCkey;
+  }
+
+  Map<String, List<double>>? get _pas {
+    if (!_pasDone) {
+      _pasByCkey = _vecByCkey(node['ev_passive']);
+      _pasDone = true;
+    }
+    return _pasByCkey;
+  }
+
+  @override
+  bool get hasEv => _ev != null;
+
+  @override
+  bool get hasEvPassive => _pas != null;
+
+  List<double>? _evLookup(Map<String, List<double>>? m, int i) {
+    if (m == null) return null;
+    final c = comboCards(i);
+    return c == null ? null : m[comboCkey(c)];
+  }
+
+  @override
+  List<double>? comboEv(int i) => _evLookup(_ev, i);
+
+  @override
+  List<double>? comboEvPassive(int i) => _evLookup(_pas, i);
 }
 
 /// View over a decoded TLSD tree.
-class TlsdNodeView implements DumpNodeView {
+class TlsdNodeView extends DumpNodeView {
   final TlsdNode node;
   final List<TlsdDict> dicts;
 
@@ -596,6 +680,21 @@ class TlsdNodeView implements DumpNodeView {
     final c = node.children[actionIdx];
     return c == null ? null : TlsdNodeView(c, dicts);
   }
+
+  @override
+  int? get playerIndex => node.isChance ? null : node.player;
+
+  @override
+  bool get hasEv => node.ev != null && node.ev!.isNotEmpty;
+
+  @override
+  bool get hasEvPassive => node.evPassive != null && node.evPassive!.isNotEmpty;
+
+  @override
+  List<double>? comboEv(int i) => node.ev?[node.comboIdx[i]];
+
+  @override
+  List<double>? comboEvPassive(int i) => node.evPassive?[node.comboIdx[i]];
 }
 
 // ── Streaming reader (tabulate bottleneck fix) ───────────────────────────────
@@ -671,13 +770,20 @@ class _StreamFrame {
   final List<String> actions;
   final Int32List comboIdx;
   final int stratOff; // byte offset of the u16 freq block; -1 when absent
+  // EV sections retained at open (pack generation reads them; tiny — the C++
+  // patch emits EVs at flop action nodes only, so this costs ~nothing on the
+  // tabulate path that ignores them).
+  final Map<int, Float32List>? ev;
+  final Map<int, Float32List>? evPassive;
   // Chance-node fields.
   final int nDeals;
 
   /// Next unconsumed child index (action child or deal index).
   int nextChild = 0;
 
-  _StreamFrame.action(this.player, this.actions, this.comboIdx, this.stratOff)
+  _StreamFrame.action(
+      this.player, this.actions, this.comboIdx, this.stratOff, this.ev,
+      this.evPassive)
       : isChance = false,
         nDeals = 0;
 
@@ -686,7 +792,9 @@ class _StreamFrame {
         player = -1,
         actions = const [],
         comboIdx = _emptyI32,
-        stratOff = -1;
+        stratOff = -1,
+        ev = null,
+        evPassive = null;
 
   static final Int32List _emptyI32 = Int32List(0);
 }
@@ -720,9 +828,11 @@ class _TlsdStreamCursor extends _TlsdReaderBase {
           stratOff = _p;
           _skip(comboIdx.length * nActions * 2);
         }
-        if (flags & 2 != 0) _skipEvSection(dictLen);
-        if (flags & 4 != 0) _skipEvSection(dictLen);
-        return _StreamFrame.action(player, actions, comboIdx, stratOff);
+        Map<int, Float32List>? ev, evPassive;
+        if (flags & 2 != 0) ev = _evSection(dictLen);
+        if (flags & 4 != 0) evPassive = _evSection(dictLen);
+        return _StreamFrame.action(
+            player, actions, comboIdx, stratOff, ev, evPassive);
       case 1:
         return _StreamFrame.chance(_u16());
       default:
@@ -854,7 +964,7 @@ class _TlsdStreamCursor extends _TlsdReaderBase {
 }
 
 /// Streaming [DumpNodeView]: same semantics as [TlsdNodeView], decoded lazily.
-class TlsdStreamNodeView implements DumpNodeView {
+class TlsdStreamNodeView extends DumpNodeView {
   final _TlsdStreamCursor _cursor;
   final _StreamFrame _frame;
 
@@ -902,4 +1012,20 @@ class TlsdStreamNodeView implements DumpNodeView {
 
   @override
   DumpNodeView? child(int actionIdx) => _cursor._childOf(_frame, actionIdx);
+
+  @override
+  int? get playerIndex => _frame.isChance ? null : _frame.player;
+
+  @override
+  bool get hasEv => _frame.ev != null && _frame.ev!.isNotEmpty;
+
+  @override
+  bool get hasEvPassive =>
+      _frame.evPassive != null && _frame.evPassive!.isNotEmpty;
+
+  @override
+  List<double>? comboEv(int i) => _frame.ev?[_frame.comboIdx[i]];
+
+  @override
+  List<double>? comboEvPassive(int i) => _frame.evPassive?[_frame.comboIdx[i]];
 }
