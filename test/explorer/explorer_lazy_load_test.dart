@@ -61,6 +61,12 @@ class _CountingSource implements PackSource {
   }
 }
 
+class _ThrowingSource implements PackSource {
+  @override
+  Future<Uint8List> read(String relPath) async =>
+      throw StateError('read failed: $relPath');
+}
+
 class _FakeDiscovery implements SpotDiscovery {
   List<ScenarioSummary> cat;
   final Map<String, List<ExplorerSpotRef>> spotsByKey;
@@ -224,6 +230,36 @@ void main() {
     expect(d.scenarioCalls['b_scen'], 2);
     expect(n.state.scenarioErrors, isEmpty);
     expect(n.state.spotsFor('b_scen'), hasLength(1));
+  });
+
+  test('ensureScenario before init() is a no-op that does NOT wedge the key',
+      () async {
+    final d = _FakeDiscovery([sum('a_scen', 1)], {
+      'a_scen': [packSpot]
+    });
+    final n = ExplorerNotifier()..debugDiscovery = d;
+    // Pre-init: no discovery yet — must complete without caching a dead
+    // future for the key (the wedge was: cleanup ran before ??= stored it).
+    await n.ensureScenario('a_scen');
+    expect(d.scenarioCalls['a_scen'], isNull);
+    expect(n.state.scenarioSpots.containsKey('a_scen'), isFalse);
+
+    await n.init();
+    expect(n.state.spotsFor('a_scen'), hasLength(1));
+    expect(n.state.spot, packSpot);
+  });
+
+  test('a spot whose source throws is NOT cached in the client LRU', () async {
+    final n = ExplorerNotifier();
+    final bad = ExplorerSpotRef(
+      scenario: 'a_scen',
+      flop: 'Ks 9h 4c',
+      spr: 'broken',
+      source: _ThrowingSource(),
+    );
+    await n.selectSpot(bad);
+    expect(n.state.error, isNotNull);
+    expect(n.debugClientCacheCount, 0); // never-loaded client dropped
   });
 
   test('selectSpot client LRU: caps at 8, reuses on a return visit', () async {

@@ -4,8 +4,8 @@
 // root: 'manifest.json', 'flop.bin.gz', 'turn/Ah.bin.gz', …). Sources:
 //  - LocalDirPackSource + scanLocalPacks (dart:io — desktop/mobile dev against
 //    a pulled packs directory; stubbed out on web via conditional export).
-//  - A hosted HTTP/Supabase-Storage source arrives with the Phase 1 hosting
-//    step; the client is source-agnostic.
+//  - HttpPackSource (http_packs.dart) — the hosted source, live on Cloudflare
+//    R2 (packs.tablelab.app); the client is source-agnostic.
 
 import 'dart:typed_data';
 
@@ -42,6 +42,10 @@ class ExplorerSpotRef {
 
   String get label => '$flop · $spr';
 
+  /// Excluding [source] from equality is sound because ONE discovery serves a
+  /// session (init() settles on a single [SpotDiscovery]) — every ref minted
+  /// for an id reads from the same base URL/directory, so two equal refs are
+  /// interchangeable. If refs ever mix discoveries in one session, revisit.
   @override
   bool operator ==(Object other) => other is ExplorerSpotRef && other.id == id;
 

@@ -6,10 +6,13 @@
 // each scenario's spots load on demand from `index/<scenario>.json` — a
 // 26k-spot fleet never rides one multi-MB index fetch. A host still serving
 // only the legacy flat `index.json` (v1) is handled transparently: the whole
-// index is fetched once (decoded OFF the UI isolate) and grouped in memory, so
-// per-scenario reads are then instant. Catalog failures are tolerated (the
-// explorer just shows no spots → Study tab stays hidden) — never fatal;
-// per-scenario fetch failures THROW so the UI can offer a retry.
+// index is fetched once and grouped in memory, so per-scenario reads are then
+// instant. Index decoding goes through compute() — a real isolate on
+// mobile/desktop, but SYNCHRONOUS on web, where a big legacy index still
+// decodes on the UI thread (the v2 lazy path exists precisely to keep those
+// payloads small). Catalog failures are tolerated (the explorer just shows no
+// spots → Study tab stays hidden) — never fatal; per-scenario fetch failures
+// THROW so the UI can offer a retry.
 
 import 'dart:convert';
 
@@ -24,8 +27,10 @@ final http.Client _shared = http.Client();
 
 /// Bound every request so a stalled host can't wedge Study discovery in a
 /// permanent spinner (the local source could never hang; the hosted one can).
-/// Generous — pack chunks are small (<100 KB), so this only ever trips on a
-/// genuinely stalled connection, not a slow-but-progressing download.
+/// Generous for pack chunks (<100 KB), but note it also bounds the index
+/// fetches — including the multi-MB LEGACY index on the fallback path, which
+/// a slow connection can genuinely exceed (acceptable: that path only serves
+/// pre-v2 hosts, and a timeout degrades to the empty-catalog state).
 const Duration _httpTimeout = Duration(seconds: 20);
 
 /// Reads a spot's pack files from a base URL: `<base>/manifest.json`,
@@ -160,6 +165,10 @@ class HostedSpotDiscovery implements SpotDiscovery {
             out.add(ScenarioSummary(
                 key: key, spotCount: count is int ? count : 0));
           }
+          // Sort by key even though the generator writes sorted — the
+          // auto-selected default scenario must not depend on file order
+          // (the spotSortKey rationale, one level up).
+          out.sort((a, b) => a.key.compareTo(b.key));
           if (out.isNotEmpty) return out;
         }
       }

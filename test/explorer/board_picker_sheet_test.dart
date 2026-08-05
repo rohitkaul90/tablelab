@@ -91,6 +91,23 @@ void main() {
     expect(find.text('7s 5s 2s'), findsOneWidget);
   });
 
+  testWidgets('a malformed flop label renders a placeholder, not a crash',
+      (tester) async {
+    await tester.pumpWidget(host(BoardPickerSheet(
+      title: 'Solved boards',
+      loadSpots: () async => [
+        _spot('garbage', 'medium'), // unparseable — deliberately still listed
+        _spot('Ks 9h 4x', 'medium'), // bad suit token
+        _spot('Ks 9h 4c', 'medium'),
+      ],
+      onPick: (_) {},
+    )));
+    await tester.pumpAndSettle(); // would throw here if CardGlyph RangeError'd
+    expect(find.text('3 of 3 boards'), findsOneWidget);
+    expect(find.text('garbage'), findsOneWidget);
+    expect(find.text('?'), findsWidgets); // neutral placeholder glyphs
+  });
+
   testWidgets('load failure → error state; Retry refetches', (tester) async {
     var calls = 0;
     await tester.pumpWidget(host(BoardPickerSheet(

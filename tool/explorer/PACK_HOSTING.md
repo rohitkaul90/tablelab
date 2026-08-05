@@ -32,7 +32,12 @@ must only ever reference already-uploaded content: a spot listed in a scenario
 index must have its pack chunks live, and a scenario listed in the catalog must
 have its index live. Uploading the catalog first would advertise scenarios
 whose index fetch 404s (the client shows a retry state — not fatal, but a bad
-first impression). Same logic per scenario when staging.
+first impression). **Corollary for staging:** `catalog.json` and the legacy
+`index.json` are ALWAYS full-scan, so they may only be uploaded once EVERY
+scenario they advertise has its packs (and scenario index) live — a staged
+single-scenario upload ships packs + that one `index/<scenario>.json` and
+nothing else. On a first-time host, stage all scenarios' packs before the
+first `catalog.json`/`index.json` upload.
 
 **Edge cache:** `catalog.json` (and the index files) sit behind Cloudflare's
 edge cache. After re-uploading them, purge the URLs (dashboard → Caching →
@@ -86,25 +91,32 @@ dart run tool/explorer/gen_pack_index.dart ~/tlpacks srp_late_v_bb
 ```
 
 Upload in the CONTRACT ORDER (packs → scenario indexes → catalog last; many
-small files → high concurrency). **[STAGED]** first:
+small files → high concurrency). **[STAGED]** — packs + that scenario's index
+ONLY. Do **not** upload `catalog.json` or the legacy `index.json` yet: both are
+always full-scan, so they advertise EVERY scanned scenario, including ones
+whose packs aren't live yet (on a first-time host, stage all scenarios' packs
+before the first catalog/legacy upload):
 ```
 rclone copy ~/tlpacks/srp_late_v_bb r2:tablelab-packs/srp_late_v_bb \
   --transfers 32 --checkers 32 --progress
 rclone copyto ~/tlpacks/index/srp_late_v_bb.json \
   r2:tablelab-packs/index/srp_late_v_bb.json --progress
-rclone copyto ~/tlpacks/index.json r2:tablelab-packs/index.json --progress
-rclone copyto ~/tlpacks/catalog.json r2:tablelab-packs/catalog.json --progress
 ```
-Then the rest (or everything at once — rclone uploads the pack dirs alongside
-the index files, which is fine as long as a FINAL `catalog.json` copy runs
-last):
+Full upload — packs FIRST (exclude every index-file kind: a mid-upload client
+must never fetch an index listing chunks that aren't live yet), then the
+scenario indexes, then the legacy index, then `catalog.json` LAST:
 ```
 rclone copy ~/tlpacks r2:tablelab-packs \
   --transfers 32 --checkers 32 --progress \
-  --exclude "*.tmp" --exclude "catalog.json"
+  --exclude "*.tmp" --exclude "catalog.json" --exclude "index.json" \
+  --exclude "index/**"
+rclone copy ~/tlpacks/index r2:tablelab-packs/index --progress
+rclone copyto ~/tlpacks/index.json r2:tablelab-packs/index.json --progress
 rclone copyto ~/tlpacks/catalog.json r2:tablelab-packs/catalog.json --progress
 ```
-`rclone copy` is idempotent/resumable — safe to re-run.
+`rclone copy` is idempotent/resumable — safe to re-run. (If the generator ran
+with `--no-legacy` there is no `index.json` — it deletes a stale local copy
+precisely so this step can't re-upload an outdated one; skip that line.)
 
 > ⚠️ **Do NOT set `Content-Encoding: gzip`** on the `.bin.gz` files. The client
 > receives raw gzipped bytes and gunzips them itself (`GZipDecoder`). rclone

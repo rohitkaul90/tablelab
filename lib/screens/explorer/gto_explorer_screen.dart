@@ -546,15 +546,20 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
-  /// Retry a failed scenario-index fetch, then (when nothing is loaded yet —
-  /// the init auto-select path failed) select its first spot. NOT
-  /// user-initiated: an error-screen Retry must not count as engagement.
+  /// Retry a failed scenario-index fetch, then select its first spot when the
+  /// UI is still waiting on that scenario: nothing loaded at all (the init
+  /// auto-select failed) OR the trail targets it while the loaded spot is from
+  /// another scenario (a failed trail-retarget — Retry must complete it, not
+  /// just refetch the index). NOT user-initiated: an error-screen Retry must
+  /// not count as engagement.
   Future<void> _retryScenario(String sc) async {
     final notifier = ref.read(explorerProvider.notifier);
     await notifier.ensureScenario(sc);
     if (!mounted) return;
     final st = ref.read(explorerProvider);
-    if (st.spot != null) return;
+    final needsSelect = st.spot == null ||
+        (_trail.scenarioKey == sc && st.spot!.scenario != sc);
+    if (!needsSelect) return;
     final spots = st.spotsFor(sc);
     if (spots.isNotEmpty) notifier.selectSpot(spots.first);
   }

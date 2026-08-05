@@ -14,11 +14,12 @@
 import '../equity/card.dart';
 import '../equity/texture_cell.dart';
 
-/// Parse a 'Ks 9h 4c' flop label into card indices, or null when any token is
-/// malformed (a bad hosted index row must not crash the picker).
+/// Parse a 'Ks 9h 4c' flop label into card indices, or null when it isn't
+/// EXACTLY three well-formed cards (a bad hosted index row must not crash the
+/// picker, and a 4-card label is not a flop).
 List<int>? parseFlop(String flop) {
   final parts = flop.trim().split(RegExp(r'\s+'));
-  if (parts.length < 3) return null;
+  if (parts.length != 3) return null;
   final cards = <int>[];
   for (final p in parts) {
     final c = parseCard(p);

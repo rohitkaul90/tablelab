@@ -16,6 +16,7 @@ void main() {
   test('parseFlop parses labels and rejects malformed ones', () {
     expect(parseFlop('Ks 9h 4c'), hasLength(3));
     expect(parseFlop('Ks 9h'), isNull); // too short
+    expect(parseFlop('Ks 9h 4c 2d'), isNull); // 4 cards — not a flop
     expect(parseFlop('Ks 9h Xx'), isNull); // bad card
   });
 

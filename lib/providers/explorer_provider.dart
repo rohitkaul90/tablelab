@@ -258,13 +258,21 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
             if (kPacksBaseUrl.isNotEmpty) HostedSpotDiscovery(kPacksBaseUrl),
             if (!kDebugMode) LocalSpotDiscovery(),
           ];
-    for (final d in candidates) {
-      catalog = await d.catalog();
-      if (catalog.isNotEmpty) {
-        found = d;
-        break;
+    try {
+      for (final d in candidates) {
+        catalog = await d.catalog();
+        if (catalog.isNotEmpty) {
+          found = d;
+          break;
+        }
       }
+    } catch (_) {
+      // catalog() promises never to throw, but a test/future source might —
+      // a leaked throw must not leave `scanning` stuck true (Study tab
+      // permanently hidden with no retry path).
+      found = null;
     }
+    if (!mounted) return;
     if (found == null) {
       state = state.copyWith(scanning: false);
       return; // catalog stays empty → a later init() retries
@@ -278,6 +286,7 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     // fetch on demand. `scanning` stays true through it so the screen shows
     // one continuous spinner, not a flash of "pick a board".
     await ensureScenario(catalog.first.key);
+    if (!mounted) return;
     final first = state.spotsFor(catalog.first.key);
     state = state.copyWith(scanning: false);
     // Race guard: a concurrent selectSpot (deep link, test) wins.
@@ -291,7 +300,13 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
   /// shared future so the next call RETRIES) instead of throwing.
   Future<void> ensureScenario(String key) {
     if (state.scenarioSpots.containsKey(key)) return Future.value();
-    return _scenarioFutures[key] ??= _fetchScenario(key);
+    // Pre-init (no discovery yet): nothing to fetch — and the no-op must NOT
+    // be cached in _scenarioFutures. A synchronous no-op future's cleanup ran
+    // BEFORE ??= stored it, permanently wedging the key on a dead completed
+    // future (review finding; reachable in debug where the tab always shows).
+    final discovery = _discovery;
+    if (discovery == null) return Future.value();
+    return _scenarioFutures[key] ??= _fetchScenario(discovery, key);
   }
 
   /// ensureScenario + return the loaded list. THROWS when the index fetch
@@ -305,12 +320,7 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     return spots;
   }
 
-  Future<void> _fetchScenario(String key) async {
-    final discovery = _discovery;
-    if (discovery == null) {
-      _scenarioFutures.remove(key);
-      return;
-    }
+  Future<void> _fetchScenario(SpotDiscovery discovery, String key) async {
     try {
       final spots = await discovery.scenarioSpots(key);
       _scenarioFutures.remove(key); // loaded → the containsKey guard takes over
@@ -332,6 +342,14 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
   /// the app-start auto-select and the error-screen Retry must not.
   Future<void> selectSpot(ExplorerSpotRef spot,
       {bool userInitiated = false}) async {
+    // Trim the OUTGOING spot's client down to its flop chunk before it goes
+    // into the LRU: a board-hop return still skips the manifest + flop
+    // refetch, but 8 cached clients can't pin 8×16 decoded turn/river chunks.
+    final prev = state.spot;
+    final prevClient = _client;
+    if (prev != null && prevClient != null && prev.id != spot.id) {
+      prevClient.retainOnly(const {'flop'});
+    }
     state = state.copyWith(
         spot: spot,
         loading: true,
@@ -348,7 +366,8 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
         clearError: true);
     // Reuse a cached client (its manifest + chunk LRU) on a return visit —
     // a board-hop A→B→A must not refetch A's manifest/flop chunk.
-    final client = _clients.remove(spot.id) ?? ExplorerPackClient(spot.source);
+    final cached = _clients.remove(spot.id);
+    final client = cached ?? ExplorerPackClient(spot.source);
     try {
       final manifest = await client.manifest();
       final nodes = await client.chunk('flop');
@@ -369,6 +388,12 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
             scenario: spot.scenario, spr: spot.spr);
       }
     } catch (e) {
+      // A transient failure (e.g. a flop-chunk timeout) must not throw away a
+      // WARM cache-hit client's memoized manifest/chunks — re-insert it. A
+      // never-loaded client stays out (drop on load error).
+      if (cached != null) {
+        _clients[spot.id] = cached;
+      }
       if (!mounted || state.spot != spot) return;
       _client = null;
       state = state.copyWith(loading: false, error: 'Could not load spot: $e');

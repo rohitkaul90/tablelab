@@ -5,7 +5,8 @@
 //   <root>/catalog.json          { version: 2, scenarios: [{key, spots, index}] }
 //   <root>/index/<scenario>.json { version: 2, scenario, spots: [{flop, spr, path}] }
 // plus the legacy flat <root>/index.json (v1, all spots — old shipped clients
-// still fetch it; opt out with --no-legacy).
+// still fetch it; opt out with --no-legacy, which also DELETES a stale copy so
+// the bulk upload can't ship an outdated one).
 //
 // The catalog and the legacy index are ALWAYS built from the FULL scan — a
 // staged single-scenario run must never delist scenarios already hosted.
@@ -127,11 +128,16 @@ void main(List<String> args) {
   written.add('catalog.json (${byScenario.length} scenarios)');
 
   // Legacy flat index (v1) — old shipped clients fetch only this. Also full,
-  // for the same never-delist reason.
+  // for the same never-delist reason. Opting out DELETES a stale copy: an
+  // outdated legacy index left behind would be re-uploaded by the bulk rclone
+  // and served to old clients.
+  final legacy = File('$root/index.json');
   if (!noLegacy) {
-    File('$root/index.json')
-        .writeAsStringSync(enc.convert({'version': 1, 'spots': spots}));
+    legacy.writeAsStringSync(enc.convert({'version': 1, 'spots': spots}));
     written.add('index.json (legacy, ${spots.length} spots)');
+  } else if (legacy.existsSync()) {
+    legacy.deleteSync();
+    written.add('index.json (legacy) deleted (--no-legacy)');
   }
 
   stdout.writeln('wrote under $root:');

@@ -146,6 +146,41 @@ void main() {
         'https://packs.example/srp_late_v_bb/Ks9h4c_medium/manifest.json');
   });
 
+  test('a catalog row without `index` falls back to index/<key>.json',
+      () async {
+    Uri? indexUrl;
+    final client = MockClient((req) async {
+      final url = req.url.toString();
+      if (url.endsWith('catalog.json')) {
+        return http.Response(
+          jsonEncode({
+            'version': 2,
+            'scenarios': [
+              {'key': 'srp_late_v_bb', 'spots': 1}, // no `index` field
+            ],
+          }),
+          200,
+        );
+      }
+      indexUrl = req.url;
+      return http.Response(
+        jsonEncode({
+          'version': 2,
+          'scenario': 'srp_late_v_bb',
+          'spots': [
+            {'flop': '7s 5s 2s', 'spr': 'deep', 'path': 'srp_late_v_bb/x'},
+          ],
+        }),
+        200,
+      );
+    });
+    final d = HostedSpotDiscovery('https://packs.example', client: client);
+    await d.catalog();
+    expect(await d.scenarioSpots('srp_late_v_bb'), hasLength(1));
+    expect(indexUrl.toString(),
+        'https://packs.example/index/srp_late_v_bb.json');
+  });
+
   test('no catalog → legacy index.json fallback, zero extra HTTP afterwards',
       () async {
     var requests = 0;

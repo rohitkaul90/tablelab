@@ -31,6 +31,21 @@ class CardGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Malformed token (not <rank><suit>) → a neutral placeholder, never a
+    // RangeError: buildBoardInfos deliberately LISTS unparseable board labels
+    // (a bad hosted index row must degrade, not crash the picker).
+    if (card.length != 2 || !kSuitChars.contains(card[1])) {
+      return Center(
+        child: Text(
+          '?',
+          style: TextStyle(
+            fontSize: rankSize,
+            fontWeight: FontWeight.w800,
+            color: color ?? const Color(0xFF9E9E9E),
+          ),
+        ),
+      );
+    }
     final suit = card[1];
     final c = color ?? kSuitGlyphColors[suit];
     return Column(
