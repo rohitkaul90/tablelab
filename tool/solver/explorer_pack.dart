@@ -67,6 +67,14 @@ export 'package:tablelab/explorer/pack_codec.dart';
 /// harder pruning if pack sizes demand it. Generator-only (not format).
 const double kReachEpsilon = 1e-4;
 
+/// Equity is NA at nodes where the OPPONENT's total pruned reach mass is
+/// below this floor (in combo-equivalents). On lines the opponent essentially
+/// never takes, the weight vector is quantization dust and the weighted-mean
+/// equity is numerically arbitrary — the real-dump pack oracle measured
+/// 0.68-vs-0.10 "equities" at an opponent mass of 0.0006 across dump formats.
+/// NA is the honest answer for the client too. Generator-only (not format).
+const double kOppMassFloor = 0.05;
+
 /// Generation counters + timings — the spike's measurement instrument.
 class PackStats {
   int actionNodes = 0, chanceNodes = 0, terminalNodes = 0;
@@ -630,6 +638,40 @@ void _walkPack(
       if (id != null && id < oppW.length) oppW[id] = w;
     });
   }
+  // Prune quantization-dust weights (same ε as the emit-side combo prune) and
+  // NA-floor the node's equity when the opponent's surviving mass is
+  // negligible — see kOppMassFloor. Keeps equity dump-format-stable AND
+  // honest (a weighted mean over ~zero mass is noise, not information).
+  var oppMass = 0.0;
+  for (var j = 0; j < oppW.length; j++) {
+    if (oppW[j] < kReachEpsilon) {
+      oppW[j] = 0.0;
+    } else {
+      oppMass += oppW[j];
+    }
+  }
+  final oppDead = oppMass < kOppMassFloor;
+
+  // Temporary oracle diagnostics: TLPACK_DEBUG_PATH=<path> dumps the opponent
+  // weight vector at that node to stderr (both generation paths).
+  final dbgPath = Platform.environment['TLPACK_DEBUG_PATH'];
+  if (dbgPath != null && path.join('/') == dbgPath) {
+    var cnt = 0;
+    var sum = 0.0;
+    final first = <String>[];
+    for (var j = 0; j < oppW.length; j++) {
+      if (oppW[j] > 0) {
+        cnt++;
+        sum += oppW[j];
+        if (first.length < 8) {
+          first.add('${oppReg.names[j]}:${oppW[j].toStringAsFixed(6)}');
+        }
+      }
+    }
+    stderr.writeln('[dbg] "$dbgPath" actor=$position '
+        'oppReachMap=${oppReach == null ? 'NULL(full-range)' : oppReach.length}'
+        ' oppW nonzero=$cnt sum=${sum.toStringAsFixed(4)} first=$first');
+  }
 
   // Chip state (from the shared verified SprState).
   final mine = spr.streetContrib[position] ?? 0;
@@ -674,11 +716,13 @@ void _walkPack(
     emitReach.add(rw);
   }
   // Equity for the emitted combos, timed as one batch (a per-combo stopwatch
-  // both undercounts sub-ms calls and adds real overhead).
+  // both undercounts sub-ms calls and adds real overhead). A dead-opponent
+  // node skips the computation entirely — all NA.
   final eqVals = Float64List(emit.length);
   final swEq = Stopwatch()..start();
   for (var k = 0; k < emit.length; k++) {
-    eqVals[k] = ctx.eq.comboEquity(board, actorIsOop, emit[k], oppW);
+    eqVals[k] =
+        oppDead ? -1.0 : ctx.eq.comboEquity(board, actorIsOop, emit[k], oppW);
   }
   swEq.stop();
   ctx.stats.equityMs += swEq.elapsedMilliseconds;
