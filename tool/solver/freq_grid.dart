@@ -756,8 +756,12 @@ Future<void> main(List<String> args) async {
   // decoded entries would be tens of GB at density-campaign shard sizes.
   final schedDryRun = args.contains('--sched-dry-run');
   final keysOnly = (noWrite || schedDryRun) && !writeOnly;
+  // --ignore-cache never consults the cache, so skip the (multi-GB shard)
+  // keys load entirely in keys-only mode — minutes of fleet-box startup.
+  final ignoreCacheEarly = args.contains('--ignore-cache');
   final results = keysOnly ? <String, dynamic>{} : _loadResults();
-  final cachedKeys = keysOnly ? await _loadCachedKeys() : null;
+  final cachedKeys =
+      keysOnly && !ignoreCacheEarly ? await _loadCachedKeys() : null;
   bool isCachedSpot(String flop, String spr) => cachedKeys != null
       ? (cachedKeys.contains(_spotKey(flop, spr)) ||
           (kScenario == 'srp_late_v_bb' &&
@@ -847,7 +851,7 @@ Future<void> main(List<String> args) async {
   // box takes deep (the split is pure env policy; see spot_sched.dart).
   final maxSpotGb =
       double.tryParse(Platform.environment['TLSOLVE_MAX_SPOT_GB'] ?? '');
-  final ignoreCache = args.contains('--ignore-cache');
+  final ignoreCache = ignoreCacheEarly;
   if (ignoreCache) {
     stdout.writeln('--ignore-cache: results-shard cache keys are IGNORED — '
         'every grid spot solves fresh (library-cached spots included). '
@@ -929,7 +933,8 @@ Future<void> main(List<String> args) async {
   if (args.contains('--sched-dry-run')) {
     stdout.writeln('sched dry run — planned order (LPT):');
     for (final s in pending) {
-      final fp = spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv);
+      final fp = spotFootprint(s.sprVal,
+          dumpFmt: dumpFmtEnv, emitPack: emitPackRoot != null);
       stdout.writeln('  ${s.flop} ${s.spr}: solve ${fp.solveGb} GB/'
           '${solverThreads}t ~${fp.estMinutes}min, parse ${fp.parseGb} GB/1t');
     }
@@ -973,14 +978,15 @@ Future<void> main(List<String> args) async {
   // tabulates before the summary/marker.
   //
   // Streaming tabulator note: TLSOLVE_TABULATE_HEAP_MB defaults to 16 GB (the
-  // streaming cursor retains raw bytes + O(depth)) ONLY when the tabulate will
-  // actually stream — i.e. the dump handed to tabulate_one is TLSD
-  // (dumpFmtEnv == 'bin') and the eager rollback isn't engaged. JSON dumps
-  // (--emit-pack forces JSON; TLSOLVE_DUMP_FMT=json/both hands tabulate_one
-  // the JSON file) still eagerly jsonDecode multi-GB trees (~45 GB medium /
-  // ~150 GB deep), as does TLSOLVE_TABULATE_EAGER=1 — both keep the 80 GB
-  // default (a 16 GB cap there OOMs every subprocess and destroys the run's
-  // paid solves). `eagerTabulate` is derived next to dumpFmtEnv above.
+  // streaming cursor retains raw bytes + O(depth); a TLSD --emit-pack run
+  // additionally holds the pack's chunk bodies, ~8-9 GB peak on deep — still
+  // inside 16 GB) ONLY when the tabulate will actually stream — i.e. the dump
+  // handed to tabulate_one is TLSD (dumpFmtEnv == 'bin') and the eager
+  // rollback isn't engaged. JSON dumps (TLSOLVE_DUMP_FMT=json/both hands
+  // tabulate_one the JSON file) still eagerly jsonDecode multi-GB trees
+  // (~45 GB medium / ~150 GB deep), as does TLSOLVE_TABULATE_EAGER=1 — both
+  // keep the 80 GB default (a 16 GB cap there OOMs every subprocess and
+  // destroys the run's paid solves). `eagerTabulate` is derived above.
   final tabHeapMb =
       int.tryParse(Platform.environment['TLSOLVE_TABULATE_HEAP_MB'] ?? '') ??
           (eagerTabulate ? 80000 : 16000);
@@ -1077,7 +1083,9 @@ Future<void> main(List<String> args) async {
       final s = pending[i];
       final key = _spotKey(s.flop, s.spr);
       final fp = spotFootprint(s.sprVal,
-          dumpFmt: dumpFmtEnv, eagerTabulate: eagerTabulate);
+          dumpFmt: dumpFmtEnv,
+          eagerTabulate: eagerTabulate,
+          emitPack: emitPackRoot != null);
       DumpSolve? ds;
       // Phase claims: solve holds (solveGb, solver threads); the detached
       // tabulate holds (parseGb, 1 thread). Track what THIS lane holds so the

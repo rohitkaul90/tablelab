@@ -67,6 +67,12 @@ export 'package:tablelab/explorer/pack_codec.dart';
 /// harder pruning if pack sizes demand it. Generator-only (not format).
 const double kReachEpsilon = 1e-4;
 
+/// Oracle/fleet diagnostics: set `TLPACK_DEBUG_PATH=<node path>` to dump that
+/// node's opponent weight vector to stderr. Read once — Platform.environment
+/// rebuilds the env map on every access, and this is consulted per action
+/// node (~10^5 times on a deep-river walk).
+final String? _kDbgPath = Platform.environment['TLPACK_DEBUG_PATH'];
+
 /// Equity is NA at nodes where the OPPONENT's total pruned reach mass is
 /// below this floor (in combo-equivalents). On lines the opponent essentially
 /// never takes, the weight vector is quantization dust and the weighted-mean
@@ -620,6 +626,19 @@ void _walkPack(
   final firstNodeForPlayer = reach == null;
   reach ??= const <String, double>{};
 
+  // Seed-consistency guard (TLSD dict seeding vs JSON first-node seeding):
+  // the fleet seeds IP from the TLSD header dict, assuming dict == the first
+  // IP node's combo set. If a future writer change makes the dict a strict
+  // superset, phantom dict-only combos would get full weight in every
+  // pre-action opponent range — warn loudly so fleet triage catches it.
+  if (firstNodeForPlayer && ckeyToIdx.length != actorReg.names.length &&
+      actorReg.names.isNotEmpty) {
+    stderr.writeln('WARN explorer_pack: first $position node has '
+        '${ckeyToIdx.length} combos but its registry was seeded with '
+        '${actorReg.names.length} — dict/strategy seed mismatch (phantom '
+        'combos would distort pre-action opponent equity).');
+  }
+
   if (node.hasEv) ctx.stats.nodesWithEv++;
   if (node.hasEvPassive) ctx.stats.nodesWithPassiveEv++;
 
@@ -652,9 +671,7 @@ void _walkPack(
   }
   final oppDead = oppMass < kOppMassFloor;
 
-  // Temporary oracle diagnostics: TLPACK_DEBUG_PATH=<path> dumps the opponent
-  // weight vector at that node to stderr (both generation paths).
-  final dbgPath = Platform.environment['TLPACK_DEBUG_PATH'];
+  final dbgPath = _kDbgPath;
   if (dbgPath != null && path.join('/') == dbgPath) {
     var cnt = 0;
     var sum = 0.0;

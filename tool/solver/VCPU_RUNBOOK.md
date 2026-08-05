@@ -218,7 +218,7 @@ TLSOLVE_ACCURACY=0.5 TLSOLVE_TIMEOUT_S=3000 TLSOLVE_MAXITER=400 TLSOLVE_THREADS=
 | `TLSOLVE_TIMEOUT_S` | `3000` | per-spot wall cap. **Deep/river may need higher** — bump if deep spots don't reach 0.5% |
 | `TLSOLVE_MAXITER` | `400` | CFR iteration cap |
 | `TLSOLVE_THREADS` | `8` | solver worker threads per spot. **16 crashed ~48%** on wet turn-raise trees (concurrency race, not OOM) — keep 8. Note threads are NOT a throughput lever anyway (8→16t only ~1.2–1.3×, memory-bandwidth-bound) — more concurrent spots is |
-| `TLSOLVE_DUMP_FMT` | `bin` | **TLSD binary dump** (2026-07-09): ~10× smaller, small-heap parse — the pre-TLSD ~15 GB JSON needed a ~150 GB heap and capped `--parallel` at ~5/TB. `json` = the oracle + REQUIRED for `--emit-pack`; `both` = one solve, two dumps (validate_dump.dart) |
+| `TLSOLVE_DUMP_FMT` | `bin` | **TLSD binary dump** (2026-07-09): ~10× smaller, small-heap parse — the pre-TLSD ~15 GB JSON needed a ~150 GB heap and capped `--parallel` at ~5/TB. `json` = the validation oracle; `both` = one solve, two dumps (validate_dump.dart / pack_oracle.dart). `--emit-pack` works on both formats since the TLSD pack port (2026-08-05) — TLSD is the pack-fleet default |
 | `TLSOLVE_FLOPS` | `rep` | flop set: `rep` (26 curated) / `all1755` (full density) / `file:<path>` (slice across boxes) |
 | `TLSOLVE_RAM_BUDGET_GB` | MemTotal×0.85 | RAM-aware scheduler budget (spot_sched.dart): solve/parse phases claim (GB, threads); deep claims throttle concurrency, shallow packs around them (LPT deep-first) |
 | `TLSOLVE_MAX_SPOT_GB` | unset | SKIP spots predicted above this (a 256 GB box grinds shallow/medium, a 1 TB box takes deep) |
@@ -284,7 +284,7 @@ This cycle = **deep-SPR** (`kSprReps` gained `'deep': 15.0`; same BTN-vs-BB scen
 
 | Cycle | Code prep | Notes |
 |---|---|---|
-| **River** | ✅ DONE — full river solved 2026-07-01 (78 spots, 0 failures). The 2026-06-30 trial's "parse is the blocker" finding was fixed twice over: first the per-spot SUBPROCESS tabulator (commit 0130619), then **TLSD binary dumps (2026-07-09)** which shrink the parse itself ~10×/25-50× heap — see the run-config table. Historical trial detail lives in `memory/dce_river_trial`. | JSON-era river rules (200 GB main heap, 150 GB tabulate heaps, --parallel ≤5/TB) are OBSOLETE under `TLSOLVE_DUMP_FMT=bin`; keep them only for `--emit-pack` (JSON) runs |
+| **River** | ✅ DONE — full river solved 2026-07-01 (78 spots, 0 failures). The 2026-06-30 trial's "parse is the blocker" finding was fixed twice over: first the per-spot SUBPROCESS tabulator (commit 0130619), then **TLSD binary dumps (2026-07-09)** which shrink the parse itself ~10×/25-50× heap — see the run-config table. Historical trial detail lives in `memory/dce_river_trial`. | JSON-era river rules (200 GB main heap, 150 GB tabulate heaps, --parallel ≤5/TB) are OBSOLETE under `TLSOLVE_DUMP_FMT=bin` — incl. pack fleets since the TLSD pack port (2026-08-05); they apply only to explicit JSON-format runs |
 
 ### Golden AMI + refresh
 

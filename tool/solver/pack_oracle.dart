@@ -132,9 +132,12 @@ void _comparePacks(
     sw = Stopwatch()..start();
     final dump = readTlsdStreamFile(tlsdPath);
     final root = dump.root;
-    if (root == null) {
-      stderr.writeln('pack_oracle: TLSD dump has an omitted root');
-      exit(1);
+    if (root == null || !root.isAction) {
+      // exitCode + return (NOT exit()) so the finally still cleans the temp
+      // dir — the JSON pack (potentially hundreds of MB) is already on disk.
+      stderr.writeln('pack_oracle: TLSD dump root is not an action node');
+      exitCode = 1;
+      return;
     }
     final rootPlayer = root.playerIndex == 1 ? 1 : 0;
     final tr = generatePackFromView(root,

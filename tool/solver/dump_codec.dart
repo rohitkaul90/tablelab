@@ -584,7 +584,15 @@ class JsonNodeView extends DumpNodeView {
   Map<String, List<double>>? _evByCkey, _pasByCkey;
 
   Map<String, List<double>>? _vecByCkey(Object? raw) {
-    if (raw is! Map<String, dynamic> || raw.isEmpty) return null;
+    if (raw == null) return null;
+    // Crash-loud on a malformed section (matches the pre-port `as Map?` cast
+    // and this file's freq hard-cast convention): a truncated/corrupt dump
+    // must fail the spot, not ship a pack with silently-NA'd EVs.
+    if (raw is! Map<String, dynamic>) {
+      throw FormatException(
+          'JSON dump: ev/ev_passive section is ${raw.runtimeType}, not a map');
+    }
+    if (raw.isEmpty) return null;
     final out = <String, List<double>>{};
     raw.forEach((k, v) {
       if (v is! List) return;

@@ -81,8 +81,10 @@ void main(List<String> args) {
       try {
         final dump = readTlsdStreamFile(dumpPath);
         final root = dump.root;
-        if (root == null) {
-          throw StateError('TLSD dump has an omitted root node');
+        if (root == null || !root.isAction) {
+          // A chance/omitted root would seed garbage registries and emit a
+          // structurally-empty pack that READS as success — fail loudly.
+          throw StateError('TLSD dump root is not an action node');
         }
         // Root is structurally OOP's node; its player index picks which
         // header dict seeds the IP registry (streaming can't peek children).

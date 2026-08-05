@@ -558,11 +558,15 @@ void main() {
       stream.finish();
       final tlsdPack = packFiles('${dir.path}/tlsd');
       expect(tlsdPack, jsonPack);
-      // Sanity: the EV actually landed (root chunk decodes with a non-NA ev).
-      final manifest = jsonDecode(
-              File('${dir.path}/tlsd/manifest.json').readAsStringSync())
-          as Map<String, dynamic>;
-      expect(manifest['chunks'], contains('flop'));
+      // Sanity: the EV actually landed — decode the flop chunk and require a
+      // non-NA per-action ev on some combo (byte-equality alone would stay
+      // green if BOTH paths regressed to all-NA EVs).
+      final nodes = decodeChunk(Uint8List.fromList(gzip
+          .decode(File('${dir.path}/tlsd/flop.bin.gz').readAsBytesSync())));
+      final anyEv = nodes.any(
+          (n) => n.combos.any((c) => c.evs.any((e) => e != null)));
+      expect(anyEv, isTrue,
+          reason: 'the withEv fixture must produce at least one decoded ev');
     });
   });
 }

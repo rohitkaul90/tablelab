@@ -49,8 +49,9 @@ dump (see `memory/solver-engine-landscape` for the full rationale):
      `src/runtime/PokerSolver.cpp` (`dump_strategy_bin`),
      `src/tools/CommandLineTool.cpp` (**`dump_result_bin <path>`** command).
    Select per solve via `TLSOLVE_DUMP_FMT=json|bin|both` (`both` = one solve,
-   two dumps — feeds `validate_dump.dart`). `--emit-pack` still requires JSON
-   (explorer_pack is not TLSD-adapted; packs are curated-subset only).
+   two dumps — feeds `validate_dump.dart` and `pack_oracle.dart`).
+   `--emit-pack` works on BOTH formats since the TLSD pack port (2026-08-05,
+   explorer_pack walks DumpNodeView); TLSD is the pack-fleet default.
 
 ## Files
 
