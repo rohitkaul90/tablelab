@@ -1,0 +1,13 @@
+# Pack-campaign calibration slice — 10 texture-diverse canonical flops
+# (one per coarse TextureCell bucket; picked 2026-08-05). x3 SPRs = 30
+# pack-emitting spots measuring $/spot + MB/spot for the fleet checkpoint.
+Ac 3c 2c
+8c 3c 2c
+Jc 8c 7d
+4c 3c 2d
+Ac 2c 2d
+Ac 6d 2h
+Jc 3d 2h
+8c 5d 4h
+Jc 2d 2h
+2c 2d 2h
