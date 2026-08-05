@@ -21,6 +21,7 @@ import '../../explorer/pack_source.dart';
 import '../../explorer/preflop_ranges.dart';
 import '../../explorer/root_equity.dart';
 import '../../widgets/explorer/action_colors.dart';
+import '../../widgets/explorer/board_picker_sheet.dart';
 import '../../widgets/explorer/equity_chart.dart';
 import '../../widgets/explorer/overview_panel.dart';
 import '../../widgets/explorer/preflop_trail_view.dart';
@@ -383,26 +384,28 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// picker), and remember it so subsequent board picks use it. Only commits
   /// the preference when a pack actually exists for that board at that regime —
   /// otherwise the depth control would desync from the data still on screen.
-  void _setDepth(String regime) {
+  Future<void> _setDepth(String regime) async {
     if (!mounted) return; // reachable from sheet closures after disposal
+    final spot = ref.read(explorerProvider).spot;
+    if (spot == null) return;
+    final notifier = ref.read(explorerProvider.notifier);
+    // Normally already loaded (the spot came from this scenario's list), but
+    // lazy discovery makes no such guarantee — ensure, then re-check.
+    await notifier.ensureScenario(spot.scenario);
+    if (!mounted) return;
     final st = ref.read(explorerProvider);
-    final spot = st.spot;
-    final target = spot == null
-        ? const []
-        : st.spots
-            .where((s) =>
-                s.scenario == spot.scenario &&
-                s.flop == spot.flop &&
-                s.spr == regime)
-            .toList();
+    if (st.spot != spot) return; // spot changed during the await
+    final target = st
+        .spotsFor(spot.scenario)
+        .where((s) => s.flop == spot.flop && s.spr == regime)
+        .toList();
     if (target.isEmpty) return; // no solved pack at that depth for this board
     setState(() {
       _depthPref = regime;
       _preflopInspect = -1;
     });
-    if (!identical(target.first, spot)) {
-      ref.read(explorerProvider.notifier)
-          .selectSpot(target.first, userInitiated: true);
+    if (target.first != spot) {
+      notifier.selectSpot(target.first, userInitiated: true);
     }
   }
 
@@ -411,10 +414,10 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     // Release-mode gap in the ref.listen sync: the auto-selected spot can be
-    // fully loaded BEFORE this screen ever mounts (ToolsScreen gates the child
-    // on spots.isNotEmpty), so the change-only listener never fires and the
-    // trail stays empty — dead navigation. Sync ONCE, lazily, when a spot first
-    // becomes available. Must NOT fire every build: otherwise folding the
+    // fully loaded BEFORE this screen ever mounts (MainNavigation gates the
+    // Study tab on catalog.isNotEmpty), so the change-only listener never fires
+    // and the trail stays empty — dead navigation. Sync ONCE, lazily, when a
+    // spot first becomes available. Must NOT fire every build: otherwise folding the
     // opener (which clears it) is instantly undone here, re-snapping the opener
     // back to the loaded spot's representative — you could never fold/change it.
     final spot0 = state.spot;
@@ -474,7 +477,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       };
 
   /// Apply a trail change: inspect the decision it creates, and re-target the
-  /// postflop spot when the mapped scenario changed and packs exist for it.
+  /// postflop spot when the mapped scenario changed and packs exist for it
+  /// (lazy: the scenario's index may need a fetch first).
   void _setTrail(PreflopTrail t, {int inspect = -1}) {
     if (!mounted) return; // reachable from sheet closures after disposal
     setState(() {
@@ -485,74 +489,78 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     if (sc == null) return;
     final st = ref.read(explorerProvider);
     if (st.spot?.scenario == sc) return;
-    final candidates = st.spots.where((s) => s.scenario == sc).toList();
+    if (!st.scenarioKeys.contains(sc)) return; // no packs for this scenario
+    _selectFirstSpotOf(sc, userInitiated: true);
+  }
+
+  /// Ensure [sc]'s index is loaded, then select its first spot — with
+  /// post-await re-checks: the screen can unmount, the user can retarget the
+  /// trail, or another selection can land during the fetch.
+  Future<void> _selectFirstSpotOf(String sc,
+      {required bool userInitiated}) async {
+    final notifier = ref.read(explorerProvider.notifier);
+    await notifier.ensureScenario(sc);
+    if (!mounted) return;
+    final st = ref.read(explorerProvider);
+    if (st.spot?.scenario == sc) return; // already there
+    if (_trail.scenarioKey != null && _trail.scenarioKey != sc) return;
+    final candidates = st.spotsFor(sc);
     if (candidates.isNotEmpty) {
-      ref.read(explorerProvider.notifier)
-          .selectSpot(candidates.first, userInitiated: true);
+      notifier.selectSpot(candidates.first, userInitiated: userInitiated);
     }
   }
 
   /// The FLOP box tap: pick among the scenario's solved BOARDS (depth is chosen
   /// in the settings gear, so the picker no longer lists per-depth rows).
   /// [scenarioKey] overrides the trail's mapping (unknown-scenario packs).
+  /// The sheet opens immediately and loads the scenario's index itself —
+  /// lazy discovery means the board list may not be fetched yet.
   void _openBoardPicker(BuildContext context, ExplorerState state,
       {String? scenarioKey}) {
     final sc = scenarioKey ?? _trail.scenarioKey;
-    if (sc == null) return;
-    final candidates = state.spots.where((s) => s.scenario == sc).toList();
-    if (candidates.isEmpty) return;
-    // Unique boards (each board is solved at every depth), in discovery order.
-    final seen = <String>{};
-    final boards = [
-      for (final s in candidates)
-        if (seen.add(s.flop)) s.flop
-    ];
+    if (sc == null || !state.scenarioKeys.contains(sc)) return;
+    final notifier = ref.read(explorerProvider.notifier);
     // Load the picked board at the current depth preference (fall back to the
     // loaded spot's depth, then any depth that board has).
     final regime = _depthPref ?? state.spot?.spr;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text('Solved boards — ${scenarioDisplayName(sc)}',
-                  style: Theme.of(sheetContext).textTheme.titleMedium),
-            ),
-            const SizedBox(height: 4),
-            for (final flop in boards)
-              ListTile(
-                dense: true,
-                title: Text(flop,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-                selected: state.spot?.flop == flop,
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  // The sheet is its own route and can outlive this screen
-                  // (conditional Study tab regated, auth swap) — a tap then
-                  // reaches a defunct State, where setState/ref throw.
-                  if (!mounted) return;
-                  final forFlop =
-                      candidates.where((s) => s.flop == flop).toList();
-                  final pick = forFlop.firstWhere((s) => s.spr == regime,
-                      orElse: () => forFlop.first);
-                  setState(() => _preflopInspect = -1);
-                  ref
-                      .read(explorerProvider.notifier)
-                      .selectSpot(pick, userInitiated: true);
-                },
-              ),
-          ],
-        ),
+      isScrollControlled: true,
+      builder: (sheetContext) => BoardPickerSheet(
+        title: 'Solved boards — ${scenarioDisplayName(sc)}',
+        selectedFlop: state.spot?.flop,
+        preferredSpr: regime,
+        // Captures the app-scoped notifier, not this State's ref — the sheet
+        // is its own route and can outlive the screen.
+        loadSpots: () => notifier.loadScenarioSpots(sc),
+        onPick: (pick) {
+          // The sheet is its own route and can outlive this screen
+          // (conditional Study tab regated, auth swap) — a tap then
+          // reaches a defunct State, where setState/ref throw.
+          if (!mounted) return;
+          setState(() => _preflopInspect = -1);
+          notifier.selectSpot(pick, userInitiated: true);
+        },
       ),
     );
   }
 
+  /// Retry a failed scenario-index fetch, then (when nothing is loaded yet —
+  /// the init auto-select path failed) select its first spot. NOT
+  /// user-initiated: an error-screen Retry must not count as engagement.
+  Future<void> _retryScenario(String sc) async {
+    final notifier = ref.read(explorerProvider.notifier);
+    await notifier.ensureScenario(sc);
+    if (!mounted) return;
+    final st = ref.read(explorerProvider);
+    if (st.spot != null) return;
+    final spots = st.spotsFor(sc);
+    if (spots.isNotEmpty) notifier.selectSpot(spots.first);
+  }
+
   Widget _postflopContent(BuildContext context, ExplorerState state) {
-    if (state.spots.isEmpty) {
+    if (state.catalog.isEmpty) {
       // The developer hint (local packs dir) must never reach prod users.
       const devHint = kDebugMode
           ? '\n\n(Developer: place packs under ~/tlpacks or pass '
@@ -564,6 +572,31 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         title: 'No solved boards on this device yet',
         body: 'Preflop ranges work above — tap any seat\'s action. Postflop '
             'solution packs are being rolled out — check back soon.$devHint',
+      );
+    }
+    // The catalog resolved but a scenario's board index failed to fetch
+    // (transient network) — retryable, unlike the no-packs state above. Keyed
+    // to the scenario the UI is actually trying to show: the trail's target,
+    // or (before any spot ever loaded, e.g. init's first-scenario fetch
+    // failing) whichever scenario errored.
+    final wantedSc = _trail.scenarioKey ?? state.spot?.scenario;
+    final failedSc = wantedSc != null && state.scenarioErrors.contains(wantedSc)
+        ? wantedSc
+        : (state.spot == null && state.scenarioErrors.isNotEmpty
+            ? state.scenarioErrors.first
+            : null);
+    if (failedSc != null) {
+      return _message(
+        context,
+        icon: Icons.cloud_off,
+        title: 'Couldn\'t load the board list',
+        body: 'The solved boards for '
+            '${scenarioDisplayName(failedSc)} didn\'t load. '
+            'Check your connection and retry.',
+        action: TextButton(
+          onPressed: () => _retryScenario(failedSc),
+          child: const Text('Retry'),
+        ),
       );
     }
     if (state.loading) {
@@ -1004,8 +1037,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     }
     final sc = _trail.scenarioKey;
     final matched = sc != null && spot != null && spot.scenario == sc;
-    final hasPacks =
-        sc != null && state.spots.any((s) => s.scenario == sc);
+    // O(1) against the catalog's key set — this runs per build, and the old
+    // any() scan was O(spots) (26k at full density).
+    final hasPacks = sc != null && state.scenarioKeys.contains(sc);
 
     final String detail;
     if (!_trail.closed) {
