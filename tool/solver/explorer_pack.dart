@@ -52,6 +52,8 @@ import 'package:tablelab/equity/card.dart';
 import 'package:tablelab/equity/evaluator.dart';
 import 'package:tablelab/explorer/pack_codec.dart';
 
+import 'dump_codec.dart'
+    show DumpNodeView, JsonNodeView;
 import 'freq_tabulate.dart' show SprState;
 import 'range_calib.dart' show parseComboKey;
 
@@ -64,6 +66,20 @@ export 'package:tablelab/explorer/pack_codec.dart';
 /// mass worth rendering). Stats also count what a 0.5% ε would drop, to inform
 /// harder pruning if pack sizes demand it. Generator-only (not format).
 const double kReachEpsilon = 1e-4;
+
+/// Oracle/fleet diagnostics: set `TLPACK_DEBUG_PATH=<node path>` to dump that
+/// node's opponent weight vector to stderr. Read once — Platform.environment
+/// rebuilds the env map on every access, and this is consulted per action
+/// node (~10^5 times on a deep-river walk).
+final String? _kDbgPath = Platform.environment['TLPACK_DEBUG_PATH'];
+
+/// Equity is NA at nodes where the OPPONENT's total pruned reach mass is
+/// below this floor (in combo-equivalents). On lines the opponent essentially
+/// never takes, the weight vector is quantization dust and the weighted-mean
+/// equity is numerically arbitrary — the real-dump pack oracle measured
+/// 0.68-vs-0.10 "equities" at an opponent mass of 0.0006 across dump formats.
+/// NA is the honest answer for the client too. Generator-only (not format).
+const double kOppMassFloor = 0.05;
 
 /// Generation counters + timings — the spike's measurement instrument.
 class PackStats {
@@ -114,10 +130,17 @@ class _ComboReg {
   /// Register a node's full combo set (first node per position — the fullest
   /// set), sorted by name for a deterministic manifest.
   void seed(Iterable<String> rawKeys) {
+    seedCards([
+      for (final k in rawKeys)
+        if (parseComboKey(k) case final c?) c
+    ]);
+  }
+
+  /// Card-pair form of [seed] (view/dict callers) — same dedupe + name sort.
+  void seedCards(Iterable<List<int>> cardPairs) {
     final parsed = <List<int>>[];
-    for (final k in rawKeys) {
-      final c = parseComboKey(k);
-      if (c != null && !byCkey.containsKey(_ckey(c))) parsed.add(c);
+    for (final c in cardPairs) {
+      if (!byCkey.containsKey(_ckey(c))) parsed.add(c);
     }
     parsed.sort((x, y) {
       final hx = x[0] >= x[1] ? x[0] : x[1];
@@ -387,19 +410,6 @@ class _PackCtx {
   }
 }
 
-/// {ckey: aligned vector} from a dump per-combo map ({'AhKs': [..]}).
-Map<String, List<double>>? _vecByCkey(Map<String, dynamic>? m) {
-  if (m == null || m.isEmpty) return null;
-  final out = <String, List<double>>{};
-  m.forEach((k, v) {
-    if (v is! List) return;
-    final c = parseComboKey(k);
-    if (c == null) return;
-    out[_ckey(c)] = [for (final x in v) (x as num).toDouble()];
-  });
-  return out.isEmpty ? null : out;
-}
-
 int _quant(double v, int scale) {
   final q = (v * scale).round();
   return q < 0 ? 0 : (q > scale ? scale : q);
@@ -410,8 +420,11 @@ int _quantEv(double v) {
   return q < -32767 ? -32767 : (q > 32767 ? 32767 : q);
 }
 
-/// Generate an explorer pack from a parsed dump [root]. Writes the manifest +
-/// chunk files under [outDir]; returns the manifest and generation stats.
+/// Generate an explorer pack from a parsed JSON dump [root] — thin wrapper
+/// over [generatePackFromView] that keeps the original registry seeding
+/// (OOP = root strategy keys; IP = first child-with-strategy in MAP order,
+/// which the view's action-order iteration can't reproduce exactly). This is
+/// the byte-oracle path for the TLSD port.
 ({Map<String, dynamic> manifest, PackStats stats}) generatePack(
   Map<String, dynamic> root, {
   required List<int> board,
@@ -422,21 +435,75 @@ int _quantEv(double v) {
   required String outDir,
   int maxBoardLen = 5,
 }) {
-  final ctx = _PackCtx(effStack, maxBoardLen);
-
-  // Seed combo registries before the walk: OOP = root strategy; IP = the first
-  // action child that has a strategy (root is structurally OOP's node). Later
-  // nodes only ever hold subsets (chance cards prune combos).
   final rootStrat =
       (root['strategy'] as Map<String, dynamic>?)?['strategy'] as Map?;
-  if (rootStrat != null) ctx.oop.seed(rootStrat.keys.cast<String>());
+  List<String>? ipKeys;
   final rootChildren = root['childrens'] as Map<String, dynamic>?;
   if (rootChildren != null) {
     for (final child in rootChildren.values) {
       final s = ((child as Map<String, dynamic>)['strategy']
           as Map<String, dynamic>?)?['strategy'] as Map?;
       if (s != null && s.isNotEmpty) {
-        ctx.ip.seed(s.keys.cast<String>());
+        ipKeys = s.keys.cast<String>().toList();
+        break;
+      }
+    }
+  }
+  return generatePackFromView(
+    JsonNodeView(root),
+    board: board,
+    pot0: pot0,
+    effStack: effStack,
+    scenario: scenario,
+    sprName: sprName,
+    outDir: outDir,
+    maxBoardLen: maxBoardLen,
+    oopSeedKeys: rootStrat?.keys.cast<String>().toList(),
+    ipSeedKeys: ipKeys,
+  );
+}
+
+/// Generate an explorer pack from any [DumpNodeView] root (JSON or TLSD,
+/// eager or streaming). Seeding: OOP from [oopSeedKeys] when given, else the
+/// root node's own combos (identical for well-formed dumps — root IS OOP's
+/// first node); IP from [ipSeedKeys] (REQUIRED for streaming TLSD, where
+/// peeking at a child before the walk would violate the forward-only cursor
+/// contract — pass the opponent player's dict keys from the TLSD header).
+({Map<String, dynamic> manifest, PackStats stats}) generatePackFromView(
+  DumpNodeView root, {
+  required List<int> board,
+  required double pot0,
+  required double effStack,
+  required String scenario,
+  required String sprName,
+  required String outDir,
+  int maxBoardLen = 5,
+  List<String>? oopSeedKeys,
+  List<String>? ipSeedKeys,
+}) {
+  final ctx = _PackCtx(effStack, maxBoardLen);
+
+  if (oopSeedKeys != null) {
+    ctx.oop.seed(oopSeedKeys);
+  } else {
+    ctx.oop.seedCards([
+      for (var i = 0; i < root.comboCount; i++)
+        if (root.comboCards(i) case final c?) c
+    ]);
+  }
+  if (ipSeedKeys != null) {
+    ctx.ip.seed(ipSeedKeys);
+  } else {
+    // Eager-tree fallback (JSON view without explicit keys): peek the first
+    // action child that has combos. NOT streaming-safe — streaming callers
+    // must pass ipSeedKeys.
+    for (var ai = 0; ai < root.actions.length; ai++) {
+      final child = root.child(ai);
+      if (child != null && child.isAction && child.comboCount > 0) {
+        ctx.ip.seedCards([
+          for (var i = 0; i < child.comboCount; i++)
+            if (child.comboCards(i) case final c?) c
+        ]);
         break;
       }
     }
@@ -500,7 +567,7 @@ int _quantEv(double v) {
 }
 
 void _walkPack(
-  Map<String, dynamic> node,
+  DumpNodeView node,
   List<int> board,
   Map<String, Map<String, double>> reachByPos,
   String position,
@@ -508,21 +575,14 @@ void _walkPack(
   SprState spr,
   _PackCtx ctx,
 ) {
-  final type = node['node_type'] as String?;
-  final children = node['childrens'] as Map<String, dynamic>?;
-  final strat = node['strategy'] as Map<String, dynamic>?;
-
-  // Chance node — same detection + reach pruning as freq_tabulate._walk.
-  final dealCards =
-      (node['dealcards'] ?? node['childrens']) as Map<String, dynamic>?;
-  if (type == 'chance_node' ||
-      (strat == null && dealCards != null && type != 'action_node')) {
+  // Chance node — same detection + reach pruning as freq_tabulate._walk
+  // (the view owns the detection; board-conflict filtering stays here).
+  if (node.isChance) {
     ctx.stats.chanceNodes++;
-    if (dealCards == null || board.length >= ctx.maxBoardLen) return;
+    if (board.length >= ctx.maxBoardLen) return;
     final nextSpr = spr.nextStreet();
-    dealCards.forEach((cardStr, child) {
-      final card = parseCard(cardStr.trim());
-      if (card < 0 || board.contains(card)) return;
+    node.forEachDeal((card, child) {
+      if (board.contains(card)) return;
       final pruned = <String, Map<String, double>>{
         for (final e in reachByPos.entries)
           e.key: {
@@ -530,21 +590,29 @@ void _walkPack(
               if (!_ckeyHasCard(r.key, card)) r.key: r.value
           },
       };
-      _walkPack(child as Map<String, dynamic>, [...board, card], pruned, 'oop',
+      _walkPack(child, [...board, card], pruned, 'oop',
           [...path, '@${cardName(card)}'], nextSpr, ctx);
     });
     return;
   }
 
-  if (strat == null) {
+  if (!node.isAction) {
     ctx.stats.terminalNodes++;
     return;
   }
 
-  final actions = (strat['actions'] as List?)?.cast<String>() ?? const [];
-  final byCombo = strat['strategy'] as Map<String, dynamic>?;
-  final freqBy = _vecByCkey(byCombo);
-  if (actions.isEmpty || byCombo == null || freqBy == null) {
+  final actions = node.actions;
+  // Node combo index: ckey → view index, for combos with parseable cards AND
+  // a usable freq vector — the exact membership the JSON path's `freqBy` had
+  // (unparseable keys and non-List vectors excluded).
+  final ckeyToIdx = <String, int>{};
+  for (var i = 0; i < node.comboCount; i++) {
+    if (!node.comboHasFreqs(i)) continue;
+    final cards = node.comboCards(i);
+    if (cards == null) continue;
+    ckeyToIdx[_ckey(cards)] = i;
+  }
+  if (actions.isEmpty || ckeyToIdx.isEmpty) {
     ctx.stats.terminalNodes++;
     return;
   }
@@ -558,10 +626,21 @@ void _walkPack(
   final firstNodeForPlayer = reach == null;
   reach ??= const <String, double>{};
 
-  final evBy = _vecByCkey(node['ev'] as Map<String, dynamic>?);
-  final pasBy = _vecByCkey(node['ev_passive'] as Map<String, dynamic>?);
-  if (evBy != null) ctx.stats.nodesWithEv++;
-  if (pasBy != null) ctx.stats.nodesWithPassiveEv++;
+  // Seed-consistency guard (TLSD dict seeding vs JSON first-node seeding):
+  // the fleet seeds IP from the TLSD header dict, assuming dict == the first
+  // IP node's combo set. If a future writer change makes the dict a strict
+  // superset, phantom dict-only combos would get full weight in every
+  // pre-action opponent range — warn loudly so fleet triage catches it.
+  if (firstNodeForPlayer && ckeyToIdx.length != actorReg.names.length &&
+      actorReg.names.isNotEmpty) {
+    stderr.writeln('WARN explorer_pack: first $position node has '
+        '${ckeyToIdx.length} combos but its registry was seeded with '
+        '${actorReg.names.length} — dict/strategy seed mismatch (phantom '
+        'combos would distort pre-action opponent equity).');
+  }
+
+  if (node.hasEv) ctx.stats.nodesWithEv++;
+  if (node.hasEvPassive) ctx.stats.nodesWithPassiveEv++;
 
   // Opponent reach weights aligned to the opponent registry (for equity).
   final oppReach = reachByPos[actorIsOop ? 'ip' : 'oop'];
@@ -577,6 +656,38 @@ void _walkPack(
       final id = oppReg.byCkey[ck];
       if (id != null && id < oppW.length) oppW[id] = w;
     });
+  }
+  // Prune quantization-dust weights (same ε as the emit-side combo prune) and
+  // NA-floor the node's equity when the opponent's surviving mass is
+  // negligible — see kOppMassFloor. Keeps equity dump-format-stable AND
+  // honest (a weighted mean over ~zero mass is noise, not information).
+  var oppMass = 0.0;
+  for (var j = 0; j < oppW.length; j++) {
+    if (oppW[j] < kReachEpsilon) {
+      oppW[j] = 0.0;
+    } else {
+      oppMass += oppW[j];
+    }
+  }
+  final oppDead = oppMass < kOppMassFloor;
+
+  final dbgPath = _kDbgPath;
+  if (dbgPath != null && path.join('/') == dbgPath) {
+    var cnt = 0;
+    var sum = 0.0;
+    final first = <String>[];
+    for (var j = 0; j < oppW.length; j++) {
+      if (oppW[j] > 0) {
+        cnt++;
+        sum += oppW[j];
+        if (first.length < 8) {
+          first.add('${oppReg.names[j]}:${oppW[j].toStringAsFixed(6)}');
+        }
+      }
+    }
+    stderr.writeln('[dbg] "$dbgPath" actor=$position '
+        'oppReachMap=${oppReach == null ? 'NULL(full-range)' : oppReach.length}'
+        ' oppW nonzero=$cnt sum=${sum.toStringAsFixed(4)} first=$first');
   }
 
   // Chip state (from the shared verified SprState).
@@ -605,10 +716,12 @@ void _walkPack(
 
   // Combos in registry order for determinism; drop reach < ε.
   final emit = <int>[];
+  final emitIdx = <int>[]; // view index of each emitted combo
   final emitReach = <double>[];
   for (var id = 0; id < actorReg.names.length; id++) {
     final ck = _ckey(actorReg.cards[id]);
-    if (!freqBy.containsKey(ck)) continue;
+    final idx = ckeyToIdx[ck];
+    if (idx == null) continue;
     final rw = firstNodeForPlayer ? 1.0 : (reach[ck] ?? 0.0);
     if (rw < kReachEpsilon) {
       ctx.stats.combosDroppedLowReach++;
@@ -616,14 +729,17 @@ void _walkPack(
     }
     if (rw < 0.005) ctx.stats.combosBelowHalfPct++;
     emit.add(id);
+    emitIdx.add(idx);
     emitReach.add(rw);
   }
   // Equity for the emitted combos, timed as one batch (a per-combo stopwatch
-  // both undercounts sub-ms calls and adds real overhead).
+  // both undercounts sub-ms calls and adds real overhead). A dead-opponent
+  // node skips the computation entirely — all NA.
   final eqVals = Float64List(emit.length);
   final swEq = Stopwatch()..start();
   for (var k = 0; k < emit.length; k++) {
-    eqVals[k] = ctx.eq.comboEquity(board, actorIsOop, emit[k], oppW);
+    eqVals[k] =
+        oppDead ? -1.0 : ctx.eq.comboEquity(board, actorIsOop, emit[k], oppW);
   }
   swEq.stop();
   ctx.stats.equityMs += swEq.elapsedMilliseconds;
@@ -631,16 +747,16 @@ void _walkPack(
   w.u16(emit.length);
   for (var k = 0; k < emit.length; k++) {
     final id = emit[k];
-    final ck = _ckey(actorReg.cards[id]);
-    final fv = freqBy[ck]!;
-    final ev = evBy?[ck];
-    final pas = pasBy?[ck];
+    final idx = emitIdx[k];
+    final fLen = node.freqLen(idx);
+    final ev = node.comboEv(idx);
+    final pas = node.comboEvPassive(idx);
     w.u16(id);
     w.u16(_quant(emitReach[k], kReachScale));
     w.u8(eqVals[k] < 0 ? kEquityNa : _quant(eqVals[k], kEquityScale));
     w.i16(pas == null || pas.isEmpty ? kEvNa : _quantEv(pas.first));
     for (var a = 0; a < actions.length; a++) {
-      w.u8(a < fv.length ? _quant(fv[a], kFreqScale) : 0);
+      w.u8(a < fLen ? _quant(node.freq(idx, a), kFreqScale) : 0);
       w.i16(ev != null && a < ev.length ? _quantEv(ev[a]) : kEvNa);
     }
     ctx.stats.combosEmitted++;
@@ -652,26 +768,19 @@ void _walkPack(
   ctx.stats.encodeMs += swEnc.elapsedMilliseconds - swEq.elapsedMilliseconds;
 
   // ── Descend children (identical to freq_tabulate._walk) ──
-  if (children == null) return;
+  // child(ai) is requested in strictly increasing order BEFORE the parent's
+  // frequencies are re-read for childReach — the streaming cursor's verified
+  // access pattern (parent frame data stays readable while its child is open).
   final other = actorIsOop ? 'ip' : 'oop';
   for (var ai = 0; ai < actions.length; ai++) {
-    final childKey = children.keys.firstWhere(
-      (k) =>
-          k == actions[ai] ||
-          k.toUpperCase().startsWith(actions[ai].trim().toUpperCase()),
-      orElse: () => '',
-    );
-    if (childKey.isEmpty) continue;
-    final child = children[childKey] as Map<String, dynamic>;
+    final child = node.child(ai);
+    if (child == null) continue;
 
     final childReach = <String, double>{};
-    byCombo.forEach((rawKey, vec) {
-      if (vec is! List || ai >= vec.length) return;
-      final cards = parseComboKey(rawKey);
-      if (cards == null) return;
-      final ck = _ckey(cards);
+    ckeyToIdx.forEach((ck, idx) {
+      if (ai >= node.freqLen(idx)) return;
       final old = firstNodeForPlayer ? 1.0 : (reach![ck] ?? 0.0);
-      final nr = old * (vec[ai] as num).toDouble();
+      final nr = old * node.freq(idx, ai);
       if (nr > 1e-9) childReach[ck] = nr;
     });
 

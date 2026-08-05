@@ -64,21 +64,49 @@ void main(List<String> args) {
     exit(64);
   }
   // Dispatch on the dump's magic bytes: a TLSD binary dump (dump_result_bin)
-  // decodes into a compact typed tree — a fraction of the JSON path's heap —
-  // and goes straight to tabulation. Pack emission still requires the JSON
-  // dump (explorer_pack walks the Map tree; packs are only emitted on curated
-  // 26-flop runs, never the full-density bulk), so a TLSD dump + --emit-pack
-  // is a wiring error, not a fallback.
+  // decodes via the streaming cursor — a fraction of the JSON path's heap —
+  // and goes straight to tabulation. Pack emission (the TLSD pack port,
+  // 2026-08-05) runs a SECOND independent streaming pass over the same file:
+  // the cursor is single-pass/forward-only, so cells and packs each get their
+  // own walk; two decode passes over ~1-2 GB of bytes beat one eager
+  // multi-GB typed tree.
   if (looksLikeTlsd(dumpPath)) {
-    if (packIdx >= 0) {
-      stderr.writeln('tabulate_one: --emit-pack requires a JSON dump '
-          '(TLSOLVE_DUMP_FMT=json when packs are on); got a TLSD dump.');
-      exit(64);
-    }
     final cells = tabulateDumpFile(dumpPath,
         board: flop, pot0: pot0, effStack: effStack, maxBoardLen: maxBoardLen);
     File(outPath)
         .writeAsStringSync(jsonEncode([for (final c in cells) c.toJson()]));
+    if (packIdx >= 0) {
+      // Secondary output: a pack failure must never flip the exit code (the
+      // grid would discard the successful tabulation + dump) — WARN, exit 0.
+      try {
+        final dump = readTlsdStreamFile(dumpPath);
+        final root = dump.root;
+        if (root == null || !root.isAction) {
+          // A chance/omitted root would seed garbage registries and emit a
+          // structurally-empty pack that READS as success — fail loudly.
+          throw StateError('TLSD dump root is not an action node');
+        }
+        // Root is structurally OOP's node; its player index picks which
+        // header dict seeds the IP registry (streaming can't peek children).
+        final rootPlayer = root.playerIndex == 1 ? 1 : 0;
+        final r = generatePackFromView(root,
+            board: flop,
+            pot0: pot0,
+            effStack: effStack,
+            scenario: args[packIdx + 2],
+            sprName: args[packIdx + 3],
+            outDir: args[packIdx + 1],
+            maxBoardLen: maxBoardLen,
+            ipSeedKeys: dump.dicts[1 - rootPlayer].keys);
+        dump.finish();
+        printPackReport(r.manifest, r.stats);
+      } catch (e) {
+        stderr.writeln('WARN tabulate_one: pack emission FAILED (cells are '
+            'unaffected and were written): $e');
+        stdout.writeln('pack emission FAILED for ${args[packIdx + 1]} — see '
+            'stderr; cells unaffected.');
+      }
+    }
     return;
   }
   // Parse ONCE (the multi-GB decode is the expensive step), then walk twice.

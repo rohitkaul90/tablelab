@@ -51,9 +51,10 @@ param(
   [int]$HeapMB = 24000,
   # Per-SUBPROCESS Dart old-gen heap cap (MB) for each tabulate_one.dart parse.
   # The STREAMING tabulator (default since the tabulate-bottleneck fix) retains
-  # only raw dump bytes + O(depth) - 16000 is generous. 0 = inherit the grid's
-  # own default, which already keys off the real path (16000 streaming / 80000
-  # for -TabulateEager or JSON/--emit-pack runs) - so 0 is right almost always.
+  # only raw dump bytes + O(depth) - 16000 is generous, incl. TLSD -EmitPack
+  # runs (second byte pass + in-memory chunk bodies ~8-9 GB deep). 0 = inherit
+  # the grid's own default, which keys off the real path (16000 streaming /
+  # 80000 for -TabulateEager or JSON-format runs) - so 0 is right almost always.
   [int]$TabulateHeapMB = 0,
   # Field rollback for the streaming tabulator: sets TLSOLVE_TABULATE_EAGER=1
   # on the box so tabulate_one uses the old eager typed-tree path (the grid
@@ -163,11 +164,12 @@ if (-not $Branch) {
 # the library pull is skipped, and shard seeding/sync narrows to the run's own
 # scenario(s).
 $noWrite = $GridArgs -match '--no-write'
-if ($EmitPack -and $DumpFmt -eq 'bin') {
-  throw "-EmitPack requires the JSON dump (packs walk the JSON tree) - use -DumpFmt json/both or drop it."
-}
-if ($EmitPack -and $noWrite) {
-  throw "-EmitPack with --no-write makes no sense (packs are curated runs; bulk runs are pack-free)."
+# TLSD pack port (2026-08-05): -EmitPack works with every -DumpFmt (packs walk
+# DumpNodeView; TLSD is the economic default for pack fleets), and the
+# RECOMMENDED fleet mode is -EmitPack + --ignore-cache + --no-write (re-solve
+# library-cached spots for packs without touching the shipped library).
+if ($EmitPack -and $noWrite -and ($GridArgs -notmatch '--ignore-cache')) {
+  Write-Host "NOTE: -EmitPack + --no-write without --ignore-cache only packs spots ABSENT from the results shards (library-cached spots are skipped packless)."
 }
 if ($noWrite) { Write-Host "Bulk mode (--no-write): frozen monolith, shard-only sync, no library pull." }
 

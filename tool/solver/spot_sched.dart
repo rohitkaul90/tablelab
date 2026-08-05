@@ -106,25 +106,41 @@ class SpotFootprint {
 /// a JSON bulk run still packs safely). Over-claiming pending detached
 /// tabulates starves solve admissions, so these must track the real path.
 SpotFootprint spotFootprint(double sprVal,
-    {required String dumpFmt, double? deepClaimGb, bool eagerTabulate = false}) {
+    {required String dumpFmt,
+    double? deepClaimGb,
+    bool eagerTabulate = false,
+    bool emitPack = false}) {
   final bool json = dumpFmt != 'bin'; // 'both' pays the JSON parse too
   final bool eager = json || eagerTabulate;
+  // TLSD pack emission (2026-08-05) runs a SECOND streaming pass over the
+  // dump bytes and buffers every chunk body + gzip in memory until the walk
+  // completes (~8-9 GB peak on a deep spot) — the streaming-tabulate claim
+  // alone would under-admit and invite OS OOM-kills that discard paid solves.
+  // JSON claims already carried packs (Cycle A/B ran at those numbers).
+  double packBump(double base, double bump) =>
+      emitPack && !eager ? base + bump : base;
   if (sprVal >= 10) {
     return SpotFootprint(
         solveGb: deepClaimGb ?? kDeepClaimGb,
-        parseGb: json ? 160 : (eager ? 8 : 3),
+        parseGb: json ? 160 : (eager ? 8 : packBump(3, 9)),
         estMinutes: 18);
   }
   if (sprVal >= 5) {
     return SpotFootprint(
-        solveGb: 36, parseGb: json ? 45 : (eager ? 4 : 1.5), estMinutes: 6);
+        solveGb: 36,
+        parseGb: json ? 45 : (eager ? 4 : packBump(1.5, 4.5)),
+        estMinutes: 6);
   }
   if (sprVal >= 2.5) {
     return SpotFootprint(
-        solveGb: 16, parseGb: json ? 12 : (eager ? 2 : 1), estMinutes: 2.5);
+        solveGb: 16,
+        parseGb: json ? 12 : (eager ? 2 : packBump(1, 3)),
+        estMinutes: 2.5);
   }
   return SpotFootprint(
-      solveGb: 8, parseGb: json ? 6 : (eager ? 1 : 0.5), estMinutes: 1);
+      solveGb: 8,
+      parseGb: json ? 6 : (eager ? 1 : packBump(0.5, 2.5)),
+      estMinutes: 1);
 }
 
 /// Minimal counting semaphore (single-isolate, like [ResourceBudget]): the
