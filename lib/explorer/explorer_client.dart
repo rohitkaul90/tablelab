@@ -55,4 +55,12 @@ class ExplorerPackClient {
     }
     return nodes;
   }
+
+  /// Drop every cached chunk except [chunkIds] (the manifest is kept). The
+  /// notifier trims an OUTGOING spot's client to its flop chunk — the
+  /// cross-spot client LRU (8 clients) must not pin 8× this cache's worth of
+  /// decoded turn/river chunks; a return visit re-fetches those lazily.
+  void retainOnly(Set<String> chunkIds) {
+    _chunks.removeWhere((id, _) => !chunkIds.contains(id));
+  }
 }

@@ -172,8 +172,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   @override
   void initState() {
     super.initState();
-    // Resolve the Study tab's visibility up front (a cheap local pack-dir scan;
-    // a no-op on web until hosted packs land) so the tab can appear without the
+    // Resolve the Study tab's visibility up front (a tiny hosted catalog.json
+    // fetch, or a local pack-dir scan in dev) so the tab can appear without the
     // Study screen ever mounting.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(explorerProvider.notifier).init();
@@ -186,10 +186,12 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     // in debug builds). Prod users must never see a permanently dead tab —
     // today's only pack source is a local dev directory; hosted packs light it
     // up later. The calculators (Equity/ICM) now live in the drawer's Tools.
-    // Watch only spot-DISCOVERY (not the whole explorer state) so the root
+    // Watch only catalog-DISCOVERY (not the whole explorer state) so the root
     // Scaffold/NavigationBar doesn't rebuild on every cursor move / chunk load.
+    // The tiny catalog resolves before any spot list loads, so the tab appears
+    // as early as possible.
     final showStudy = kDebugMode ||
-        ref.watch(explorerProvider.select((s) => s.spots.isNotEmpty));
+        ref.watch(explorerProvider.select((s) => s.catalog.isNotEmpty));
     // Study focus mode hides the bottom nav for a full-window spot view.
     final maximized = ref.watch(studyMaximizedProvider);
 

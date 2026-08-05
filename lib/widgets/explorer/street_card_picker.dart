@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../equity/card.dart';
+import 'board_cards.dart';
 
 class StreetCardPicker extends StatelessWidget {
   final String title; // 'Pick the turn card'
@@ -24,13 +25,6 @@ class StreetCardPicker extends StatelessWidget {
     this.available,
     required this.onPick,
   });
-
-  static const _suitColors = {
-    'c': Color(0xFF6FBF73), // clubs — green (4-color deck reads faster)
-    'd': Color(0xFF64A5E8), // diamonds — blue
-    'h': Color(0xFFE57373), // hearts — red
-    's': Color(0xFFE0E0E0), // spades — light on the dark felt
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +59,6 @@ class StreetCardPicker extends StatelessWidget {
     // merged away (not in [available]).
     final disabled = excluded.contains(name) ||
         (available != null && !available!.contains(name));
-    final suit = name[1];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Material(
@@ -79,30 +72,10 @@ class StreetCardPicker extends StatelessWidget {
           child: SizedBox(
             width: 30,
             height: 40,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  name[0],
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: disabled
-                        ? scheme.onSurface.withValues(alpha: 0.2)
-                        : _suitColors[suit],
-                  ),
-                ),
-                Text(
-                  kSuitSymbols[kSuitChars.indexOf(suit)],
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 1,
-                    color: disabled
-                        ? scheme.onSurface.withValues(alpha: 0.2)
-                        : _suitColors[suit],
-                  ),
-                ),
-              ],
+            child: CardGlyph(
+              name,
+              color:
+                  disabled ? scheme.onSurface.withValues(alpha: 0.2) : null,
             ),
           ),
         ),

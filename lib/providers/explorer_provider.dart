@@ -12,6 +12,8 @@
 // survives because solver trees offer identical action structures on every
 // runout card; sizes are pot-relative).
 
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,8 +28,23 @@ import '../explorer/root_equity.dart';
 import '../services/analytics_service.dart';
 
 class ExplorerState {
-  final bool scanning; // initial spot discovery in flight
-  final List<ExplorerSpotRef> spots;
+  final bool scanning; // initial catalog discovery in flight
+
+  /// The scenario catalog (tiny — one row per scenario). Empty = no packs
+  /// discoverable → the Study tab stays hidden.
+  final List<ScenarioSummary> catalog;
+
+  /// Precomputed key set of [catalog] — the per-build "does this scenario have
+  /// packs?" check must be O(1), not a list scan.
+  final Set<String> scenarioKeys;
+
+  /// Lazily-loaded spot lists, keyed by scenario. A key's ABSENCE means "not
+  /// fetched yet" (or failed — see [scenarioErrors]), never "no spots".
+  final Map<String, List<ExplorerSpotRef>> scenarioSpots;
+
+  /// Scenarios whose index fetch failed (retryable via ensureScenario).
+  final Set<String> scenarioErrors;
+
   final ExplorerSpotRef? spot;
   final PackManifest? manifest;
   final List<PackNode>? flopNodes;
@@ -55,7 +72,10 @@ class ExplorerState {
 
   const ExplorerState({
     this.scanning = false,
-    this.spots = const [],
+    this.catalog = const [],
+    this.scenarioKeys = const {},
+    this.scenarioSpots = const {},
+    this.scenarioErrors = const {},
     this.spot,
     this.manifest,
     this.flopNodes,
@@ -70,9 +90,15 @@ class ExplorerState {
     this.error,
   });
 
+  /// The loaded spots of [sc], or [] when not (yet) fetched.
+  List<ExplorerSpotRef> spotsFor(String sc) => scenarioSpots[sc] ?? const [];
+
   ExplorerState copyWith({
     bool? scanning,
-    List<ExplorerSpotRef>? spots,
+    List<ScenarioSummary>? catalog,
+    Set<String>? scenarioKeys,
+    Map<String, List<ExplorerSpotRef>>? scenarioSpots,
+    Set<String>? scenarioErrors,
     ExplorerSpotRef? spot,
     PackManifest? manifest,
     List<PackNode>? flopNodes,
@@ -92,7 +118,10 @@ class ExplorerState {
   }) {
     return ExplorerState(
       scanning: scanning ?? this.scanning,
-      spots: spots ?? this.spots,
+      catalog: catalog ?? this.catalog,
+      scenarioKeys: scenarioKeys ?? this.scenarioKeys,
+      scenarioSpots: scenarioSpots ?? this.scenarioSpots,
+      scenarioErrors: scenarioErrors ?? this.scenarioErrors,
       spot: spot ?? this.spot,
       manifest: manifest ?? this.manifest,
       flopNodes: flopNodes ?? this.flopNodes,
@@ -150,34 +179,161 @@ class ExplorerState {
   bool get atLineEnd => cursor >= line.length;
 }
 
+/// Discovery over the local `~/tlpacks` scan: one scan (memoized), catalog
+/// synthesized by grouping the scanned spots per scenario. Never throws — an
+/// unreadable dir is just an empty catalog (the local-scan contract).
+class LocalSpotDiscovery implements SpotDiscovery {
+  Future<Map<String, List<ExplorerSpotRef>>>? _scan;
+
+  Future<Map<String, List<ExplorerSpotRef>>> _grouped() {
+    return _scan ??= () async {
+      final root = defaultPacksRoot();
+      final spots = root == null
+          ? const <ExplorerSpotRef>[]
+          : await scanLocalPacks(root); // already spotSortKey-sorted
+      final grouped = <String, List<ExplorerSpotRef>>{};
+      for (final s in spots) {
+        (grouped[s.scenario] ??= []).add(s);
+      }
+      return grouped;
+    }();
+  }
+
+  @override
+  Future<List<ScenarioSummary>> catalog() async {
+    final grouped = await _grouped();
+    return [
+      for (final e in grouped.entries)
+        ScenarioSummary(key: e.key, spotCount: e.value.length),
+    ]..sort((a, b) => a.key.compareTo(b.key));
+  }
+
+  @override
+  Future<List<ExplorerSpotRef>> scenarioSpots(String key) async =>
+      (await _grouped())[key] ?? const [];
+}
+
 class ExplorerNotifier extends StateNotifier<ExplorerState> {
   ExplorerNotifier() : super(const ExplorerState());
 
   ExplorerPackClient? _client;
 
-  /// Discover browsable spots from the hosted index and/or the local
-  /// `~/tlpacks` scan. In a DEBUG build local packs win (a dev iterating on
+  /// The discovery init() settled on (the one whose catalog was non-empty).
+  SpotDiscovery? _discovery;
+
+  /// Test seam: when set, init() uses this instead of the local/hosted pair.
+  @visibleForTesting
+  SpotDiscovery? debugDiscovery;
+
+  /// In-flight per-scenario index fetches — concurrent ensureScenario calls
+  /// share one future; a FAILED fetch is removed so the next call retries.
+  final Map<String, Future<void>> _scenarioFutures = {};
+
+  /// Decoded-pack clients keyed by spot id, so a board-hop A→B→A serves A's
+  /// manifest + chunks from memory instead of refetching (the old code built a
+  /// fresh client per selectSpot). Insertion-ordered map used as an LRU.
+  final LinkedHashMap<String, ExplorerPackClient> _clients = LinkedHashMap();
+  static const int _clientCacheMax = 8;
+
+  @visibleForTesting
+  int get debugClientCacheCount => _clients.length;
+
+  /// Discover the scenario CATALOG from the hosted host and/or the local
+  /// `~/tlpacks` scan, then lazily load only the first scenario and auto-select
+  /// its first spot. In a DEBUG build local packs win (a dev iterating on
   /// freshly-generated packs shouldn't be silently served the older hosted
   /// set); in release, hosted wins (there are no local packs on web/mobile
-  /// anyway). Both sources are failure-tolerant → an empty list just hides the
-  /// Study tab, never an error.
+  /// anyway). Catalog discovery is failure-tolerant → an empty catalog just
+  /// hides the Study tab, never an error (and a later init() retries).
   Future<void> init() async {
-    if (state.scanning || state.spots.isNotEmpty) return;
+    if (state.scanning || state.catalog.isNotEmpty) return;
     state = state.copyWith(scanning: true, clearError: true);
 
-    Future<List<ExplorerSpotRef>> local() async {
-      final root = defaultPacksRoot();
-      return root == null ? const [] : scanLocalPacks(root);
+    SpotDiscovery? found;
+    List<ScenarioSummary> catalog = const [];
+    final candidates = debugDiscovery != null
+        ? <SpotDiscovery>[debugDiscovery!]
+        : <SpotDiscovery>[
+            if (kDebugMode) LocalSpotDiscovery(),
+            if (kPacksBaseUrl.isNotEmpty) HostedSpotDiscovery(kPacksBaseUrl),
+            if (!kDebugMode) LocalSpotDiscovery(),
+          ];
+    try {
+      for (final d in candidates) {
+        catalog = await d.catalog();
+        if (catalog.isNotEmpty) {
+          found = d;
+          break;
+        }
+      }
+    } catch (_) {
+      // catalog() promises never to throw, but a test/future source might —
+      // a leaked throw must not leave `scanning` stuck true (Study tab
+      // permanently hidden with no retry path).
+      found = null;
     }
+    if (!mounted) return;
+    if (found == null) {
+      state = state.copyWith(scanning: false);
+      return; // catalog stays empty → a later init() retries
+    }
+    _discovery = found;
+    state = state.copyWith(
+      catalog: catalog,
+      scenarioKeys: {for (final s in catalog) s.key},
+    );
+    // Load only the FIRST scenario up front for the auto-select — the rest
+    // fetch on demand. `scanning` stays true through it so the screen shows
+    // one continuous spinner, not a flash of "pick a board".
+    await ensureScenario(catalog.first.key);
+    if (!mounted) return;
+    final first = state.spotsFor(catalog.first.key);
+    state = state.copyWith(scanning: false);
+    // Race guard: a concurrent selectSpot (deep link, test) wins.
+    if (first.isNotEmpty && state.spot == null) {
+      await selectSpot(first.first);
+    }
+  }
 
-    Future<List<ExplorerSpotRef>> hosted() async =>
-        kPacksBaseUrl.isEmpty ? const [] : fetchHostedSpots(kPacksBaseUrl);
+  /// Fetch [key]'s spot list if it isn't loaded. Concurrent calls share one
+  /// fetch; a failure records [ExplorerState.scenarioErrors] (and clears the
+  /// shared future so the next call RETRIES) instead of throwing.
+  Future<void> ensureScenario(String key) {
+    if (state.scenarioSpots.containsKey(key)) return Future.value();
+    // Pre-init (no discovery yet): nothing to fetch — and the no-op must NOT
+    // be cached in _scenarioFutures. A synchronous no-op future's cleanup ran
+    // BEFORE ??= stored it, permanently wedging the key on a dead completed
+    // future (review finding; reachable in debug where the tab always shows).
+    final discovery = _discovery;
+    if (discovery == null) return Future.value();
+    return _scenarioFutures[key] ??= _fetchScenario(discovery, key);
+  }
 
-    var spots = await (kDebugMode ? local() : hosted());
-    if (spots.isEmpty) spots = await (kDebugMode ? hosted() : local());
+  /// ensureScenario + return the loaded list. THROWS when the index fetch
+  /// failed — the board-picker sheet must distinguish "fetch failed" (show
+  /// Retry) from a genuinely empty scenario. Safe to call from a sheet that
+  /// outlives its screen (the notifier is app-scoped).
+  Future<List<ExplorerSpotRef>> loadScenarioSpots(String key) async {
+    await ensureScenario(key);
+    final spots = state.scenarioSpots[key];
+    if (spots == null) throw StateError('scenario index failed: $key');
+    return spots;
+  }
 
-    state = state.copyWith(scanning: false, spots: spots);
-    if (spots.isNotEmpty) await selectSpot(spots.first);
+  Future<void> _fetchScenario(SpotDiscovery discovery, String key) async {
+    try {
+      final spots = await discovery.scenarioSpots(key);
+      _scenarioFutures.remove(key); // loaded → the containsKey guard takes over
+      if (!mounted) return;
+      state = state.copyWith(
+        scenarioSpots: {...state.scenarioSpots, key: spots},
+        scenarioErrors: {...state.scenarioErrors}..remove(key),
+      );
+    } catch (_) {
+      _scenarioFutures.remove(key); // retryable
+      if (!mounted) return;
+      state = state.copyWith(scenarioErrors: {...state.scenarioErrors, key});
+    }
   }
 
   /// [userInitiated] gates the `explorer_spot_loaded` analytics event and
@@ -186,6 +342,14 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
   /// the app-start auto-select and the error-screen Retry must not.
   Future<void> selectSpot(ExplorerSpotRef spot,
       {bool userInitiated = false}) async {
+    // Trim the OUTGOING spot's client down to its flop chunk before it goes
+    // into the LRU: a board-hop return still skips the manifest + flop
+    // refetch, but 8 cached clients can't pin 8×16 decoded turn/river chunks.
+    final prev = state.spot;
+    final prevClient = _client;
+    if (prev != null && prevClient != null && prev.id != spot.id) {
+      prevClient.retainOnly(const {'flop'});
+    }
     state = state.copyWith(
         spot: spot,
         loading: true,
@@ -200,10 +364,19 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
         // wedges _streetClosed in an infinite spinner (review finding).
         chunkLoading: false,
         clearError: true);
+    // Reuse a cached client (its manifest + chunk LRU) on a return visit —
+    // a board-hop A→B→A must not refetch A's manifest/flop chunk.
+    final cached = _clients.remove(spot.id);
+    final client = cached ?? ExplorerPackClient(spot.source);
     try {
-      final client = ExplorerPackClient(spot.source);
       final manifest = await client.manifest();
       final nodes = await client.chunk('flop');
+      // Cache even when the load raced a newer spot switch (the completed
+      // client is still valid for a later return); drop only on load ERROR.
+      _clients[spot.id] = client;
+      while (_clients.length > _clientCacheMax) {
+        _clients.remove(_clients.keys.first);
+      }
       if (!mounted || state.spot != spot) return;
       _client = client;
       _rootOppFuture = null; // per-spot cache
@@ -215,6 +388,12 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
             scenario: spot.scenario, spr: spot.spr);
       }
     } catch (e) {
+      // A transient failure (e.g. a flop-chunk timeout) must not throw away a
+      // WARM cache-hit client's memoized manifest/chunks — re-insert it. A
+      // never-loaded client stays out (drop on load error).
+      if (cached != null) {
+        _clients[spot.id] = cached;
+      }
       if (!mounted || state.spot != spot) return;
       _client = null;
       state = state.copyWith(loading: false, error: 'Could not load spot: $e');
@@ -417,7 +596,9 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
     if (spot == null || manifest == null) {
       return Future.value(const <PackCombo>[]);
     }
-    if (_rootOppFuture != null && identical(_rootOppSpot, spot)) {
+    // Value equality — lazy discovery can re-materialize the same spot as a
+    // fresh ref object, which must still hit this memo.
+    if (_rootOppFuture != null && _rootOppSpot == spot) {
       return _rootOppFuture!;
     }
     _rootOppSpot = spot;
