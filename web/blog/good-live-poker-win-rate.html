@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What's a Good Win Rate in Live Poker? (bb/hr, Honestly) — TableLab</title>
+  <meta name="description" content="Coaches put a good live $1/$2 win rate anywhere from $2 to $25/hr. We line up the benchmarks, add the rake math, and show the sample your win rate needs.">
+  <link rel="canonical" href="https://tablelab.app/blog/good-live-poker-win-rate">
+  <meta property="og:title" content="What's a Good Win Rate in Live Poker? (bb/hr, Honestly)">
+  <meta property="og:description" content="Published benchmarks for a good $1/$2 win rate span 10x — and none state their sample. We line them up, add the rake math, and show what your own number needs.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://tablelab.app/blog/good-live-poker-win-rate">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="What's a Good Win Rate in Live Poker? (bb/hr, Honestly)">
+  <meta name="twitter:description" content="The old rule says 1bb/hr at $1/$2. BlackRain79 says 10. Rake alone eats $12/hr either way. Here's what the benchmarks agree on — and the sample they never mention.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta property="article:published_time" content="2026-08-06">
+  <meta property="article:modified_time" content="2026-08-06">
+  <meta name="author" content="Rohit Kaul">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="stylesheet" href="/site.css?v=495db8e391">
+  <script src="/site.js?v=7c350f7df0" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://tablelab.app/blog/good-live-poker-win-rate#article",
+        "headline": "What's a Good Win Rate in Live Poker? (bb/hr, Honestly)",
+        "description": "What published coaches actually claim a good live win rate is at $1/$2, $2/$5 and $5/$10 — a 10x disagreement — plus the bb/hr vs bb/100 unit conversion, the rake arithmetic that explains most of the spread, and the sample size a live win rate needs before it means anything.",
+        "datePublished": "2026-08-06",
+        "dateModified": "2026-08-06",
+        "author": { "@id": "https://tablelab.app/#rohit" },
+        "publisher": { "@id": "https://tablelab.app/#organization" },
+        "image": { "@id": "https://tablelab.app/blog/good-live-poker-win-rate#primaryimage" },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://tablelab.app/blog/good-live-poker-win-rate" },
+        "isPartOf": { "@id": "https://tablelab.app/blog#blog" },
+        "wordCount": 1800,
+        "keywords": ["good live poker win rate", "live poker win rate", "bb per hour poker", "poker hourly rate", "1/2 win rate", "live poker rake", "bb/100 live poker"],
+        "articleSection": "Bankroll & Variance"
+      },
+      {
+        "@type": "Blog",
+        "@id": "https://tablelab.app/blog#blog",
+        "name": "The TableLab Blog",
+        "url": "https://tablelab.app/blog/",
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com", "https://www.youtube.com/channel/UCaslEsv-BMGKuOY4ssKQqVQ"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://tablelab.app/#rohit",
+        "name": "Rohit Kaul",
+        "givenName": "Rohit",
+        "description": "Live cash-game poker player and data-analytics professional; maker of TableLab. Around 20 years playing poker, focused on live cash as a winning player, with over a decade building quantitative models in Python.",
+        "jobTitle": "Founder",
+        "worksFor": { "@id": "https://tablelab.app/#organization" },
+        "knowsAbout": ["Poker strategy", "Cash game poker", "Game theory optimal (GTO) poker", "Poker bankroll management", "Data analytics", "Quantitative modeling"],
+        "alumniOf": [
+          { "@type": "CollegeOrUniversity", "name": "Purdue University" },
+          { "@type": "CollegeOrUniversity", "name": "University of Mumbai" }
+        ],
+        "sameAs": [
+          "https://www.linkedin.com/in/rohit-kaul-a761171a2",
+          "https://x.com/RohitKaul90",
+          "https://www.youtube.com/@rohitkaul1990",
+          "https://pokerdb.thehendonmob.com/player.php?a=r&n=877305"
+        ]
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://tablelab.app/blog/good-live-poker-win-rate#primaryimage",
+        "url": "https://tablelab.app/og-cover.png",
+        "width": 2400,
+        "height": 1260
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/blog/good-live-poker-win-rate#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tablelab.app" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://tablelab.app/blog/" },
+          { "@type": "ListItem", "position": 3, "name": "Good Live Poker Win Rate", "item": "https://tablelab.app/blog/good-live-poker-win-rate" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/blog/good-live-poker-win-rate#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "What is a good win rate at $1/$2 live poker?", "acceptedAnswer": { "@type": "Answer", "text": "Published answers disagree by an order of magnitude. The old rule of thumb says one big blind per hour, about $2. BlackRain79 puts the very best players at 10bb per hour, about $20. Red Chip Poker's estimate for a full-time $1/$2 pro tops out near $25 an hour and declines with volume. None of these benchmarks state the sample size behind them, so treat all of them as informed folklore rather than measurements." } },
+          { "@type": "Question", "name": "How do you convert bb/100 to bb per hour in live poker?", "acceptedAnswer": { "@type": "Answer", "text": "A live full-ring table deals roughly 25 to 30 hands per hour (Upswing Poker), so multiply a bb/100 figure by about 0.25 to 0.30 to get bb per hour. Running it the other way, the widely quoted 10bb-per-hour live benchmark works out to roughly 33 to 40 bb/100 — about ten times what counts as a strong online win rate." } },
+          { "@type": "Question", "name": "How many hours before a live win rate is statistically meaningful?", "acceptedAnswer": { "@type": "Answer", "text": "Primedope's variance calculator FAQ puts it at roughly 100,000 hands for a plus or minus 1.8 BB/100 read at 95% confidence — 3,300 to 4,000 hours at a live pace of 25 to 30 hands an hour. Our own check of the arithmetic says even that is generous: at a standard deviation of 90 BB/100, a plus or minus 1.8 read takes closer to a million hands. Either way, shorter samples are estimates, not measurements." } },
+          { "@type": "Question", "name": "Should I track my live win rate in dollars per hour or big blinds per hour?", "acceptedAnswer": { "@type": "Answer", "text": "Both, for different jobs. Dollars per hour is what pays for things and what most live players quote (PokerCoaching.com). Big blinds per hour normalizes across stakes, so it is the number that tells you whether you actually beat a game or just moved up in blinds. A tracker that stores stakes with every session can compute both from the same data." } },
+          { "@type": "Question", "name": "Why do live win rates look so much higher than online win rates?", "acceptedAnswer": { "@type": "Answer", "text": "Partly softer player pools, partly arithmetic. Quoted live benchmarks of around 10bb per hour convert to roughly 33 to 40 bb/100 at live dealing speeds — versus the 3 to 30 bb/100 range BlackRain79 quotes across online small stakes, where anything near the top of that range requires the softest games. Survivorship bias does the rest: the players publishing win rates are the ones still winning." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-H4D9DBVXDD');
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/about">About</a>
+            <details class="nav-dropdown">
+        <summary>Tools<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <nav aria-label="Free poker calculators">
+          <a href="/variance-calculator">Variance Calculator</a>
+          <a href="/icm-calculator">ICM Calculator</a>
+        </nav>
+      </details>
+      <a class="link" href="/privacy">Privacy</a>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Good Live Poker Win Rate</div>
+
+      <h1>What's a Good Win Rate in Live Poker? (bb/hr, Honestly)</h1>
+      <p class="byline">By Rohit Kaul · August 6, 2026 · 9 min read</p>
+
+      <div class="hero-banner">
+        <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Published benchmarks for a good $1/$2 live win rate span from 2 dollars an hour to 25 dollars an hour — a tenfold disagreement, and none of them state their sample size.">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0d130d"/>
+              <stop offset="1" stop-color="#16201a"/>
+            </linearGradient>
+          </defs>
+          <rect width="1200" height="380" fill="url(#bg)"/>
+          <rect x="0" y="0" width="6" height="380" fill="#4CAF50"/>
+          <text x="70" y="86" fill="#81C784" font-size="22" letter-spacing="3" font-family="sans-serif">BANKROLL &amp; VARIANCE</text>
+          <text x="68" y="170" fill="#ffffff" font-size="60" font-weight="700" font-family="sans-serif">"A good win rate"</text>
+          <text x="68" y="242" fill="#ffffff" font-size="60" font-weight="700" font-family="sans-serif">spans a 10x range.</text>
+          <text x="70" y="300" fill="#b0bec5" font-size="26" font-family="sans-serif">And nobody quotes the sample size behind their number.</text>
+          <rect x="70" y="324" width="560" height="40" rx="8" fill="rgba(76,175,80,0.14)" stroke="#4CAF50" stroke-opacity="0.5"/>
+          <text x="86" y="351" fill="#eceff1" font-size="20" font-family="sans-serif"><tspan fill="#81C784" font-weight="700">$2 &ndash; $25/hr</tspan>  ·  same stake  ·  same question</text>
+        </svg>
+      </div>
+
+      <p>Ask what a good win rate is at $1/$2 and the published answers span a factor of ten. The old live rule of thumb says one big blind an hour &mdash; about $2. BlackRain79 puts the very best players at 10bb an hour, or $20 (<a href="https://www.blackrain79.com/2014/06/good-win-rates-for-micro-and-small_6.html">BlackRain79</a>). Red Chip Poker's estimate for a full-time $1/$2 pro tops out around $25 &mdash; and falls as volume rises (<a href="https://redchippoker.com/playing-1-2-poker-for-a-living/">Red Chip Poker</a>). Same stake, same question, answers an order of magnitude apart.</p>
+
+      <p>That spread isn't carelessness. It's what happens when a number gets quoted without its units, its rake assumptions, or its sample size. This post lines the benchmarks up, does the conversion arithmetic the sources skip, and then asks the question none of them answer: how many hours before <em>your</em> number means anything?</p>
+
+      <div class="tldr">
+        <p><strong>TL;DR:</strong> Published benchmarks for a good live win rate disagree by 10x at the same stake &mdash; from the folklore 1bb/hr to BlackRain79's 10bb/hr to Red Chip's ~$25/hr ceiling &mdash; and every one of them omits its sample size. Live win rates are quoted in big blinds <em>per hour</em>, not bb/100: at 25&ndash;30 hands an hour, the quoted 10bb/hr converts to roughly 33&ndash;40 bb/100, around ten times a strong online rate. Rake explains much of the disagreement &mdash; roughly <strong>$12 an hour in rake alone leaves each $1/$2 player's stack</strong> before anyone wins anything. And the sample needed to actually trust a live win rate starts at 100,000 hands &mdash; 3,300+ hours at live speed &mdash; and our own check of the math says even that is generous. Our advice: measure your own post-rake rate, attach the hours to it, and treat every published number as folklore until it shows its sample.</p>
+      </div>
+
+      <h2>What the published benchmarks actually say</h2>
+
+      <p>The most-cited figures come from BlackRain79, who is at least explicit about both his units and his uncertainty. His ladder starts at $20 an hour for the very best at $1/$2 and climbs to $170 at $10/$20 &mdash; numbers he himself calls "wild speculations" (<a href="https://www.blackrain79.com/2018/06/good-poker-hourly-rate.html">BlackRain79</a>). Red Chip's Kat Martin, writing about playing $1/$2 for a living, lands lower: a realistic ceiling near <strong>$25 an hour for a full-time pro</strong>, with the rate declining as volume grows (<a href="https://redchippoker.com/playing-1-2-poker-for-a-living/">Red Chip Poker</a>). And in the comments under BlackRain79's own hourly-rate article, the old-school counterpoint survives: the traditional live rule of thumb of one big blind per hour, with the $20 figure dismissed as unattainable over big samples.</p>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption>Published "good" live win rates by stake. Units as each source states them; none of the sources publish the sample behind their figure.</caption>
+          <thead>
+            <tr><th>Stake</th><th>BlackRain79 ("very best")</th><th>Red Chip (full-time ceiling)</th><th>Old rule of thumb</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>$1/$2</td><td>$20/hr (10bb/hr)</td><td>~$25/hr, declining with volume</td><td>1bb/hr (~$2/hr)</td></tr>
+            <tr><td>$2/$5</td><td>$50/hr (10bb/hr)</td><td>&mdash;</td><td>1bb/hr (~$5/hr)</td></tr>
+            <tr><td>$5/$10</td><td>$90/hr (9bb/hr)</td><td>&mdash;</td><td>1bb/hr (~$10/hr)</td></tr>
+            <tr><td>$10/$20</td><td>$170/hr (8.5bb/hr)</td><td>&mdash;</td><td>1bb/hr (~$20/hr)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure>
+        <svg viewBox="0 0 580 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bar chart of what published sources call a good win rate at 1/2 live: the old rule of thumb at about 2 dollars an hour, BlackRain79's very-best figure at 20 dollars an hour, and Red Chip Poker's full-time ceiling at about 25 dollars an hour. A tenfold spread at the same stake." style="max-width:100%;height:auto">
+          <text x="20" y="24" fill="#eceff1" font-size="14">"A good $1/$2 win rate," according to&hellip;</text>
+          <!-- scale: 12.8 px per $, origin x=180 -->
+          <text x="172" y="70" fill="#cfd8dc" font-size="12" text-anchor="end">Old rule of thumb</text>
+          <rect x="180" y="58" width="26" height="16" rx="4" fill="#4CAF50"/>
+          <text x="214" y="70" fill="#90a4ae" font-size="11">~$2/hr (1bb/hr)</text>
+          <text x="172" y="122" fill="#cfd8dc" font-size="12" text-anchor="end">BlackRain79</text>
+          <rect x="180" y="110" width="256" height="16" rx="4" fill="#4CAF50"/>
+          <text x="444" y="122" fill="#90a4ae" font-size="11">$20/hr</text>
+          <text x="172" y="174" fill="#cfd8dc" font-size="12" text-anchor="end">Red Chip Poker</text>
+          <rect x="180" y="162" width="320" height="16" rx="4" fill="#4CAF50"/>
+          <text x="508" y="174" fill="#90a4ae" font-size="11">~$25/hr</text>
+          <text x="20" y="216" fill="#90a4ae" font-size="11">Same stake, same question. Sources: BlackRain79 (2014); Red Chip Poker (2017);</text>
+          <text x="20" y="230" fill="#90a4ae" font-size="11">rule-of-thumb figure as discussed on BlackRain79's hourly-rate page. None state a sample size.</text>
+        </svg>
+        <figcaption>A 10x disagreement about the same stake &mdash; and not one of the three numbers comes with a sample size attached.</figcaption>
+      </figure>
+
+      <h2>Why live win rates come in bb per hour, not bb/100</h2>
+
+      <p>Online, win rate means big blinds per 100 hands &mdash; bb/100. Live, nobody quotes that, because nobody deals 100 hands quickly enough for it to feel natural. A full-ring live table gets through roughly <strong>25 to 30 hands an hour</strong> (<a href="https://upswingpoker.com/hands-per-hour-live-poker-vs-online/">Upswing Poker</a>). So the live convention is big blinds per hour, and the dollars-per-hour phrasing most players actually use is the same number times the big blind (<a href="https://pokercoaching.com/blog/poker-terms/win-rate/">PokerCoaching.com</a>).</p>
+
+      <p>The conversion is one division, and it's worth doing once because the result is startling. Ten big blinds an hour at 25&ndash;30 hands an hour is <strong>roughly 33&ndash;40 bb/100</strong>. For comparison, BlackRain79's own range for good online small-stakes win rates runs 3&ndash;30 bb/100, with the low single digits counting as solid at most stakes (<a href="https://www.blackrain79.com/2014/06/good-win-rates-for-micro-and-small_6.html">BlackRain79</a>). Taken at face value, the standard live benchmark claims live pros beat their games at around <em>ten times</em> the rate strong online players beat theirs.</p>
+
+      <div class="callout"><p><strong>Our arithmetic, flagged:</strong> both inputs are sourced &mdash; the 10bb/hr benchmark and the 25&ndash;30 hands/hr pace &mdash; but the division is ours; no source we found publishes live benchmarks in bb/100. Some of that 10x gap is real (live pools are softer, and one weak seat matters more when you play 27 hands an hour against the same people). Some of it is survivorship: the people publishing win rates are the ones still winning. The honest reading is that the two numbers aren't measuring comparable populations.</p></div>
+
+      <h2>How much of your win rate does the rake eat?</h2>
+
+      <p>More than any benchmark admits, and it lands hardest at the lowest stakes. A typical low-stakes live game takes a tenth of each pot capped at $5 or $6, plus promo drops on top (<a href="https://www.pokernews.com/strategy/lets-look-at-the-rake-and-time-charges-28692.htm">PokerNews</a>). Ashley Adams runs the numbers for a full $1/$2 table: between rake, jackpot drops, and dealer tips, roughly $180 an hour leaves the table &mdash; <strong>the rake alone costing each player about $12 an hour</strong> before winners and losers are sorted at all.</p>
+
+      <p>Set that against the benchmarks above and the disagreement starts to explain itself. Twelve dollars an hour is more than half of BlackRain79's entire "very best" win rate at $1/$2 &mdash; a player who'd beat the game for $32 an hour rake-free is a $20 winner, and a modest rake-free winner is an outright loser.</p>
+
+      <p>Jonathan Little makes the structural point crisply: a $5 cap at $1/$2 is two and a half big blinds out of every capped pot, while the cap at nosebleed stakes is a rounding error (<a href="https://pokercoaching.com/blog/rake-in-poker/">PokerCoaching.com</a>). The rake burden runs <em>backwards</em> &mdash; heaviest exactly where the games are softest. When two coaches disagree about what's achievable at $1/$2, check whether they're imagining the same drop structure before assuming one of them is wrong.</p>
+
+      <h2>How many hours before your win rate means anything?</h2>
+
+      <p>Here's the part every benchmark skips. Primedope's variance calculator &mdash; the upstream source most published poker variance work leans on &mdash; answers it in its FAQ: roughly <strong>100,000 hands for a &plusmn;1.8 BB/100 read</strong> at 95% confidence (<a href="https://www.primedope.com/poker-variance-calculator/">Primedope</a>). We ran the standard formula on the same inputs, and the honest correction points up, not down. At a standard deviation of 90 BB/100, 100,000 hands only narrows you to about &plusmn;5.6 BB/100; the &plusmn;1.8 read takes closer to a million hands &mdash; that check is our arithmetic. Either way the conclusion holds: at 25&ndash;30 live hands an hour, even the friendlier figure is 3,300 to 4,000 hours of play, and the million-hand version is a whole career.</p>
+
+      <p>Shorter samples aren't worthless; they're just wide. A few hundred hours of live results is consistent with being a solid winner, a breakeven player, or a modest loser all at once. It's the same sample-size wall we hit when we ran <a href="/blog/poker-tournament-variance">the tournament version of this question</a> through our variance engine &mdash; even 1,000 tournaments couldn't separate a good player from a losing one. If you want to see your own band rather than take ours on faith, <a href="/variance-calculator">our variance calculator</a> will compute it from your win rate, standard deviation, and hours &mdash; or prefill those numbers from your own tracked sessions.</p>
+
+      <h2>What does a real tracked sample look like?</h2>
+
+      <p>Rohit &mdash; who builds TableLab &mdash; published his own numbers at Cardplayer Lifestyle in July: 2,735 hours of tracked live cash &mdash; the cash-game core of the roughly 3,200 tracked hours in the article's title &mdash; at about <strong>$83 CAD an hour</strong> (<a href="https://cardplayerlifestyle.com/poker-tips-strategy/3200-hours-tracked-live-poker/">Cardplayer Lifestyle</a>). Even that sample, more live hours than most regulars log in four years, only pins the true rate inside roughly a &plusmn;$25 band &mdash; his own caveat in the piece. The band is wider than the entire BlackRain79-versus-rule-of-thumb dispute at $1/$2.</p>
+
+      <p>The tracked data also shows things a single headline number hides. He won more than two-thirds of his sessions, yet the median losing session outweighed the median winning one &mdash; win percentage flattered the graph while the tail carried it, with the top tenth of sessions producing nearly two-thirds of total profit. And the hourly rate fell off a cliff with session length:</p>
+
+      <figure>
+        <svg viewBox="0 0 580 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bar chart of hourly win rate by session length from 2,735 tracked live hours: sessions under 5 hours earned 141 dollars an hour, 5 to 7 hours earned 117, 7 to 8 hours earned 76, and sessions over 8 hours earned 23 dollars an hour." style="max-width:100%;height:auto">
+          <text x="20" y="24" fill="#eceff1" font-size="14">Hourly rate by session length (2,735 tracked hours)</text>
+          <!-- scale: 2.3 px per $, origin x=150 -->
+          <text x="142" y="70" fill="#cfd8dc" font-size="12" text-anchor="end">Under 5h</text>
+          <rect x="150" y="58" width="324" height="16" rx="4" fill="#4CAF50"/>
+          <text x="482" y="70" fill="#90a4ae" font-size="11">$141/hr</text>
+          <text x="142" y="112" fill="#cfd8dc" font-size="12" text-anchor="end">5&ndash;7h</text>
+          <rect x="150" y="100" width="269" height="16" rx="4" fill="#4CAF50"/>
+          <text x="427" y="112" fill="#90a4ae" font-size="11">$117/hr</text>
+          <text x="142" y="154" fill="#cfd8dc" font-size="12" text-anchor="end">7&ndash;8h</text>
+          <rect x="150" y="142" width="175" height="16" rx="4" fill="#ffd54f"/>
+          <text x="333" y="154" fill="#90a4ae" font-size="11">$76/hr</text>
+          <text x="142" y="196" fill="#cfd8dc" font-size="12" text-anchor="end">Over 8h</text>
+          <rect x="150" y="184" width="53" height="16" rx="4" fill="#ef9a9a"/>
+          <text x="211" y="196" fill="#90a4ae" font-size="11">$23/hr</text>
+          <text x="20" y="236" fill="#90a4ae" font-size="11">Source: Rohit Kaul, "What 3,200 Hours of Tracked Live Poker Taught Me," Cardplayer Lifestyle, July 2026.</text>
+        </svg>
+        <figcaption>The hour-eight cliff: the same player, the same games, a sixth of the win rate once sessions run long. Only tracked data can show you this.</figcaption>
+      </figure>
+
+      <p>None of that is visible in "I make about $80 an hour." It only falls out of logged sessions with start times, end times, and stakes attached &mdash; which is the practical argument for tracking in the first place.</p>
+
+      <h2>So what number should you aim for?</h2>
+
+      <p>Not a number &mdash; a procedure. The benchmarks disagree too much, and your rake structure, pool, and hours differ too much from anyone else's for a borrowed target to mean anything. What works instead:</p>
+
+      <ul>
+        <li><strong>Measure post-rake, in both units.</strong> Log every session with stakes and hours; let the tracker compute $/hr and bb/hr from the same data. Dollars pay rent; big blinds tell you whether you beat the game or just moved up.</li>
+        <li><strong>Attach the hours to the number.</strong> "$40/hr over 180 hours" and "$40/hr over 2,000 hours" are different claims. Quote your win rate the way you'd want a benchmark quoted to you.</li>
+        <li><strong>Judge the inputs you control.</strong> Session length, game selection, and rake structure moved the tracked numbers above more than any strategy tweak. Your bankroll should follow field and rake reality too &mdash; <a href="/blog/poker-bankroll-management">our buy-in guide</a> covers that side.</li>
+      </ul>
+
+      <h2>The bottom line</h2>
+
+      <ul>
+        <li>Published "good win rate" figures at $1/$2 span <strong>$2 to $25 an hour</strong>, and none of them publish the sample behind the claim.</li>
+        <li>Live win rates are quoted in bb <em>per hour</em>; at 25&ndash;30 hands an hour, the standard 10bb/hr benchmark converts to roughly 33&ndash;40 bb/100 &mdash; ten times a strong online rate. Treat that gap with suspicion, not pride.</li>
+        <li>Rake alone takes roughly <strong>$12 an hour from every $1/$2 player</strong> before anyone wins a cent &mdash; 60% of BlackRain79's "very best" figure. Pre-rake and post-rake claims aren't comparable.</li>
+        <li>Trusting a live win rate to within a couple of bb/100 takes 100,000 hands by the friendliest published figure &mdash; 3,300+ live hours &mdash; and closer to a million hands by our own check of the math. Anything shorter is an estimate, and should be quoted with its hours.</li>
+        <li>A real 2,735-hour tracked sample still carries a &plusmn;$25/hr band &mdash; wider than the entire published disagreement it would settle.</li>
+      </ul>
+
+      <p>The honest answer to "what's a good live poker win rate" is: <em>measured over what sample, after what rake?</em> Anyone who answers without asking those two questions first is quoting folklore. <a href="/">Start logging your sessions</a> and let your own graph do the arguing &mdash; and when the number swings wildly month to month, <a href="/blog/poker-tournament-variance">that's variance doing what variance does</a>, not necessarily you.</p>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>What is a good win rate at $1/$2 live poker?</summary>
+          <p>Published answers disagree by an order of magnitude. The old rule of thumb says one big blind per hour (~$2). BlackRain79 puts the very best players at 10bb/hr, about $20 (<a href="https://www.blackrain79.com/2014/06/good-win-rates-for-micro-and-small_6.html">BlackRain79</a>). Red Chip Poker's estimate for a full-time $1/$2 pro tops out near $25/hr and declines with volume (<a href="https://redchippoker.com/playing-1-2-poker-for-a-living/">Red Chip Poker</a>). None state their sample size &mdash; treat all of them as informed folklore.</p>
+        </details>
+        <details>
+          <summary>How do you convert bb/100 to bb per hour in live poker?</summary>
+          <p>A live full-ring table deals roughly 25&ndash;30 hands per hour (<a href="https://upswingpoker.com/hands-per-hour-live-poker-vs-online/">Upswing Poker</a>), so multiply bb/100 by about 0.25&ndash;0.30. Running it the other way, the widely quoted 10bb/hr live benchmark works out to roughly 33&ndash;40 bb/100 &mdash; about ten times what counts as a strong online win rate.</p>
+        </details>
+        <details>
+          <summary>How many hours before a live win rate is statistically meaningful?</summary>
+          <p>Primedope's variance calculator FAQ puts it at roughly 100,000 hands for a &plusmn;1.8 BB/100 read at 95% confidence (<a href="https://www.primedope.com/poker-variance-calculator/">Primedope</a>) &mdash; 3,300&ndash;4,000 hours at live speed. Our own check of the arithmetic says even that is generous: at a standard deviation of 90 BB/100, a &plusmn;1.8 read takes closer to a million hands. Either way, shorter samples are estimates, not measurements; <a href="/variance-calculator">our variance calculator</a> shows the band for your own numbers.</p>
+        </details>
+        <details>
+          <summary>Should I track my live win rate in dollars per hour or big blinds per hour?</summary>
+          <p>Both, for different jobs. $/hr is what pays for things and what live players actually quote (<a href="https://pokercoaching.com/blog/poker-terms/win-rate/">PokerCoaching.com</a>). bb/hr normalizes across stakes, so it's the number that tells you whether you beat the game or just moved up in blinds. A tracker that stores stakes with every session computes both from the same data.</p>
+        </details>
+        <details>
+          <summary>Why do live win rates look so much higher than online win rates?</summary>
+          <p>Partly softer pools, partly arithmetic. Quoted live benchmarks of ~10bb/hr convert to roughly 33&ndash;40 bb/100 at live dealing speeds, versus the 3&ndash;30 bb/100 range quoted across online small stakes (<a href="https://www.blackrain79.com/2014/06/good-win-rates-for-micro-and-small_6.html">BlackRain79</a>). Survivorship bias does the rest: the players publishing win rates are the ones still winning.</p>
+        </details>
+      </section>
+
+      <h3>Sources</h3>
+      <ul class="sources">
+        <li>Williams, N. (BlackRain79), "Good Poker Win Rates for Micro and Small Stakes," 2014, <a href="https://www.blackrain79.com/2014/06/good-win-rates-for-micro-and-small_6.html">blackrain79.com</a></li>
+        <li>Williams, N. (BlackRain79), "What is a Good Poker Hourly Rate?," 2018, <a href="https://www.blackrain79.com/2018/06/good-poker-hourly-rate.html">blackrain79.com</a></li>
+        <li>Martin, K., "Playing $1/$2 Poker for a Living," Red Chip Poker, 2017-09-22, <a href="https://redchippoker.com/playing-1-2-poker-for-a-living/">redchippoker.com</a></li>
+        <li>Fisk, G., "How Many Poker Hands Are Played Per Hour? (Live Poker vs Online)," Upswing Poker, 2020-02-05, <a href="https://upswingpoker.com/hands-per-hour-live-poker-vs-online/">upswingpoker.com</a></li>
+        <li>Adams, A., "Let's Look at the Rake (and Time Charges)," PokerNews, 2017-08-07, <a href="https://www.pokernews.com/strategy/lets-look-at-the-rake-and-time-charges-28692.htm">pokernews.com</a></li>
+        <li>Little, J., "How to Beat the Rake in Poker," PokerCoaching.com, 2024-09-19, <a href="https://pokercoaching.com/blog/rake-in-poker/">pokercoaching.com</a></li>
+        <li>PokerCoaching.com, "Win Rate — Poker Terms," <a href="https://pokercoaching.com/blog/poker-terms/win-rate/">pokercoaching.com</a></li>
+        <li>Primedope, "Poker Variance Calculator (Cash Games)," updated 2026-02-28, <a href="https://www.primedope.com/poker-variance-calculator/">primedope.com</a></li>
+        <li>Kaul, R., "What 3,200 Hours of Tracked Live Poker Taught Me About My Own Game," Cardplayer Lifestyle, 2026-07-29, <a href="https://cardplayerlifestyle.com/poker-tips-strategy/3200-hours-tracked-live-poker/">cardplayerlifestyle.com</a></li>
+      </ul>
+
+      <p class="disclaimer-line">Win rates here are published estimates and one tracked personal sample, not universal truths &mdash; your rake structure, pool, and hours will move every number. The bb/100 conversions and hour equivalents are our arithmetic on the cited inputs, flagged where they appear. Poker involves real variance and real risk; nothing here is financial advice. Verify big bankroll decisions against your own tracked results.</p>
+
+      <aside class="author-box">
+        <h3>About the author</h3>
+        <p><strong>Rohit Kaul</strong> is a winning live cash-game player and a data-analytics
+        professional (Master's in Business Analytics, Purdue) who builds the quantitative models behind
+        TableLab &mdash; profitable every year since 2023, across roughly 3,200 hours of tracked live cash.
+        Find him on
+        <a href="https://www.linkedin.com/in/rohit-kaul-a761171a2" rel="me noopener" target="_blank">LinkedIn</a>,
+        <a href="https://www.youtube.com/@rohitkaul1990" rel="me noopener" target="_blank">YouTube</a>, and
+        <a href="https://pokerdb.thehendonmob.com/player.php?a=r&amp;n=877305" rel="me noopener" target="_blank">The Hendon Mob</a>.</p>
+      </aside>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+</body>
+</html>
