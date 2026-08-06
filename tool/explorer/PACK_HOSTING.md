@@ -178,6 +178,60 @@ on next launch — no client deploy.
 Test before committing the real URL:
 `flutter run -d chrome --dart-define=TLPACKS_URL=https://packs.tablelab.app`.
 
+## Fleet upload (box → R2, full-density campaigns)
+
+The full-density pack fleet (5 scenarios × 5,265 spots, ~350 MB avg/spot) is
+far too big to pull to the operator laptop — solve boxes upload **directly to
+R2** instead. Launch with:
+
+```
+.\tool\solver\vcpu-solve.ps1 -EmitPack -PackR2Remote r2:tablelab-packs `
+  -GridArgs "--no-write --ignore-cache --parallel N" ... -PullAndTerminate
+```
+
+`-PackR2Remote` (requires `-EmitPack`) makes the launcher: install rclone on
+the box, push the operator's `%APPDATA%\rclone\rclone.conf`, and run
+`tool/solver/box_pack_uploader.sh` in its own tmux session (`uploader`, log
+`~/uploader.log`) alongside the solve. Every 10 min the uploader:
+
+1. finds complete spot packs — `<packsRoot>/<scenario>/<spotDir>/manifest.json`
+   present (freq_grid writes the manifest atomically LAST, so presence proves a
+   whole pack) that still hold `*.bin.gz` chunks;
+2. `rclone copy`s each to `<remote>/<scenario>/<spotDir>/` — the **exact hosted
+   layout above**, so no post-processing is needed;
+3. verifies the **remote** manifest landed, then deletes the LOCAL chunk files
+   + emptied subdirs but **KEEPS the local `manifest.json`**.
+
+**Marker semantics.** The surviving local manifest is freq_grid's
+`--ignore-cache` pack-existence resume marker — the box's disk stays bounded
+(chunks leave as they upload) while a re-run on the SAME box still skips
+uploaded spots. A transient rclone failure never kills the loop; the spot
+retries next cycle (`rclone copy` is idempotent).
+
+**Resume seed (spot reclaims).** Before the solve starts, the launcher pulls
+just the remote manifests (`rclone copy <remote>/<scenario>/ ~/packs/<scenario>/
+--include "*/manifest.json"`) for each scenario in `-Scenario` — a
+reclaim-relaunch onto a **fresh** box materializes the completion markers and
+skips everything already uploaded, losing only in-flight spots.
+
+**Completion.** Under `-PullAndTerminate` the pack tar+scp pull is SKIPPED
+entirely: after `BATCH DONE` the launcher touches `~/solve-done` (the
+uploader's exit condition), waits for the uploader's final sweep
+(`UPLOAD SWEEP DONE (<n> spots uploaded total)`, timeout 1 h), then terminates.
+A sweep timeout leaves the box RUNNING (data preservation) — finish manually.
+Without `-PullAndTerminate`, touch `~/solve-done` yourself when the solve ends.
+
+**Boxes touch ONLY pack dirs — never `index/`, `index.json`, or
+`catalog.json`.** The upload-order contract at the top of this doc is preserved
+by construction: packs stream up first, and the operator regenerates + uploads
+the scenario index (then legacy index + catalog LAST) only **after** a
+scenario's packs are fully live. For index generation against R2 (no local
+chunks), sync the remote manifests down and run `gen_pack_index.dart` over
+that tree, or pull the scenario's manifests the same `--include` way.
+
+Debug: `bash tool/solver/box_pack_uploader.sh <packsRoot> <remote> --dry-run`
+prints what it would upload/delete without acting.
+
 ## Cost
 Storage 51 GB → ~$0.62/mo (10 GB free + 41 GB × $0.015). Egress: **$0**. Class-A
 (writes) one-time on upload; Class-B (reads) are cheap and only on real usage.

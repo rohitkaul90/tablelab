@@ -1,0 +1,2 @@
+# Shell scripts run on Linux boxes (synced via git archive) - must stay LF.
+*.sh text eol=lf
