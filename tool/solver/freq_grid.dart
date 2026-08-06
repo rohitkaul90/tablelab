@@ -859,16 +859,32 @@ Future<void> main(List<String> args) async {
             'rewrite library entries — pack fleets should pass --no-write.'}');
   }
   final pending = <({String flop, String spr, double sprVal})>[];
-  var skipped = 0, skippedTooBig = 0;
+  // Pack-existence resume: under --ignore-cache the results cache is
+  // deliberately blind, so a reclaim-relaunch would re-solve EVERYTHING —
+  // the pack itself is the completion marker instead. manifest.json is
+  // written LAST by generatePack, so its presence proves a complete pack
+  // (a reclaim mid-emission leaves no manifest → the spot re-solves).
+  bool hasCompletePack(String flop, String spr) =>
+      emitPackRoot != null &&
+      File('$emitPackRoot/$kScenario/'
+              '${flop.replaceAll(' ', '')}_$spr/manifest.json')
+          .existsSync();
+  var skipped = 0, skippedTooBig = 0, skippedPacked = 0;
   for (final s in spots) {
     if (!ignoreCache && isCachedSpot(s.flop, s.spr)) {
       skipped++;
+    } else if (ignoreCache && hasCompletePack(s.flop, s.spr)) {
+      skippedPacked++;
     } else if (maxSpotGb != null &&
         spotFootprint(s.sprVal, dumpFmt: dumpFmtEnv).solveGb > maxSpotGb) {
       skippedTooBig++;
     } else if (limit == null || pending.length < limit) {
       pending.add(s);
     }
+  }
+  if (skippedPacked > 0) {
+    stdout.writeln('--ignore-cache resume: $skippedPacked spot(s) already '
+        'have a complete pack (manifest present) — skipped.');
   }
   if (skippedTooBig > 0) {
     stdout.writeln('⚠ TLSOLVE_MAX_SPOT_GB=$maxSpotGb: $skippedTooBig spot(s) '
