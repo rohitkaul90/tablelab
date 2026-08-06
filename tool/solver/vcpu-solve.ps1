@@ -45,6 +45,19 @@ param(
   [switch]$EmitPack,
   # Local destination root for pulled packs (created if absent).
   [string]$PackDest = (Join-Path $HOME 'tlpacks'),
+  # FLEET UPLOAD MODE (requires -EmitPack): rclone remote+bucket the box
+  # uploads finished packs to CONTINUOUSLY (e.g. 'r2:tablelab-packs'), via
+  # tool/solver/box_pack_uploader.sh in its own tmux session 'uploader'.
+  # Each verified upload prunes the local chunk files (manifest.json kept -
+  # it is freq_grid's --ignore-cache resume marker), so box disk stays
+  # bounded on full-density slices too big to pull home. Before the solve
+  # starts, remote manifests are seeded into ~/packs so a reclaim-relaunch
+  # onto a fresh box skips already-uploaded spots. Under -PullAndTerminate
+  # the multi-GB pack tar+scp pull is SKIPPED: the launcher touches
+  # ~/solve-done and waits for the uploader's final sweep instead. Needs the
+  # operator rclone config at $env:APPDATA\rclone\rclone.conf (pushed to the
+  # box). Empty = today's pull-home behavior, unchanged.
+  [string]$PackR2Remote = '',
   # Dart old-gen heap cap (MB) for the MAIN grid process. Since tabulation now runs
   # in per-spot SUBPROCESSES (tabulate_one.dart), the main process no longer holds a
   # giant dump, so this stays small. The big heap is per-subprocess (-TabulateHeapMB).
@@ -172,6 +185,16 @@ if ($EmitPack -and $noWrite -and ($GridArgs -notmatch '--ignore-cache')) {
   Write-Host "NOTE: -EmitPack + --no-write without --ignore-cache only packs spots ABSENT from the results shards (library-cached spots are skipped packless)."
 }
 if ($noWrite) { Write-Host "Bulk mode (--no-write): frozen monolith, shard-only sync, no library pull." }
+# Fleet upload mode validation - still BEFORE any AWS call (a pure param error
+# must never launch a paid instance).
+$rcloneConf = Join-Path $env:APPDATA 'rclone\rclone.conf'
+if ($PackR2Remote) {
+  if (-not $EmitPack) { throw "-PackR2Remote requires -EmitPack (it only moves emitted packs)." }
+  if (-not (Test-Path $rcloneConf)) {
+    throw "-PackR2Remote needs the operator rclone config at $rcloneConf (see tool/explorer/PACK_HOSTING.md step 3)."
+  }
+  Write-Host "Fleet upload mode: box streams packs to $PackR2Remote (no pack pull home)."
+}
 
 function Invoke-Aws { # run aws, throw on non-zero exit (native exe - $ErrorAction won't)
   $out = aws @args
@@ -338,6 +361,44 @@ foreach ($sh in @($shards)) {
   Write-Host "Seeded shard $($sh.Name)."
 }
 
+# -- 4b. Fleet upload mode: rclone + config + R2 resume seed ------------------
+if ($PackR2Remote) {
+  Write-Host "Fleet upload setup: rclone install + config + resume-seeding pack markers..."
+  # Box-side setup goes in a FILE built locally (LF) and scp'd, never inline
+  # over ssh - ssh.exe strips nested double quotes (house lesson; same pattern
+  # as run-solve.sh below). `$ stays literal for the remote shell.
+  $seedList = ($Scenario -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) -join ' '
+  $setupSh = @"
+#!/usr/bin/env bash
+set -u
+if ! which rclone >/dev/null 2>&1; then
+  curl -s https://rclone.org/install.sh | sudo bash
+fi
+rclone version >/dev/null 2>&1 || { echo 'RCLONE INSTALL FAILED'; exit 1; }
+# RESUME SEED: materialize the remote completion markers (manifest.json only)
+# into ~/packs so freq_grid's --ignore-cache pack-existence resume skips
+# already-uploaded spots after a reclaim-relaunch onto a fresh box. An empty
+# or absent remote scenario dir is fine (first slice) - never fail setup on it.
+for SC in $seedList; do
+  mkdir -p ~/packs/`$SC
+  rclone copy "$PackR2Remote/`$SC/" ~/packs/`$SC/ --include "*/manifest.json" --transfers 16 --checkers 16 || echo "SEED `$SC: nothing to seed (empty remote?)"
+  echo "SEEDED `$SC: `$(find ~/packs/`$SC -name manifest.json | wc -l) marker(s)"
+done
+echo SETUP DONE
+"@
+  $localSetup = Join-Path $env:TEMP "fleet-upload-setup-$PID.sh"
+  [IO.File]::WriteAllText($localSetup, ($setupSh -replace "`r`n", "`n"))
+  scp -o StrictHostKeyChecking=accept-new -i $key $localSetup "ubuntu@${pubip}:~/fleet-upload-setup.sh"
+  if ($LASTEXITCODE -ne 0) { throw "scp fleet-upload-setup.sh failed" }
+  Remove-Item $localSetup -Force -ErrorAction SilentlyContinue  # PID-named: clean up
+  ssh @ssh 'mkdir -p ~/.config/rclone'
+  if ($LASTEXITCODE -ne 0) { throw "mkdir ~/.config/rclone on the box failed" }
+  scp -o StrictHostKeyChecking=accept-new -i $key $rcloneConf "ubuntu@${pubip}:~/.config/rclone/rclone.conf"
+  if ($LASTEXITCODE -ne 0) { throw "scp rclone.conf failed" }
+  ssh @ssh 'bash ~/fleet-upload-setup.sh'
+  if ($LASTEXITCODE -ne 0) { throw "fleet upload setup (rclone install / resume seed) failed" }
+}
+
 # -- 5. Start the solve in a detached tmux session ----------------------------
 # Build a run-solve.sh locally (LF endings) and scp it, to avoid nested PS->ssh->bash
 # quoting. `$HOME is escaped so it stays literal for the remote shell; $Profile etc.
@@ -429,11 +490,31 @@ if ($LASTEXITCODE -ne 0) { throw "scp run-solve.sh failed" }
 Remove-Item $localSh -Force -ErrorAction SilentlyContinue  # PID-named: clean up
 ssh @ssh 'tmux kill-session -t solve 2>/dev/null; tmux new -d -s solve "bash ~/run-solve.sh"'
 if ($LASTEXITCODE -ne 0) { throw "failed to start the tmux solve session" }
+if ($PackR2Remote) {
+  # Continuous uploader in its OWN tmux session. The inner command lives in a
+  # scp'd file so no quoting crosses ssh (mirror run-solve.sh). The script
+  # itself arrived with the repo sync (tool/solver/box_pack_uploader.sh).
+  $upSh = @"
+#!/usr/bin/env bash
+bash ~/poker_tracker/tool/solver/box_pack_uploader.sh /home/ubuntu/packs $PackR2Remote 2>&1 | tee ~/uploader.log
+"@
+  $localUp = Join-Path $env:TEMP "run-uploader-$PID.sh"
+  [IO.File]::WriteAllText($localUp, ($upSh -replace "`r`n", "`n"))
+  scp -o StrictHostKeyChecking=accept-new -i $key $localUp "ubuntu@${pubip}:~/run-uploader.sh"
+  if ($LASTEXITCODE -ne 0) { throw "scp run-uploader.sh failed" }
+  Remove-Item $localUp -Force -ErrorAction SilentlyContinue  # PID-named: clean up
+  ssh @ssh 'tmux kill-session -t uploader 2>/dev/null; tmux new -d -s uploader "bash ~/run-uploader.sh"'
+  if ($LASTEXITCODE -ne 0) { throw "failed to start the tmux uploader session" }
+  Write-Host "Pack uploader started (tmux 'uploader' -> $PackR2Remote; log: ~/uploader.log)."
+}
 Write-Host ""
 Write-Host "Solve started on $iid ($itype): TLSOLVE_SCENARIO=$Scenario TLSOLVE_PROFILE=$Profile $GridArgs$packArgs"
 Write-Host ""
 Write-Host "  Watch:      ssh -i `"$key`" ubuntu@$pubip   then  tmux attach -t solve"
 Write-Host "  Tail log:   ssh -i `"$key`" ubuntu@$pubip 'tail -f ~/solve.log'"
+if ($PackR2Remote) {
+  Write-Host "  Uploader:   ssh -i `"$key`" ubuntu@$pubip 'tail -f ~/uploader.log'"
+}
 Write-Host "  RAM:        ssh -i `"$key`" ubuntu@$pubip 'watch -n15 free -g'"
 Write-Host "  Pull lib:   scp -i `"$key`" ubuntu@${pubip}:~/poker_tracker/assets/gto_freq_library.json ./assets/"
 Write-Host "  Terminate:  aws ec2 terminate-instances --region $Region --instance-ids $iid"
@@ -774,7 +855,43 @@ if ($PullAndTerminate) {
     }
   } finally { Pop-Location }
   $okPacks = $true
-  if ($EmitPack) {
+  if ($EmitPack -and $PackR2Remote) {
+    # FLEET UPLOAD MODE: packs already streamed to R2 continuously - no
+    # tar+scp pull. Touch ~/solve-done (the uploader's exit condition), then
+    # wait for its final-sweep sentinel in ~/uploader.log.
+    Write-Host "Fleet upload mode: signaling the uploader; waiting for its final sweep..."
+    $t = Invoke-SshTimed 'touch ~/solve-done' -TimeoutSec 30
+    if (-not ($t -and $t.Code -eq 0)) {
+      $t = Invoke-SshTimed 'touch ~/solve-done' -TimeoutSec 30  # one retry on a blip
+    }
+    if (-not ($t -and $t.Code -eq 0)) {
+      Write-Warning "Could not touch ~/solve-done on the box - the uploader never gets"
+      Write-Warning "its exit signal. Instance $iid LEFT RUNNING; finish manually:"
+      Write-Warning "  ssh -i `"$key`" ubuntu@$pubip 'touch ~/solve-done; tail -f ~/uploader.log'"
+      Write-Warning "  aws ec2 terminate-instances --region $Region --instance-ids $iid"
+      return
+    }
+    $sweepLine = $null
+    $sweepDeadline = (Get-Date).AddSeconds(3600)
+    while ((Get-Date) -lt $sweepDeadline) {
+      # grep|tail exits 0 even on no match (tail's code) - judge by content.
+      $r = Invoke-SshTimed "grep 'UPLOAD SWEEP DONE' ~/uploader.log 2>/dev/null | tail -n 1" -TimeoutSec 30
+      if ($r -and $r.Code -eq 0 -and "$($r.Out)" -match 'UPLOAD SWEEP DONE') {
+        $sweepLine = "$($r.Out)".Trim()
+        break
+      }
+      Start-Sleep 30
+    }
+    if (-not $sweepLine) {
+      Write-Warning "Uploader final sweep did NOT report done within 3600s. Instance $iid"
+      Write-Warning "LEFT RUNNING so no pack data is lost - watch ~/uploader.log for"
+      Write-Warning "'UPLOAD SWEEP DONE', then terminate:"
+      Write-Warning "  ssh -i `"$key`" ubuntu@$pubip 'tail -f ~/uploader.log'"
+      Write-Warning "  aws ec2 terminate-instances --region $Region --instance-ids $iid"
+      return
+    }
+    Write-Host "  $sweepLine"
+  } elseif ($EmitPack) {
     # Packs are emitted only for NEWLY-solved spots: a fully-cached run never
     # creates ~/packs, and failing the pull on that would leave the box
     # running (billing) over a nonexistent optional output. Probe first.
@@ -817,9 +934,12 @@ if ($PullAndTerminate) {
   # freq_grid_results.json before BATCH DONE) - the staging copies are now
   # redundant snapshots.
   if (Test-Path $staging) { Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue }
+  $packNote = if ($EmitPack -and $PackR2Remote) {
+    " Packs live on $PackR2Remote (indexes NOT touched - regenerate + upload per tool/explorer/PACK_HOSTING.md when the scenario completes)."
+  } else { '' }
   if ($noWrite) {
-    Write-Host "Done. Shards pulled (bulk mode - assemble the library operator-side with --write at campaign end) + instance terminated."
+    Write-Host "Done. Shards pulled (bulk mode - assemble the library operator-side with --write at campaign end) + instance terminated.$packNote"
   } else {
-    Write-Host "Done. Library pulled (review 'git diff', then 'git add -f' it)$(if ($EmitPack) { ", packs in $PackDest" }) + instance terminated."
+    Write-Host "Done. Library pulled (review 'git diff', then 'git add -f' it)$(if ($EmitPack -and -not $PackR2Remote) { ", packs in $PackDest" }) + instance terminated.$packNote"
   }
 }
