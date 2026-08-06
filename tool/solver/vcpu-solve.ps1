@@ -70,8 +70,8 @@ param(
   # Per-spot solver wall cap (s).
   [int]$TimeoutS = 7200,
   # -- WS1/WS2 knobs (full-density plan). Empty = inherit the code defaults. --
-  # Dump format: bin (TLSD - ~10x smaller, small-heap parse) | json (oracle;
-  # required by -EmitPack) | both (validation). See run_solver.dart.
+  # Dump format: bin (TLSD - ~10x smaller, small-heap parse; works with
+  # -EmitPack since the TLSD pack port) | json (oracle) | both (validation).
   [ValidateSet('', 'bin', 'json', 'both')]
   [string]$DumpFmt = '',
   # Flop set: rep (26 curated) | all1755 (full density) | file:<path-on-box>.

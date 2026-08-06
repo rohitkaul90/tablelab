@@ -63,9 +63,12 @@ import 'range_calib.dart' show parseComboKey;
 export 'package:tablelab/explorer/pack_codec.dart';
 
 /// Combos below this reach are dropped from a node (they carry no strategy
-/// mass worth rendering). Stats also count what a 0.5% ε would drop, to inform
-/// harder pruning if pack sizes demand it. Generator-only (not format).
-const double kReachEpsilon = 1e-4;
+/// mass worth rendering). Raised 1e-4 → 5e-3 for the full-density campaign
+/// (user GO 2026-08-06): calibration measured 24.2% of 1.93B emitted records
+/// under 0.5% reach — solver dust whose grid cells render ~invisible — worth
+/// ~1.5TB (~7.5TB → ~6.0TB) at fleet scale. Stats still count emitted combos
+/// under 1% to inform any future harder pruning. Generator-only (not format).
+const double kReachEpsilon = 5e-3;
 
 /// Oracle/fleet diagnostics: set `TLPACK_DEBUG_PATH=<node path>` to dump that
 /// node's opponent weight vector to stderr. Read once — Platform.environment
@@ -86,7 +89,7 @@ class PackStats {
   int actionNodes = 0, chanceNodes = 0, terminalNodes = 0;
   int nodesWithEv = 0, nodesWithPassiveEv = 0;
   int combosEmitted = 0, combosDroppedLowReach = 0;
-  int combosBelowHalfPct = 0; // emitted, but a 0.5% ε would drop them
+  int combosBelowNextPct = 0; // emitted, but a 1% ε would drop them
   int chunkCount = 0;
   int rawBytes = 0, gzBytes = 0;
   int rankCacheMs = 0, matrixMs = 0, equityMs = 0, encodeMs = 0, writeMs = 0;
@@ -561,8 +564,13 @@ int _quantEv(double v) {
     'combos': {'oop': ctx.oop.names, 'ip': ctx.ip.names},
     'chunks': chunkIndex,
   };
-  File('$outDir/manifest.json')
-      .writeAsStringSync(const JsonEncoder.withIndent(' ').convert(manifest));
+  // Minified (26,325 manifests × 241KB pretty ≈ 6.9GB → ~5.1GB) and written
+  // ATOMICALLY (tmp + rename): the manifest's existence is the fleet's
+  // pack-completion marker, so a spot-reclaim hard-kill mid-write must never
+  // leave a truncated-but-present manifest (= permanently skipped hole).
+  final mf = File('$outDir/manifest.json.tmp')
+    ..writeAsStringSync(jsonEncode(manifest));
+  mf.renameSync('$outDir/manifest.json');
   return (manifest: manifest, stats: ctx.stats);
 }
 
@@ -727,7 +735,7 @@ void _walkPack(
       ctx.stats.combosDroppedLowReach++;
       continue;
     }
-    if (rw < 0.005) ctx.stats.combosBelowHalfPct++;
+    if (rw < 0.01) ctx.stats.combosBelowNextPct++;
     emit.add(id);
     emitIdx.add(idx);
     emitReach.add(rw);
@@ -829,7 +837,7 @@ void printPackReport(Map<String, dynamic> manifest, PackStats s) {
       '${s.nodesWithPassiveEv} (${(s.passiveEvNodeCoverage * 100).toStringAsFixed(1)}%)');
   stdout.writeln('combos: ${s.combosEmitted} emitted · '
       '${s.combosDroppedLowReach} dropped (<$kReachEpsilon) · '
-      '${s.combosBelowHalfPct} of emitted are <0.5% reach');
+      '${s.combosBelowNextPct} of emitted are <1% reach');
   for (final e in byStreet.entries) {
     stdout.writeln('  ${e.key.padRight(5)} ${e.value.n} chunk(s), '
         '${e.value.nodes} nodes, raw ${_mb(e.value.raw)} MB, '

@@ -235,9 +235,14 @@ void _comparePacks(
         for (final id in {...byIdA.keys, ...byIdB.keys}) {
           final ca = byIdA[id], cb = byIdB[id];
           if (ca == null || cb == null) {
-            // Membership flip: legal only at the reach-ε boundary.
+            // Membership flip: legal only in a TIGHT band around the reach-ε
+            // boundary — u16 freq quantization moves reach by ≲4/65535, so a
+            // legitimate flip's surviving reach sits within that of ε (plus
+            // margin). A loose `< 2ε` band became ~80× wider than the physics
+            // when ε rose to 5e-3 (review finding) and would have hidden real
+            // membership bugs on combos with up to 2× threshold reach.
             final present = ca ?? cb!;
-            if (present.reach < 2 * kReachEpsilon) {
+            if ((present.reach - kReachEpsilon).abs() <= 6 / 65535) {
               epsilonFlips++;
               continue;
             }
