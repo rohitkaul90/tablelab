@@ -564,9 +564,13 @@ int _quantEv(double v) {
     'combos': {'oop': ctx.oop.names, 'ip': ctx.ip.names},
     'chunks': chunkIndex,
   };
-  File('$outDir/manifest.json')
-      // Minified: 26,325 manifests × 241KB pretty-printed ≈ 6.9GB → ~5.1GB.
-      .writeAsStringSync(jsonEncode(manifest));
+  // Minified (26,325 manifests × 241KB pretty ≈ 6.9GB → ~5.1GB) and written
+  // ATOMICALLY (tmp + rename): the manifest's existence is the fleet's
+  // pack-completion marker, so a spot-reclaim hard-kill mid-write must never
+  // leave a truncated-but-present manifest (= permanently skipped hole).
+  final mf = File('$outDir/manifest.json.tmp')
+    ..writeAsStringSync(jsonEncode(manifest));
+  mf.renameSync('$outDir/manifest.json');
   return (manifest: manifest, stats: ctx.stats);
 }
 
