@@ -74,4 +74,63 @@ void main() {
     await tester.pump();
     expect(picked, isNull);
   });
+
+  group('cross-street pin in the iso context (PR #66 review)', () {
+    // Flop Kc 9c 4d: h/s merge over the flop alone, so a turn pick of the
+    // absent As would route to a stored Ah — WRONG once a 2h river is pinned
+    // (the h↔s transposition moves the pin). The call sites now put the other
+    // street's pin in [isoBoard] as well as [excluded].
+    const flop = ['Kc', '9c', '4d'];
+
+    Widget pinnedHost({
+      required Set<String> excluded,
+      required Set<String> available,
+      required List<String> isoBoard,
+      required void Function(String) onPick,
+    }) =>
+        MaterialApp(
+          home: Scaffold(
+            body: StreetCardPicker(
+              title: 'Pick the turn card',
+              excluded: excluded,
+              available: available,
+              isoBoard: isoBoard,
+              onPick: onPick,
+            ),
+          ),
+        );
+
+    testWidgets('a pinned river disables the previously mis-routable card',
+        (tester) async {
+      String? picked;
+      await tester.pumpWidget(pinnedHost(
+        excluded: {...flop, '2h'},
+        available: const {'Ah'},
+        isoBoard: [...flop, '2h'],
+        onPick: (c) => picked = c,
+      ));
+      // As has no equivalent under the pinned board → dead, no ≡ badge.
+      expect(find.text('≡'), findsNothing);
+      await tester.tap(_tile('As'));
+      await tester.pump();
+      expect(picked, isNull);
+    });
+
+    testWidgets('an excluded twin is removed from the routable targets',
+        (tester) async {
+      // Ah IS stored, but it's pinned on the other street (excluded) — it
+      // cannot stand in for As, which then has no representative → disabled.
+      String? picked;
+      await tester.pumpWidget(pinnedHost(
+        excluded: {...flop, 'Ah'},
+        available: const {'Ah'},
+        isoBoard: flop,
+        onPick: (c) => picked = c,
+      ));
+      expect(find.text('≡'), findsNothing);
+      await tester.tap(_tile('As'));
+      await tester.pump();
+      expect(picked, isNull);
+    });
+  });
 }

@@ -56,16 +56,19 @@ String canonicalFlop(List<int> flop) {
 }
 
 /// Parse loose user text into EXACTLY three distinct cards, or null. Accepts
-/// any case, optional space/comma separators, suit symbols (♣♦♥♠), and "10"
-/// for T — "as 7s 6s", "A♠7♠6♠", "10h9h4c". The result is sorted rank-desc,
-/// suit-asc (the canonical serialization order) for stable display.
+/// any case, optional space/comma/dash/slash separators, suit symbols (♣♦♥♠,
+/// with or without the U+FE0F emoji variation selector keyboards append), and
+/// "10" for T — "as 7s 6s", "A♠7♠6♠", "As-7s-6s", "10h9h4c". The result is
+/// sorted rank-desc, suit-asc (the canonical serialization order) for stable
+/// display.
 List<int>? parseFlopInput(String input) {
   final s = input
+      .replaceAll('\uFE0F', '') // ♠️-style emoji presentation → bare symbol
       .replaceAll('♣', 'c')
       .replaceAll('♦', 'd')
       .replaceAll('♥', 'h')
       .replaceAll('♠', 's')
-      .replaceAll(RegExp(r'[\s,]+'), '')
+      .replaceAll(RegExp(r'[\s,/\-]+'), '')
       .replaceAll('10', 'T');
   if (s.length != 6) return null;
   final cards = <int>[];

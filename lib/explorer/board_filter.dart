@@ -58,7 +58,8 @@ String? canonicalQueryKey(String query) {
 }
 
 /// Build the [BoardInfo] list ONCE per picker open — filtering then never
-/// re-parses (the recompute on each keystroke is set-membership + contains).
+/// re-parses (the recompute on each keystroke is one query canonicalization
+/// plus set-membership + contains per board; see [applyBoardFilter]).
 List<BoardInfo> buildBoardInfos(List<String> flops) {
   BoardInfo info(String flop) {
     final cards = parseFlop(flop);
@@ -93,7 +94,14 @@ class BoardFilter {
   bool get isEmpty =>
       suits.isEmpty && pairing.isEmpty && highRanks.isEmpty && query.trim().isEmpty;
 
-  bool matches(BoardInfo info) {
+  bool matches(BoardInfo info) =>
+      _matches(info, _normalizeQuery(query), canonicalQueryKey(query));
+
+  /// [matches] with the query terms precomputed — [applyBoardFilter] hoists
+  /// them out of the per-board loop (the canonicalization runs 24 suit perms,
+  /// so recomputing it per substring-missing board was ~1,755× per keystroke
+  /// at full density).
+  bool _matches(BoardInfo info, String q, String? canonicalKey) {
     final t = info.texture;
     if (suits.isNotEmpty && (t == null || !suits.contains(t.suit))) return false;
     if (pairing.isNotEmpty && (t == null || !pairing.contains(t.pairing))) {
@@ -103,19 +111,25 @@ class BoardFilter {
         (info.highRankChar == null || !highRanks.contains(info.highRankChar))) {
       return false;
     }
-    final q = _normalizeQuery(query);
     if (q.isNotEmpty && !info.searchKey.contains(q)) {
       // A full-board query in a non-canonical suit spelling still matches its
       // stored representative (suits are interchangeable).
-      final canon = canonicalQueryKey(query);
-      if (canon == null || info.searchKey != canon) return false;
+      if (canonicalKey == null || info.searchKey != canonicalKey) return false;
     }
     return true;
   }
 }
 
-List<BoardInfo> applyBoardFilter(List<BoardInfo> infos, BoardFilter filter) =>
-    filter.isEmpty ? infos : [for (final i in infos) if (filter.matches(i)) i];
+List<BoardInfo> applyBoardFilter(List<BoardInfo> infos, BoardFilter filter) {
+  if (filter.isEmpty) return infos;
+  // Hoisted once per call — never per board.
+  final q = _normalizeQuery(filter.query);
+  final canonicalKey = canonicalQueryKey(filter.query);
+  return [
+    for (final i in infos)
+      if (filter._matches(i, q, canonicalKey)) i
+  ];
+}
 
 // ── Chip labels ──────────────────────────────────────────────────────────────
 

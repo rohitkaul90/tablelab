@@ -1246,12 +1246,16 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             ? manifest.availableRiverCards(state.turnCard!)
             : null)
         : manifest.availableTurnCards();
-    // The suit-iso context: the board fixed BEFORE this pick (the OTHER
-    // street's pin is a collision concern, handled via excluded above) — lets
-    // the picker route a pruned twin to its stored representative.
+    // The suit-iso context: the FULL pinned board minus the card being picked
+    // — the OTHER street's pin must join the equivalence computation (a suit
+    // transposition that MOVES a pinned river doesn't map the requested board
+    // to the routed one), so a turn pick with a pinned river includes it; the
+    // ambiguous cards then render disabled rather than mis-route. The pin
+    // stays in [excluded] too (collision).
     final isoBoard = [
       ...manifest.flop.split(' '),
       if (river && state.turnCard != null) state.turnCard!,
+      if (!river && state.riverCard != null) state.riverCard!,
     ];
     showModalBottomSheet<void>(
       context: context,
@@ -1739,7 +1743,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       if (dealt == 0 && state.riverCard != null) state.riverCard!,
     };
     // Offer only solved runouts (see _openCardPicker), routing pruned suit
-    // twins to their stored representative via the iso context.
+    // twins to their stored representative via the iso context — which, like
+    // _openCardPicker, includes the OTHER street's pin (a transposition must
+    // not move a pinned river).
     final available = dealt == 0
         ? state.manifest?.availableTurnCards()
         : (state.turnCard != null
@@ -1750,6 +1756,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         : [
             ...state.manifest!.flop.split(' '),
             if (dealt > 0 && state.turnCard != null) state.turnCard!,
+            if (dealt == 0 && state.riverCard != null) state.riverCard!,
           ];
     return Center(
       child: SingleChildScrollView(

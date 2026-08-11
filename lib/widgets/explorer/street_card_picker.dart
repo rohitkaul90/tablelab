@@ -21,11 +21,14 @@ class StreetCardPicker extends StatelessWidget {
   /// them a stored suit-equivalent representative to route to.
   final Set<String>? available;
 
-  /// The suit-isomorphism context: the board fixed BEFORE this pick (flop for
-  /// a turn pick, flop + stored turn for a river pick). When supplied with
-  /// [available], an absent card with an available suit-equivalent renders
-  /// ENABLED with a ≡ badge and taps through to the stored representative via
-  /// [representativeFor]; null keeps the plain absent-= -disabled behavior.
+  /// The suit-isomorphism context: the FULL pinned board minus the card being
+  /// picked (flop + any pinned river for a turn pick, flop + stored turn for
+  /// a river pick — the other street's pin must constrain the equivalence
+  /// classes, or routing could transpose a suit that MOVES the pin). When
+  /// supplied with [available], an absent card with an available
+  /// suit-equivalent renders ENABLED with a ≡ badge and taps through to the
+  /// stored representative via [representativeFor]; null keeps the plain
+  /// absent-= -disabled behavior.
   final List<String>? isoBoard;
   final void Function(String card) onPick;
   const StreetCardPicker({
@@ -41,8 +44,9 @@ class StreetCardPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     // Representatives must themselves be tappable — the OTHER street's pin
-    // rides in [excluded] (a collision concern, not part of the fixed board),
-    // so routing targets are the available cards minus the excluded ones.
+    // rides in [excluded] as well as [isoBoard] (it's already on the board,
+    // so it can't stand in), so routing targets are the available cards minus
+    // the excluded ones.
     final routable = isoBoard == null
         ? null
         : available?.where((c) => !excluded.contains(c)).toSet();
@@ -103,14 +107,17 @@ class StreetCardPicker extends StatelessWidget {
                   )
                 : Stack(children: [
                     Positioned.fill(child: CardGlyph(name)),
+                    // Bottom-right, not top-right: the FittedBox scales the
+                    // row down on narrow phones and a top badge crowded the
+                    // rank char at ~7px.
                     Positioned(
-                      top: 0,
+                      bottom: 1,
                       right: 2,
                       child: Text(
                         '≡',
                         style: TextStyle(
-                            fontSize: 9,
-                            height: 1.4,
+                            fontSize: 10,
+                            height: 1.0,
                             color: scheme.onSurfaceVariant),
                       ),
                     ),
@@ -124,8 +131,11 @@ class StreetCardPicker extends StatelessWidget {
   void _tap(BuildContext context, String name, String? rep) {
     if (rep != null) {
       // Transient equivalence hint — the strip will (correctly) show the
-      // stored representative, so say why the card changed suit.
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+      // stored representative, so say why the card changed suit. Replace any
+      // showing snackbar so rapid picks don't queue a backlog of stale hints.
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      messenger?.hideCurrentSnackBar();
+      messenger?.showSnackBar(SnackBar(
         content: Text(
             '${_symbol(name)} ≡ ${_symbol(rep)} here — suits are '
             'interchangeable'),
