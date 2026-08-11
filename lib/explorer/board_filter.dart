@@ -13,6 +13,7 @@
 
 import '../equity/card.dart';
 import '../equity/texture_cell.dart';
+import 'board_iso.dart';
 
 /// Parse a 'Ks 9h 4c' flop label into card indices, or null when it isn't
 /// EXACTLY three well-formed cards (a bad hosted index row must not crash the
@@ -46,6 +47,15 @@ class BoardInfo {
 /// Normalize a search query the same way [BoardInfo.searchKey] is built, so
 /// 'Ks 9' and 'ks9' match identically.
 String _normalizeQuery(String q) => q.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+
+/// The canonical-board search key for [query] when it parses as a FULL 3-card
+/// board under ANY suit spelling — the library stores one suit-isomorphic
+/// representative, so "as7s6s" must find the stored Ac7c6c. Null when the
+/// query isn't a complete board (partial queries keep substring semantics).
+String? canonicalQueryKey(String query) {
+  final canonical = canonicalizeFlopString(query);
+  return canonical == null ? null : _normalizeQuery(canonical);
+}
 
 /// Build the [BoardInfo] list ONCE per picker open — filtering then never
 /// re-parses (the recompute on each keystroke is set-membership + contains).
@@ -94,7 +104,12 @@ class BoardFilter {
       return false;
     }
     final q = _normalizeQuery(query);
-    if (q.isNotEmpty && !info.searchKey.contains(q)) return false;
+    if (q.isNotEmpty && !info.searchKey.contains(q)) {
+      // A full-board query in a non-canonical suit spelling still matches its
+      // stored representative (suits are interchangeable).
+      final canon = canonicalQueryKey(query);
+      if (canon == null || info.searchKey != canon) return false;
+    }
     return true;
   }
 }

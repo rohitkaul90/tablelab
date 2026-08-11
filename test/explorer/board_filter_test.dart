@@ -104,6 +104,34 @@ void main() {
     );
   });
 
+  test('a full-board query in ANY suit spelling finds the canonical board',
+      () {
+    // Real hosted spots carry canonical flop labels — the suit-iso search
+    // targets those.
+    final canon = buildBoardInfos(['7c 5c 2c', 'Kc 9d 4h']);
+    for (final q in ['7s5s2s', '7d 5d 2d', '7♥5♥2♥', '2c 5c 7c']) {
+      expect(
+        applyBoardFilter(canon, BoardFilter(query: q)).map((i) => i.flop),
+        ['7c 5c 2c'],
+        reason: 'query "$q"',
+      );
+    }
+    // Rainbow respelled: Ks 9h 4c ≡ the stored Kc 9d 4h.
+    expect(
+      applyBoardFilter(canon, const BoardFilter(query: 'ks9h4c'))
+          .map((i) => i.flop),
+      ['Kc 9d 4h'],
+    );
+    // A partial query never canonicalizes (substring behavior unchanged).
+    expect(applyBoardFilter(canon, const BoardFilter(query: '7s5s')), isEmpty);
+  });
+
+  test('canonicalQueryKey: full boards only, normalized like searchKey', () {
+    expect(canonicalQueryKey('As7s6s'), 'ac7c6c');
+    expect(canonicalQueryKey('As 7s'), isNull);
+    expect(canonicalQueryKey('zz'), isNull);
+  });
+
   test('chip labels', () {
     expect(suitPatternLabel(SuitPattern.rainbow), 'Rainbow');
     expect(suitPatternLabel(SuitPattern.twotone), 'Two-tone');

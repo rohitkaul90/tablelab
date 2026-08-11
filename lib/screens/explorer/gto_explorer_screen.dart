@@ -1246,6 +1246,13 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             ? manifest.availableRiverCards(state.turnCard!)
             : null)
         : manifest.availableTurnCards();
+    // The suit-iso context: the board fixed BEFORE this pick (the OTHER
+    // street's pin is a collision concern, handled via excluded above) — lets
+    // the picker route a pruned twin to its stored representative.
+    final isoBoard = [
+      ...manifest.flop.split(' '),
+      if (river && state.turnCard != null) state.turnCard!,
+    ];
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -1255,6 +1262,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           title: 'Pick the ${river ? 'river' : 'turn'} card',
           excluded: excluded,
           available: available,
+          isoBoard: isoBoard,
           onPick: (c) {
             Navigator.of(sheetContext).pop();
             if (!mounted) return; // sheet route can outlive this screen
@@ -1730,12 +1738,19 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       ...state.dealtCards,
       if (dealt == 0 && state.riverCard != null) state.riverCard!,
     };
-    // Offer only solved runouts (see _openCardPicker).
+    // Offer only solved runouts (see _openCardPicker), routing pruned suit
+    // twins to their stored representative via the iso context.
     final available = dealt == 0
         ? state.manifest?.availableTurnCards()
         : (state.turnCard != null
             ? state.manifest?.availableRiverCards(state.turnCard!)
             : null);
+    final isoBoard = state.manifest == null
+        ? null
+        : [
+            ...state.manifest!.flop.split(' '),
+            if (dealt > 0 && state.turnCard != null) state.turnCard!,
+          ];
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -1746,6 +1761,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
               title: dealt == 0 ? 'Pick the turn card' : 'Pick the river card',
               excluded: excluded,
               available: available,
+              isoBoard: isoBoard,
               onPick: (c) =>
                   ref.read(explorerProvider.notifier).pickCard(c),
             ),

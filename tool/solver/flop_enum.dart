@@ -10,43 +10,20 @@
 // serialization over all 24 suit permutations (cards sorted rank-desc,
 // suit-asc within rank). Brute force over 22,100 × 24 is instant and immune to
 // the classic within-rank-ordering pitfalls of first-appearance relabeling.
+//
+// The canonicalization itself lives in the app (lib/explorer/board_iso.dart —
+// pure, web-safe) so the Study explorer's suit normalizer and this grid
+// tooling share ONE implementation (the pack_codec pattern); re-exported here
+// so tool/test callers keep their import. Byte-identity with the committed
+// slice files is test-locked (test/solver/flop_enum_test.dart +
+// test/explorer/board_iso_test.dart).
 
 import 'dart:io';
 
-import 'package:tablelab/equity/card.dart';
+import 'package:tablelab/explorer/board_iso.dart';
 
-/// All 1,755 canonical flops as "As Kd 7h"-style strings (the grid's flop
-/// format), deterministic order (sorted).
-List<String> allIsoFlops() {
-  final seen = <String>{};
-  for (var a = 0; a < 52; a++) {
-    for (var b = a + 1; b < 52; b++) {
-      for (var c = b + 1; c < 52; c++) {
-        seen.add(canonicalFlop([a, b, c]));
-      }
-    }
-  }
-  final out = seen.toList()..sort();
-  return out;
-}
-
-/// The canonical representative of [flop]'s suit-isomorphism class, as a
-/// "Rr Rr Rr" string. Deterministic: minimum serialization over all 24 suit
-/// permutations.
-String canonicalFlop(List<int> flop) {
-  String? best;
-  for (final perm in _kSuitPerms) {
-    final mapped = [
-      for (final c in flop) cardIndex(cardRank(c), perm[cardSuit(c)])
-    ]..sort((x, y) {
-        final r = cardRank(y).compareTo(cardRank(x)); // rank desc
-        return r != 0 ? r : cardSuit(x).compareTo(cardSuit(y)); // suit asc
-      });
-    final s = mapped.map(cardName).join(' ');
-    if (best == null || s.compareTo(best) < 0) best = s;
-  }
-  return best!;
-}
+export 'package:tablelab/explorer/board_iso.dart'
+    show allIsoFlops, canonicalFlop;
 
 /// A stride-sampled slice of [all]: [count] entries at phase [offset] — for
 /// ARBITRARY-COUNT calibration sampling (e.g. a 200-flop timing slice).
@@ -122,19 +99,4 @@ void main(List<String> args) {
   final offset = args.length > 2 ? _intArg(args[2]) : 0;
   _writeSlice(args[1], strideSlice(allIsoFlops(), count, offset),
       'stride-sampled canonical flops (offset $offset)');
-}
-
-/// All 24 permutations of the 4 suits, computed once.
-final List<List<int>> _kSuitPerms = _perms([0, 1, 2, 3]);
-
-List<List<int>> _perms(List<int> xs) {
-  if (xs.length <= 1) return [xs];
-  final out = <List<int>>[];
-  for (var i = 0; i < xs.length; i++) {
-    final rest = [...xs]..removeAt(i);
-    for (final p in _perms(rest)) {
-      out.add([xs[i], ...p]);
-    }
-  }
-  return out;
 }
