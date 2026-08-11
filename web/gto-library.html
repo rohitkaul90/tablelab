@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free GTO Library — 26,325 Solved Poker Spots — TableLab</title>
+  <meta name="description" content="TableLab's free GTO library: 26,325 solved postflop spots — 5 preflop scenarios, all 1,755 strategically distinct flops, 3 stack depths each, solved flop to river to ≤0.5% exploitability. Free in the TableLab app.">
+  <link rel="canonical" href="https://tablelab.app/gto-library">
+  <meta property="og:title" content="Free GTO Library — 26,325 Solved Poker Spots">
+  <meta property="og:description" content="Every strategically distinct flop, five common preflop battles, three stack depths — solved flop to river and free inside the TableLab poker tracker.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tablelab.app/gto-library">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Free GTO Library — 26,325 Solved Poker Spots">
+  <meta name="twitter:description" content="Every strategically distinct flop, five common preflop battles, three stack depths — solved flop to river, free in TableLab.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta name="author" content="MagpiQ">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="stylesheet" href="/site.css?v=495db8e391">
+  <script src="/site.js?v=7c350f7df0" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://tablelab.app/gto-library#webpage",
+        "name": "TableLab GTO Library — 26,325 Solved Poker Spots",
+        "url": "https://tablelab.app/gto-library",
+        "description": "Overview of TableLab's free solved GTO library: 26,325 postflop spots covering five common preflop scenarios, all 1,755 strategically distinct flops, and three stack-depth buckets each, solved flop to river with a commercially licensed CFR solver.",
+        "mainEntity": { "@id": "https://tablelab.app/gto-library#dataset" },
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "Dataset",
+        "@id": "https://tablelab.app/gto-library#dataset",
+        "name": "TableLab GTO Library",
+        "url": "https://tablelab.app/gto-library",
+        "description": "26,325 fully solved no-limit hold'em postflop spots: 5 preflop scenarios (BTN vs BB, CO vs BB, UTG vs BB, SB vs BB, and a BB vs BTN 3-bet pot) × all 1,755 strategically distinct flops × 3 stack-depth buckets, solved flop to river with TexasSolver to at most 0.5% exploitability. Includes per-combo strategy frequencies, EV at flop decision nodes, equities, and reach. Browsable for free in the TableLab app on the web and on Android.",
+        "creator": { "@id": "https://tablelab.app/#organization" },
+        "isAccessibleForFree": true,
+        "license": "https://tablelab.app/terms"
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com", "https://www.youtube.com/channel/UCaslEsv-BMGKuOY4ssKQqVQ"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/gto-library#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tablelab.app" },
+          { "@type": "ListItem", "position": 2, "name": "GTO Library", "item": "https://tablelab.app/gto-library" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/gto-library#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "What is GTO poker strategy?", "acceptedAnswer": { "@type": "Answer", "text": "GTO (game-theory optimal) strategy is the equilibrium solution to a poker spot: a mix of bets, checks, calls, raises, and folds for every hand such that no opponent strategy can exploit it. Solvers compute these equilibria numerically. Studying GTO output tells you the baseline — how often each hand in your range wants to take each action — which you can then deviate from to exploit real opponents." } },
+          { "@type": "Question", "name": "Is the TableLab GTO library really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The library is part of the free TableLab app — the web app at tablelab.app and the Android app on Google Play. There is no paywall on the Study tab, no locked scenarios, and no credit card. Comparable precomputed-solution products are paid subscriptions." } },
+          { "@type": "Question", "name": "How accurate are the solutions?", "acceptedAnswer": { "@type": "Answer", "text": "Every spot is solved with TexasSolver, a CFR solver used under a commercial license, to an exploitability of at most 0.5% of the pot. That means a theoretically perfect opponent could gain no more than half a percent of the pot per hand against the computed strategy — a standard precision target for practical GTO study. The in-app footer labels the library Beta, flop to river." } },
+          { "@type": "Question", "name": "Why do the suits in the library sometimes differ from my actual hand?", "acceptedAnswer": { "@type": "Answer", "text": "Boards are stored in canonical suit-isomorphic form. Suits have no inherent value in hold'em, so A♠7♥2♦ and A♥7♦2♣ play identically — the 22,100 raw flops collapse to 1,755 strategically distinct ones. The library solves each distinct flop once and represents it with one canonical suit assignment; map your hand's suits onto the canonical board and the strategy is exactly the same." } },
+          { "@type": "Question", "name": "Does the GTO library work on mobile?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The library lives in the TableLab app's Study tab, which runs on Android via Google Play and in any modern browser at tablelab.app — the same solved spots, streamed on demand, on both platforms." } },
+          { "@type": "Question", "name": "Can it solve my exact custom spot?", "acceptedAnswer": { "@type": "Answer", "text": "No — it is a precomputed library, not an on-demand solver. Solutions exist for five specific preflop lines with standard open sizes, across three stack-depth buckets per scenario. If your spot came from a different preflop line or a non-standard size, the nearest library spot is a reference point, not an exact answer; a custom tree needs a full solver." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-H4D9DBVXDD');
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/about">About</a>
+            <details class="nav-dropdown">
+        <summary>Tools<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <nav aria-label="Free poker calculators">
+          <a href="/variance-calculator">Variance Calculator</a>
+          <a href="/icm-calculator">ICM Calculator</a>
+        </nav>
+      </details>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / GTO Library</div>
+
+      <h1>The TableLab GTO Library</h1>
+
+      <p class="lead">TableLab's Study tab holds 26,325 fully solved postflop spots — five common
+      preflop battles, every one of the 1,755 strategically distinct flops, three stack depths
+      each, solved from the flop through the river. It is hosted, streamed on demand, and free
+      inside the free TableLab app: in your browser at <a href="/">tablelab.app</a> or on
+      <a href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker" rel="noopener" target="_blank">Android
+      via Google Play</a>.</p>
+
+      <h2>What's inside</h2>
+
+      <p>The library covers five heads-up scenarios. Each one is solved on all 1,755
+      strategically distinct flops and at three stack-depth buckets, which is where the 26,325
+      comes from: 5 scenarios × 1,755 flops × 3 depths.</p>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Flops solved</th>
+              <th>Stack-depth buckets</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>BTN opens vs BB call — single-raised pot</td>
+              <td>1,755</td>
+              <td>Shallow · Medium · Deep</td>
+            </tr>
+            <tr>
+              <td>CO-class (middle-position) open vs BB</td>
+              <td>1,755</td>
+              <td>Shallow · Medium · Deep</td>
+            </tr>
+            <tr>
+              <td>UTG-class (early-position) open vs BB</td>
+              <td>1,755</td>
+              <td>Shallow · Medium · Deep</td>
+            </tr>
+            <tr>
+              <td>SB opens vs BB call — blind vs blind</td>
+              <td>1,755</td>
+              <td>Shallow · Medium · Deep</td>
+            </tr>
+            <tr>
+              <td>BB 3-bets vs BTN open — 3-bet pot</td>
+              <td>1,755</td>
+              <td>Committed · Shallow · Medium</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Every solved spot carries the full strategic detail, not just a summary:</p>
+
+      <ul>
+        <li><strong>Per-combo strategy frequencies</strong> — how often each exact hand combo
+        bets, checks, calls, raises, or folds at every decision node, flop to river.</li>
+        <li><strong>EV at flop decision nodes</strong> — the solver's expected value per combo
+        where the flop decision is made.</li>
+        <li><strong>Equities and reach</strong> — each combo's equity and how often it actually
+        arrives at the node along the line you're viewing.</li>
+      </ul>
+
+      <p>Across the library that adds up to hundreds of millions of solved strategy
+      datapoints.</p>
+
+      <h2>Every flop — literally</h2>
+
+      <p>There are 22,100 ways to deal three cards from a 52-card deck. But suits have no
+      inherent value in hold'em: A♠7♥2♦ and A♥7♦2♣ are the same strategic problem with the suit
+      labels swapped. Grouping flops that are identical up to a relabeling of suits — suit
+      isomorphism — collapses those 22,100 raw flops to 1,755 strategically distinct ones. The
+      library solves each of the 1,755 once, represented by one canonical suit assignment, so
+      every possible flop you can be dealt maps to a solved board. That is what "every flop"
+      means here: complete coverage, no sampling, no "similar texture" approximation at the
+      flop level.</p>
+
+      <h2>How it was built</h2>
+
+      <p>Every spot was solved with TexasSolver, an open-source CFR (counterfactual regret
+      minimization) solver that TableLab uses under a commercial license, running on large
+      cloud compute over multiple solve campaigns. Each solution is converged to an
+      exploitability of at most 0.5% of the pot, and the full game tree is solved from the flop
+      through the river — turn and river strategy comes from the same converged tree, not from
+      re-solving or extrapolation.</p>
+
+      <div class="callout"><p><strong>What ≤0.5% exploitability means.</strong> Exploitability
+      measures how far a strategy sits from perfect equilibrium: it is the maximum a
+      theoretically perfect opponent could win against it, per hand, beyond what they'd win at
+      true equilibrium. At 0.5% of the pot, the computed strategy gives up at most half a
+      percent of the pot to a perfect counter-strategy — a standard precision target for
+      practical study, and far below what any human opponent can extract.</p></div>
+
+      <h2>Browsing it: the explorer</h2>
+
+      <p>The Study tab is a visual explorer over the solved trees, built in the style players
+      already know from modern GTO trainers:</p>
+
+      <ul>
+        <li><strong>Strip navigation</strong> — one horizontal strip walks the whole hand:
+        preflop seats, the flop board, each postflop decision, and the turn and river cards. Tap
+        any point to inspect it, or take a different action to branch the line.</li>
+        <li><strong>13×13 strategy grid</strong> — the classic hand matrix with stacked
+        action-frequency bars per cell, plus a hand-class lens that recolors the grid by made
+        hands, draws, and air.</li>
+        <li><strong>Equity distribution charts</strong> — both players' equity curves at the
+        current node, so you can see who holds the nut advantage and where ranges diverge.</li>
+        <li><strong>Per-combo drill-down</strong> — tap any cell to see that exact combo's
+        frequencies and detail at the node.</li>
+        <li><strong>Filterable board picker</strong> — find flops by suitedness, pairing, and
+        high card, or search for a specific board.</li>
+      </ul>
+
+      <h2>Free, inside a free tracker</h2>
+
+      <p>Precomputed GTO solutions have generally been sold as subscriptions: PeakGTO lists at
+      $79 per month, Lucid GTO at $49 per month, and GTO Wizard's paid plans span roughly $39 to
+      $279 per month, per their published pricing as of August 2026. Those are capable products
+      built for dedicated solver study. TableLab takes a different position: the library ships
+      free inside a free bankroll tracker, because the point is not to sell solver access — it
+      is to put a solved baseline next to the sessions and hands you already track.</p>
+
+      <h2>Connected to your own hands</h2>
+
+      <p>The library isn't a standalone viewer bolted onto the app. TableLab records your
+      sessions and full street-by-street hand histories, and its AI hand coaching is grounded in
+      deterministic facts — computed equities, pot odds, and solver-derived GTO frequencies from
+      this same library — injected into every analysis so the coaching can't invent numbers.
+      Study a spot in the explorer, then see the same solved frequencies referenced when the
+      coach reviews a hand you actually played.</p>
+
+      <h2>Honest limitations</h2>
+
+      <ul>
+        <li><strong>Specific preflop lines.</strong> Solutions exist for the five scenarios
+        above with standard open sizes. A different preflop line or a non-standard size means
+        the nearest spot is a reference, not an exact answer.</li>
+        <li><strong>Canonical suits.</strong> Boards are shown in suit-isomorphic canonical
+        form — the strategy is identical, but the suit letters may differ from your actual
+        hand.</li>
+        <li><strong>≤0.5% exploitability, not perfection.</strong> Solutions are converged to a
+        tight practical threshold, not a mathematical zero.</li>
+        <li><strong>Beta, flop to river.</strong> The in-app library carries a "Beta · flop to
+        river" footer: postflop is solved in full; preflop ranges come from standard charts, not
+        a preflop solve.</li>
+        <li><strong>Not an on-demand solver.</strong> You browse precomputed solutions; the app
+        does not solve arbitrary custom trees.</li>
+      </ul>
+
+      <div class="tool-cta">
+        <p><strong>Open the library.</strong> The Study tab is live in the free TableLab app —
+        <a href="/">open the web app</a> or
+        <a href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker" rel="noopener" target="_blank">get it on Google Play</a>.
+        No signup fee, no locked scenarios.</p>
+      </div>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>What is GTO poker strategy?</summary>
+          <p>GTO (game-theory optimal) strategy is the equilibrium solution to a poker spot: a
+          mix of bets, checks, calls, raises, and folds for every hand such that no opponent
+          strategy can exploit it. Solvers compute these equilibria numerically. Studying GTO
+          output tells you the baseline — how often each hand in your range wants to take each
+          action — which you can then deviate from to exploit real opponents.</p>
+        </details>
+        <details>
+          <summary>Is the TableLab GTO library really free?</summary>
+          <p>Yes. The library is part of the free TableLab app — the web app at
+          <a href="/">tablelab.app</a> and the Android app on Google Play. There is no paywall
+          on the Study tab, no locked scenarios, and no credit card. Comparable
+          precomputed-solution products are paid subscriptions.</p>
+        </details>
+        <details>
+          <summary>How accurate are the solutions?</summary>
+          <p>Every spot is solved with TexasSolver, a CFR solver used under a commercial
+          license, to an exploitability of at most 0.5% of the pot. That means a theoretically
+          perfect opponent could gain no more than half a percent of the pot per hand against
+          the computed strategy — a standard precision target for practical GTO study. The
+          in-app footer labels the library Beta, flop to river.</p>
+        </details>
+        <details>
+          <summary>Why do the suits in the library sometimes differ from my actual hand?</summary>
+          <p>Boards are stored in canonical suit-isomorphic form. Suits have no inherent value
+          in hold'em, so A♠7♥2♦ and A♥7♦2♣ play identically — the 22,100 raw flops collapse to
+          1,755 strategically distinct ones. The library solves each distinct flop once and
+          represents it with one canonical suit assignment; map your hand's suits onto the
+          canonical board and the strategy is exactly the same.</p>
+        </details>
+        <details>
+          <summary>Does the GTO library work on mobile?</summary>
+          <p>Yes. The library lives in the TableLab app's Study tab, which runs on Android via
+          Google Play and in any modern browser at tablelab.app — the same solved spots,
+          streamed on demand, on both platforms.</p>
+        </details>
+        <details>
+          <summary>Can it solve my exact custom spot?</summary>
+          <p>No — it is a precomputed library, not an on-demand solver. Solutions exist for
+          five specific preflop lines with standard open sizes, across three stack-depth
+          buckets per scenario. If your spot came from a different preflop line or a
+          non-standard size, the nearest library spot is a reference point, not an exact
+          answer; a custom tree needs a full solver.</p>
+        </details>
+      </section>
+
+      <p class="disclaimer-line">Solver output is a strategic baseline, not a guarantee against
+      real opponents — exploiting the player in front of you usually beats equilibrium. Also
+      free: the <a href="/variance-calculator">variance calculator</a> and the
+      <a href="/icm-calculator">ICM deal calculator</a>.</p>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/gto-library">GTO Library</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+      <p class="responsible"><strong>18+</strong> — TableLab is a personal record-keeping and analytics tool for players aged 18 and over. It offers no real-money play, wagering, deposits, or gambling of any kind. If gambling is affecting you or someone you know, free confidential help is available at <a href="https://www.begambleaware.org" target="_blank" rel="noopener nofollow">BeGambleAware.org</a> and <a href="https://www.gamcare.org.uk" target="_blank" rel="noopener nofollow">GamCare</a>.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

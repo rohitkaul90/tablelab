@@ -67,6 +67,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://tablelab.app/gto-library</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://tablelab.app/privacy</loc>
     <lastmod>2026-07-21</lastmod>
     <changefreq>yearly</changefreq>
