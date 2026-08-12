@@ -75,11 +75,12 @@ void main() {
     expect(picked, isNull);
   });
 
-  group('cross-street pin in the iso context (PR #66 review)', () {
+  group('cross-street pin semantics (PR #66)', () {
     // Flop Kc 9c 4d: h/s merge over the flop alone, so a turn pick of the
-    // absent As would route to a stored Ah — WRONG once a 2h river is pinned
-    // (the h↔s transposition moves the pin). The call sites now put the other
-    // street's pin in [isoBoard] as well as [excluded].
+    // absent As routes to a stored Ah. A previously pinned river no longer
+    // constrains a TURN pick — changing the turn CLEARS the pinned river, so
+    // the call sites pass a FLOP-ONLY iso context (and don't exclude the
+    // river card). A RIVER pick still carries the stored turn in [excluded].
     const flop = ['Kc', '9c', '4d'];
 
     Widget pinnedHost({
@@ -100,26 +101,32 @@ void main() {
           ),
         );
 
-    testWidgets('a pinned river disables the previously mis-routable card',
-        (tester) async {
+    testWidgets(
+        'turn pick under flop-only context routes As even with a river '
+        'pinned (the pin is about to be cleared)', (tester) async {
       String? picked;
       await tester.pumpWidget(pinnedHost(
-        excluded: {...flop, '2h'},
+        excluded: flop.toSet(), // NO river card — as if no river exists
         available: const {'Ah'},
-        isoBoard: [...flop, '2h'],
+        isoBoard: flop,
         onPick: (c) => picked = c,
       ));
-      // As has no equivalent under the pinned board → dead, no ≡ badge.
-      expect(find.text('≡'), findsNothing);
+      // As has a stored twin over the flop → ≡ badge, taps through to Ah.
+      expect(find.text('≡'), findsOneWidget);
       await tester.tap(_tile('As'));
       await tester.pump();
-      expect(picked, isNull);
+      expect(picked, 'Ah');
+      // Let the snackbar's auto-dismiss timer fire before teardown.
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
     });
 
-    testWidgets('an excluded twin is removed from the routable targets',
+    testWidgets(
+        'river path: an excluded twin is removed from the routable targets',
         (tester) async {
-      // Ah IS stored, but it's pinned on the other street (excluded) — it
-      // cannot stand in for As, which then has no representative → disabled.
+      // Ah IS stored, but it's the pinned turn (excluded on a river pick) —
+      // it cannot stand in for As, which then has no representative →
+      // disabled.
       String? picked;
       await tester.pumpWidget(pinnedHost(
         excluded: {...flop, 'Ah'},

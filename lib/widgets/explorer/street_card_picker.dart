@@ -21,11 +21,11 @@ class StreetCardPicker extends StatelessWidget {
   /// them a stored suit-equivalent representative to route to.
   final Set<String>? available;
 
-  /// The suit-isomorphism context: the FULL pinned board minus the card being
-  /// picked (flop + any pinned river for a turn pick, flop + stored turn for
-  /// a river pick — the other street's pin must constrain the equivalence
-  /// classes, or routing could transpose a suit that MOVES the pin). When
-  /// supplied with [available], an absent card with an available
+  /// The suit-isomorphism context: the fixed board the pick lands on — the
+  /// FLOP ONLY for a turn pick (changing the turn CLEARS any pinned river, so
+  /// no later card constrains the classes), flop + stored turn for a river
+  /// pick (the earlier street's card is fixed and rides in [excluded] too).
+  /// When supplied with [available], an absent card with an available
   /// suit-equivalent renders ENABLED with a ≡ badge and taps through to the
   /// stored representative via [representativeFor]; null keeps the plain
   /// absent-= -disabled behavior.
@@ -43,10 +43,10 @@ class StreetCardPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // Representatives must themselves be tappable — the OTHER street's pin
-    // rides in [excluded] as well as [isoBoard] (it's already on the board,
-    // so it can't stand in), so routing targets are the available cards minus
-    // the excluded ones.
+    // Representatives must themselves be tappable — on a river pick the
+    // stored turn rides in [excluded] as well as [isoBoard] (it's already on
+    // the board, so it can't stand in), so routing targets are the available
+    // cards minus the excluded ones.
     final routable = isoBoard == null
         ? null
         : available?.where((c) => !excluded.contains(c)).toSet();

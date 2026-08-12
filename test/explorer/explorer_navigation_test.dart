@@ -270,4 +270,69 @@ void main() {
     expect(n.state.currentNode, isNotNull); // still the flop root
     expect(n.state.currentNode!.street, 0);
   });
+
+  test('changing the TURN clears the pinned river; identical re-pick keeps it',
+      () async {
+    final n = ExplorerNotifier();
+    await n.selectSpot(spot);
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+    await n.pickCard('2s');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+    await n.pickCard('3d');
+    expect(n.state.line,
+        ['CHECK', 'CHECK', '@2s', 'CHECK', 'CHECK', '@3d']);
+
+    // Re-pick the IDENTICAL turn card → the river survives untouched.
+    await n.setPinnedCard(river: false, card: '2s');
+    expect(n.state.line,
+        ['CHECK', 'CHECK', '@2s', 'CHECK', 'CHECK', '@3d']);
+    expect(n.state.turnCard, '2s');
+    expect(n.state.riverCard, '3d');
+
+    // Change the turn to a DIFFERENT card → the pinned river CLEARS and the
+    // line truncates at the river deal (river street un-dealt: dealtCards has
+    // one entry, so the strip's river box falls back to its '+' state).
+    await n.setPinnedCard(river: false, card: '7d');
+    expect(n.state.line, ['CHECK', 'CHECK', '@7d', 'CHECK', 'CHECK']);
+    expect(n.state.turnCard, '7d');
+    expect(n.state.riverCard, isNull);
+    expect(n.state.riverNodes, isNull);
+    expect(n.state.cursor, lessThanOrEqualTo(n.state.line.length));
+    expect(n.state.dealtCards, ['7d']);
+  });
+
+  test('the old river card is a LEGAL new turn pick (river cleared)',
+      () async {
+    final n = ExplorerNotifier();
+    await n.selectSpot(spot);
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+    await n.pickCard('2s');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+    await n.pickCard('3d');
+
+    // The pinned river 3d as the NEW turn: no collision guard fires — the
+    // river is cleared by the same change.
+    await n.setPinnedCard(river: false, card: '3d');
+    expect(n.state.turnCard, '3d');
+    expect(n.state.riverCard, isNull);
+    expect(n.state.line, ['CHECK', 'CHECK', '@3d', 'CHECK', 'CHECK']);
+  });
+
+  test('a NEW turn pick at the line end clears a leftover river pin',
+      () async {
+    final n = ExplorerNotifier();
+    await n.selectSpot(spot);
+    // River pinned ahead of time (before any street is dealt).
+    await n.setPinnedCard(river: true, card: '3d');
+    expect(n.state.riverCard, '3d');
+    await n.advance('CHECK');
+    await n.advance('CHECK');
+    await n.pickCard('2s'); // turn differs from the (null) turn pin
+    expect(n.state.turnCard, '2s');
+    expect(n.state.riverCard, isNull);
+  });
 }

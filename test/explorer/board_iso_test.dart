@@ -184,12 +184,16 @@ void main() {
           isNull);
     });
 
-    test('a cross-street pinned card in fixedCards blocks the mis-route', () {
-      // PR #66 review (HIGH): flop Kc 9c 4d, river pinned 2h. Over the flop
-      // alone h/s merge, so a turn pick of the absent As would route to the
-      // stored Ah — but that h↔s transposition MOVES the pinned 2h to 2s
-      // (Kc9c4d + Ah + 2h is NOT isomorphic to Kc9c4d + As + 2h). With the
-      // pin in fixedCards the class splits and the pick correctly dies.
+    test('an extra fixed card splits the suit class (pure math)', () {
+      // Flop Kc 9c 4d: over the flop alone h/s merge, so the absent As
+      // routes to a stored Ah. Add a 4th fixed card in h (2h) and the h↔s
+      // transposition would MOVE it (Kc9c4d + Ah + 2h is NOT isomorphic to
+      // Kc9c4d + As + 2h) — the class splits and the route correctly dies.
+      // NOTE (PR #66 design change): the app no longer feeds a pinned RIVER
+      // into a TURN pick's fixed set — changing the turn clears the pinned
+      // river instead. The live use of a 4-card fixed set is the RIVER pick
+      // (flop + stored turn); the math itself is direction-agnostic and this
+      // stays as pure-math coverage.
       const flop = ['Kc', '9c', '4d'];
       expect(equivalentCards('As', fixedCards: flop).toSet(), {'Ah', 'As'});
       expect(
