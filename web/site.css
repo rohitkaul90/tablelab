@@ -491,6 +491,12 @@ table.compare tbody tr:last-child td { border-bottom: none; }
 @media (max-width: 560px) {
   .hero h1 { font-size: 2rem; }
   .features, .steps { grid-template-columns: 1fr; }
+}
+
+/* Header collapses to the ☰ menu earlier than the general phone breakpoint:
+   with the top-level GTO Library link the widest headers (legal + tool pages)
+   need ~640px min-content, so 561-660px would otherwise wrap to two lines. */
+@media (max-width: 660px) {
   .site-nav .link { display: none; }
   .nav-dropdown { display: none; }   /* its links are mirrored into the ☰ panel */
   .nav-menu { display: block; }
