@@ -19,7 +19,7 @@
   <meta name="twitter:description" content="At least 50 buy-ins for cash, 100+ for tournaments — and the risk-of-ruin math behind why.">
   <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
   <meta property="article:published_time" content="2026-07-05">
-  <meta property="article:modified_time" content="2026-07-20">
+  <meta property="article:modified_time" content="2026-08-17">
   <meta name="author" content="Rohit Kaul">
   <meta name="theme-color" content="#111811">
   <script>
@@ -47,7 +47,7 @@
         "headline": "Poker Bankroll Management: How Many Buy-Ins Do You Actually Need?",
         "description": "A grounded guide to poker bankroll management for live cash and tournaments: how many buy-ins the authorities recommend, the risk-of-ruin math, real variance numbers, and why live differs from online.",
         "datePublished": "2026-07-05",
-        "dateModified": "2026-07-20",
+        "dateModified": "2026-08-17",
         "author": { "@id": "https://tablelab.app/#rohit" },
         "publisher": { "@id": "https://tablelab.app/#organization" },
         "image": { "@id": "https://tablelab.app/blog/poker-bankroll-management#primaryimage" },
@@ -284,9 +284,9 @@
 
       <h2>Why do tournaments need 100+ buy-ins?</h2>
 
-      <p>Because the payout structure is brutal by design. Only about 10 to 20% of a tournament field cashes, and the prize pool concentrates at the very top, so you lose small most of the time and win big rarely. That top-heaviness makes per-tournament standard deviation roughly 5 to 10 times a comparable cash session (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope, "Tournament Variance Calculator"</a>). Same edge, far wilder ride.</p>
+      <p>Because the payout structure is brutal by design. Only about 10 to 20% of a tournament field cashes, and the prize pool concentrates at the very top &mdash; the same top-heaviness that makes <a href="/icm-calculator">ICM math</a> matter at a final table &mdash; so you lose small most of the time and win big rarely. That top-heaviness makes per-tournament standard deviation roughly 5 to 10 times a comparable cash session (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope, "Tournament Variance Calculator"</a>). Same edge, far wilder ride.</p>
 
-      <p>Concretely: a genuinely winning tournament player with a healthy 30% return on investment can run 200 or more tournaments without a significant cash and still be a long-term winner (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>). At one or two big fields a week, that's a year-long drought that means nothing about your skill. A 100-buy-in minimum isn't caution; it's the floor that lets you survive a normal cold streak.</p>
+      <p>Concretely: a genuinely winning tournament player with a healthy 30% return on investment can run 200 or more tournaments without a significant cash and still be a long-term winner (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>) &mdash; we worked through exactly <a href="/blog/poker-tournament-variance">how big a tournament sample you need</a> in its own post. At one or two big fields a week, that's a year-long drought that means nothing about your skill. A 100-buy-in minimum isn't caution; it's the floor that lets you survive a normal cold streak.</p>
 
       <h2>How big a downswing should a winning player expect?</h2>
 
@@ -304,7 +304,7 @@
 
       <h2>Bankroll management only matters if you're a winner</h2>
 
-      <p>Here's the uncomfortable part. Every formula above takes your win rate as an input, and for most players that number is negative. In a University of Hamburg study of online play, 91% of all rake came from the most active 10% of players &mdash; a concentration that only makes sense if the large casual majority are net losers (<a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1908161">Fiedler, 2012</a>). A separate peer-reviewed analysis of 51,761 players confirmed poker is skill-predominant, but found results only start reflecting skill after roughly 1,000 hands (<a href="https://www.liebertpub.com/doi/10.1089/glre.2008.13106">Fiedler &amp; Rock, 2009</a>).</p>
+      <p>Here's the uncomfortable part. Every formula above takes your win rate as an input, and for most players that number is negative. In a University of Hamburg study of online play, 91% of all rake came from the most active 10% of players &mdash; a concentration that only makes sense if the large casual majority are net losers (<a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1908161">Fiedler, 2012</a>). A separate peer-reviewed analysis of 51,761 players confirmed poker is skill-predominant, but found results only start reflecting skill after roughly 1,000 hands (<a href="https://www.liebertpub.com/doi/10.1089/glre.2008.13106">Fiedler &amp; Rock, 2009</a>). And if you do have a real, tracked win rate, sanity-check it against <a href="/blog/good-live-poker-win-rate">what a good live poker win rate actually looks like</a> before plugging it into the formula.</p>
 
       <p>So the honest sequence is: first find out whether you're actually a winner, and at what rate, and with how much variance &mdash; then size the bankroll. You can't do the second step without real data for the first, and memory is a terrible logbook. That means tracking every session: buy-in, cash-out, hours, and stake, so your win rate (in bb/100) and standard deviation are measured, not guessed. It's exactly why we built the <a href="/about#features">TableLab dashboard</a> the way we did: log your sessions and it computes the win rate, BB/100, and variance trends you'd otherwise have to estimate. The bankroll math is only as good as the numbers you feed it.</p>
 
