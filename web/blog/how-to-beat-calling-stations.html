@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Beat Calling Stations in Live Poker — TableLab</title>
+  <meta name="description" content="How to beat calling stations: the value-betting math, why bluffing them burns money, the multiway equity problem, and when to believe their rare raise.">
+  <link rel="canonical" href="https://tablelab.app/blog/how-to-beat-calling-stations">
+  <meta property="og:title" content="How to Beat Calling Stations in Live Poker">
+  <meta property="og:description" content="Stop bluffing, value bet thinner and bigger, and respect the rare raise. The research, the sizing math, and the multiway problem every guide skips.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://tablelab.app/blog/how-to-beat-calling-stations">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Beat Calling Stations in Live Poker">
+  <meta name="twitter:description" content="Research on 27M hands: the players who win the most pots win the least money. How to get paid by them — and why the advice breaks in 5-way limped pots.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta property="article:published_time" content="2026-08-17">
+  <meta property="article:modified_time" content="2026-08-17">
+  <meta name="author" content="Rohit Kaul">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="stylesheet" href="/site.css?v=495db8e391">
+  <script src="/site.js?v=7c350f7df0" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://tablelab.app/blog/how-to-beat-calling-stations#article",
+        "headline": "How to Beat Calling Stations in Live Poker",
+        "description": "How to adjust against loose-passive players and calling stations in live games: the value-betting and sizing math against inelastic calling ranges, why the standard advice degrades in multiway limped pots, when to believe a station's raise, and what these games do to your win rate and variance.",
+        "datePublished": "2026-08-17",
+        "dateModified": "2026-08-17",
+        "author": { "@id": "https://tablelab.app/#rohit" },
+        "publisher": { "@id": "https://tablelab.app/#organization" },
+        "image": { "@id": "https://tablelab.app/blog/how-to-beat-calling-stations#primaryimage" },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://tablelab.app/blog/how-to-beat-calling-stations" },
+        "isPartOf": { "@id": "https://tablelab.app/blog#blog" },
+        "wordCount": 2400,
+        "keywords": ["how to beat calling stations", "calling station poker", "loose passive poker", "loose passive live games", "poker player types", "value betting", "multiway pots"],
+        "articleSection": "Live Poker Strategy"
+      },
+      {
+        "@type": "Blog",
+        "@id": "https://tablelab.app/blog#blog",
+        "name": "The TableLab Blog",
+        "url": "https://tablelab.app/blog/",
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com", "https://www.youtube.com/channel/UCaslEsv-BMGKuOY4ssKQqVQ"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://tablelab.app/#rohit",
+        "name": "Rohit Kaul",
+        "givenName": "Rohit",
+        "description": "Live cash-game poker player and data-analytics professional; maker of TableLab. Around 20 years playing poker, focused on live cash as a winning player, with over a decade building quantitative models in Python.",
+        "jobTitle": "Founder",
+        "worksFor": { "@id": "https://tablelab.app/#organization" },
+        "knowsAbout": ["Poker strategy", "Cash game poker", "Game theory optimal (GTO) poker", "Poker bankroll management", "Data analytics", "Quantitative modeling"],
+        "alumniOf": [
+          { "@type": "CollegeOrUniversity", "name": "Purdue University" },
+          { "@type": "CollegeOrUniversity", "name": "University of Mumbai" }
+        ],
+        "sameAs": [
+          "https://www.linkedin.com/in/rohit-kaul-a761171a2",
+          "https://x.com/RohitKaul90",
+          "https://www.youtube.com/@rohitkaul1990",
+          "https://pokerdb.thehendonmob.com/player.php?a=r&n=877305"
+        ]
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://tablelab.app/blog/how-to-beat-calling-stations#primaryimage",
+        "url": "https://tablelab.app/og-cover.png",
+        "width": 2400,
+        "height": 1260
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/blog/how-to-beat-calling-stations#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tablelab.app" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://tablelab.app/blog/" },
+          { "@type": "ListItem", "position": 3, "name": "How to Beat Calling Stations", "item": "https://tablelab.app/blog/how-to-beat-calling-stations" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/blog/how-to-beat-calling-stations#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "What is a calling station in poker?", "acceptedAnswer": { "@type": "Answer", "text": "A calling station is a player who calls often regardless of hand strength — the loose-passive corner of the classic four-quadrant player taxonomy popularized in Alan Schoonmaker's The Psychology of Poker (2000). They limp, they call, they rarely raise, and they are most common in live and low-stakes games (Upswing Poker)." } },
+          { "@type": "Question", "name": "How do you beat a calling station?", "acceptedAnswer": { "@type": "Answer", "text": "Value bet more hands, size those bets bigger, and stop bluffing. A station's calls don't fold to pressure, so a bluff burns money against them, while every extra value bet gets paid. Coaches from Jonathan Little to Ashley Adams converge on the same playbook: isolate them preflop, bet hands you'd normally check, and keep the bluffing frequency near zero." } },
+          { "@type": "Question", "name": "Should you ever bluff a calling station?", "acceptedAnswer": { "@type": "Answer", "text": "Almost never. A bluff only profits when the opponent folds often enough — with a three-quarter-pot bluff, roughly 43% of the time. Calling stations fold far less than that, which makes the arithmetic negative before any read enters the picture. The rare exception is a board and line where even a station's range can't call, and those are rarer than they feel in the moment." } },
+          { "@type": "Question", "name": "What changes when the whole table is loose-passive and pots go multiway?", "acceptedAnswer": { "@type": "Answer", "text": "Raw equity collapses. In our own Monte Carlo simulation, pocket aces win about 85% of the time against one random hand that never folds, but under half the time against five. That's why the standard heads-up station playbook degrades in live limped family pots: you value bet strong hands harder, but you also need genuinely stronger hands to stack off, and you should isolate preflop to shrink the field." } },
+          { "@type": "Question", "name": "If calling stations play badly, why do I keep losing to them?", "acceptedAnswer": { "@type": "Answer", "text": "Two honest reasons. First, variance: loose multiway games raise both your win rate and your standard deviation, so bad stretches run longer and hurt more. Second, unadjusted play: research on roughly 27 million hands found that winning many pots correlates negatively with profit at small stakes — the station's many small wins come from players who keep bluffing into them and keep paying off with medium hands. If that's you, the leak is yours, not theirs." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-H4D9DBVXDD');
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/about">About</a>
+            <details class="nav-dropdown">
+        <summary>Tools<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <nav aria-label="Free poker calculators">
+          <a href="/variance-calculator">Variance Calculator</a>
+          <a href="/icm-calculator">ICM Calculator</a>
+        </nav>
+      </details>
+      <a class="link" href="/privacy">Privacy</a>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / How to Beat Calling Stations</div>
+
+      <h1>How to Beat Calling Stations in Live Poker</h1>
+      <p class="byline">By Rohit Kaul · August 17, 2026 · 10 min read</p>
+
+      <div class="hero-banner">
+        <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Research on roughly 27 million hands found that the players who win the most pots win the least money — the calling station story in one sentence.">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0d130d"/>
+              <stop offset="1" stop-color="#16201a"/>
+            </linearGradient>
+          </defs>
+          <rect width="1200" height="380" fill="url(#bg)"/>
+          <rect x="0" y="0" width="6" height="380" fill="#4CAF50"/>
+          <text x="70" y="86" fill="#81C784" font-size="22" letter-spacing="3" font-family="sans-serif">LIVE POKER STRATEGY</text>
+          <text x="68" y="170" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">They call everything.</text>
+          <text x="68" y="242" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">Most players still pay them.</text>
+          <text x="70" y="300" fill="#b0bec5" font-size="26" font-family="sans-serif">The players who win the most pots win the least money.</text>
+          <rect x="70" y="324" width="620" height="40" rx="8" fill="rgba(76,175,80,0.14)" stroke="#4CAF50" stroke-opacity="0.5"/>
+          <text x="86" y="351" fill="#eceff1" font-size="20" font-family="sans-serif"><tspan fill="#81C784" font-weight="700">value bets · no bluffs · multiway math</tspan>  ·  27M hands of evidence</text>
+        </svg>
+      </div>
+
+      <p>Every live low-stakes game has them: the player who limps five hands an orbit, calls three streets with second pair, and shows down hands you didn't know people played. Calling stations are the most profitable opponents in poker &mdash; and, judging by how often winning against them gets described as "running good," among the most misplayed.</p>
+
+      <p>The fix isn't a secret. It's a short list of adjustments that every serious source agrees on, a bit of sizing arithmetic that most sources skip, and one genuinely under-covered problem: what happens when there are four of them in the same pot. This post covers all three, with the research that explains why the adjustments work.</p>
+
+      <div class="tldr">
+        <p><strong>TL;DR:</strong> A calling station calls too much and raises almost never, and the counter-strategy is the mirror image of default poker: value bet more hands, size those bets bigger, and stop bluffing &mdash; a three-quarter-pot bluff needs roughly 43% folds to break even, and stations don't fold that often. Their calling ranges are inelastic (they call by absolute hand strength, not price), so big value bets get paid nearly as often as small ones. The academic backdrop: across roughly 27 million hands, winning many pots correlated negatively with profit, most strongly at small stakes &mdash; the station wins the pots, you win the money. The part most guides skip is multiway: in our own simulation, aces drop from ~85% equity against one all-the-way caller to under half against five, so isolate preflop and stack off stronger in family pots. And when a station raises, believe them.</p>
+      </div>
+
+      <h2>What is a calling station?</h2>
+
+      <p>A calling station is "a player who calls often regardless of their hand strength" &mdash; most common in live games and low-stakes online games (<a href="https://upswingpoker.com/calling-stations-poker-strategy/">Upswing Poker</a>). It's the loose-passive corner of the classic four-quadrant taxonomy &mdash; loose or tight preflop, passive or aggressive after &mdash; popularized as "the styles grid" in Alan Schoonmaker's <em>The Psychology of Poker</em> (Two Plus Two, 2000), where the loose-passive archetype literally carries the name Calling Station.</p>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption>The classic style grid, after Schoonmaker (2000). Live low-stakes pools skew heavily toward the left column.</caption>
+          <thead>
+            <tr><th></th><th>Passive</th><th>Aggressive</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Loose</strong></td><td>Calling Station &mdash; limps and calls everything, rarely raises</td><td>Maniac / LAG &mdash; plays everything, fast</td></tr>
+            <tr><td><strong>Tight</strong></td><td>Rock &mdash; folds everything, calls only when strong</td><td>TAG &mdash; selective and aggressive; the winning default</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Spotting one takes an orbit or two: watch for limp-calling, for calls on every street without raises, and for showdowns that don't connect to any coherent range. The same observation habits that replace a HUD in live poker &mdash; we covered them in <a href="/blog/how-to-read-players-without-a-hud">how to read players without a HUD</a> &mdash; identify stations faster than any stat would, and a tracker with player notes (TableLab's Reads tab tags the archetype directly) makes the read persist across sessions instead of being re-learned every visit.</p>
+
+      <h2>Why calling stations lose &mdash; and who they lose to</h2>
+
+      <p>The cleanest evidence comes from a University of Toronto study of roughly 27 million online small-stakes hands. Kyle Siler found that the relationship between winning a large proportion of pots and profitability is <em>negative</em> &mdash; and that the effect is strongest in small-stakes games (<a href="https://link.springer.com/article/10.1007/s10899-009-9168-2">Siler, <em>Journal of Gambling Studies</em>, 2010</a>). The players dragging the most pots were losing the most money. He also found tight-aggressive strategies were the most profitable, and that loose-passive play thins out as stakes rise &mdash; which is a polite way of saying stations live at the stakes most of us play.</p>
+
+      <p>Read that finding from the station's side and the exploit writes itself. Their many small pots come from somewhere: from players who keep bluffing into someone who doesn't fold, and from players who pay off big bets with medium hands. The station's strategy only loses to opponents who stop donating in those two specific ways. Which is the entire counter-strategy, and why it fits in one section.</p>
+
+      <h2>The core adjustment: value bet more, bluff almost never</h2>
+
+      <p>Every serious treatment converges on the same playbook. Jonathan Little's version: isolate their limps preflop, bet big with your value hands, keep bluffs to a minimum, add overbets with your strongest hands, and stay friendly while you do it (<a href="https://pokercoaching.com/blog/calling-stations-in-poker/">PokerCoaching.com</a>). Ashley Adams' home-game version from a decade ago matches it nearly point for point, and adds the rule this post's later section is built on: when in doubt on the river, bet (<a href="https://www.pokernews.com/strategy/five-ways-to-beat-calling-stations-in-your-home-game-26167.htm">PokerNews</a>).</p>
+
+      <p>The no-bluffing half isn't a style preference; it's arithmetic. A bluff profits only when the fold rate clears the price. Bet three-quarters pot and you need folds about 43% of the time just to break even; every point below that is money lit on fire.</p>
+
+      <figure>
+        <svg viewBox="0 0 580 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bar chart of the expected value of a three-quarter-pot bluff at different opponent fold frequencies. At 20 percent folds the bluff loses 40 units per 100-unit pot, at 30 percent it loses 22.5, at 43 percent it breaks even, and at 60 percent it wins 30. Calling stations live at the left end of the chart." style="max-width:100%;height:auto">
+          <text x="20" y="24" fill="#eceff1" font-size="14">EV of a &frac34;-pot bluff, by how often the opponent folds (pot = 100)</text>
+          <line x1="300" y1="46" x2="300" y2="204" stroke="#546e7a" stroke-dasharray="4 4"/>
+          <!-- scale: 3 px per EV unit, origin x=300 -->
+          <text x="292" y="70" fill="#cfd8dc" font-size="12" text-anchor="end">Folds 20%</text>
+          <rect x="180" y="58" width="120" height="16" rx="4" fill="#ef9a9a"/>
+          <text x="172" y="70" fill="#90a4ae" font-size="11" text-anchor="end">&minus;40</text>
+          <text x="292" y="112" fill="#cfd8dc" font-size="12" text-anchor="end">Folds 30%</text>
+          <rect x="232" y="100" width="68" height="16" rx="4" fill="#ef9a9a"/>
+          <text x="224" y="112" fill="#90a4ae" font-size="11" text-anchor="end">&minus;22.5</text>
+          <text x="292" y="154" fill="#cfd8dc" font-size="12" text-anchor="end">Folds 43%</text>
+          <rect x="298" y="142" width="4" height="16" rx="2" fill="#ffd54f"/>
+          <text x="310" y="154" fill="#90a4ae" font-size="11">break-even</text>
+          <text x="292" y="196" fill="#cfd8dc" font-size="12" text-anchor="end">Folds 60%</text>
+          <rect x="300" y="184" width="90" height="16" rx="4" fill="#4CAF50"/>
+          <text x="398" y="196" fill="#90a4ae" font-size="11">+30</text>
+          <text x="20" y="236" fill="#90a4ae" font-size="11">EV = fold% &times; pot &minus; (1 &minus; fold%) &times; bet. Our arithmetic; the break-even point is bet &divide; (bet + pot).</text>
+        </svg>
+        <figcaption>The bluff math against someone who doesn't fold. A station's fold rate lives at the left end of this chart; no read or run-out changes the sign.</figcaption>
+      </figure>
+
+      <p>The value half of the playbook has a documented before-and-after. Upswing's Ryan Fee logged a 10,000-hand test at $0.25/$0.50 online against station-heavy tables: down about two buy-ins over the first 1,700 hands playing his defaults, then up about six over the next 2,800 after cutting bluffs, betting thinner for value, and sizing up (<a href="https://upswingpoker.com/calling-stations-poker-strategy/">Upswing Poker</a>). It's one player and a small sample &mdash; treat it as an illustration, not a proof &mdash; but the direction matches what the sizing math below says should happen.</p>
+
+      <h2>Why bigger bets work: inelastic calling ranges</h2>
+
+      <p>Against a thinking opponent, bet size shapes their continuing range &mdash; bigger bets fold out more hands. James "SplitSuit" Sweeney's framing is the useful one here: that opponent's calling range is <em>elastic</em>, it responds to price. A station's is <em>inelastic</em> &mdash; they decide by looking at their own cards, judge absolute hand strength, and call or fold roughly the same set of hands whether the bet is a third of the pot or all of it (<a href="https://www.splitsuit.com/poker-elasticity-vs-inelasticity">SplitSuit</a>).</p>
+
+      <p>Inelasticity turns sizing into a one-way lever. If top pair is calling 130 whether you bet 60 or 130, betting 60 is a 70-unit donation to your own stack's ceiling. So the adjustment compounds: not only more value bets, but bigger ones &mdash; including overbets with your strongest hands, which is exactly where Little's playbook puts them. And on the rare street where you do bluff, the same logic runs in reverse: since the size barely moves their fold rate, a bluff that must exist should be small.</p>
+
+      <div class="callout"><p><strong>The thin-value threshold moves too:</strong> hands that are check-backs against solid regulars &mdash; second pair, top pair weak kicker &mdash; become bets, because the station calls with worse far more often than a regular does. Andrew Brokos makes the range-level version of this point against loose limp-callers: there are no flops that favor their range over yours, so the bar for what counts as a value hand drops table-wide (<a href="https://blog.gtowizard.com/how-to-handle-loose-passive-limpers/">GTO Wizard</a>).</p></div>
+
+      <h2>What about limped family pots? The multiway problem</h2>
+
+      <p>Here's where the standard guides go quiet. Nearly every calling-station article &mdash; including the good ones &mdash; analyzes a heads-up pot: you, the station, a value bet. The live $1/$3 reality is four limpers, your iso-raise, and three callers anyway. Multiway pots against players who don't fold are a different mathematical object, and pretending otherwise is how "just value bet" turns into stacking off with one pair against four ranges.</p>
+
+      <p>The core fact is equity collapse. We ran the numbers through TableLab's own Monte Carlo engine &mdash; the same simulator behind our in-app equity calculator &mdash; for a hero hand against opponents holding random cards who all stay to showdown:</p>
+
+      <figure>
+        <svg viewBox="0 0 580 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Line chart of hero equity against 1 through 8 random opponents who never fold. Pocket aces: 85.4 percent against one, 64 percent against three, 49.1 percent against five, 34.3 percent against eight. Pocket kings and ace-king suited fall faster still." style="max-width:100%;height:auto">
+          <text x="20" y="24" fill="#eceff1" font-size="14">Hero equity vs number of stay-to-showdown opponents (our simulation)</text>
+          <!-- plot: x = 90 + (opps-1)*65; y = 210 - pct*1.7 -->
+          <line x1="60" y1="210" x2="560" y2="210" stroke="#546e7a"/>
+          <line x1="60" y1="40" x2="60" y2="210" stroke="#546e7a"/>
+          <line x1="60" y1="125" x2="560" y2="125" stroke="#546e7a" stroke-dasharray="3 5" opacity="0.5"/>
+          <text x="52" y="46" fill="#90a4ae" font-size="10" text-anchor="end">100%</text>
+          <text x="52" y="129" fill="#90a4ae" font-size="10" text-anchor="end">50%</text>
+          <text x="52" y="213" fill="#90a4ae" font-size="10" text-anchor="end">0%</text>
+          <polyline fill="none" stroke="#4CAF50" stroke-width="3" points="90,64.8 155,85.4 220,101.2 285,115.0 350,126.5 415,136.1 480,143.9 545,151.7"/>
+          <polyline fill="none" stroke="#ffd54f" stroke-width="2" points="90,69.8 155,93.4 220,111.1 285,125.3 350,137.4 415,146.1 480,153.6 545,160.7"/>
+          <polyline fill="none" stroke="#90caf9" stroke-width="2" points="90,95.8 155,124.0 220,139.8 285,149.8 350,157.3 415,162.7 480,167.5 545,171.6"/>
+          <circle cx="90" cy="64.8" r="4" fill="#4CAF50"/>
+          <circle cx="350" cy="126.5" r="4" fill="#4CAF50"/>
+          <text x="100" y="58" fill="#4CAF50" font-size="11" font-weight="700">AA 85.4%</text>
+          <text x="358" y="120" fill="#4CAF50" font-size="11" font-weight="700">49.1%</text>
+          <text x="20" y="235" fill="#90a4ae" font-size="11">Opponents:</text>
+          <text x="87" y="235" fill="#90a4ae" font-size="11">1</text>
+          <text x="152" y="235" fill="#90a4ae" font-size="11">2</text>
+          <text x="217" y="235" fill="#90a4ae" font-size="11">3</text>
+          <text x="282" y="235" fill="#90a4ae" font-size="11">4</text>
+          <text x="347" y="235" fill="#90a4ae" font-size="11">5</text>
+          <text x="412" y="235" fill="#90a4ae" font-size="11">6</text>
+          <text x="477" y="235" fill="#90a4ae" font-size="11">7</text>
+          <text x="542" y="235" fill="#90a4ae" font-size="11">8</text>
+          <text x="470" y="60" fill="#4CAF50" font-size="12" font-weight="700">AA</text>
+          <text x="470" y="76" fill="#ffd54f" font-size="12">KK</text>
+          <text x="470" y="92" fill="#90caf9" font-size="12">AKs</text>
+          <text x="20" y="254" fill="#90a4ae" font-size="10">TableLab Monte Carlo, 100,000 runouts per point, random never-folding opponents. Corroborates Wizard of Odds' published multi-player simulations.</text>
+        </svg>
+        <figcaption>Aces against one station: an 85% favorite. Aces against five: a coin flip at 49.1%. The hand didn't change; the denominator did.</figcaption>
+      </figure>
+
+      <p>Random never-folding hands are the clean, reproducible baseline (real limpers hold somewhat better-connected cards, which cuts your edge further on wet boards) &mdash; and the shape of the curve matches Wizard of Odds' long-standing multi-player power-rating simulations (<a href="https://wizardofodds.com/games/texas-hold-em/6-player-game/">Wizard of Odds</a>). Ed Miller's <em>The Course</em> (2015) treats these loose multiway live games as their own recurring problem for the same reason: the tools of aggression simply work less well in bloated family pots.</p>
+
+      <p>The practical adjustments, in order of importance:</p>
+
+      <ol>
+        <li><strong>Isolate preflop, and size up doing it.</strong> The raise's job is to shrink the field, and against limpers it needs to be far larger than the online-standard open. Brokos' range math backs the aggression: even the flops that look worst for an iso-raiser keep their equity near even against a limp-caller's range &mdash; on a board as grim as J&#9824;7&#9829;6&#9829; the raiser still holds about 56% (<a href="https://blog.gtowizard.com/how-to-handle-loose-passive-limpers/">GTO Wizard</a>).</li>
+        <li><strong>Raise your stack-off threshold with the field size.</strong> The one-pair hands you happily pile in heads-up against a station are the exact hands the equity chart punishes four-way.</li>
+        <li><strong>Keep value betting &mdash; but bet into the field with hands that beat calls, not hands that beat folds.</strong> Multiway, someone has a piece almost always; the no-bluffing rule gets stricter, not looser.</li>
+      </ol>
+
+      <h2>When the station raises, believe them</h2>
+
+      <p>The mirror image of "they never fold" is "they never bluff." A player who calls with everything has no need to raise without a monster, so when the passive player suddenly wakes up with a raise, the information content is enormous. Adams states it as bluntly as it deserves: give them credit for the hand they're representing, and fold (<a href="https://www.pokernews.com/strategy/five-ways-to-beat-calling-stations-in-your-home-game-26167.htm">PokerNews</a>). Folding top pair to a station's river check-raise feels impossibly tight and is usually just correct.</p>
+
+      <p>This is also where a persistent read earns its money. "Raised the river twice all night, showed the nuts both times" is exactly the note that turns a painful laydown into an easy one three weeks later &mdash; if it was written down.</p>
+
+      <h2>What station-heavy games do to your win rate</h2>
+
+      <p>Everything above raises your expectation; none of it makes the ride smooth. Loose multiway games push more money in with thinner edges, which raises variance along with the win rate &mdash; a bigger standard deviation per hour means longer, deeper bad stretches even while the long-run number improves.</p>
+
+      <p>If you want to see what that trade looks like for your own numbers, <a href="/variance-calculator">our variance calculator</a> will chart the swings, and <a href="/blog/good-live-poker-win-rate">what a good live win rate looks like</a> covers why the hourly figure these games produce needs a big sample before you trust it. Deeper swings also argue for the conservative end of the buy-in guidelines in <a href="/blog/poker-bankroll-management">our bankroll guide</a>.</p>
+
+      <p>It's also the strongest argument for game selection there is. The largest field study of poker skill &mdash; 32,000 players at the 2010 World Series of Poker &mdash; found a-priori skilled players earned an average return above 30% while everyone else averaged minus 15% (<a href="https://www.nber.org/papers/w17023">Levitt &amp; Miles, NBER</a>).</p>
+
+      <p>Edges in poker are real and large, and they're realized by sitting where your edge is biggest. Bart Hanson's live version of the advice is to pick tables by how weak the lineup is, not how deep the stacks are (<a href="https://crushlivepoker.com/articles/table-selection-strategies-finding-the-best-live-cash-game-table-to-maximize-your-winnings">Crush Live Poker</a>) &mdash; his numbers are coaching estimates rather than measurements, but the direction is the same one Siler's data points: the money comes from the loose-passive seats.</p>
+
+      <h2>The bottom line</h2>
+
+      <ul>
+        <li><strong>Identify them fast and write it down.</strong> Limp-calls, no raises, incoherent showdowns. A tagged read outlives the session; a mental note doesn't.</li>
+        <li><strong>Invert your defaults.</strong> More value bets, thinner value bets, bigger value bets &mdash; and a bluffing frequency near zero, because the fold rate never clears the price.</li>
+        <li><strong>Their calls are inelastic.</strong> Size tells them nothing; charge the maximum with value and save the creativity.</li>
+        <li><strong>Multiway changes the math.</strong> Aces at ~85% against one never-folding opponent are under half against five. Isolate bigger, stack off stronger, and stop expecting heads-up advice to survive a family pot.</li>
+        <li><strong>The rare raise is real.</strong> Passive players don't bluff-raise; fold the hand you'd snap off against anyone else.</li>
+        <li><strong>Expect the swings.</strong> These games raise your win rate and your variance together; bankroll for the games you're actually in.</li>
+      </ul>
+
+      <p>The research says the station's many pots and your fewer, bigger ones are the same money changing addresses. Whether it changes in your direction comes down to whether you actually make the adjustments &mdash; and whether you can show, from your own tracked sessions, that they worked. <a href="/">Log your sessions</a>, tag the stations, and let the graph settle it.</p>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>What is a calling station in poker?</summary>
+          <p>A player who calls often regardless of hand strength &mdash; the loose-passive corner of the classic style grid popularized in Alan Schoonmaker's <em>The Psychology of Poker</em> (2000). They limp, call, and rarely raise, and they're most common in live and low-stakes games (<a href="https://upswingpoker.com/calling-stations-poker-strategy/">Upswing Poker</a>).</p>
+        </details>
+        <details>
+          <summary>How do you beat a calling station?</summary>
+          <p>Value bet more hands, size bigger, stop bluffing. Their calls don't respond to pressure, so bluffs burn money while every extra value bet gets paid. Coaches from Jonathan Little (<a href="https://pokercoaching.com/blog/calling-stations-in-poker/">PokerCoaching</a>) to Ashley Adams (<a href="https://www.pokernews.com/strategy/five-ways-to-beat-calling-stations-in-your-home-game-26167.htm">PokerNews</a>) converge on the same short playbook: isolate preflop, bet hands you'd normally check, and respect the rare raise.</p>
+        </details>
+        <details>
+          <summary>Should you ever bluff a calling station?</summary>
+          <p>Almost never. A &frac34;-pot bluff needs roughly 43% folds to break even &mdash; the break-even point is bet &divide; (bet + pot) &mdash; and stations fold far less than that. The arithmetic is negative before any read enters the picture; the rare exceptions are rarer than they feel in the moment.</p>
+        </details>
+        <details>
+          <summary>What changes when the whole table is loose-passive and pots go multiway?</summary>
+          <p>Raw equity collapses: in our Monte Carlo simulation, aces win about 85% against one never-folding opponent but under half against five. Isolate preflop with bigger raises, require genuinely stronger hands to stack off, and keep the no-bluffing rule strict &mdash; multiway, someone always has a piece.</p>
+        </details>
+        <details>
+          <summary>If calling stations play badly, why do I keep losing to them?</summary>
+          <p>Variance, or an unadjusted strategy &mdash; usually both. Loose multiway games raise your standard deviation along with your win rate, so losing stretches run long (<a href="/variance-calculator">see your own swing sizes</a>). And research on ~27M hands found winning many pots correlates negatively with profit at small stakes (<a href="https://link.springer.com/article/10.1007/s10899-009-9168-2">Siler, 2010</a>) &mdash; the station's small wins come from players who keep bluffing into them and keep paying off. If that's you, the leak is fixable.</p>
+        </details>
+      </section>
+
+      <h3>Sources</h3>
+      <ul class="sources">
+        <li>Siler, K., "Social and Psychological Challenges of Poker," <em>Journal of Gambling Studies</em> 26:401&ndash;420, 2010, <a href="https://link.springer.com/article/10.1007/s10899-009-9168-2">link.springer.com</a></li>
+        <li>Levitt, S. &amp; Miles, T., "The Role of Skill Versus Luck in Poker," NBER Working Paper 17023, 2011, <a href="https://www.nber.org/papers/w17023">nber.org</a></li>
+        <li>Schoonmaker, A., <em>The Psychology of Poker</em>, Two Plus Two Publishing, 2000</li>
+        <li>Mathias, G., "The Ultimate Guide to Crushing Calling Stations," Upswing Poker, 2019-10-15, <a href="https://upswingpoker.com/calling-stations-poker-strategy/">upswingpoker.com</a></li>
+        <li>Sweeney, J., "Elastic vs. Inelastic Ranges in Poker," SplitSuit, <a href="https://www.splitsuit.com/poker-elasticity-vs-inelasticity">splitsuit.com</a></li>
+        <li>Brokos, A., "How to Handle Loose, Passive Limpers," GTO Wizard, 2024-03-18, <a href="https://blog.gtowizard.com/how-to-handle-loose-passive-limpers/">blog.gtowizard.com</a></li>
+        <li>Little, J., "How to Beat Calling Stations in Poker," PokerCoaching.com, 2024-01-26, <a href="https://pokercoaching.com/blog/calling-stations-in-poker/">pokercoaching.com</a></li>
+        <li>Adams, A., "Five Ways to Beat Calling Stations in Your Home Game," PokerNews, 2016-10-25, <a href="https://www.pokernews.com/strategy/five-ways-to-beat-calling-stations-in-your-home-game-26167.htm">pokernews.com</a></li>
+        <li>Hanson, B., "Table Selection Strategies," Crush Live Poker, 2023-05-14, <a href="https://crushlivepoker.com/articles/table-selection-strategies-finding-the-best-live-cash-game-table-to-maximize-your-winnings">crushlivepoker.com</a></li>
+        <li>Wizard of Odds, "Texas Hold'em &mdash; 6-Player Game" and "10-Player Game" simulations, <a href="https://wizardofodds.com/games/texas-hold-em/6-player-game/">wizardofodds.com</a></li>
+        <li>Miller, E., <em>The Course: Serious Hold'em Strategy for Smart Players</em>, 2015</li>
+      </ul>
+
+      <p class="disclaimer-line">The player-type adjustments here are strategy consensus from the cited coaches plus published research; the bluff-EV and multiway-equity figures are our own arithmetic and simulations on stated assumptions, flagged where they appear. Real opponents differ from any archetype &mdash; validate reads against what you actually see, and expect real variance either way. Nothing here is financial advice.</p>
+
+      <aside class="author-box">
+        <h3>About the author</h3>
+        <p><strong>Rohit Kaul</strong> is a winning live cash-game player and a data-analytics
+        professional (Master's in Business Analytics, Purdue) who builds the quantitative models behind
+        TableLab &mdash; profitable every year since 2023, across roughly 3,200 hours of tracked live cash.
+        Find him on
+        <a href="https://www.linkedin.com/in/rohit-kaul-a761171a2" rel="me noopener" target="_blank">LinkedIn</a>,
+        <a href="https://www.youtube.com/@rohitkaul1990" rel="me noopener" target="_blank">YouTube</a>, and
+        <a href="https://pokerdb.thehendonmob.com/player.php?a=r&amp;n=877305" rel="me noopener" target="_blank">The Hendon Mob</a>.</p>
+      </aside>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+</body>
+</html>
