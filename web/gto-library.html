@@ -31,7 +31,7 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icons/Icon-192.png">
   <link rel="stylesheet" href="/site.css?v=495db8e391">
-  <script src="/site.js?v=7c350f7df0" defer></script>
+  <script src="/site.js?v=302dfa2fc7" defer></script>
 
   <script type="application/ld+json">
   {
@@ -132,6 +132,7 @@
         <nav aria-label="Free poker calculators">
           <a href="/variance-calculator">Variance Calculator</a>
           <a href="/icm-calculator">ICM Calculator</a>
+          <a href="/gto-library">GTO Library</a>
         </nav>
       </details>
       <details class="nav-menu">
@@ -168,37 +169,32 @@
 
       <div class="compare-wrap">
         <table class="compare">
+          <caption>The five solved scenarios. Every scenario covers all 1,755 strategically distinct flops.</caption>
           <thead>
             <tr>
               <th>Scenario</th>
-              <th>Flops solved</th>
               <th>Stack-depth buckets</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>BTN opens vs BB call — single-raised pot</td>
-              <td>1,755</td>
               <td>Shallow · Medium · Deep</td>
             </tr>
             <tr>
               <td>CO-class (middle-position) open vs BB</td>
-              <td>1,755</td>
               <td>Shallow · Medium · Deep</td>
             </tr>
             <tr>
               <td>UTG-class (early-position) open vs BB</td>
-              <td>1,755</td>
               <td>Shallow · Medium · Deep</td>
             </tr>
             <tr>
               <td>SB opens vs BB call — blind vs blind</td>
-              <td>1,755</td>
               <td>Shallow · Medium · Deep</td>
             </tr>
             <tr>
               <td>BB 3-bets vs BTN open — 3-bet pot</td>
-              <td>1,755</td>
               <td>Committed · Shallow · Medium</td>
             </tr>
           </tbody>
@@ -268,9 +264,12 @@
 
       <h2>Free, inside a free tracker</h2>
 
-      <p>Precomputed GTO solutions have generally been sold as subscriptions: PeakGTO lists at
-      $79 per month, Lucid GTO at $49 per month, and GTO Wizard's paid plans span roughly $39 to
-      $279 per month, per their published pricing as of August 2026. Those are capable products
+      <p>Precomputed GTO solutions have generally been sold as subscriptions: <a href="https://peakgto.com/">PeakGTO</a> lists
+      its paid plan at $79 per month, <a href="https://lucidpoker.com/pricing">Lucid</a>'s Pro
+      tier runs $49 per month, and GTO Wizard's paid tiers span $49 to $279 per month billed
+      monthly ($39 to $229 on annual billing), per
+      <a href="https://www.pokernews.com/news/2026/03/gto-wizard-subscription-plans-new-features-pricing-50908.htm">PokerNews's 2026 pricing overview</a> —
+      all as published in August 2026. Those are capable products
       built for dedicated solver study. TableLab takes a different position: the library ships
       free inside a free bankroll tracker, because the point is not to sell solver access — it
       is to put a solved baseline next to the sessions and hands you already track.</p>
