@@ -179,8 +179,8 @@
     });
   });
 
-  // Let the choice be revisited. Injected rather than hand-added to ten duplicated
-  // footers, so there is one copy to maintain.
+  // Let the choice be revisited. Injected rather than hand-added to every page's
+  // duplicated footer, so there is one copy to maintain.
   var footerLinks = document.querySelector('footer a[href="/terms"]');
   if (footerLinks && footerLinks.parentNode) {
     var sep = document.createTextNode(' · ');
