@@ -1232,11 +1232,13 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       {required bool river}) {
     final manifest = state.manifest;
     if (manifest == null) return;
+    // A RIVER pick excludes the stored turn (collision). A TURN pick computes
+    // its sets as if NO river exists: changing the turn CLEARS the pinned
+    // river (see setPinnedCard), so the old river card is a legal new turn
+    // and no later card constrains the pick.
     final excluded = <String>{
       ...manifest.flop.split(' '),
-      // Exclude the OTHER street's pin so swaps can't collide.
       if (river && state.turnCard != null) state.turnCard!,
-      if (!river && state.riverCard != null) state.riverCard!,
     };
     // Offer only the runouts the pack solved (suit-isomorphic representatives);
     // the merged twins have no node. River availability keys off the (stored)
@@ -1246,6 +1248,14 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             ? manifest.availableRiverCards(state.turnCard!)
             : null)
         : manifest.availableTurnCards();
+    // The suit-iso context: the fixed board the pick lands on — flop only for
+    // a turn pick (the pinned river is about to be cleared, so it must not
+    // constrain the equivalence classes), flop + stored turn for a river pick
+    // (that direction is unambiguous; the turn stays in [excluded] too).
+    final isoBoard = [
+      ...manifest.flop.split(' '),
+      if (river && state.turnCard != null) state.turnCard!,
+    ];
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -1255,6 +1265,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           title: 'Pick the ${river ? 'river' : 'turn'} card',
           excluded: excluded,
           available: available,
+          isoBoard: isoBoard,
           onPick: (c) {
             Navigator.of(sheetContext).pop();
             if (!mounted) return; // sheet route can outlive this screen
@@ -1728,14 +1739,22 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final excluded = <String>{
       ...?state.manifest?.flop.split(' '),
       ...state.dealtCards,
-      if (dealt == 0 && state.riverCard != null) state.riverCard!,
     };
-    // Offer only solved runouts (see _openCardPicker).
+    // Offer only solved runouts (see _openCardPicker), routing pruned suit
+    // twins to their stored representative via the iso context — flop only
+    // for a turn pick (picking a turn clears any pinned river), flop + dealt
+    // turn for a river pick.
     final available = dealt == 0
         ? state.manifest?.availableTurnCards()
         : (state.turnCard != null
             ? state.manifest?.availableRiverCards(state.turnCard!)
             : null);
+    final isoBoard = state.manifest == null
+        ? null
+        : [
+            ...state.manifest!.flop.split(' '),
+            if (dealt > 0 && state.turnCard != null) state.turnCard!,
+          ];
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -1746,6 +1765,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
               title: dealt == 0 ? 'Pick the turn card' : 'Pick the river card',
               excluded: excluded,
               available: available,
+              isoBoard: isoBoard,
               onPick: (c) =>
                   ref.read(explorerProvider.notifier).pickCard(c),
             ),

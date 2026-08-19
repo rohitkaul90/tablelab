@@ -10,7 +10,10 @@
 // Runout cards are PINNED per street: they survive rewinds/edits, auto-deal on
 // replay, and change only via their card box (in-place swap — the betting line
 // survives because solver trees offer identical action structures on every
-// runout card; sizes are pot-relative).
+// runout card; sizes are pot-relative). One exception: CHANGING the turn card
+// CLEARS the pinned river (upstream change resets downstream — and it removes
+// the suit-ambiguity class where a turn transposition could move a later pin);
+// re-picking the identical turn keeps the river.
 
 import 'dart:collection';
 
@@ -115,6 +118,7 @@ class ExplorerState {
     bool clearTurn = false,
     bool clearRiver = false,
     bool clearPins = false,
+    bool clearRiverPin = false,
   }) {
     return ExplorerState(
       scanning: scanning ?? this.scanning,
@@ -130,7 +134,9 @@ class ExplorerState {
       line: line ?? this.line,
       cursor: cursor ?? this.cursor,
       turnCard: clearPins ? null : (turnCard ?? this.turnCard),
-      riverCard: clearPins ? null : (riverCard ?? this.riverCard),
+      riverCard: clearPins || clearRiverPin
+          ? null
+          : (riverCard ?? this.riverCard),
       loading: loading ?? this.loading,
       chunkLoading: chunkLoading ?? this.chunkLoading,
       error: clearError ? null : (error ?? this.error),
@@ -477,6 +483,10 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
       cursor: newLine.length,
       turnCard: dealt == 0 ? card : null,
       riverCard: dealt == 0 ? null : card,
+      // A turn DIFFERENT from the pinned one clears any pinned river (a
+      // changed turn resets downstream); the auto-deal replay passes the
+      // pinned card itself and keeps it.
+      clearRiverPin: dealt == 0 && card != s.turnCard,
       clearError: true,
     );
     await _loadChunksForLine();
@@ -485,24 +495,37 @@ class ExplorerNotifier extends StateNotifier<ExplorerState> {
   /// Re-pin a street's card (the card-box tap): replaces the pin and swaps
   /// any matching chance step IN PLACE — the betting line survives; only the
   /// chunks re-fetch. Valid at any cursor position.
+  ///
+  /// Changing the TURN to a different card CLEARS the pinned river and
+  /// truncates the line at the river deal (the river street is un-dealt — its
+  /// box returns to the empty "+" state): a changed turn resets downstream,
+  /// and no surviving river pin means no suit-transposition ambiguity.
+  /// Re-picking the identical turn keeps the river. Because the old river is
+  /// cleared, it is a LEGAL new turn card (no collision guard against it).
   Future<void> setPinnedCard(
       {required bool river, required String card}) async {
     final m = state.manifest;
     if (m == null) return;
     if (m.flop.split(' ').contains(card)) return;
     if (river && card == state.turnCard) return;
-    if (!river && card == state.riverCard) return;
-    final line = [...state.line];
+    final turnChanged = !river && card != state.turnCard;
+    var line = [...state.line];
     final chanceIdxs = [
       for (var i = 0; i < line.length; i++)
         if (line[i].startsWith('@')) i
     ];
     final pos = river ? 1 : 0;
     if (chanceIdxs.length > pos) line[chanceIdxs[pos]] = '@$card';
+    if (turnChanged && chanceIdxs.length > 1) {
+      // Drop the river chance step and everything after it.
+      line = line.sublist(0, chanceIdxs[1]);
+    }
     state = state.copyWith(
       line: line,
+      cursor: state.cursor.clamp(0, line.length),
       turnCard: river ? null : card,
       riverCard: river ? card : null,
+      clearRiverPin: turnChanged,
       clearError: true,
     );
     await _loadChunksForLine();

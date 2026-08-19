@@ -91,6 +91,36 @@ void main() {
     expect(find.text('7s 5s 2s'), findsOneWidget);
   });
 
+  testWidgets('non-canonical suit spelling finds the stored board + iso hint',
+      (tester) async {
+    await tester.pumpWidget(host(BoardPickerSheet(
+      title: 'Solved boards',
+      loadSpots: () async => [
+        _spot('7c 5c 2c', 'medium'), // canonical monotone
+        _spot('Kc 9d 4h', 'medium'), // canonical rainbow
+      ],
+      onPick: (_) {},
+    )));
+    await tester.pumpAndSettle();
+
+    // The user searches the spade spelling of the stored club board.
+    await tester.enterText(find.byType(TextField), '7s5s2s');
+    await tester.pumpAndSettle();
+    expect(find.text('1 of 2 boards'), findsOneWidget);
+    expect(find.text('7c 5c 2c'), findsOneWidget);
+    expect(
+      find.text('Showing 7♣5♣2♣ — same board as 7♠5♠2♠ '
+          '(suits are interchangeable)'),
+      findsOneWidget,
+    );
+
+    // Typing the stored spelling shows no redirect hint.
+    await tester.enterText(find.byType(TextField), '7c5c2c');
+    await tester.pumpAndSettle();
+    expect(find.text('1 of 2 boards'), findsOneWidget);
+    expect(find.textContaining('same board as'), findsNothing);
+  });
+
   testWidgets('a malformed flop label renders a placeholder, not a crash',
       (tester) async {
     await tester.pumpWidget(host(BoardPickerSheet(

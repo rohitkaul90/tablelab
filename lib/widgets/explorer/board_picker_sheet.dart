@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import '../../equity/card.dart';
 import '../../equity/texture_cell.dart';
 import '../../explorer/board_filter.dart';
+import '../../explorer/board_iso.dart';
 import '../../explorer/pack_source.dart';
 import 'board_cards.dart';
 
@@ -172,6 +173,7 @@ class _BoardPickerSheetState extends State<BoardPickerSheet> {
       );
     }
     final filtered = applyBoardFilter(_infos, _filter);
+    final isoHint = _isoHint(filtered);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -216,6 +218,17 @@ class _BoardPickerSheetState extends State<BoardPickerSheet> {
                   (on) => setState(
                       () => on ? _highRanks.add(r) : _highRanks.remove(r))),
           ]),
+        if (isoHint != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: Text(
+              isoHint,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
           child: Text(
@@ -241,6 +254,26 @@ class _BoardPickerSheetState extends State<BoardPickerSheet> {
       ],
     );
   }
+
+  /// When a full-board query in a NON-canonical suit spelling matched its
+  /// stored representative, a one-liner explains the redirect — the user typed
+  /// As7s6s and is looking at Ac7c6c (suits are interchangeable).
+  String? _isoHint(List<BoardInfo> filtered) {
+    final typed = parseFlopInput(_query.text);
+    if (typed == null) return null;
+    final canonical = canonicalFlop(typed);
+    if (typed.map(cardName).join(' ') == canonical) return null; // as stored
+    if (!filtered.any((i) => i.flop == canonical)) return null;
+    return 'Showing ${_symbols(canonical)} — same board as '
+        '${_symbols(typed.map(cardName).join(' '))} '
+        '(suits are interchangeable)';
+  }
+
+  /// 'Ac 7c 6c' → 'A♣7♣6♣'.
+  String _symbols(String flop) => flop.split(' ').map((t) {
+        final c = parseCard(t);
+        return c < 0 ? t : cardRankChar(c) + cardSuitSymbol(c);
+      }).join();
 
   /// One horizontally-scrolling chip row (13 rank chips don't fit a phone).
   Widget _chipRow(BuildContext context, List<Widget> chips) {
