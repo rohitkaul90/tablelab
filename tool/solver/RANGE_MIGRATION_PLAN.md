@@ -38,15 +38,35 @@ Full audit detail: memory `range-audit-findings` + session logs 2026-08-19.
    × caller-seat selectors; 8-max only), All-In 4bet, All-In 5bet (MTT).
    Charts are MIXED-FREQUENCY. Push/Fold section covers ≤~10bb separately.
 
-**Extraction mechanics (validated in-browser 2026-08-19):** no API call on
-chart switch — data is embedded in the React page. Cells are
-`page_handCell__*` divs with classes `page_raise__*` / `page_fold__*` /
-`page_mixed__*` (mixed cells carry gradient splits with per-action
-percentages). A `javascript_tool` loop can drive the selectors and scrape all
-169 cells per chart → JSON with exact frequencies. `/api/save-user-preference/`
-fires on selection (harmless). Extraction output lives in
-`tool/solver/ranges_pc/` (JSON, committed; one file per chart, keyed
-`{game}_{format}_{depth}_{hero}_{action}[_{vs}...]`).
+**Extraction — DONE 2026-08-19 (far better than scraping).** The page loads
+its ENTIRE dataset from `GET /api/get-training-weights?gameFormat={MTT|Cash}`
+(auth cookies; fetched in-page via the user's logged-in Chrome, transferred
+out via a one-shot localhost bridge — `ranges_pc/receive.py`). Raw payloads
+committed as `tool/solver/ranges_pc/raw/pc-{mtt,cash}.json.gz` (uncompressed
+`.json` gitignored; `gunzip -k` to regenerate).
+
+**Dataset:** 2,429 ranges. Cash 569 (8Max 323 · 6Max 235 · HU 11; 100/200bb;
+squeeze charts: 112 8Max + 28 6Max). MTT 1,860 (8Max 1,734 · HU 126; bbs
+2,3,…,100 including 17 & 35 the UI greys out).
+
+**Schema (`ranges[]`):** `format` (MTT/Cash) · `type` (8Max/6Max/HU) · `seat`
+· `bbs` · `handed` · `villains`/`villainSeat`/`villainSeat2` · **`action` =
+the situation hero FACES**: `Folded To` (=RFI spot), `Open Raise` (=vs RFI),
+`3bet`, `4bet`, `Squeeze` (=vs raise+call), `Limp` (=vs limp), `All-In
+3bet/4bet/5bet` · `heroBetSize`/`raiseSize` (bb) · `sequence`/`simpleSequence`
+(preflop line, e.g. `F-F-F-F-F-R-F`) · `ante` · sometimes `excludeHands` ·
+`handsWeights`: hand → `["f: x","c: x","r (size): x", …]` frequencies
+summing to 1, with raise-TO sizes embedded in the labels.
+
+**Validation (2026-08-19):** Cash 8Max 100bb BTN `Folded To` = 40.3% open @
+3bb ✓ (expected 40-44). BB vs BTN open = call 25.5 / 3-bet 12.7 / fold 61.8 —
+and every hand the audit flagged now defends: TT 3-bets 100%, 99 c64/r36,
+KJs c46/r54, KTs c14/r86, KQo c31/r69, AJo c47/r53, K9s c71/r29.
+
+**Sizing note for Phase B:** PC trees use THEIR sizes (BTN open 3bb — not our
+current 2.5x; BB 3-bet to 12bb; all-in nodes explicit). Adopt PC sizes when
+re-solving so ranges and tree geometry stay consistent; `heroBetSize`/
+`raiseSize` carry them per chart.
 
 ## Phase A — ingestion & plumbing (no solver cost)
 
