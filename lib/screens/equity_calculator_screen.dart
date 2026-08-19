@@ -113,6 +113,10 @@ class _EquityCalculatorScreenState
 
   void _openRangeEditor(int idx) {
     final p = _players[idx];
+    // Pin the preset source for this sheet's lifetime: reading it inside the
+    // builder would let the list swap legacy→PC on a mid-sheet rebuild,
+    // stranding the dropdown's selected key.
+    final pcPresets = ref.read(pcEquityPresetsProvider);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -121,7 +125,7 @@ class _EquityCalculatorScreenState
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => PlayerRangeEditor(
         // PC weighted-chart presets once loaded; legacy presets meanwhile.
-        presets: ref.read(pcEquityPresetsProvider),
+        presets: pcPresets,
         position: p.position,
         selectedCells: p.selectedCells,
         takenPositions: _takenPositions..remove(p.position),

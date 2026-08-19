@@ -166,7 +166,7 @@ Set<String>? pcRfiHands(
   required int tableSeats,
   required num effectiveBb,
   required String heroLabel,
-  double threshold = 0.5,
+  double threshold = kPcActionThreshold,
 }) {
   final chart = resolvePcChart(
     lib,

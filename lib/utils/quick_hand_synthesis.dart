@@ -279,9 +279,12 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input,
         effectiveBb: bb,
         heroLabel: input.positionLabel,
         node: PcNode.rfi);
-    if (rfiCh != null) pcCanOpen = rfiCh.raiseFreq(hand) >= 0.5;
+    if (rfiCh != null) pcCanOpen = rfiCh.raiseFreq(hand) >= kPcActionThreshold;
     final openerLabel = _assumedOpenerLabel(pc, input.numSeats);
-    if (openerLabel != null && openerLabel != input.positionLabel) {
+    if (openerLabel != null) {
+      // A hero labelled like the assumed opener (e.g. app 'UTG' vs assumed
+      // 'UTG') is handled by resolvePcChart's collision shift, so no equality
+      // guard here — it would silently mix PC and legacy charts in one hand.
       final defCh = resolvePcChart(pcRanges,
           tournament: trn,
           tableSeats: input.numSeats,
@@ -289,17 +292,22 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input,
           heroLabel: input.positionLabel,
           node: PcNode.vsOpen,
           openerLabel: openerLabel);
-      if (defCh != null) pcWould3Bet = defCh.raiseFreq(hand) >= 0.5;
+      if (defCh != null) pcWould3Bet = defCh.raiseFreq(hand) >= kPcActionThreshold;
     }
+    // The assumed 3-bettor is a blind for an in-position opener (mirrors the
+    // synthesized villain seating), the BB for an SB opener. Explicit so the
+    // variant choice never rides on find()'s id tie-break.
+    final threeBettor = pc == 'bb' ? 'SB' : 'BB';
     final vs3Ch = resolvePcChart(pcRanges,
         tournament: trn,
         tableSeats: input.numSeats,
         effectiveBb: bb,
         heroLabel: input.positionLabel,
-        node: PcNode.vs3bet);
+        node: PcNode.vs3bet,
+        openerLabel: threeBettor);
     if (vs3Ch != null) {
-      pcWould4Bet = vs3Ch.raiseFreq(hand) >= 0.5;
-      pcCalls3Bet = vs3Ch.callFreq(hand) >= 0.5;
+      pcWould4Bet = vs3Ch.raiseFreq(hand) >= kPcActionThreshold;
+      pcCalls3Bet = vs3Ch.callFreq(hand) >= kPcActionThreshold;
     }
   }
 

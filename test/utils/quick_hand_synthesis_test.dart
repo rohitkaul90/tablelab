@@ -425,6 +425,14 @@ void main() {
   });
 
   group('replayer seat invariant', () {
+    late final PcRangeLibrary pcLib;
+
+    setUpAll(() {
+      pcLib = PcRangeLibrary.fromJsonString(
+          File('assets/pc_ranges.json').readAsStringSync());
+      expect(pcLib.skippedCharts, 0);
+    });
+
     void runSeatInvariantSweep(PcRangeLibrary? pcRanges) {
       for (final cards in [
         ['As', 'Kd'], // chart hand
@@ -477,15 +485,11 @@ void main() {
     });
 
     test('the full matrix holds under the PC weighted charts too', () {
-      final lib = PcRangeLibrary.fromJsonString(
-          File('assets/pc_ranges.json').readAsStringSync());
-      expect(lib.skippedCharts, 0);
-      runSeatInvariantSweep(lib);
+      runSeatInvariantSweep(pcLib);
     });
 
     test('PC charts drive the preflop story where legacy charts differed', () {
-      final lib = PcRangeLibrary.fromJsonString(
-          File('assets/pc_ranges.json').readAsStringSync());
+      final lib = pcLib;
       // 6-max UTG is the lojack under the PC mapping: KTs is a standard LJ
       // open there, but the legacy 6-max path used the full-ring UTG chart
       // which never opened it (the range-audit defect this migration fixes).

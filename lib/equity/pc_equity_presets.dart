@@ -56,7 +56,7 @@ List<GtoPreset> pcEquityPresets(PcRangeLibrary lib) {
         hero: 'BB',
         node: 'vs_open',
         villains: [e.key]);
-    if (ch == null) continue;
+    if (ch == null || ch.bbs != 100) continue; // exact depth only
     final defend = ch.binaryHands(ch.continueFreq);
     if (defend.isNotEmpty) {
       out.add(GtoPreset(

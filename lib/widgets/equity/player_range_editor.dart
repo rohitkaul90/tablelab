@@ -60,19 +60,27 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
     _card2 = widget.card2;
   }
 
-  List<GtoPreset> get _presets => widget.presets ?? gtoPresets;
+  // Pinned for the sheet's lifetime (the caller resolves the PC-vs-legacy
+  // choice ONCE at sheet-open) and memoized: the range-matrix drag paints a
+  // setState per crossed cell, so per-build regrouping would run dozens of
+  // times per stroke.
+  late final List<GtoPreset> _presets = widget.presets ?? gtoPresets;
+  late final Map<String, List<GtoPreset>> _presetsByCategory =
+      widget.presets == null ? gtoPresetsByCategory : _groupByCategory();
 
-  Map<String, List<GtoPreset>> get _presetsByCategory {
-    if (widget.presets == null) return gtoPresetsByCategory;
+  Map<String, List<GtoPreset>> _groupByCategory() {
     final out = <String, List<GtoPreset>>{};
-    for (final p in widget.presets!) {
+    for (final p in _presets) {
       out.putIfAbsent(p.category, () => []).add(p);
     }
     return out;
   }
 
   void _applyPreset(String key) {
-    final preset = _presets.firstWhere((p) => p.key == key);
+    // orElse guard: a stale key (e.g. state restored across a preset-source
+    // change) must never throw in release — it just doesn't apply.
+    final preset = _presets.where((p) => p.key == key).firstOrNull;
+    if (preset == null) return;
     setState(() {
       _selectedPreset = key;
       _cells = handSetToCells(preset.hands);

@@ -11,13 +11,21 @@ import '../equity/weighted_ranges.dart';
 /// it loads (or if the asset is broken — `skippedCharts` keeps a broken
 /// regeneration observable rather than fatal).
 final pcRangeLibraryProvider = FutureProvider<PcRangeLibrary>((ref) async {
-  final raw = await rootBundle.loadString('assets/pc_ranges.json');
+  // cache:false — without it the 3.5MB raw JSON string stays pinned in the
+  // asset cache for the app's lifetime alongside the parsed library. (On web
+  // compute() runs synchronously, so the one-time parse lands on the UI
+  // thread at screen-entry warm-up — a known, accepted hitch.)
+  final raw =
+      await rootBundle.loadString('assets/pc_ranges.json', cache: false);
   return compute(PcRangeLibrary.fromJsonString, raw);
 });
 
 /// Equity-calculator preset list derived from the library; null while loading
-/// (the range editor falls back to the legacy presets).
+/// AND null when the derived list is empty (a degenerate asset must fall back
+/// to the legacy presets, not present an empty picker).
 final pcEquityPresetsProvider = Provider<List<GtoPreset>?>((ref) {
   final lib = ref.watch(pcRangeLibraryProvider).valueOrNull;
-  return lib == null ? null : pcEquityPresets(lib);
+  if (lib == null) return null;
+  final presets = pcEquityPresets(lib);
+  return presets.isEmpty ? null : presets;
 });
