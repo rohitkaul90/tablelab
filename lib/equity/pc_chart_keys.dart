@@ -1,19 +1,25 @@
 // App-context → PC-chart resolution for the weighted range library.
 //
-// The app names positions button-relative per table size (hand_model.dart
-// positionLabels: 9-max = BTN,SB,BB,UTG,UTG+1,UTG+2,MP,HJ,CO); the PC library
-// is 8-max canonical (UTG,UTG1,LJ,HJ,CO,BTN,SB,BB — see
-// tool/solver/RANGE_MIGRATION_PLAN.md). This file owns the mapping between the
-// two, exactly like chart_keys.dart owns it for the legacy binary presets.
+// The app names positions button-relative per table size
+// (TableSetup.positionLabels — the single source of the ladder; this file
+// deliberately DERIVES from it instead of re-forking the table, per the
+// CLAUDE.md don't-re-fork rule). The PC library is 8-max canonical
+// (UTG, UTG1, LJ, HJ, CO, BTN, SB, BB) plus a heads-up table — see
+// tool/solver/RANGE_MIGRATION_PLAN.md.
 //
 // Seat mapping principle: LATE positions anchor. We walk backward from the
 // button (BTN, CO, HJ, ...) in both vocabularies and clamp anything earlier
 // than the PC ladder to UTG. This is also the fix for the old 6-max/9-max
 // mislabel: a 6-max table's "UTG" is three-off-the-button and correctly
-// resolves to PC's LJ, not the full-ring UTG chart.
+// resolves to PC's LJ, not the full-ring UTG chart. When clamping collides
+// two distinct app seats onto one PC seat, the LATER-ACTING participant is
+// shifted one PC seat later so hero and villains stay distinct (a hero
+// responding to an open acts after the opener; a squeeze caller acts after
+// the raiser).
 //
 // PURE Dart — no Flutter, no I/O.
 
+import '../models/hand_model.dart' show TableSetup;
 import 'weighted_ranges.dart';
 
 /// PC seats in action order (8-max).
@@ -27,40 +33,33 @@ const List<String> _pcFromButton = ['BTN', 'CO', 'HJ', 'LJ', 'UTG1', 'UTG'];
 /// Maps an app position label (as produced by TableSetup.positionLabels /
 /// positionName for [tableSeats]) to the PC 8-max seat whose chart applies.
 ///
-/// Blinds map directly (the straddler defends like a BB, mirroring
-/// chart_keys.posClass). Non-blind seats map by distance-from-button, clamped
-/// to UTG for tables deeper than 8-handed.
-String pcSeatFor(String appLabel, int tableSeats) {
+/// Role matters for the straddler: defending, a straddler plays like a (wide)
+/// big blind (mirrors chart_keys.posClass); but a straddler who RAISES is an
+/// early-position aggressor, so pass [aggressor] for opener/caller labels —
+/// the legacy openerBucketForLabel bucketed a straddle opener 'early' and this
+/// keeps that behavior (review finding: STR→BB in the opener role resolved a
+/// blind-vs-blind chart, or nothing at all).
+String pcSeatFor(String appLabel, int tableSeats, {bool aggressor = false}) {
   switch (appLabel) {
     case 'SB':
       return 'SB';
     case 'BB':
-    case 'STR':
       return 'BB';
+    case 'STR':
+      return aggressor ? 'UTG' : 'BB';
   }
-  // Non-blind ladder for this table size, walking backward from the button.
-  // App labels come from hand_model's tables: e.g. 9-max backward =
-  // BTN, CO, HJ, MP, UTG+2, UTG+1, UTG.
   final ladder = _appFromButton(tableSeats);
   final idx = ladder.indexOf(appLabel);
   if (idx < 0) return 'UTG'; // exotic label (P7, ...): earliest is safest
   return idx < _pcFromButton.length ? _pcFromButton[idx] : 'UTG';
 }
 
+/// Non-blind app labels for [seats], walking backward from the button —
+/// derived from TableSetup.positionLabels ([BTN, SB, BB, ...ascending]) so the
+/// ladder has exactly one source of truth.
 List<String> _appFromButton(int seats) {
-  // Mirrors hand_model.dart _positionLabels, non-blind seats only, reversed
-  // into backward-from-button order.
-  const tables = {
-    2: ['BTN'],
-    3: ['BTN'],
-    4: ['BTN', 'UTG'],
-    5: ['BTN', 'CO', 'UTG'],
-    6: ['BTN', 'CO', 'HJ', 'UTG'],
-    7: ['BTN', 'CO', 'HJ', 'MP', 'UTG'],
-    8: ['BTN', 'CO', 'HJ', 'MP', 'UTG+1', 'UTG'],
-    9: ['BTN', 'CO', 'HJ', 'MP', 'UTG+2', 'UTG+1', 'UTG'],
-  };
-  return tables[seats] ?? tables[9]!;
+  final labels = TableSetup.positionLabels(seats);
+  return [labels.first, ...labels.skip(3).toList().reversed];
 }
 
 /// The situation-node id for a hero facing [facing] (mirrors the normalized
@@ -74,11 +73,23 @@ class PcNode {
   static const vsLimp = 'vs_limp';
 }
 
+/// Shifts a PC seat one step later in action order, staying in the non-blind
+/// zone (UTG → UTG1 → LJ → HJ → CO → BTN). Returns the input at the cap.
+String _oneSeatLater(String pcSeat) {
+  final i = _pcFromButton.indexOf(pcSeat);
+  return i <= 0 ? pcSeat : _pcFromButton[i - 1];
+}
+
 /// Resolves a chart for an app-level preflop spot.
 ///
-/// [heroLabel]/[openerLabel] are app position labels for [tableSeats];
-/// [effectiveBb] snaps to the nearest available depth in the library
-/// (cash: 100/200; mtt: 80/50/30/20/12 in the bundled asset).
+/// [heroLabel]/[openerLabel]/[callerLabel] are app position labels for
+/// [tableSeats]; [effectiveBb] snaps to the nearest available depth.
+/// Heads-up tables (2 seats) route to the PC HU charts (app BTN posts the SB
+/// heads-up → PC 'SB'). 3-handed tables return null — the library has no
+/// 3-max charts and a full-ring chart would be confidently wrong (review
+/// finding); callers must handle null anyway.
+/// [facingAllIn] disambiguates same-node sequence variants (facing a 3-bet
+/// JAM vs a sized 3-bet) — see PcRangeLibrary.find.
 WeightedChart? resolvePcChart(
   PcRangeLibrary lib, {
   required bool tournament,
@@ -88,22 +99,48 @@ WeightedChart? resolvePcChart(
   required String node,
   String? openerLabel,
   String? callerLabel,
+  bool? facingAllIn,
 }) {
   final game = tournament ? 'mtt' : 'cash';
-  final hero = pcSeatFor(heroLabel, tableSeats);
+  if (tableSeats == 2) {
+    // Heads-up: the button IS the small blind.
+    String hu(String l) => l == 'BTN' ? 'SB' : l == 'STR' ? 'BB' : l;
+    return lib.find(
+      game: game,
+      table: 'hu',
+      bbs: effectiveBb,
+      hero: hu(heroLabel),
+      node: node,
+      villains: openerLabel == null ? null : [hu(openerLabel)],
+      facingAllIn: facingAllIn,
+    );
+  }
+  if (tableSeats == 3) return null;
+
+  var hero = pcSeatFor(heroLabel, tableSeats);
   List<String>? villains;
   if (openerLabel != null) {
-    final opener = pcSeatFor(openerLabel, tableSeats);
-    villains = callerLabel == null
-        ? [opener]
-        : [opener, pcSeatFor(callerLabel, tableSeats)];
-    // A hero/villain collision means the seat mapping collapsed two distinct
-    // app seats onto one PC seat (deep full-ring tables clamp to UTG). Shift
-    // the villain one seat earlier so the lookup stays coherent.
-    if (villains.first == hero) {
-      final i = kPcSeats.indexOf(villains.first);
-      if (i > 0) villains[0] = kPcSeats[i - 1];
+    var opener = pcSeatFor(openerLabel, tableSeats, aggressor: true);
+    String? caller = callerLabel == null
+        ? null
+        : pcSeatFor(callerLabel, tableSeats, aggressor: true);
+    // Clamping can collapse distinct app seats onto one PC seat (deep
+    // full-ring tables squeeze UTG/UTG+1 together). Restore distinctness by
+    // shifting the LATER-ACTING participant later: the caller acts after the
+    // opener, and a responding hero acts after both. Each shift is bounded by
+    // the ladder cap, so the loop terminates.
+    if (caller != null && caller == opener) caller = _oneSeatLater(caller);
+    for (var guard = 0;
+        guard < kPcSeats.length &&
+            hero != 'SB' &&
+            hero != 'BB' &&
+            (hero == opener || hero == caller);
+        guard++) {
+      final shifted = _oneSeatLater(hero);
+      if (shifted == hero) break; // capped at BTN: give up shifting
+      hero = shifted;
     }
+    villains = caller == null ? [opener] : [opener, caller];
   }
   return lib.find(
     game: game,
@@ -111,6 +148,7 @@ WeightedChart? resolvePcChart(
     hero: hero,
     node: node,
     villains: villains,
+    facingAllIn: facingAllIn,
   );
 }
 

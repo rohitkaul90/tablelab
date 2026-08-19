@@ -162,12 +162,25 @@ class PcRangeLibrary {
   final Map<String, WeightedChart> _byId;
   final Map<String, List<WeightedChart>> _byNode;
 
-  PcRangeLibrary._(this.charts, this._byId, this._byNode);
+  /// Charts dropped by the defensive parse (0 for a healthy asset).
+  final int skippedCharts;
 
+  PcRangeLibrary._(this.charts, this._byId, this._byNode, this.skippedCharts);
+
+  /// Parses defensively: a malformed chart is SKIPPED, never allowed to take
+  /// the other ~1,200 down with it (the codebase's parse-defensively doctrine;
+  /// mirrors gto_frequency_library's tolerance). [skippedCharts] counts them
+  /// so a broken regeneration is observable in tests.
   factory PcRangeLibrary.fromJson(Map<String, dynamic> j) {
-    final charts = (j['charts'] as List)
-        .map((c) => WeightedChart.fromJson(c as Map<String, dynamic>))
-        .toList();
+    final charts = <WeightedChart>[];
+    var skipped = 0;
+    for (final raw in (j['charts'] as List? ?? const [])) {
+      try {
+        charts.add(WeightedChart.fromJson(raw as Map<String, dynamic>));
+      } catch (_) {
+        skipped++;
+      }
+    }
     final byId = <String, WeightedChart>{};
     final byNode = <String, List<WeightedChart>>{};
     for (final c in charts) {
@@ -175,7 +188,7 @@ class PcRangeLibrary {
       byNode.putIfAbsent(_nodeKey(c.game, c.table, c.hero, c.node), () => [])
           .add(c);
     }
-    return PcRangeLibrary._(charts, byId, byNode);
+    return PcRangeLibrary._(charts, byId, byNode, skipped);
   }
 
   /// Parse from a raw JSON string — suitable as a compute() payload.
@@ -194,9 +207,28 @@ class PcRangeLibrary {
     return bbs;
   }
 
+  /// Whether hero's only aggressive options in [c] are all-in (a proxy for
+  /// "the raise hero is facing left no room" — i.e. hero faces a jam).
+  static bool _allInOnlyAggression(WeightedChart c) {
+    var hasRaise = false, hasAllIn = false;
+    for (final a in c.actions) {
+      final k = pcActionKind(a);
+      if (k == PcActionKind.raise) hasRaise = true;
+      if (k == PcActionKind.allIn) hasAllIn = true;
+    }
+    return hasAllIn && !hasRaise;
+  }
+
   /// Find the chart for a node, snapping to the nearest available depth and
   /// (when [villains] is given) requiring a villain match. Returns null when
   /// the slice doesn't exist at all.
+  ///
+  /// [facingAllIn] disambiguates same-key sequence variants (the dataset holds
+  /// e.g. BOTH "UTG facing a sized 3-bet" and "UTG facing a 3-bet jam" at the
+  /// same game/table/bbs/hero/node/villains): true prefers the variant whose
+  /// only aggressive response is all-in, false prefers the sized variant, and
+  /// null defaults to the sized variant. Remaining ties break by action-count
+  /// (richer chart first) then id — fully deterministic.
   WeightedChart? find({
     required String game,
     String table = '8max',
@@ -204,6 +236,7 @@ class PcRangeLibrary {
     required String hero,
     required String node,
     List<String>? villains,
+    bool? facingAllIn,
   }) {
     var list = _byNode[_nodeKey(game, table, hero, node)];
     if (list == null || list.isEmpty) return null;
@@ -213,19 +246,25 @@ class PcRangeLibrary {
       if (vMatch.isEmpty) return null;
       list = vMatch;
     }
-    WeightedChart? best;
+    // Nearest depth first (ties keep both for the preference pass below).
     num bestDist = double.infinity;
     for (final c in list) {
       final d = (c.bbs - bbs).abs();
-      // Prefer the closer depth; on ties prefer the deeper chart (playing a
-      // 90bb stack off the 80bb chart beats the 100bb one by distance, but on
-      // an exact tie deeper is the safer default).
-      if (d < bestDist || (d == bestDist && best != null && c.bbs > best.bbs)) {
-        best = c;
-        bestDist = d;
-      }
+      if (d < bestDist) bestDist = d;
     }
-    return best;
+    final atDepth = list.where((c) => (c.bbs - bbs).abs() == bestDist).toList();
+    final wantJam = facingAllIn ?? false;
+    atDepth.sort((a, b) {
+      // Deeper chart on an exact depth tie (90bb between 80 and 100 → 100).
+      final byBbs = b.bbs.compareTo(a.bbs);
+      if (byBbs != 0) return byBbs;
+      final aJam = _allInOnlyAggression(a), bJam = _allInOnlyAggression(b);
+      if (aJam != bJam) return (aJam == wantJam) ? -1 : 1;
+      final byActions = b.actions.length.compareTo(a.actions.length);
+      if (byActions != 0) return byActions;
+      return a.id.compareTo(b.id);
+    });
+    return atDepth.first;
   }
 
   static bool _sameVillains(List<String> a, List<String> b) {

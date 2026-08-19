@@ -96,6 +96,66 @@ def combos(h):
     return 6 if len(h) == 2 else (4 if h.endswith('s') else 12)
 
 
+RANK_ORDER = {r: i for i, r in enumerate('23456789TJQKA')}
+
+
+def expand_hand_token(tok):
+    """Expand one excludeHands token to concrete 169-grid hand labels.
+
+    Forms seen in the raw data: '55-22' (pair range), 'J4o-J2o' (kicker range),
+    '65o-32o' (diagonal/connector range: both ranks step down), 'Q9s+' (kicker
+    ascending), '22+' (pairs ascending), '72' (bare: both 72s and 72o),
+    plus plain singles like '52o' / '82s'.
+    """
+    tok = tok.strip()
+    if not tok:
+        return []
+    if tok.endswith('+'):
+        base = tok[:-1]
+        if len(base) == 2 and base[0] == base[1]:  # pairs up
+            lo = RANK_ORDER[base[0]]
+            return [r * 2 for r, i in RANK_ORDER.items() if i >= lo]
+        hi, lo = base[0], base[1]
+        sfxs = [base[2]] if len(base) > 2 else ['s', 'o']  # 'J2+' = both
+        return [hi + k + sfx for sfx in sfxs for k, i in RANK_ORDER.items()
+                if RANK_ORDER[lo] <= i < RANK_ORDER[hi]]
+    if '-' in tok:
+        a, b = [t.strip() for t in tok.split('-', 1)]
+        if len(a) == 2 and a[0] == a[1]:  # pair range (a high, b low)
+            hi, lo = RANK_ORDER[a[0]], RANK_ORDER[b[0]]
+            return [r * 2 for r, i in RANK_ORDER.items() if lo <= i <= hi]
+        # Suffix may appear on either end or neither ('72-52' = both variants).
+        sfx_a = a[2] if len(a) > 2 else None
+        sfx_b = b[2] if len(b) > 2 else None
+        sfxs = [sfx_a or sfx_b] if (sfx_a or sfx_b) else ['s', 'o']
+        out = []
+        for sfx in sfxs:
+            if a[0] == b[0]:  # same high card: kicker range
+                hi, lo = RANK_ORDER[a[1]], RANK_ORDER[b[1]]
+                out += [a[0] + k + sfx for k, i in RANK_ORDER.items()
+                        if lo <= i <= hi]
+                continue
+            # diagonal: equal rank-gap at both ends, step both ranks down
+            gap_a = RANK_ORDER[a[0]] - RANK_ORDER[a[1]]
+            gap_b = RANK_ORDER[b[0]] - RANK_ORDER[b[1]]
+            if gap_a != gap_b:
+                raise ValueError(f'unparseable range token {tok!r}')
+            ranks = '23456789TJQKA'
+            for hi_i in range(RANK_ORDER[a[0]], RANK_ORDER[b[0]] - 1, -1):
+                out.append(ranks[hi_i] + ranks[hi_i - gap_a] + sfx)
+        return out
+    if len(tok) == 2 and tok[0] != tok[1]:  # bare '72': both variants
+        return [tok + 's', tok + 'o']
+    return [tok]  # pair or explicit single
+
+
+def expand_exclude(spec):
+    out = set()
+    for tok in spec.split(','):
+        out.update(expand_hand_token(tok))
+    return out
+
+
 def load(name):
     p = RAW / f'{name}.json'
     if p.exists():
@@ -116,9 +176,13 @@ def main():
                       f'{c["action"]} seq={c.get("simpleSequence")} ({c.get("fileName")})')
 
     # ── dedup ────────────────────────────────────────────────────────────────
+    # Sizes are PART of the identity: the same node solved against a different
+    # raise size is a materially different strategy (review finding — 67 groups
+    # differed on up to 95/169 hands), so only true re-uploads dedupe.
     def lkey(c):
         return (c['format'], c['type'], c['bbs'], c['seat'], c['action'],
-                tuple(c.get('villains') or []), c.get('simpleSequence') or '')
+                tuple(c.get('villains') or []), c.get('simpleSequence') or '',
+                tuple(c.get('heroBetSize') or []), tuple(c.get('raiseSize') or []))
 
     groups = {}
     for c in charts_in:
@@ -175,12 +239,31 @@ def main():
 
         if len(c['handsWeights']) != 169:
             n_partial += 1
+        # excludeHands = hands hero cannot hold at this node (filtered out by
+        # hero's own earlier action). Null them so consumers never read the
+        # placeholder fold-1.0 rows the raw data carries — UNLESS the row has
+        # genuine non-fold mass, in which case trust the weights and warn.
+        excluded = set()
+        if c.get('excludeHands'):
+            try:
+                excluded = expand_exclude(c['excludeHands'])
+            except ValueError as e:
+                report.append(f'  - EXCLUDE PARSE FAILED ({e}) on {c["seat"]} '
+                              f'{c["action"]} {c["bbs"]}bb — exclusions ignored')
         hands = {}
         for h in ALL_HANDS:
             acts = c['handsWeights'].get(h)
             if acts is None:
                 hands[h] = None
                 continue
+            if h in excluded:
+                nonfold = sum(float(a.split(':')[1]) for a in acts
+                              if not a.strip().startswith('f'))
+                if nonfold < 0.005:
+                    hands[h] = None
+                    continue
+                report.append(f'  - EXCLUDE CONTRADICTION kept: {game}/{table}/'
+                              f'{bbs}bb {hero} {node} {h} nonfold={nonfold:.2f}')
             row = [0.0] * len(acts_canon)
             ok = True
             for a in acts:
@@ -252,16 +335,20 @@ def main():
 
     checks = []
     btn = find(game='cash', table='8max', bbs=100, hero='BTN', node='rfi')
-    if btn:
-        r = share(btn, {'r', 'a'})
-        checks.append(('cash 8max 100bb BTN rfi raise%', r, 35, 50))
-    bb = find(game='cash', table='8max', bbs=100, hero='BB', node='vs_open')
-    bb = bb if bb and bb['villains'] == ['BTN'] else next(
+    bb = next(
         (ch for ch in out_charts if ch['game'] == 'cash' and ch['table'] == '8max'
          and ch['bbs'] == 100 and ch['hero'] == 'BB' and ch['node'] == 'vs_open'
          and ch['villains'] == ['BTN']), None)
-    if bb:
-        checks.append(('cash 8max 100bb BB defend% vs BTN open', share(bb, {'c', 'r', 'a'}), 30, 50))
+    # A missing anchor is itself a hard failure — it means the node vocabulary
+    # drifted (e.g. PC renamed an action and the slug fallback fired), which is
+    # exactly what these benchmarks exist to catch.
+    if btn is None or bb is None:
+        print('\n'.join(report))
+        sys.exit('BENCHMARK ANCHOR MISSING: '
+                 f'btn_rfi={"ok" if btn else "MISSING"} '
+                 f'bb_vs_btn={"ok" if bb else "MISSING"}')
+    checks.append(('cash 8max 100bb BTN rfi raise%', share(btn, {'r', 'a'}), 35, 50))
+    checks.append(('cash 8max 100bb BB defend% vs BTN open', share(bb, {'c', 'r', 'a'}), 30, 50))
     failed = [(n, v) for n, v, lo, hi in checks if not lo <= v <= hi]
     for n, v, lo, hi in checks:
         report.append(f'- benchmark {n}: {v:.1f} (expect {lo}-{hi}) '

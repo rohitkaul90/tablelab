@@ -1,12 +1,12 @@
 {
- "total": 2180,
+ "total": 2251,
  "byKind": {
-  "cash/6max/rfi": 5,
-  "cash/6max/vs_3bet": 15,
+  "cash/6max/rfi": 8,
+  "cash/6max/vs_3bet": 34,
   "cash/6max/vs_4bet": 15,
   "cash/6max/vs_allin_4bet": 7,
-  "cash/6max/vs_open": 15,
-  "cash/6max/vs_raise_call": 10,
+  "cash/6max/vs_open": 24,
+  "cash/6max/vs_raise_call": 16,
   "cash/8max/rfi": 14,
   "cash/8max/vs_3bet": 56,
   "cash/8max/vs_4bet": 56,
@@ -31,15 +31,15 @@
   "mtt/8max/vs_limp_raise": 3,
   "mtt/8max/vs_open": 305,
   "mtt/8max/vs_raise_call": 476,
-  "mtt/hu/rfi": 17,
-  "mtt/hu/vs_3bet": 8,
-  "mtt/hu/vs_4bet": 1,
+  "mtt/hu/rfi": 31,
+  "mtt/hu/vs_3bet": 15,
+  "mtt/hu/vs_4bet": 2,
   "mtt/hu/vs_allin_3bet": 9,
   "mtt/hu/vs_allin_4bet": 8,
   "mtt/hu/vs_allin_5bet": 1,
-  "mtt/hu/vs_limp": 13,
+  "mtt/hu/vs_limp": 18,
   "mtt/hu/vs_limp_raise": 6,
-  "mtt/hu/vs_open": 9
+  "mtt/hu/vs_open": 16
  },
  "charts": [
   {
@@ -965,6 +965,405 @@
    ],
    "raise_pct": 3.4,
    "call_pct": 3.9
+  },
+  {
+   "id": "cash_6max_100bb_BTN_vs_3bet_vs_BB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BTN",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "F-F-F-R-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:26.5",
+    "a:100"
+   ],
+   "raise_pct": 3.7,
+   "call_pct": 12.5
+  },
+  {
+   "id": "cash_6max_100bb_CO_vs_3bet_vs_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "CO",
+   "node": "vs_3bet",
+   "villains": [
+    "BTN"
+   ],
+   "sequence": "F-F-R-R-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:21",
+    "a:100"
+   ],
+   "raise_pct": 4.9,
+   "call_pct": 8.9
+  },
+  {
+   "id": "cash_6max_100bb_HJ_vs_3bet_vs_BB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "HJ",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "F-R-F-F-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:23",
+    "a:100"
+   ],
+   "raise_pct": 2.0,
+   "call_pct": 7.7
+  },
+  {
+   "id": "cash_6max_100bb_HJ_vs_3bet_vs_SB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "HJ",
+   "node": "vs_3bet",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "F-R-F-F-R-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:23",
+    "a:100"
+   ],
+   "raise_pct": 2.0,
+   "call_pct": 9.1
+  },
+  {
+   "id": "cash_6max_100bb_BTN_vs_3bet_vs_SB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BTN",
+   "node": "vs_3bet",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "F-F-F-R-R-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:24",
+    "a:100"
+   ],
+   "raise_pct": 5.0,
+   "call_pct": 11.6
+  },
+  {
+   "id": "cash_6max_100bb_HJ_vs_3bet_vs_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "HJ",
+   "node": "vs_3bet",
+   "villains": [
+    "BTN"
+   ],
+   "sequence": "F-R-F-R-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:21",
+    "a:100"
+   ],
+   "raise_pct": 3.8,
+   "call_pct": 8.9
+  },
+  {
+   "id": "cash_6max_100bb_HJ_vs_3bet_vs_CO_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "HJ",
+   "node": "vs_3bet",
+   "villains": [
+    "CO"
+   ],
+   "sequence": "F-R-R-F-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:21",
+    "a:100"
+   ],
+   "raise_pct": 4.7,
+   "call_pct": 5.5
+  },
+  {
+   "id": "cash_6max_100bb_CO_vs_3bet_vs_BB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "CO",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "F-F-R-F-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:23",
+    "a:100"
+   ],
+   "raise_pct": 2.4,
+   "call_pct": 9.2
+  },
+  {
+   "id": "cash_6max_100bb_CO_vs_3bet_vs_SB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "CO",
+   "node": "vs_3bet",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "F-F-R-F-R-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:23",
+    "a:100"
+   ],
+   "raise_pct": 2.6,
+   "call_pct": 10.3
+  },
+  {
+   "id": "cash_6max_100bb_LJ_vs_3bet_vs_BB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "LJ",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-F-F-F-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:23",
+    "a:100"
+   ],
+   "raise_pct": 1.7,
+   "call_pct": 6.6
+  },
+  {
+   "id": "cash_6max_100bb_LJ_vs_3bet_vs_SB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "LJ",
+   "node": "vs_3bet",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R-F-F-F-R-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:23",
+    "a:100"
+   ],
+   "raise_pct": 1.6,
+   "call_pct": 7.7
+  },
+  {
+   "id": "cash_6max_100bb_LJ_vs_3bet_vs_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "LJ",
+   "node": "vs_3bet",
+   "villains": [
+    "BTN"
+   ],
+   "sequence": "R-F-F-R-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:21",
+    "a:100"
+   ],
+   "raise_pct": 3.0,
+   "call_pct": 8.2
+  },
+  {
+   "id": "cash_6max_100bb_LJ_vs_3bet_vs_CO_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "LJ",
+   "node": "vs_3bet",
+   "villains": [
+    "CO"
+   ],
+   "sequence": "R-F-R-F-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:21",
+    "a:100"
+   ],
+   "raise_pct": 4.1,
+   "call_pct": 4.9
+  },
+  {
+   "id": "cash_6max_100bb_LJ_vs_3bet_vs_HJ_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "LJ",
+   "node": "vs_3bet",
+   "villains": [
+    "HJ"
+   ],
+   "sequence": "R-R-F-F-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:21",
+    "a:100"
+   ],
+   "raise_pct": 3.7,
+   "call_pct": 5.1
+  },
+  {
+   "id": "cash_6max_100bb_SB_vs_3bet_vs_BB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "SB",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "F-F-F-F-R-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:21",
+    "a:100"
+   ],
+   "raise_pct": 7.5,
+   "call_pct": 17.5
+  },
+  {
+   "id": "cash_6max_100bb_BTN_vs_3bet_vs_SB_n3",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BTN",
+   "node": "vs_3bet",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "F-F-F-R-R-F",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:25",
+    "a:100"
+   ],
+   "raise_pct": 4.0,
+   "call_pct": 13.6
+  },
+  {
+   "id": "cash_6max_100bb_HJ_vs_3bet_vs_BB_n3",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "HJ",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "F-R-F-F-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:24",
+    "a:100"
+   ],
+   "raise_pct": 1.7,
+   "call_pct": 8.4
+  },
+  {
+   "id": "cash_6max_100bb_CO_vs_3bet_vs_BB_n3",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "CO",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "F-F-R-F-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:24",
+    "a:100"
+   ],
+   "raise_pct": 2.5,
+   "call_pct": 9.2
+  },
+  {
+   "id": "cash_6max_100bb_LJ_vs_3bet_vs_BB_n3",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "LJ",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-F-F-F-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:24",
+    "a:100"
+   ],
+   "raise_pct": 1.6,
+   "call_pct": 6.5
   },
   {
    "id": "cash_8max_200bb_UTG1_vs_3bet_vs_HJ",
@@ -4083,6 +4482,60 @@
    "call_pct": 0.0
   },
   {
+   "id": "cash_6max_100bb_LJ_rfi_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "LJ",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:2.25",
+    "a:100"
+   ],
+   "raise_pct": 18.6,
+   "call_pct": 0.0
+  },
+  {
+   "id": "cash_6max_100bb_HJ_rfi_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "HJ",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "F",
+   "actions": [
+    "f",
+    "c",
+    "r:2.25",
+    "a:100"
+   ],
+   "raise_pct": 22.5,
+   "call_pct": 0.0
+  },
+  {
+   "id": "cash_6max_100bb_CO_rfi_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "CO",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "F-F",
+   "actions": [
+    "f",
+    "c",
+    "r:2.25",
+    "a:100"
+   ],
+   "raise_pct": 28.9,
+   "call_pct": 0.0
+  },
+  {
    "id": "cash_8max_200bb_UTG1_rfi",
    "game": "cash",
    "table": "8max",
@@ -5145,6 +5598,186 @@
    ],
    "raise_pct": 16.3,
    "call_pct": 31.8
+  },
+  {
+   "id": "cash_6max_100bb_BB_vs_open_vs_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "BTN"
+   ],
+   "sequence": "F-F-F-R-F",
+   "actions": [
+    "f",
+    "c",
+    "r:13",
+    "a:100"
+   ],
+   "raise_pct": 11.8,
+   "call_pct": 43.8
+  },
+  {
+   "id": "cash_6max_100bb_BB_vs_open_vs_HJ_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "HJ"
+   ],
+   "sequence": "F-R-F-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r:11.5",
+    "a:100"
+   ],
+   "raise_pct": 6.2,
+   "call_pct": 37.8
+  },
+  {
+   "id": "cash_6max_100bb_SB_vs_open_vs_HJ_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "SB",
+   "node": "vs_open",
+   "villains": [
+    "HJ"
+   ],
+   "sequence": "F-R-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r:10.5",
+    "a:100"
+   ],
+   "raise_pct": 7.2,
+   "call_pct": 8.9
+  },
+  {
+   "id": "cash_6max_100bb_SB_vs_open_vs_CO_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "SB",
+   "node": "vs_open",
+   "villains": [
+    "CO"
+   ],
+   "sequence": "F-F-R-F",
+   "actions": [
+    "f",
+    "c",
+    "r:10.5",
+    "a:100"
+   ],
+   "raise_pct": 8.9,
+   "call_pct": 8.2
+  },
+  {
+   "id": "cash_6max_100bb_BB_vs_open_vs_CO_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "CO"
+   ],
+   "sequence": "F-F-R-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r:11.5",
+    "a:100"
+   ],
+   "raise_pct": 7.9,
+   "call_pct": 45.4
+  },
+  {
+   "id": "cash_6max_100bb_SB_vs_open_vs_LJ_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "SB",
+   "node": "vs_open",
+   "villains": [
+    "LJ"
+   ],
+   "sequence": "R-F-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r:10.5",
+    "a:100"
+   ],
+   "raise_pct": 6.0,
+   "call_pct": 8.3
+  },
+  {
+   "id": "cash_6max_100bb_BB_vs_open_vs_LJ_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "LJ"
+   ],
+   "sequence": "R-F-F-F-F",
+   "actions": [
+    "f",
+    "c",
+    "r:11.5",
+    "a:100"
+   ],
+   "raise_pct": 5.3,
+   "call_pct": 32.7
+  },
+  {
+   "id": "cash_6max_100bb_BB_vs_open_vs_SB_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "F-F-F-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r:9",
+    "a:100"
+   ],
+   "raise_pct": 17.4,
+   "call_pct": 46.2
+  },
+  {
+   "id": "cash_6max_100bb_SB_vs_open_vs_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "SB",
+   "node": "vs_open",
+   "villains": [
+    "BTN"
+   ],
+   "sequence": "F-F-F-R",
+   "actions": [
+    "f",
+    "c",
+    "r:11.5",
+    "a:100"
+   ],
+   "raise_pct": 12.8,
+   "call_pct": 6.4
   },
   {
    "id": "cash_8max_200bb_BTN_vs_open_vs_CO",
@@ -7029,6 +7662,132 @@
    "call_pct": 0.0
   },
   {
+   "id": "cash_6max_100bb_BB_vs_raise_call_vs_HJ_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BB",
+   "node": "vs_raise_call",
+   "villains": [
+    "HJ",
+    "BTN"
+   ],
+   "sequence": "F-R-F-C-F",
+   "actions": [
+    "f",
+    "c",
+    "r:13",
+    "a:100"
+   ],
+   "raise_pct": 7.8,
+   "call_pct": 25.4
+  },
+  {
+   "id": "cash_6max_100bb_SB_vs_raise_call_vs_HJ_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "SB",
+   "node": "vs_raise_call",
+   "villains": [
+    "HJ",
+    "BTN"
+   ],
+   "sequence": "F-R-F-C",
+   "actions": [
+    "f",
+    "c",
+    "r:13",
+    "a:100"
+   ],
+   "raise_pct": 8.0,
+   "call_pct": 0.0
+  },
+  {
+   "id": "cash_6max_100bb_SB_vs_raise_call_vs_LJ_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "SB",
+   "node": "vs_raise_call",
+   "villains": [
+    "LJ",
+    "BTN"
+   ],
+   "sequence": "R-F-F-C",
+   "actions": [
+    "f",
+    "c",
+    "r:13",
+    "a:100"
+   ],
+   "raise_pct": 7.3,
+   "call_pct": 0.0
+  },
+  {
+   "id": "cash_6max_100bb_BB_vs_raise_call_vs_LJ_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BB",
+   "node": "vs_raise_call",
+   "villains": [
+    "LJ",
+    "BTN"
+   ],
+   "sequence": "R-F-F-C-F",
+   "actions": [
+    "f",
+    "c",
+    "r:13",
+    "a:100"
+   ],
+   "raise_pct": 6.9,
+   "call_pct": 24.6
+  },
+  {
+   "id": "cash_6max_100bb_BB_vs_raise_call_vs_CO_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "BB",
+   "node": "vs_raise_call",
+   "villains": [
+    "CO",
+    "BTN"
+   ],
+   "sequence": "F-F-R-C-F",
+   "actions": [
+    "f",
+    "c",
+    "r:13",
+    "a:100"
+   ],
+   "raise_pct": 9.0,
+   "call_pct": 26.9
+  },
+  {
+   "id": "cash_6max_100bb_SB_vs_raise_call_vs_CO_BTN_n2",
+   "game": "cash",
+   "table": "6max",
+   "bbs": 100,
+   "hero": "SB",
+   "node": "vs_raise_call",
+   "villains": [
+    "CO",
+    "BTN"
+   ],
+   "sequence": "F-F-R-C",
+   "actions": [
+    "f",
+    "c",
+    "r:13",
+    "a:100"
+   ],
+   "raise_pct": 9.6,
+   "call_pct": 0.0
+  },
+  {
    "id": "cash_6max_100bb_BB_vs_raise_call_vs_BTN_SB",
    "game": "cash",
    "table": "6max",
@@ -8872,6 +9631,28 @@
     "c",
     "r",
     "r:0",
+    "a:19.995",
+    "a:20"
+   ],
+   "raise_pct": 14.0,
+   "call_pct": 25.8
+  },
+  {
+   "id": "mtt_hu_20bb_SB_vs_3bet_vs_BB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 20,
+   "hero": "SB",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:0",
     "a:20"
    ],
    "raise_pct": 23.3,
@@ -9392,6 +10173,28 @@
   },
   {
    "id": "mtt_hu_25bb_SB_vs_3bet_vs_BB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 25,
+   "hero": "SB",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-R",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "r",
+    "a:24.995",
+    "a:25"
+   ],
+   "raise_pct": 10.8,
+   "call_pct": 28.9
+  },
+  {
+   "id": "mtt_hu_25bb_SB_vs_3bet_vs_BB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 25,
@@ -9996,6 +10799,28 @@
    "actions": [
     "f",
     "c",
+    "r:0",
+    "r",
+    "a:29.995",
+    "a:30"
+   ],
+   "raise_pct": 12.1,
+   "call_pct": 23.6
+  },
+  {
+   "id": "mtt_hu_30bb_SB_vs_3bet_vs_BB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 30,
+   "hero": "SB",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-R",
+   "actions": [
+    "f",
+    "c",
     "r",
     "r:0",
     "a:30"
@@ -10005,6 +10830,28 @@
   },
   {
    "id": "mtt_hu_35bb_SB_vs_3bet_vs_BB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 35,
+   "hero": "SB",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-R",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "r",
+    "a:34.995",
+    "a:35"
+   ],
+   "raise_pct": 9.9,
+   "call_pct": 28.5
+  },
+  {
+   "id": "mtt_hu_35bb_SB_vs_3bet_vs_BB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 35,
@@ -10592,6 +11439,28 @@
     "c",
     "r:0",
     "r",
+    "a:39.995",
+    "a:40"
+   ],
+   "raise_pct": 9.2,
+   "call_pct": 25.5
+  },
+  {
+   "id": "mtt_hu_40bb_SB_vs_3bet_vs_BB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 40,
+   "hero": "SB",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-R",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "r",
     "a:40"
    ],
    "raise_pct": 12.6,
@@ -10599,6 +11468,27 @@
   },
   {
    "id": "mtt_hu_50bb_SB_vs_3bet_vs_BB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 50,
+   "hero": "SB",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-R",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "r",
+    "a:49.995"
+   ],
+   "raise_pct": 8.9,
+   "call_pct": 25.6
+  },
+  {
+   "id": "mtt_hu_50bb_SB_vs_3bet_vs_BB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 50,
@@ -11768,6 +12658,27 @@
   },
   {
    "id": "mtt_hu_60bb_SB_vs_3bet_vs_BB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 60,
+   "hero": "SB",
+   "node": "vs_3bet",
+   "villains": [
+    "BB"
+   ],
+   "sequence": "R-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:22.5",
+    "a:59.995"
+   ],
+   "raise_pct": 7.7,
+   "call_pct": 28.9
+  },
+  {
+   "id": "mtt_hu_60bb_SB_vs_3bet_vs_BB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 60,
@@ -13815,6 +14726,27 @@
   },
   {
    "id": "mtt_hu_60bb_BB_vs_4bet_vs_SB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 60,
+   "hero": "BB",
+   "node": "vs_4bet",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R-R-R",
+   "actions": [
+    "f",
+    "c",
+    "r",
+    "r:0",
+    "a:59.995"
+   ],
+   "raise_pct": 9.0,
+   "call_pct": 9.0
+  },
+  {
+   "id": "mtt_hu_60bb_BB_vs_4bet_vs_SB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 60,
@@ -24746,6 +25678,24 @@
     "r:0",
     "a:4"
    ],
+   "raise_pct": 77.1,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_4bb_SB_rfi_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 4,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "a:4"
+   ],
    "raise_pct": 85.7,
    "call_pct": 0.0
   },
@@ -24877,6 +25827,24 @@
   },
   {
    "id": "mtt_hu_5bb_SB_rfi",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 5,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "a:5"
+   ],
+   "raise_pct": 75.3,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_5bb_SB_rfi_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 5,
@@ -25034,6 +26002,24 @@
     "r:0",
     "a:6"
    ],
+   "raise_pct": 72.9,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_6bb_SB_rfi_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 6,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "a:6"
+   ],
    "raise_pct": 81.0,
    "call_pct": 0.0
   },
@@ -25178,6 +26164,24 @@
     "r:0",
     "a:7"
    ],
+   "raise_pct": 69.4,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_7bb_SB_rfi_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 7,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "a:7"
+   ],
    "raise_pct": 77.2,
    "call_pct": 0.0
   },
@@ -25309,6 +26313,24 @@
   },
   {
    "id": "mtt_hu_8bb_SB_rfi",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 8,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "a:8"
+   ],
+   "raise_pct": 50.2,
+   "call_pct": 29.9
+  },
+  {
+   "id": "mtt_hu_8bb_SB_rfi_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 8,
@@ -25895,6 +26917,24 @@
    "actions": [
     "f",
     "c",
+    "r:2",
+    "a:15"
+   ],
+   "raise_pct": 20.4,
+   "call_pct": 78.6
+  },
+  {
+   "id": "mtt_hu_15bb_SB_rfi_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 15,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
     "r:0",
     "a:15"
    ],
@@ -25903,6 +26943,24 @@
   },
   {
    "id": "mtt_hu_17bb_SB_rfi",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 17,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:2",
+    "a:17"
+   ],
+   "raise_pct": 27.1,
+   "call_pct": 72.0
+  },
+  {
+   "id": "mtt_hu_17bb_SB_rfi_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 17,
@@ -26057,6 +27115,24 @@
    "actions": [
     "f",
     "c",
+    "r:2",
+    "a:20"
+   ],
+   "raise_pct": 29.2,
+   "call_pct": 69.5
+  },
+  {
+   "id": "mtt_hu_20bb_SB_rfi_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 20,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
     "r:2.5",
     "a:20"
    ],
@@ -26191,6 +27267,24 @@
   },
   {
    "id": "mtt_hu_25bb_SB_rfi",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 25,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:2.2",
+    "a:25"
+   ],
+   "raise_pct": 31.0,
+   "call_pct": 68.0
+  },
+  {
+   "id": "mtt_hu_25bb_SB_rfi_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 25,
@@ -26345,6 +27439,24 @@
    "actions": [
     "f",
     "c",
+    "r:2.2",
+    "a:30"
+   ],
+   "raise_pct": 79.8,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_30bb_SB_rfi_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 30,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
     "r:3",
     "a:30"
    ],
@@ -26353,6 +27465,24 @@
   },
   {
    "id": "mtt_hu_35bb_SB_rfi",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 35,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:2.2",
+    "a:35"
+   ],
+   "raise_pct": 81.9,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_35bb_SB_rfi_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 35,
@@ -26507,6 +27637,24 @@
    "actions": [
     "f",
     "c",
+    "r:2.2",
+    "a:40"
+   ],
+   "raise_pct": 82.3,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_40bb_SB_rfi_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 40,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
     "r:3",
     "a:40"
    ],
@@ -26515,6 +27663,24 @@
   },
   {
    "id": "mtt_hu_50bb_SB_rfi",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 50,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:2.5",
+    "a:49.995"
+   ],
+   "raise_pct": 81.3,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_50bb_SB_rfi_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 50,
@@ -26785,6 +27951,24 @@
   },
   {
    "id": "mtt_hu_60bb_SB_rfi",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 60,
+   "hero": "SB",
+   "node": "rfi",
+   "villains": [],
+   "sequence": "",
+   "actions": [
+    "f",
+    "c",
+    "r:2.5",
+    "a:59.995"
+   ],
+   "raise_pct": 82.3,
+   "call_pct": 0.0
+  },
+  {
+   "id": "mtt_hu_60bb_SB_rfi_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 60,
@@ -27190,6 +28374,26 @@
     "r:0",
     "a:8"
    ],
+   "raise_pct": 52.9,
+   "call_pct": 47.1
+  },
+  {
+   "id": "mtt_hu_8bb_BB_vs_limp_vs_SB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 8,
+   "hero": "BB",
+   "node": "vs_limp",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "C",
+   "actions": [
+    "f",
+    "c",
+    "r:0",
+    "a:8"
+   ],
    "raise_pct": 63.1,
    "call_pct": 36.9
   },
@@ -27350,11 +28554,51 @@
     "r:3.5",
     "a:15"
    ],
+   "raise_pct": 41.0,
+   "call_pct": 59.0
+  },
+  {
+   "id": "mtt_hu_15bb_BB_vs_limp_vs_SB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 15,
+   "hero": "BB",
+   "node": "vs_limp",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "C",
+   "actions": [
+    "f",
+    "c",
+    "r:3.5",
+    "a:15"
+   ],
    "raise_pct": 47.2,
    "call_pct": 52.8
   },
   {
    "id": "mtt_hu_17bb_BB_vs_limp_vs_SB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 17,
+   "hero": "BB",
+   "node": "vs_limp",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "C",
+   "actions": [
+    "f",
+    "c",
+    "r:3.5",
+    "a:17"
+   ],
+   "raise_pct": 39.8,
+   "call_pct": 60.2
+  },
+  {
+   "id": "mtt_hu_17bb_BB_vs_limp_vs_SB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 17,
@@ -27407,6 +28651,26 @@
    "actions": [
     "f",
     "c",
+    "r:3.5",
+    "a:20"
+   ],
+   "raise_pct": 39.0,
+   "call_pct": 61.0
+  },
+  {
+   "id": "mtt_hu_20bb_BB_vs_limp_vs_SB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 20,
+   "hero": "BB",
+   "node": "vs_limp",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "C",
+   "actions": [
+    "f",
+    "c",
     "r:4",
     "a:20"
    ],
@@ -27435,6 +28699,26 @@
   },
   {
    "id": "mtt_hu_25bb_BB_vs_limp_vs_SB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 25,
+   "hero": "BB",
+   "node": "vs_limp",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "C",
+   "actions": [
+    "f",
+    "c",
+    "r:3.5",
+    "a:25"
+   ],
+   "raise_pct": 38.3,
+   "call_pct": 61.7
+  },
+  {
+   "id": "mtt_hu_25bb_BB_vs_limp_vs_SB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 25,
@@ -30072,6 +31356,26 @@
    "actions": [
     "f",
     "c",
+    "r:6",
+    "a:20"
+   ],
+   "raise_pct": 28.0,
+   "call_pct": 56.5
+  },
+  {
+   "id": "mtt_hu_20bb_BB_vs_open_vs_SB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 20,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R",
+   "actions": [
+    "f",
+    "c",
     "r:7.5",
     "a:20"
    ],
@@ -30640,6 +31944,26 @@
   },
   {
    "id": "mtt_hu_25bb_BB_vs_open_vs_SB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 25,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R",
+   "actions": [
+    "f",
+    "c",
+    "r:7.04",
+    "a:25"
+   ],
+   "raise_pct": 25.4,
+   "call_pct": 53.5
+  },
+  {
+   "id": "mtt_hu_25bb_BB_vs_open_vs_SB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 25,
@@ -31232,6 +32556,26 @@
    "actions": [
     "f",
     "c",
+    "r:7.7",
+    "a:30"
+   ],
+   "raise_pct": 31.2,
+   "call_pct": 52.2
+  },
+  {
+   "id": "mtt_hu_30bb_BB_vs_open_vs_SB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 30,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R",
+   "actions": [
+    "f",
+    "c",
     "r:10.5",
     "a:30"
    ],
@@ -31240,6 +32584,26 @@
   },
   {
    "id": "mtt_hu_35bb_BB_vs_open_vs_SB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 35,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R",
+   "actions": [
+    "f",
+    "c",
+    "r:7.7",
+    "a:35"
+   ],
+   "raise_pct": 28.7,
+   "call_pct": 56.1
+  },
+  {
+   "id": "mtt_hu_35bb_BB_vs_open_vs_SB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 35,
@@ -31832,6 +33196,26 @@
    "actions": [
     "f",
     "c",
+    "r:8.8",
+    "a:40"
+   ],
+   "raise_pct": 26.2,
+   "call_pct": 59.8
+  },
+  {
+   "id": "mtt_hu_40bb_BB_vs_open_vs_SB_n2",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 40,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R",
+   "actions": [
+    "f",
+    "c",
     "r:12",
     "a:40"
    ],
@@ -31840,6 +33224,26 @@
   },
   {
    "id": "mtt_hu_50bb_BB_vs_open_vs_SB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 50,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R",
+   "actions": [
+    "f",
+    "c",
+    "r:10",
+    "a:49.995"
+   ],
+   "raise_pct": 24.7,
+   "call_pct": 52.9
+  },
+  {
+   "id": "mtt_hu_50bb_BB_vs_open_vs_SB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 50,
@@ -32980,6 +34384,26 @@
   },
   {
    "id": "mtt_hu_60bb_BB_vs_open_vs_SB",
+   "game": "mtt",
+   "table": "hu",
+   "bbs": 60,
+   "hero": "BB",
+   "node": "vs_open",
+   "villains": [
+    "SB"
+   ],
+   "sequence": "R",
+   "actions": [
+    "f",
+    "c",
+    "r:10",
+    "a:59.995"
+   ],
+   "raise_pct": 23.2,
+   "call_pct": 54.2
+  },
+  {
+   "id": "mtt_hu_60bb_BB_vs_open_vs_SB_n2",
    "game": "mtt",
    "table": "hu",
    "bbs": 60,

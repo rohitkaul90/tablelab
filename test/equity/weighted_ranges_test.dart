@@ -14,10 +14,35 @@ void main() {
 
   group('parsing', () {
     test('loads the full bundled slice', () {
-      expect(lib.charts.length, 1073);
-      // 8-max only in the asset; both games present.
-      expect(lib.charts.every((c) => c.table == '8max'), isTrue);
+      expect(lib.charts.length, 1190);
+      expect(lib.skippedCharts, 0);
+      // 8-max + heads-up in the asset; both games present.
+      expect(lib.charts.map((c) => c.table).toSet(), {'8max', 'hu'});
       expect(lib.charts.map((c) => c.game).toSet(), {'cash', 'mtt'});
+    });
+
+    test('a malformed chart is skipped, not fatal', () {
+      final broken = PcRangeLibrary.fromJson({
+        'charts': [
+          {'id': 'bad'}, // missing every required field
+          {
+            'id': 'ok',
+            'game': 'cash',
+            'table': '8max',
+            'bbs': 100,
+            'hero': 'BTN',
+            'node': 'rfi',
+            'villains': [],
+            'sequence': '',
+            'actions': ['f', 'r:3'],
+            'hands': {
+              'AA': [0.0, 1.0]
+            },
+          },
+        ]
+      });
+      expect(broken.skippedCharts, 1);
+      expect(broken.charts.single.id, 'ok');
     });
 
     test('action ids decode', () {
@@ -66,13 +91,24 @@ void main() {
     });
 
     test('unreachable hands are null-safe zeros', () {
-      // An MTT all-in response chart excludes hands hero never holds there.
-      final ch = lib.charts.firstWhere(
-          (c) => c.node.startsWith('vs_allin') && c.hands.values.contains(null));
-      final nullHand =
-          ch.hands.entries.firstWhere((e) => e.value == null).key;
-      expect(ch.continueFreq(nullHand), 0);
-      expect(ch.foldFreq(nullHand), 0);
+      // The emitter strips unreachable rows entirely — an absent hand must
+      // behave as an all-zero row. Every vs_3bet chart excludes hands hero
+      // never opened, so find one missing a trash hand.
+      final ch = lib.charts.firstWhere((c) =>
+          c.node == 'vs_3bet' && !c.hands.containsKey('72o'));
+      expect(ch.continueFreq('72o'), 0);
+      expect(ch.foldFreq('72o'), 0);
+      expect(ch.freqWhere('72o', (_) => true), 0);
+    });
+
+    test('excludeHands rows no longer ship as fake 100% folds', () {
+      // A BTN opener facing a 3-bet never holds 72o; before the excludeHands
+      // fix these shipped as genuine fold rows inflating fold mass.
+      final ch = lib.find(
+          game: 'cash', bbs: 100, hero: 'BTN', node: 'vs_3bet', villains: ['SB']);
+      expect(ch, isNotNull);
+      expect(ch!.hands.containsKey('72o'), isFalse);
+      expect(ch.hands.containsKey('AA'), isTrue);
     });
   });
 
@@ -147,6 +183,87 @@ void main() {
       final combos =
           hands.fold<int>(0, (s, h) => s + combosOfHand(h)) / 1326 * 100;
       expect(combos, inInclusiveRange(30, 50));
+    });
+
+    test('sequence variants disambiguate on facingAllIn', () {
+      // The dataset holds BOTH "facing a sized 3-bet" and "facing a 3-bet jam"
+      // at mtt 30bb UTG vs UTG1. Before the tie-break fix the jam chart was
+      // permanently shadowed.
+      WeightedChart? get(bool? jam) => lib.find(
+          game: 'mtt',
+          bbs: 30,
+          hero: 'UTG',
+          node: 'vs_3bet',
+          villains: ['UTG1'],
+          facingAllIn: jam);
+      final sized = get(false)!;
+      final jam = get(true)!;
+      expect(sized.id, isNot(jam.id));
+      expect(jam.actions.where((a) => pcActionKind(a) == PcActionKind.raise),
+          isEmpty);
+      expect(sized.actions.where((a) => pcActionKind(a) == PcActionKind.raise),
+          isNotEmpty);
+      expect(get(null)!.id, sized.id); // default = sized variant
+    });
+
+    test('9-max UTG+1 defending vs UTG open resolves (collision shift)', () {
+      final ch = resolvePcChart(lib,
+          tournament: false,
+          tableSeats: 9,
+          effectiveBb: 100,
+          heroLabel: 'UTG+1',
+          node: PcNode.vsOpen,
+          openerLabel: 'UTG');
+      expect(ch, isNotNull);
+      expect(ch!.hero, 'UTG1'); // hero shifted later, opener keeps UTG
+      expect(ch.villains, ['UTG']);
+    });
+
+    test('squeeze caller collision shifts the caller', () {
+      final ch = resolvePcChart(lib,
+          tournament: false,
+          tableSeats: 9,
+          effectiveBb: 100,
+          heroLabel: 'BTN',
+          node: PcNode.vsRaiseCall,
+          openerLabel: 'UTG',
+          callerLabel: 'UTG+1');
+      expect(ch, isNotNull);
+      expect(ch!.villains, ['UTG', 'UTG1']);
+    });
+
+    test('straddle opener maps early, not to a blind', () {
+      final ch = resolvePcChart(lib,
+          tournament: false,
+          tableSeats: 9,
+          effectiveBb: 100,
+          heroLabel: 'BB',
+          node: PcNode.vsOpen,
+          openerLabel: 'STR');
+      expect(ch, isNotNull);
+      expect(ch!.villains, ['UTG']); // early-position aggressor model
+    });
+
+    test('heads-up routes to HU charts; 3-max returns null', () {
+      final hu = resolvePcChart(lib,
+          tournament: false,
+          tableSeats: 2,
+          effectiveBb: 100,
+          heroLabel: 'BTN',
+          node: PcNode.rfi);
+      expect(hu, isNotNull);
+      expect(hu!.table, 'hu');
+      // HU opens are far wider than the full-ring ~40% chart.
+      final open = hu.comboShare((a) => pcActionKind(a) != PcActionKind.fold);
+      expect(open, greaterThan(0.6));
+
+      final threeMax = resolvePcChart(lib,
+          tournament: false,
+          tableSeats: 3,
+          effectiveBb: 100,
+          heroLabel: 'BTN',
+          node: PcNode.rfi);
+      expect(threeMax, isNull);
     });
 
     test('squeeze node resolves with raiser + caller', () {
