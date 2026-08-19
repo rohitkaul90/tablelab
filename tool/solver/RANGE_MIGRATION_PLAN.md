@@ -70,6 +70,22 @@ re-solving so ranges and tree geometry stay consistent; `heroBetSize`/
 
 ## Phase A — ingestion & plumbing (no solver cost)
 
+**Status 2026-08-19:** steps 1–3 DONE (extraction via API; normalizer;
+app asset `assets/pc_ranges.json` — 1,073 charts: cash 8max 100+200bb, mtt
+8max 80/50/30/20/12bb; Dart model `lib/equity/weighted_ranges.dart` +
+resolution `lib/equity/pc_chart_keys.dart`, 13 unit tests incl. real-data
+value checks and the 6-max-UTG→LJ seat-mapping fix; analyzer + full suite
+green).
+
+**Consumer-cutover sequencing decision:** consumers that must stay CONSISTENT
+with the solved library (villain_range's equity cross-check + GTO-frequency
+FACT, the Explorer preflop trail, freq_grid scenario ranges) cut over
+TOGETHER WITH Phase B's re-solved library — otherwise coaching FACTs would
+quote PC ranges while the library cells/packs were solved with the old ones.
+Standalone consumers (equity-calculator presets, quick-hand synthesis
+classifier) can cut over before Phase B in their own PR; synthesis's
+seat-invariant sweep test is the guard.
+
 1. **Extractor** (`tool/solver/extract_pc_charts.*` — browser-driven): scrape
    Cash 8-max (both depths, all actions incl. raise-call) + MTT 8-max at the
    depths our regimes need first (100/50/30/20/12), then the rest of the
