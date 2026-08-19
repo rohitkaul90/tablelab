@@ -19,6 +19,11 @@ class PlayerRangeEditor extends StatefulWidget {
   final void Function(String position, Set<int> cells, bool isExactHand, int? card1, int? card2) onSave;
   final VoidCallback? onDelete;
 
+  /// Preset list to offer; null falls back to the legacy [gtoPresets] (used
+  /// only while the PC weighted library is still loading — the caller passes
+  /// the PC-derived presets once available).
+  final List<GtoPreset>? presets;
+
   const PlayerRangeEditor({
     super.key,
     required this.position,
@@ -30,6 +35,7 @@ class PlayerRangeEditor extends StatefulWidget {
     this.card2,
     this.excludedCards = const {},
     this.onDelete,
+    this.presets,
   });
 
   @override
@@ -54,10 +60,19 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
     _card2 = widget.card2;
   }
 
-  Map<String, List<GtoPreset>> get _presetsByCategory => gtoPresetsByCategory;
+  List<GtoPreset> get _presets => widget.presets ?? gtoPresets;
+
+  Map<String, List<GtoPreset>> get _presetsByCategory {
+    if (widget.presets == null) return gtoPresetsByCategory;
+    final out = <String, List<GtoPreset>>{};
+    for (final p in widget.presets!) {
+      out.putIfAbsent(p.category, () => []).add(p);
+    }
+    return out;
+  }
 
   void _applyPreset(String key) {
-    final preset = gtoPresets.firstWhere((p) => p.key == key);
+    final preset = _presets.firstWhere((p) => p.key == key);
     setState(() {
       _selectedPreset = key;
       _cells = handSetToCells(preset.hands);

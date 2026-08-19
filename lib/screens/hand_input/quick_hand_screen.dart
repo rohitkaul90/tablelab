@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/hand_model.dart';
+import '../../providers/pc_ranges_provider.dart';
 import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/helpers.dart';
@@ -73,6 +74,9 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
   @override
   void initState() {
     super.initState();
+    // Warm the PC range library so the save-time synthesis classifies on the
+    // weighted charts (it falls back to the legacy charts if still loading).
+    ref.read(pcRangeLibraryProvider);
     _selectedSessionId = widget.prefilledSessionId;
     _isTournament = widget.isTournamentSession;
     final prefill = widget.prefilledStakes?.trim();
@@ -352,7 +356,8 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
         tournamentStage: _isTournament ? _tournamentStage : null,
         ante: _isTournament ? _parseBlind(_anteCtrl.text) : null,
       );
-      final synth = synthesizeQuickHand(input);
+      final synth = synthesizeQuickHand(input,
+          pcRanges: ref.read(pcRangeLibraryProvider).valueOrNull);
       await ref.read(handServiceProvider).saveHand(
             tableSetup: synth.tableSetup,
             players: synth.players,
