@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import '../equity/chart_keys.dart';
+import '../equity/pc_chart_keys.dart';
+import '../equity/weighted_ranges.dart';
 import '../models/hand_model.dart';
 
 /// What hero was facing at the decision point.
@@ -127,6 +129,18 @@ String quickHandNotation(List<String> cards) {
 /// [openerBucketForLabel], which buckets a known opener's actual position.
 String _assumedOpenerBucket(String pc) => pc == 'ip' ? 'early' : 'late';
 
+/// Representative opener LABEL for the assumed unknown opener, for the PC
+/// chart lookup (mirrors [_assumedOpenerBucket]: an in-position hero is
+/// assumed to face an early open, a blind hero a late one). Null when the
+/// table has no seat matching the assumption — the caller falls back to the
+/// legacy bucketed chart.
+String? _assumedOpenerLabel(String pc, int numSeats) {
+  if (pc == 'ip') {
+    return numSeats >= 4 ? 'UTG' : null; // 2-3 handed: no early seat exists
+  }
+  return numSeats >= 2 ? 'BTN' : null; // blinds assume a late open
+}
+
 // ── preflop story ─────────────────────────────────────────────────────────────
 
 /// The synthesized route to the decision street: who drove the pot and how.
@@ -224,7 +238,8 @@ QuickPotType _inferPotType(
 /// The synthesized actions are plausible scaffolding, never ground truth —
 /// the [notes] context line states what was assumed and instructs the AI to
 /// evaluate only the recorded decision.
-QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
+QuickHandSynthesis synthesizeQuickHand(QuickHandInput input,
+    {PcRangeLibrary? pcRanges}) {
   final labels = TableSetup.positionLabels(input.numSeats);
   final heroSeat = labels.indexOf(input.positionLabel);
   if (heroSeat < 0) {
@@ -249,9 +264,59 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
   final bucket = _assumedOpenerBucket(pc);
   final trn = input.isTournament;
 
-  final heroCanOpen = inChart(rfiKey(input.positionLabel, trn), hand);
-  final heroWould3Bet = inChart(threeBetKey(pc, bucket, trn), hand) ||
-      inChart(fourBetKey(trn), hand);
+  // Hand classification: PC weighted charts when the library is loaded
+  // (threshold: takes the action at least half the time), with a PER-TEST
+  // fallback to the legacy binary charts whenever the PC lookup can't resolve
+  // a chart (short-handed tables, exotic labels, load failure). The synthesis
+  // invariant is unchanged either way: a hand in no chart is never the
+  // synthesized aggressor.
+  bool? pcCanOpen, pcWould3Bet, pcWould4Bet, pcCalls3Bet;
+  if (pcRanges != null) {
+    final bb = input.effStackBb ?? 100;
+    final rfiCh = resolvePcChart(pcRanges,
+        tournament: trn,
+        tableSeats: input.numSeats,
+        effectiveBb: bb,
+        heroLabel: input.positionLabel,
+        node: PcNode.rfi);
+    if (rfiCh != null) pcCanOpen = rfiCh.raiseFreq(hand) >= kPcActionThreshold;
+    final openerLabel = _assumedOpenerLabel(pc, input.numSeats);
+    if (openerLabel != null) {
+      // A hero labelled like the assumed opener (e.g. app 'UTG' vs assumed
+      // 'UTG') is handled by resolvePcChart's collision shift, so no equality
+      // guard here — it would silently mix PC and legacy charts in one hand.
+      final defCh = resolvePcChart(pcRanges,
+          tournament: trn,
+          tableSeats: input.numSeats,
+          effectiveBb: bb,
+          heroLabel: input.positionLabel,
+          node: PcNode.vsOpen,
+          openerLabel: openerLabel);
+      if (defCh != null) pcWould3Bet = defCh.raiseFreq(hand) >= kPcActionThreshold;
+    }
+    // The assumed 3-bettor is a blind for an in-position opener (mirrors the
+    // synthesized villain seating), the BB for an SB opener. Explicit so the
+    // variant choice never rides on find()'s id tie-break.
+    final threeBettor = pc == 'bb' ? 'SB' : 'BB';
+    final vs3Ch = resolvePcChart(pcRanges,
+        tournament: trn,
+        tableSeats: input.numSeats,
+        effectiveBb: bb,
+        heroLabel: input.positionLabel,
+        node: PcNode.vs3bet,
+        openerLabel: threeBettor);
+    if (vs3Ch != null) {
+      pcWould4Bet = vs3Ch.raiseFreq(hand) >= kPcActionThreshold;
+      pcCalls3Bet = vs3Ch.callFreq(hand) >= kPcActionThreshold;
+    }
+  }
+
+  final heroCanOpen =
+      pcCanOpen ?? inChart(rfiKey(input.positionLabel, trn), hand);
+  final would4Bet = pcWould4Bet ?? inChart(fourBetKey(trn), hand);
+  final heroWould3Bet =
+      (pcWould3Bet ?? inChart(threeBetKey(pc, bucket, trn), hand)) || would4Bet;
+  final calls3Bet = pcCalls3Bet ?? inChart(call3BetKey(pc, trn), hand);
 
   // ── story + villain seat ────────────────────────────────────────────────
   final nIntermediate =
@@ -262,9 +327,8 @@ QuickHandSynthesis synthesizeQuickHand(QuickHandInput input) {
           ? _inferPotType(input.potBeforeBb, nIntermediate, heroWould3Bet)
           : input.potType);
 
-  var story = _buildStory(resolvedType, heroCanOpen, heroWould3Bet,
-      inChart(fourBetKey(trn), hand),
-      inChart(call3BetKey(pc, trn), hand), pc);
+  var story = _buildStory(
+      resolvedType, heroCanOpen, heroWould3Bet, would4Bet, calls3Bet, pc);
 
   // The villain's seat must make the story's order of action possible.
   final (villainSeat, limpCall) = _villainSeat(

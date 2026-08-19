@@ -22,6 +22,12 @@ import 'dart:convert';
 ///   `r`          raise with no size recorded (rare legacy label)
 enum PcActionKind { fold, call, raise, allIn }
 
+/// The single binarization policy for weighted→binary views: a hand is "in"
+/// a binary range when it takes the relevant action at least this often.
+/// Referenced by binaryHands, pcRfiHands, the equity presets, and the
+/// quick-hand synthesis classifier — tune it HERE, nowhere else.
+const double kPcActionThreshold = 0.5;
+
 PcActionKind pcActionKind(String actionId) {
   switch (actionId.split(':').first) {
     case 'f':
@@ -124,7 +130,7 @@ class WeightedChart {
   /// hands whose [pred]-frequency is at least [threshold].
   Set<String> binaryHands(
     double Function(String hand) freqOf, {
-    double threshold = 0.5,
+    double threshold = kPcActionThreshold,
   }) {
     final out = <String>{};
     for (final h in hands.keys) {

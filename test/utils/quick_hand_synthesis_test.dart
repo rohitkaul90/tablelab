@@ -1,4 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/equity/chart_keys.dart';
+import 'package:tablelab/equity/pc_chart_keys.dart';
+import 'package:tablelab/equity/weighted_ranges.dart';
 import 'package:tablelab/models/hand_filter.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/utils/quick_hand_synthesis.dart';
@@ -420,7 +425,15 @@ void main() {
   });
 
   group('replayer seat invariant', () {
-    test('every action seat belongs to a player, across the full matrix', () {
+    late final PcRangeLibrary pcLib;
+
+    setUpAll(() {
+      pcLib = PcRangeLibrary.fromJsonString(
+          File('assets/pc_ranges.json').readAsStringSync());
+      expect(pcLib.skippedCharts, 0);
+    });
+
+    void runSeatInvariantSweep(PcRangeLibrary? pcRanges) {
       for (final cards in [
         ['As', 'Kd'], // chart hand
         ['7c', '2d'], // junk hand — exercises the fallback branches
@@ -431,18 +444,20 @@ void main() {
               for (final facing in QuickFacing.values) {
                 for (final action in QuickHeroAction.values) {
                   for (final earlier in QuickEarlierAction.values) {
-                  final s = synthesizeQuickHand(makeInput(
-                    heroCards: cards,
-                    numSeats: seats,
-                    positionLabel: label,
-                    decisionStreet: street,
-                    facing: facing,
-                    heroAction: action,
-                    earlierAction: earlier,
-                    earlierBetBb:
-                        earlier == QuickEarlierAction.bet ? 5 : null,
-                    potBeforeBb: street == Street.preflop ? null : 12,
-                  ));
+                  final s = synthesizeQuickHand(
+                      makeInput(
+                        heroCards: cards,
+                        numSeats: seats,
+                        positionLabel: label,
+                        decisionStreet: street,
+                        facing: facing,
+                        heroAction: action,
+                        earlierAction: earlier,
+                        earlierBetBb:
+                            earlier == QuickEarlierAction.bet ? 5 : null,
+                        potBeforeBb: street == Street.preflop ? null : 12,
+                      ),
+                      pcRanges: pcRanges);
                   final playerSeats =
                       s.players.map((p) => p.seatIndex).toSet();
                   expect(playerSeats.length, equals(2),
@@ -463,6 +478,56 @@ void main() {
           }
         }
       }
+    }
+
+    test('every action seat belongs to a player, across the full matrix', () {
+      runSeatInvariantSweep(null); // legacy binary charts
+    });
+
+    test('the full matrix holds under the PC weighted charts too', () {
+      runSeatInvariantSweep(pcLib);
+    });
+
+    test('PC charts drive the preflop story where legacy charts differed', () {
+      final lib = pcLib;
+      // 6-max UTG is the lojack under the PC mapping: KTs is a standard LJ
+      // open there, but the legacy 6-max path used the full-ring UTG chart
+      // which never opened it (the range-audit defect this migration fixes).
+      final chart = resolvePcChart(lib,
+          tournament: false,
+          tableSeats: 6,
+          effectiveBb: 100,
+          heroLabel: 'UTG',
+          node: PcNode.rfi)!;
+      expect(chart.raiseFreq('KTs'), greaterThanOrEqualTo(0.5),
+          reason: 'guard: KTs must be an LJ open for this canary to work');
+      expect(inChart(rfiKey('UTG', false), 'KTs'), isFalse,
+          reason: 'guard: legacy full-ring UTG chart must not open KTs');
+
+      QuickHandSynthesis synth(PcRangeLibrary? pc) => synthesizeQuickHand(
+          makeInput(
+            heroCards: ['Kh', 'Th'],
+            numSeats: 6,
+            positionLabel: 'UTG',
+            decisionStreet: Street.flop,
+            facing: QuickFacing.bet,
+            heroAction: QuickHeroAction.call,
+            potBeforeBb: 6,
+          ),
+          pcRanges: pc);
+
+      bool heroOpened(QuickHandSynthesis s) {
+        final preflop = s.streets.first.actions;
+        final raises =
+            preflop.where((a) => a.type == ActionType.raise).toList();
+        return raises.isNotEmpty &&
+            raises.last.seat == s.tableSetup.heroSeat;
+      }
+
+      expect(heroOpened(synth(lib)), isTrue,
+          reason: 'PC charts: KTs opens from the 6-max lojack');
+      expect(heroOpened(synth(null)), isFalse,
+          reason: 'legacy charts: KTs was not an open (defend fallback)');
     });
   });
 
