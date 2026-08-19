@@ -1,0 +1,12 @@
+# 11-spot early repair batch
+Ac 9d 6h
+Ac Jd 5d
+Ac Kd 5c
+Jc 6c 5d
+Jc 6d 5d
+Jc Tc 7d
+Kc 7c 5c
+Kc Jc 9c
+Qc Jd 8d
+Tc 6d 2h
+Tc 7d 5h
