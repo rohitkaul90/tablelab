@@ -232,7 +232,9 @@ void main() {
       expect(ch!.villains, ['UTG', 'UTG1']);
     });
 
-    test('straddle opener maps early, not to a blind', () {
+    test('straddle raiser models as the widest blind aggressor (SB)', () {
+      // The straddler is a third blind; their option-raise is wide, so the SB
+      // opener chart is the width-realistic proxy (owner decision 2026-08-19).
       final ch = resolvePcChart(lib,
           tournament: false,
           tableSeats: 9,
@@ -241,7 +243,10 @@ void main() {
           node: PcNode.vsOpen,
           openerLabel: 'STR');
       expect(ch, isNotNull);
-      expect(ch!.villains, ['UTG']); // early-position aggressor model
+      expect(ch!.villains, ['SB']); // BB-vs-straddle ≈ blind-vs-blind dynamics
+      // And defending, the straddler still maps to BB.
+      expect(pcSeatFor('STR', 9), 'BB');
+      expect(pcSeatFor('STR', 9, aggressor: true), 'SB');
     });
 
     test('heads-up routes to HU charts; 3-max returns null', () {

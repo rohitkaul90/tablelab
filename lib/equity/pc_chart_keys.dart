@@ -33,12 +33,17 @@ const List<String> _pcFromButton = ['BTN', 'CO', 'HJ', 'LJ', 'UTG1', 'UTG'];
 /// Maps an app position label (as produced by TableSetup.positionLabels /
 /// positionName for [tableSeats]) to the PC 8-max seat whose chart applies.
 ///
-/// Role matters for the straddler: defending, a straddler plays like a (wide)
-/// big blind (mirrors chart_keys.posClass); but a straddler who RAISES is an
-/// early-position aggressor, so pass [aggressor] for opener/caller labels —
-/// the legacy openerBucketForLabel bucketed a straddle opener 'early' and this
-/// keeps that behavior (review finding: STR→BB in the opener role resolved a
-/// blind-vs-blind chart, or nothing at all).
+/// Role matters for the straddler, who is best understood as a THIRD BLIND:
+/// they post dark, act last preflop, and close the action like a BB — so
+/// defending, STR maps to BB (mirrors chart_keys.posClass). When the straddler
+/// RAISES (the straddle-option raise over callers) there is no true chart in a
+/// no-straddle library; we model them as an SB raiser — the widest blind-
+/// aggressor chart available — because range WIDTH is what chart choice feeds
+/// (a straddle-option raise is far wider than a UTG open, and postflop
+/// position is derived independently from action order by villain_range, so
+/// the chart's positional label doesn't leak into EQR). Owner-reviewed
+/// decision 2026-08-19; the earlier 'UTG opener' mapping overstated the
+/// straddler's strength.
 String pcSeatFor(String appLabel, int tableSeats, {bool aggressor = false}) {
   switch (appLabel) {
     case 'SB':
@@ -46,7 +51,7 @@ String pcSeatFor(String appLabel, int tableSeats, {bool aggressor = false}) {
     case 'BB':
       return 'BB';
     case 'STR':
-      return aggressor ? 'UTG' : 'BB';
+      return aggressor ? 'SB' : 'BB';
   }
   final ladder = _appFromButton(tableSeats);
   final idx = ladder.indexOf(appLabel);

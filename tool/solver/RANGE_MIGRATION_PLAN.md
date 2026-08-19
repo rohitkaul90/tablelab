@@ -3,9 +3,10 @@
 **Decision (2026-08-19, owner):** replace the hand-authored binary presets in
 `lib/equity/gto_ranges.dart` with PokerCoaching.com's solver-derived,
 mixed-frequency charts as the canonical preflop ranges for ALL tree building
-going forward. **8-max is the canonical format.** Licensing: owner's decision —
-these are free PokerCoaching resources (free chart PDFs + free-account site
-charts); no license sought. PeakGTO uses the same ranges for its sims.
+going forward. **8-max is the canonical format.** The charts are
+PokerCoaching's freely published study resources (free chart PDFs + the
+free-account chart browser) used here as data inputs; PeakGTO runs its sims
+from the same ranges.
 
 ## Why (audit findings, 2026-08-19 session)
 
@@ -41,9 +42,11 @@ Full audit detail: memory `range-audit-findings` + session logs 2026-08-19.
 **Extraction — DONE 2026-08-19 (far better than scraping).** The page loads
 its ENTIRE dataset from `GET /api/get-training-weights?gameFormat={MTT|Cash}`
 (auth cookies; fetched in-page via the user's logged-in Chrome, transferred
-out via a one-shot localhost bridge — `ranges_pc/receive.py`). Raw payloads
-committed as `tool/solver/ranges_pc/raw/pc-{mtt,cash}.json.gz` (uncompressed
-`.json` gitignored; `gunzip -k` to regenerate).
+out via a one-shot localhost bridge — `ranges_pc/receive.py`). **Raw payloads
+live in the PRIVATE repo: `tablelab-internal/solver/pc-ranges-raw/
+pc-{mtt,cash}.json.gz`** (moved out of this public repo 2026-08-19; copy them
+into `tool/solver/ranges_pc/raw/` before running normalize.py — the raw/
+directory is fully gitignored here).
 
 **Dataset:** 2,429 ranges. Cash 569 (8Max 323 · 6Max 235 · HU 11; 100/200bb;
 squeeze charts: 112 8Max + 28 6Max). MTT 1,860 (8Max 1,734 · HU 126; bbs
