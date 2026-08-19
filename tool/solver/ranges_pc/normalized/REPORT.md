@@ -1,0 +1,56 @@
+# PC range normalization report
+
+charts out: 2180
+
+- raw entries: 2429; skipped (no handsWeights): 3
+  - SKIPPED MTT/8Max/30bb BTN All-In 4bet seq=F-F-F-F-F-C-F-R-R-A (0.0.0.0.0.1.0.40085.4.3.0.rng)
+  - SKIPPED MTT/8Max/30bb BTN All-In 4bet seq=F-F-F-F-F-C-R-F-R-A (0.0.0.0.0.1.40075.0.4.3.0.rng)
+  - SKIPPED MTT/8Max/40bb BTN All-In 5bet seq=F-F-F-F-F-R-R-F-R-A (0.0.0.0.0.40037.40087.0.40045.3.0.rng)
+- logical charts: 2180; superseded duplicates dropped: 246
+- rows renormalized (|sum-1| in 0.005..0.1): 1729
+- rows nulled as bad (|sum-1| > 0.1 or unparseable): 0
+- charts with <169 hands in source (absent = unreachable): 470
+- benchmark cash 8max 100bb BTN rfi raise%: 40.3 (expect 35-50) OK
+- benchmark cash 8max 100bb BB defend% vs BTN open: 38.2 (expect 30-50) OK
+
+## superseded (first 40)
+  - Cash/6Max/100bb BTN 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb BTN 3bet vs ['BB'] [no-date] (sizes [26.5])
+  - Cash/6Max/100bb BTN 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb BTN 3bet vs ['BB'] [no-date] (sizes [26.5])
+  - Cash/6Max/100bb BTN 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb BTN 3bet vs ['BB'] [no-date] (sizes [26.5])
+  - Cash/6Max/100bb CO 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb CO 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb CO 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb BTN 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb BTN 3bet vs ['SB'] [no-date] (sizes [25])
+  - Cash/6Max/100bb BTN 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb BTN 3bet vs ['SB'] [no-date] (sizes [25])
+  - Cash/6Max/100bb BTN 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb BTN 3bet vs ['SB'] [no-date] (sizes [24])
+  - Cash/6Max/100bb HJ 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb HJ 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb HJ 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb HJ 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['BB'] [no-date] (sizes [24])
+  - Cash/6Max/100bb HJ 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['BB'] [no-date] (sizes [24])
+  - Cash/6Max/100bb HJ 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['BB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb CO 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['BB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb CO 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['BB'] [no-date] (sizes [24])
+  - Cash/6Max/100bb CO 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['BB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb HJ 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb HJ 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb HJ 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb HJ 3bet vs ['CO'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['CO'] [no-date] (sizes [21])
+  - Cash/6Max/100bb HJ 3bet vs ['CO'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['CO'] [no-date] (sizes [21])
+  - Cash/6Max/100bb HJ 3bet vs ['CO'] [20250403] superseded Cash/6Max/100bb HJ 3bet vs ['CO'] [no-date] (sizes [21])
+  - Cash/6Max/100bb CO 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb CO 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb CO 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb CO 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb LJ 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb LJ 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb LJ 3bet vs ['SB'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['SB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb LJ 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['BB'] [no-date] (sizes [24])
+  - Cash/6Max/100bb LJ 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['BB'] [no-date] (sizes [24])
+  - Cash/6Max/100bb LJ 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['BB'] [no-date] (sizes [23])
+  - Cash/6Max/100bb LJ 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb LJ 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb LJ 3bet vs ['BTN'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['BTN'] [no-date] (sizes [21])
+  - Cash/6Max/100bb SB 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb SB 3bet vs ['BB'] [no-date] (sizes [21])
+  - Cash/6Max/100bb SB 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb SB 3bet vs ['BB'] [no-date] (sizes [21])
+  - Cash/6Max/100bb SB 3bet vs ['BB'] [20250403] superseded Cash/6Max/100bb SB 3bet vs ['BB'] [no-date] (sizes [21])
+  - Cash/6Max/100bb LJ 3bet vs ['CO'] [20250403] superseded Cash/6Max/100bb LJ 3bet vs ['CO'] [no-date] (sizes [21])
