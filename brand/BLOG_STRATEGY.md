@@ -113,6 +113,7 @@ Review every trend post at **90 days**: either refresh the peg with current figu
 
 | Post | Review by | Why |
 |---|---|---|
+| `/blog/are-poker-solvers-allowed` | **2026-09-30** | Intro says WSOP Online 2026 (Aug 16 – Sep 29, on GGPoker) is running "right now". The day after it ends: switch the intro to past tense, keep the scoped "Why 2026 is the year the line got enforced" H2 as history, re-check the PokerStars/GGPoker policy pages for wording changes, and bump the three dates together. |
 | `/blog/poker-tournament-variance` | **2026-08-06** | Written before the WSOP Main Event final table (Aug 3–5). Its intro, conclusion, and FAQ #5 use future tense about a result that will exist by Aug 6. Swap to past tense, name the champion, and consider replacing the pure-news FAQ with an evergreen question. |
 
 ### Trend backlog
@@ -120,7 +121,7 @@ Review every trend post at **90 days**: either refresh the peg with current figu
 | Candidate | Cluster | Peg | Shelf life |
 |---|---|---|---|
 | **LLMs vs GTO: the 2026 scoreboard** — PokerSkill (arXiv 2605.30094, 2026-05-28) has LLMs playing near-solver poker with no training and no solver, yet still **losing** to the GTO Wizard benchmark: GPT‑5.5 XHigh −57 ± 21 mbb/hand, Claude Opus 4.6 −80 ± 29, Opus 4.7 −87 ± 64. "Expert-level" in the title ≠ beating GTO. | B | arXiv paper | High |
-| **Which poker tools are actually allowed in 2026** — RTA/HUD policy split; GGPoker × GTO Wizard integrity partnership, 31 accounts banned, Fair Play Check timestamp forensics. Defines the line TableLab sits on. | New (Pillar 2) | RTA arms race | High |
+| ~~**Which poker tools are actually allowed in 2026**~~ — **SHIPPED 2026-08-30** as `/blog/are-poker-solvers-allowed` (evergreen keyword `are poker solvers allowed`; the 2026 peg confined to intro/hero/one H2 per the rule above). | Pillar 2 → B | RTA arms race | High |
 | **WSOP Online series** (Aug 16 – Sep 29, 2026) | A | Calendar | Low |
 
 ## AI-Citation / GEO Surface Strategy

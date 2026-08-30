@@ -14,8 +14,14 @@
   </url>
   <url>
     <loc>https://tablelab.app/blog/</loc>
-    <lastmod>2026-08-17</lastmod>
+    <lastmod>2026-08-30</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tablelab.app/blog/are-poker-solvers-allowed</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
@@ -38,7 +44,7 @@
   </url>
   <url>
     <loc>https://tablelab.app/blog/how-to-read-players-without-a-hud</loc>
-    <lastmod>2026-08-17</lastmod>
+    <lastmod>2026-08-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -50,7 +56,7 @@
   </url>
   <url>
     <loc>https://tablelab.app/blog/can-ai-solve-poker</loc>
-    <lastmod>2026-08-17</lastmod>
+    <lastmod>2026-08-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
