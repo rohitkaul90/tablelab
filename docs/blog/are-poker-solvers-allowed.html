@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Are Poker Solvers Allowed? Online and Live Rules — TableLab</title>
+  <meta name="description" content="Solvers and trackers are allowed away from the table. Open one mid-hand, it's RTA, and it cost one pro £40,000. Rule text from PokerStars, GGPoker, TDA, WSOP.">
+  <link rel="canonical" href="https://tablelab.app/blog/are-poker-solvers-allowed">
+  <meta property="og:title" content="Are Poker Solvers Allowed? Where the Line Is, Online and Live">
+  <meta property="og:description" content="Every major operator allows solvers for study and bans them mid-hand. The rule text from PokerStars, GGPoker, the TDA and the WSOP, and the case that shows intent doesn't save you.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://tablelab.app/blog/are-poker-solvers-allowed">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Are Poker Solvers Allowed? Where the Line Is, Online and Live">
+  <meta name="twitter:description" content="Solver on the broadcast, solver banned in the room. Where PokerStars, GGPoker, the TDA and the WSOP draw the line on solvers, charts, HUDs and your phone.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta property="article:published_time" content="2026-08-30">
+  <meta property="article:modified_time" content="2026-08-30">
+  <meta name="author" content="Rohit Kaul">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="stylesheet" href="/site.css?v=2e84643698">
+  <script src="/site.js?v=302dfa2fc7" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://tablelab.app/blog/are-poker-solvers-allowed#article",
+        "headline": "Are Poker Solvers Allowed? Where the Line Is, Online and Live",
+        "description": "Whether poker solvers, trainers, trackers, charts and HUDs are allowed, online and live: the exact rule text from PokerStars, GGPoker, GTO Wizard's terms, the 2024 TDA rules and the 2026 WSOP tournament and cash-game rules, the enforcement timeline from 2020 to 2026, and why, on PokerStars' wording and in the Clack case on iPoker, checking a hand after it was played still counts as real-time assistance.",
+        "datePublished": "2026-08-30",
+        "dateModified": "2026-08-30",
+        "author": { "@id": "https://tablelab.app/#rohit" },
+        "publisher": { "@id": "https://tablelab.app/#organization" },
+        "image": { "@id": "https://tablelab.app/blog/are-poker-solvers-allowed#primaryimage" },
+        "mainEntityOfPage": { "@type": "WebPage", "@id": "https://tablelab.app/blog/are-poker-solvers-allowed" },
+        "isPartOf": { "@id": "https://tablelab.app/blog#blog" },
+        "wordCount": 3531,
+        "keywords": ["are poker solvers allowed", "is using a solver cheating", "poker RTA rules", "what is RTA in poker", "are HUDs allowed on PokerStars", "are HUDs allowed on GGPoker", "can you use your phone at the poker table"],
+        "articleSection": "The Honest Layer"
+      },
+      {
+        "@type": "Blog",
+        "@id": "https://tablelab.app/blog#blog",
+        "name": "The TableLab Blog",
+        "url": "https://tablelab.app/blog/",
+        "publisher": { "@id": "https://tablelab.app/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": ["https://magpiq.com", "https://www.youtube.com/channel/UCaslEsv-BMGKuOY4ssKQqVQ"],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://tablelab.app/#rohit",
+        "name": "Rohit Kaul",
+        "givenName": "Rohit",
+        "description": "Live cash-game poker player and data-analytics professional; maker of TableLab. Around 20 years playing poker, focused on live cash as a winning player, with over a decade building quantitative models in Python.",
+        "jobTitle": "Founder",
+        "worksFor": { "@id": "https://tablelab.app/#organization" },
+        "knowsAbout": ["Poker strategy", "Cash game poker", "Game theory optimal (GTO) poker", "Poker bankroll management", "Data analytics", "Quantitative modeling"],
+        "alumniOf": [
+          { "@type": "CollegeOrUniversity", "name": "Purdue University" },
+          { "@type": "CollegeOrUniversity", "name": "University of Mumbai" }
+        ],
+        "sameAs": [
+          "https://www.linkedin.com/in/rohit-kaul-a761171a2",
+          "https://x.com/RohitKaul90",
+          "https://www.youtube.com/@rohitkaul1990",
+          "https://pokerdb.thehendonmob.com/player.php?a=r&n=877305"
+        ]
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://tablelab.app/blog/are-poker-solvers-allowed#primaryimage",
+        "url": "https://tablelab.app/og-cover.png",
+        "width": 2400,
+        "height": 1260
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/blog/are-poker-solvers-allowed#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tablelab.app" },
+          { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://tablelab.app/blog/" },
+          { "@type": "ListItem", "position": 3, "name": "Are Poker Solvers Allowed?", "item": "https://tablelab.app/blog/are-poker-solvers-allowed" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/blog/are-poker-solvers-allowed#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "Are poker solvers allowed?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, for study. PokerStars lists solver-class tools as \"prohibited while our software is running\"; GGPoker's policy says every decision should be made free of \"external assistance\"; GTO Wizard's own terms bar use \"during a live poker game.\" Own one, run one, review with one. Just not with a hand in progress." } },
+          { "@type": "Question", "name": "Is using a solver cheating?", "acceptedAnswer": { "@type": "Answer", "text": "During a hand, yes. That's real-time assistance, and every major site treats it as cheating; GGPoker's stated penalty is \"PERMANENT BAN, CONFISCATION OF FUNDS.\" After the session, with the client closed, it's how everyone serious studies, and no operator objects to it." } },
+          { "@type": "Question", "name": "Can you check a hand in a solver between hands or on a break?", "acceptedAnswer": { "@type": "Answer", "text": "Don't. Thomas Clack said he looked hands up \"after a hand had been played\" and still lost a £40,000 Grosvenor sponsorship after an iPoker suspension in February 2026. The rule keys on the tool being open while the client runs, not on your intent." } },
+          { "@type": "Question", "name": "Are HUDs allowed in 2026?", "acceptedAnswer": { "@type": "Answer", "text": "It depends on the site. PokerStars permits HUDs built only from information \"accumulated through your own play\" and bans datamining; GGPoker and WPT Global prohibit third-party HUDs. Live, there's no HUD at all, so you build reads by hand and write them down." } },
+          { "@type": "Question", "name": "Can you use your phone at a live poker table?", "acceptedAnswer": { "@type": "Answer", "text": "Under the 2024 TDA rules: not with a live hand (Rule 5C), never resting on the table (5B), and never for strategy tools (5D). The 2026 WSOP goes further: devices removed at the final three tables, and charts, apps, and artificial intelligence banned in the tournament room for players and spectators alike." } },
+          { "@type": "Question", "name": "Is a bankroll tracker app allowed?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. A tracker doesn't touch the hand in progress. Online, PokerStars permits tools that use \"only information that you have accumulated through your own play,\" and GGPoker doesn't flag tools that don't interact with its client during gameplay. Live, log between hands with the phone off the felt." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-H4D9DBVXDD');
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/gto-library">GTO Library</a>
+      <a class="link" href="/about">About</a>
+            <details class="nav-dropdown">
+        <summary>Tools<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <nav aria-label="Free poker calculators">
+          <a href="/variance-calculator">Variance Calculator</a>
+          <a href="/icm-calculator">ICM Calculator</a>
+        </nav>
+      </details>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Are Poker Solvers Allowed?</div>
+
+      <h1>Are Poker Solvers Allowed? Where the Line Is, Online and Live</h1>
+      <p class="byline">By Rohit Kaul · August 30, 2026 · 15 min read</p>
+
+      <div class="hero-banner">
+        <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Solvers, trackers, and charts are allowed at your desk and banned at the table — the exact rule text from PokerStars, GGPoker, the TDA, and the WSOP.">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0d130d"/>
+              <stop offset="1" stop-color="#16201a"/>
+            </linearGradient>
+          </defs>
+          <rect width="1200" height="380" fill="url(#bg)"/>
+          <rect x="0" y="0" width="6" height="380" fill="#4CAF50"/>
+          <text x="70" y="86" fill="#81C784" font-size="22" letter-spacing="3" font-family="sans-serif">THE HONEST LAYER</text>
+          <text x="68" y="170" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">Allowed at your desk.</text>
+          <text x="68" y="242" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">Banned at the table.</text>
+          <text x="70" y="300" fill="#b0bec5" font-size="26" font-family="sans-serif">Solver on the WSOP broadcast, solver banned in the room. Which side are you on?</text>
+          <rect x="70" y="324" width="640" height="40" rx="8" fill="rgba(76,175,80,0.14)" stroke="#4CAF50" stroke-opacity="0.5"/>
+          <text x="86" y="351" fill="#eceff1" font-size="20" font-family="sans-serif"><tspan fill="#81C784" font-weight="700">solvers · trackers · charts · phones</tspan>  &mdash;  the exact rule text</text>
+        </svg>
+      </div>
+
+      <p>If you study with a solver, a trainer, or a tracker, you've probably had the thought at least once: is this actually allowed? The short answer is yes. The long answer is a stack of rules that all turn on one word: when. Own the tool, run the tool, review with the tool. Just don't have it open with a hand in progress.</p>
+
+      <p>The timing makes it worth spelling out now. WSOP Online 2026 is running on GGPoker as we write this, from August 16 to September 29, on the network that suspended 31 accounts with GTO Wizard's help. This June, the WSOP named GTO Wizard, the same tool, its official training partner and started showing its Optimal Play graphic on the broadcast. Solver on the screen, solver banned in the room. This post lays out the rules online and live, the cases that decided what counts as during play, and what it means for a phone with a study app on it.</p>
+
+      <div class="tldr">
+        <p><strong>TL;DR:</strong> Solvers, trainers, and trackers are allowed &mdash; away from the table. PokerStars bans them only while its client is running. GGPoker bans any outside help during play, full stop. GTO Wizard's own terms tell you not to use it during a game. Live, the 2024 TDA rules keep strategy tools off the table, and the 2026 WSOP cash-game rules now list solver output by name. Intent doesn't save you: a UK pro lost a £40,000 sponsorship in February 2026 for checking hands <em>after</em> they were played, with the client still open. TableLab is built for the allowed side of that line, which is post-session review. Here's where the line sits.</p>
+      </div>
+
+      <h2>Are poker solvers allowed?</h2>
+
+      <p>Yes, as study tools. No operator bans owning or running a solver; every major one bans using it while you're in a hand. PokerStars puts solvers in the bucket that's off-limits only while its software is running, and GTO Wizard's terms tell you not to use the service during a game, online included. The line is when, not what.</p>
+
+      <p>Look at how PokerStars structures its policy, because the structure is the answer. The page sorts everything into three buckets: tools that are always fine, tools that are never fine, and tools that are fine except while the PokerStars client is running (<a href="https://www.pokerstars.com/poker/room/prohibited/">PokerStars</a>). Solvers, range-versus-range simulators, ICM and Nash calculators all land in that third bucket. Not the second. The tool is permitted; the timing is the offense. The exact wording of that third heading is worth memorizing, because it decides the Clack case later on: "prohibited while our software is running."</p>
+
+      <p>The vendor's own contract says the same thing. Section 7.1 of GTO Wizard's terms bars using the service during a live poker game, and spells out that online games count and that this is what real-time assistance means (<a href="https://gtowizard.com/terms/">GTO Wizard Terms</a>). Nobody selling solvers wants to be the reason a customer gets banned, so the clause sits in the contract you clicked through.</p>
+
+      <p>What's actually banned, then, is real-time assistance, or RTA. PokerNews' working definition from 2020 still holds: anything that helps you make a decision while a cash game or tournament is in progress (<a href="https://www.pokernews.com/news/2020/10/what-is-meant-by-real-time-assistance-rta-38054.htm">PokerNews</a>). There's no list of software in that definition, only a clock.</p>
+
+      <h2>What counts as real-time assistance?</h2>
+
+      <p>Anything that influences a decision while a hand is live: solver output, range or ICM calculators, push/fold charts, a friend on Discord. GGPoker's current policy goes furthest and bans looking at charts of any kind during play. PokerStars still allows a simple starting-hand chart for unopened pots, which is the one place the two disagree.</p>
+
+      <p>It helps to sort assistance into three families. Software: solvers, equity and ICM calculators, bots. Reference material: preflop charts, push/fold tables, a printed range. Human help: a coach on the rail, a friend on a call. GGPoker's policy (version 20260313) covers all three with one sentence in §2.2: "Every decision made at the poker table should be made free of any external assistance" (<a href="https://ggpoker.com/network/security-ecology-policy/">GGPoker</a>). Its list of blocked tools then names the usual suspects, RTA, bots, solvers, charts and HUDs, as examples of what influences a decision.</p>
+
+      <p>The chart split is the detail that catches people. PokerStars permits a simple table of which hands to open in an unopened pot (<a href="https://www.pokerstars.com/poker/room/prohibited/">PokerStars</a>). GGPoker's §2.3 bans charts of any kind during play. Same laminated RFI chart, two verdicts. If you play on both networks, follow the stricter rule and leave it in the drawer.</p>
+
+      <p>HUDs are their own category, and the policies split again. PokerStars allows a HUD only if every number in it came from hands you played yourself, and it bans datamining outright. GGPoker blocks third-party HUDs altogether. Live, the question never comes up: there's no HUD, and you build reads by hand, which is <a href="/blog/how-to-read-players-without-a-hud">the skill we covered in reading players without a HUD</a>.</p>
+
+      <div class="callout"><p>Our read: the operators aren't banning math. They're banning outsourced math. If the number came from your head, it's poker. If it came from a screen during the hand, it's RTA.</p></div>
+
+      <h2>The big sites, in their own words</h2>
+
+      <p>Same principle, different wording. PokerStars sorts tools into permitted, prohibited at all times, and permitted-but-not-while-the-client-runs. GGPoker bans RTA, bots, solvers, charts, and third-party HUDs outright, and §2.4 sets the penalty as a permanent ban with funds confiscated. HUD policy is where sites diverge most.</p>
+
+      <p>Here's the matrix, built from the two operators' own pages as published on August 30, 2026. The third column comes from a secondary source and covers HUD stance only.</p>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption>Tool by operator. ✓ allowed · ✗ prohibited.</caption>
+          <thead>
+            <tr><th>Tool</th><th>PokerStars</th><th>GGPoker</th><th>WPT Global &amp; ACR*</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Solver (study, client closed)</strong></td><td>✓ &mdash; banned only while the client is running</td><td>✓ &mdash; tools that don't interact with the client during play aren't flagged</td><td>&mdash;</td></tr>
+            <tr><td><strong>Solver (client open)</strong></td><td>✗</td><td>✗ &mdash; permanent ban, funds confiscated</td><td>&mdash;</td></tr>
+            <tr><td><strong>Simple preflop chart during play</strong></td><td>✓ &mdash; unopened pots only</td><td>✗ &mdash; charts of any kind</td><td>&mdash;</td></tr>
+            <tr><td><strong>Third-party HUD</strong></td><td>Own-play data only</td><td>✗</td><td>WPT Global ✗ · ACR (WPN) ✓</td></tr>
+            <tr><td><strong>Tracker (post-session)</strong></td><td>✓ &mdash; your own hands only</td><td>✓ &mdash; no interaction during play</td><td>&mdash;</td></tr>
+            <tr><td><strong>Datamining</strong></td><td>✗</td><td>Not named; §2.2 bars any outside help</td><td>&mdash;</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>*Third column from GipsyTeam's May 2026 HUD survey, a secondary source; check the operator's own page before you play.</p>
+
+      <p>Two GGPoker clauses matter more than the rest. The penalty line, §2.4, is written in capitals: "PERMANENT BAN, CONFISCATION OF FUNDS." It's the only penalty the RTA section names. The safe-harbor line is quieter: a tool that doesn't interact with GGPoker during gameplay won't be flagged. That's the clause a post-session tracker or an offline solver lives under, and it's worth knowing by name.</p>
+
+      <p>On HUDs, the industry splits down the middle. GipsyTeam's May 2026 survey lists PokerStars, 888, WPN, iPoker, and Winamax as permitting HUDs, and GGPoker, WPT Global, and CoinPoker as prohibiting them (<a href="https://www.gipsyteam.com/news/23-05-2026/huds-on-poker-sites">GipsyTeam</a>). It's a useful map, but the operator's page is the territory, and operators edit those pages without announcing it.</p>
+
+      <h2>What are the rules at a live table?</h2>
+
+      <p>Stricter than online, and written down. TDA Rule 5D (2024) keeps betting apps, charts, and any other strategy tool off the table. WSOP 2026 Rule 64(g) bars any poker information tool while you're in a hand, and 64(d) extends the ban to spectators in the room. Even the WSOP cash-game rules now list solver output by name, in Rule 21.</p>
+
+      <h3>Tournament rules: TDA 5 and WSOP 63&ndash;64</h3>
+      <p>Start with the Poker TDA, whose rules many card rooms adopt. The 2024 rules (version 1.0, dated October 9, 2024) rewrote Rule 5 into a device section with three teeth (<a href="https://www.pokertda.com/view-poker-tda-rules/">Poker TDA</a>). 5B: phones and other devices can't rest on the table. 5C: if you have a live hand, you can't touch a device at all. 5D is the one that matters here, so here it is in full: "Betting apps, charts, and other poker strategy tools may not be used at the table. Nor may players receive or use poker strategy data from another person or source." Notice there's no software test in it. A paper chart fails it too.</p>
+
+      <p>The WSOP goes further in its 2026 tournament rules (<a href="https://assets.wsopcdn.com/wsop/1a72ba28-781c-409d-a9c3-5ca13c4c5718.pdf">WSOP 2026 Tournament Rules</a>). Rule 63: no phone or other communication device on the table, ever. Rule 64(b) allows approved devices only if they contain no AI and no other form of electronic assistance. 64(c) removes devices entirely once the field is down to three tables. 64(d) widens the net to the rail: nobody in the tournament room, players or spectators, may use charts, apps, AI, or any other electronic assistance.</p>
+
+      <p>Then 64(g), the clause aimed at you: no betting apps, gaming charts, or any poker information tool while you're involved in a hand. The carve-out is narrow and named: the WSOP LIVE app, WSOP.com, and the Caesars Mobile Sports App. Rule 64(a) quotes Nevada's device statute, NRS 465.075, so the rulebook isn't only house policy.</p>
+
+      <h3>Cash games: WSOP Live-Action Rule 21</h3>
+      <p>Cash games are covered too. The WSOP's 2026 Live-Action Rules, Rule 21, prohibit real-time assistance outright. Players can't use any device, software, or communication method to get "coaching, advice, analysis, solver output, or other strategic assistance about any live hand in play," and the rule names smart watches and earpieces so nobody can claim a grey area (<a href="https://assets.wsopcdn.com/wsop/853ee602-e1e9-4019-a0cf-381419d805c6.pdf">WSOP 2026 Live-Action Rules</a>). Penalties run from immediate removal through forfeiture of chips to a permanent ban pending investigation. Rule 27 allows devices that don't interfere with the game, and Rule 82 calls phone use at the table discouraged. That word is doing a lot of work.</p>
+
+      <h2>Why 2026 is the year the line got enforced</h2>
+
+      <p>Detection moved from noticing suspicious play to timestamping it. GTO Wizard's Fair Play Check returns the exact time a board was solved; GGPoker used it to suspend 31 accounts on the first day of their partnership, announced March 2025. In 2026 an iPoker suspension cost a UK pro a £40,000 deal, and the WSOP put GTO Wizard on its broadcast while banning it in the room.</p>
+
+      <h3>2020: pattern detection</h3>
+      <p>The enforcement story starts in September 2020, when GGPoker answered a cheating scandal with numbers instead of a statement. Forty accounts banned, forty warned, $1,175,305 confiscated from 13 accounts, and 4,329 players reimbursed, about $272 each (<a href="https://www.pokernews.com/news/2020/09/ggpoker-responds-cheating-scandal-38050.htm">PokerNews</a>; <a href="https://pokerfuse.com/news/poker-room-news/211765-ggpoker-reimburses-over-4000-players-following-recent-rta/">pokerfuse</a>). GGPoker didn't say how it found them.</p>
+
+      <figure>
+        <svg viewBox="0 0 580 236" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Horizontal bar chart of GGPoker's September 2020 real-time-assistance sweep: 40 accounts banned, 40 accounts warned, funds confiscated from 13 accounts, and 4,329 players reimbursed. In total $1,175,305 was redistributed, roughly $272 per reimbursed player. Bar lengths use a square-root scale so the small counts stay visible." style="max-width:100%;height:auto">
+          <text x="20" y="24" fill="#eceff1" font-size="14">GGPoker's 2020 RTA sweep in numbers</text>
+          <!-- bars: x0 = 168, width = sqrt(n) × 6.08 px (square-root scale) -->
+          <text x="160" y="70" fill="#cfd8dc" font-size="12" text-anchor="end">Accounts banned</text>
+          <rect x="168" y="58" width="38" height="16" rx="4" fill="#ef9a9a"/>
+          <text x="214" y="70" fill="#90a4ae" font-size="11">40</text>
+          <text x="160" y="112" fill="#cfd8dc" font-size="12" text-anchor="end">Accounts warned</text>
+          <rect x="168" y="100" width="38" height="16" rx="4" fill="#ffd54f"/>
+          <text x="214" y="112" fill="#90a4ae" font-size="11">40</text>
+          <text x="160" y="154" fill="#cfd8dc" font-size="12" text-anchor="end">Funds confiscated</text>
+          <rect x="168" y="142" width="22" height="16" rx="4" fill="#90caf9"/>
+          <text x="198" y="154" fill="#90a4ae" font-size="11">13 accounts</text>
+          <text x="160" y="196" fill="#cfd8dc" font-size="12" text-anchor="end">Players reimbursed</text>
+          <rect x="168" y="184" width="400" height="16" rx="4" fill="#4CAF50"/>
+          <text x="560" y="180" fill="#4CAF50" font-size="11" font-weight="700" text-anchor="end">4,329</text>
+          <text x="20" y="226" fill="#90a4ae" font-size="11">$1,175,305 redistributed, &asymp;$272 average. Bar lengths on a square-root scale.</text>
+        </svg>
+        <figcaption>GGPoker's September 2020 sweep. Source: PokerNews, 2020-09-30; pokerfuse, 2020-10-07.</figcaption>
+      </figure>
+
+      <h3>2023&ndash;2026: timestamps</h3>
+      <p>September 2023 changed the method. GTO Wizard's Fair Play Check lets an operator ask whether a given board, or any strategically identical board, was solved in GTO Wizard inside a date window, and if it was, the tool returns the exact time (<a href="https://blog.gtowizard.com/towards-a-safer-poker-ecosystem/">GTO Wizard</a>). WPN and WPT Global signed on the same month (<a href="https://www.poker.org/gto-wizard-teams-up-with-major-online-operators-to-help-combat-cheating/">poker.org</a>). Weeks later PokerStars said it catches 95% of RTA proactively and called RTA an existential threat to online poker (<a href="https://pokerfuse.com/news/poker-room-news/219952-inside-pokerstars-arsenal-how-it-combats-rta/">pokerfuse</a>). That's the operator's claim, not an audited figure.</p>
+
+      <p>In March 2025 GGPoker joined, citing suspiciously heavy GTO Wizard use during live play and summing up the principle in one line: "Poker should be individual vs. individual, not individual vs. machine" (<a href="https://ggpoker.com/blog/ggpoker-gto-wizard-join-forces/">GGPoker</a>; <a href="https://www.pokernews.com/news/2025/03/ggpoker-and-gto-wizard-team-up-to-keep-poker-fair-48110.htm">PokerNews</a>). GTO Wizard later reported 31 accounts suspended on the first day of the cooperation, and said operators can now check at scale whether boards dealt on their network were being looked up in real time (<a href="https://blog.gtowizard.com/supporting_operators_in_protecting_online_poker/">GTO Wizard</a>). ACR formalized its own integration in June 2025 (<a href="https://www.acrpoker.eu/acr-poker/partnering-for-poker-integrity-how-acr-poker-and-gto-wizard-are-raising-the-bar-for-game-integrity/">ACR</a>).</p>
+
+      <figure style="overflow-x:auto">
+        <svg viewBox="0 0 580 290" style="min-width:560px;width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Timeline of solver-rule enforcement from 2020 to 2026, nine events: September 2020, GGPoker bans 40 accounts, warns 40, and confiscates $1,175,305. September 2023, GTO Wizard launches Fair Play Check and WPN and WPT Global partner with it. October 2023, PokerStars says it catches 95 percent of RTA proactively. October 2024, the TDA rewrites Rule 5. December 2024, the WSOP adds its electronic-assistance rule. March 2025, GGPoker announces its GTO Wizard partnership; 31 accounts were later reported suspended on the first day of cooperation. February 2026, Thomas Clack loses a £40,000 Grosvenor sponsorship. June 2026, the WSOP names GTO Wizard its Official Poker Training Partner. August to September 2026, WSOP Online runs on GGPoker.">
+          <text x="20" y="20" fill="#eceff1" font-size="14">How the line got enforced, 2020 &rarr; 2026</text>
+          <!-- axis at y=160; events equally spaced, x = 65 + i × 57; labels alternate above/below -->
+          <line x1="40" y1="160" x2="545" y2="160" stroke="#546e7a" stroke-width="2"/>
+          <!-- 0: Sep 2020 (above) -->
+          <line x1="65" y1="160" x2="65" y2="74" stroke="#546e7a"/>
+          <circle cx="65" cy="160" r="5" fill="#ef9a9a"/>
+          <text x="65" y="40" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Sep 2020</text>
+          <text x="65" y="52" fill="#cfd8dc" font-size="9.5" text-anchor="middle">GG bans 40, warns 40</text>
+          <text x="65" y="64" fill="#cfd8dc" font-size="9.5" text-anchor="middle">confiscates $1,175,305</text>
+          <!-- 1: Sep 2023 (below) -->
+          <line x1="122" y1="160" x2="122" y2="232" stroke="#546e7a"/>
+          <circle cx="122" cy="160" r="5" fill="#90caf9"/>
+          <text x="122" y="248" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Sep 2023</text>
+          <text x="122" y="260" fill="#cfd8dc" font-size="9.5" text-anchor="middle">Fair Play Check;</text>
+          <text x="122" y="272" fill="#cfd8dc" font-size="9.5" text-anchor="middle">WPN &amp; WPT Global join</text>
+          <!-- 2: Oct 2023 (above) -->
+          <line x1="179" y1="160" x2="179" y2="74" stroke="#546e7a"/>
+          <circle cx="179" cy="160" r="5" fill="#90caf9"/>
+          <text x="179" y="40" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Oct 2023</text>
+          <text x="179" y="52" fill="#cfd8dc" font-size="9.5" text-anchor="middle">PokerStars says 95%</text>
+          <text x="179" y="64" fill="#cfd8dc" font-size="9.5" text-anchor="middle">of RTA caught early</text>
+          <!-- 3: Oct 2024 (below) -->
+          <line x1="236" y1="160" x2="236" y2="232" stroke="#546e7a"/>
+          <circle cx="236" cy="160" r="5" fill="#ffd54f"/>
+          <text x="236" y="248" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Oct 2024</text>
+          <text x="236" y="260" fill="#cfd8dc" font-size="9.5" text-anchor="middle">TDA rewrites Rule 5</text>
+          <text x="236" y="272" fill="#cfd8dc" font-size="9.5" text-anchor="middle">(no strategy tools)</text>
+          <!-- 4: Dec 2024 (above) -->
+          <line x1="293" y1="160" x2="293" y2="74" stroke="#546e7a"/>
+          <circle cx="293" cy="160" r="5" fill="#ffd54f"/>
+          <text x="293" y="40" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Dec 2024</text>
+          <text x="293" y="52" fill="#cfd8dc" font-size="9.5" text-anchor="middle">WSOP bans "electronic</text>
+          <text x="293" y="64" fill="#cfd8dc" font-size="9.5" text-anchor="middle">assistance" in room</text>
+          <!-- 5: Mar 2025 (below) -->
+          <line x1="350" y1="160" x2="350" y2="232" stroke="#546e7a"/>
+          <circle cx="350" cy="160" r="5" fill="#ef9a9a"/>
+          <text x="350" y="248" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Mar 2025</text>
+          <text x="350" y="260" fill="#cfd8dc" font-size="9.5" text-anchor="middle">GG &times; GTO Wizard;</text>
+          <text x="350" y="272" fill="#cfd8dc" font-size="9.5" text-anchor="middle">31 accounts, day one</text>
+          <!-- 6: Feb 2026 (above) -->
+          <line x1="407" y1="160" x2="407" y2="74" stroke="#546e7a"/>
+          <circle cx="407" cy="160" r="5" fill="#ef9a9a"/>
+          <text x="407" y="40" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Feb 2026</text>
+          <text x="407" y="52" fill="#cfd8dc" font-size="9.5" text-anchor="middle">Clack loses £40,000</text>
+          <text x="407" y="64" fill="#cfd8dc" font-size="9.5" text-anchor="middle">Grosvenor deal</text>
+          <!-- 7: Jun 2026 (below) -->
+          <line x1="464" y1="160" x2="464" y2="232" stroke="#546e7a"/>
+          <circle cx="464" cy="160" r="5" fill="#4CAF50"/>
+          <text x="464" y="248" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Jun 2026</text>
+          <text x="464" y="260" fill="#cfd8dc" font-size="9.5" text-anchor="middle">WSOP names GTO Wizard</text>
+          <text x="464" y="272" fill="#cfd8dc" font-size="9.5" text-anchor="middle">training partner</text>
+          <!-- 8: Aug–Sep 2026 (above) -->
+          <line x1="521" y1="160" x2="521" y2="74" stroke="#546e7a"/>
+          <circle cx="521" cy="160" r="5" fill="#4CAF50"/>
+          <text x="521" y="40" fill="#eceff1" font-size="10" font-weight="700" text-anchor="middle">Aug&ndash;Sep 2026</text>
+          <text x="521" y="52" fill="#cfd8dc" font-size="9.5" text-anchor="middle">WSOP Online runs</text>
+          <text x="521" y="64" fill="#cfd8dc" font-size="9.5" text-anchor="middle">on GGPoker</text>
+        </svg>
+        <figcaption>Six years from pattern-matching to timestamps. Sources: PokerNews, pokerfuse, GTO Wizard, poker.org, Poker TDA, GGPoker; full list below.</figcaption>
+      </figure>
+
+      <p>Which brings us to 2026. In February, an iPoker suspension cost Thomas Clack a £40,000 Grosvenor package; the next section is about him. In June, the WSOP named GTO Wizard its official training partner, and the broadcast now carries an Optimal Play graphic showing the solver's preferred action and whether the player followed it (<a href="https://www.pokernews.com/news/2026/06/wsop-gto-wizard-official-poker-training-partner-2026-partner-51512.htm">PokerNews</a>; <a href="https://blog.gtowizard.com/gto-wizard-at-the-2026-world-series-of-poker/">GTO Wizard</a>). And from August 16 to September 29, WSOP Online 2026 runs on GGPoker: 33 bracelets and a $25 million guaranteed Main Event (<a href="https://www.pokernews.com/news/2026/08/ggpoker-unveils-2026-wsop-online-schedule-33-bracelets-52081.htm">PokerNews</a>). That's the network that suspends you for opening the broadcast's sponsor mid-hand. That isn't hypocrisy. It's the line, drawn in public.</p>
+
+      <h2>Does "I only checked it after the hand" count?</h2>
+
+      <p>On PokerStars' wording, yes, and iPoker's February 2026 suspension of Thomas Clack is the test case. Thomas Clack said he only looked hands up after they'd been played. It still cost him a £40,000 Grosvenor sponsorship. The rule is about the tool being open while the client runs, not about intent. ACR is the counter-example: it investigated Nacho Barbero and cleared him.</p>
+
+      <p>Clack's full quote, as PokerNews reported it in February 2026: "After a hand had been played, I looked it up to see if I played it well. I wasn't using it to affect my play, but I had it open, which was silly" (<a href="https://www.pokernews.com/news/2026/02/thomas-clack-loses-grosvenor-poker-sponsorship-50567.htm">PokerNews</a>). Grosvenor ended the sponsorship anyway. He's still allowed to play live at Grosvenor venues, which tells you the operator separated the person from the policy.</p>
+
+      <p>Re-read PokerStars' third category with that in mind: prohibited while our software is running. Not while you're in a hand. Not when it affects a decision. Running. On a plain reading, reviewing a hand you've already folded, with the client minimized behind the solver, satisfies every word of that clause.</p>
+
+      <p>The contrast case is Nacho Barbero. In January 2025 he was seen with GTO Wizard open during The Venom on ACR, which he said was for coaching on Discord (<a href="https://www.pokernews.com/news/2025/01/online-poker-cheating-acr-poker-47859.htm">PokerNews</a>). ACR investigated hand by hand and cleared him, saying he never used real-time assistance to help his own or anyone else's decisions during live hands (<a href="https://www.pokernews.com/news/2025/02/acr-releases-rta-allegation-findings-47877.htm">PokerNews</a>). He kept his seat. He also spent weeks under a public investigation over a window that was open.</p>
+
+      <p>One more thing to know about the vendor. Section 7.2 of GTO Wizard's terms lets the company confirm to a third party, anonymously, whether a particular board was searched in the service at a particular time (<a href="https://gtowizard.com/terms/">GTO Wizard Terms</a>). The solver you pay for is a witness for the operator, not an ally in a dispute. So the practical rule writes itself: close the client, then study.</p>
+
+      <h2>Where TableLab sits: the after-the-session side</h2>
+
+      <p>On the allowed side, by design. TableLab has no online-client integration, no HUD, and no hand-history scraping; the hand recorder, the GTO library, and the AI review are post-session tools. At a live table the only thing you'd touch mid-session is the session logger, and TDA 5B and 5C make that a between-hands, phone-off-the-table activity, so treat it that way.</p>
+
+      <p>Where we sit: TableLab is a bankroll tracker with a hand recorder, a browsable GTO library, and AI hand review. The GTO numbers come from a real CFR solver (TexasSolver) we run offline. <a href="/about#how-analysis-works">The AI only explains those numbers</a> and reasons about spots a solver can't cover. It's barred from stating a frequency it wasn't given: <a href="/blog/can-ai-solve-poker">a language model is not a solver</a>. Nothing in the app connects to an online client, reads a table, or shows opponent stats, and every review happens after the session. That's the allowed side of every policy quoted above. Two honest caveats. The analysis can be wrong, so verify big decisions. And at a live table your phone answers to the house rule, not ours.</p>
+
+      <p>Two practical notes on the study side. The GTO numbers you browse in the app come from <a href="/gto-library">a solved GTO library of 26,325 spots</a>, computed offline and served as static data. And because the review runs after the session, it can sit next to <a href="/blog/good-live-poker-win-rate">your tracked win rate</a>: the hand you're second-guessing and the sample it belongs to, in one place.</p>
+
+      <p>The live table is where a study app needs manners. Log rebuys, breaks, and expenses with your hand folded, never with a live hand (5C). Keep the phone in your lap or pocket, never resting on the felt (5B). Don't open the hand recorder, the library, or a past review while you're in a hand; that's 5D territory, whatever the app is. And at the WSOP, once you reach the final three tables, nothing at all, per 64(c). In our own sessions the logger comes out with the cards in the muck, and the phone goes back in the pocket before the next deal. The house rule always outranks the app's design.</p>
+
+      <h2>How do you study with solvers without crossing the line?</h2>
+
+      <p>Four habits keep you clean everywhere, online and live. If a rule is ambiguous, the floor decides, and not meaning to hasn't saved anyone yet.</p>
+
+      <ul>
+        <li>Client closed, then solver open. Not minimized. Closed.</li>
+        <li>Charts stay off the desk and off the table. PokerStars permits a simple preflop chart in unopened pots; GGPoker permits none; TDA 5D permits none. The strictest rule is the one to memorize.</li>
+        <li>Review after the session, not between hands. Clack's account is exactly what between hands costs, and PokerStars' rule is about the software running, so a window behind a window still counts. Record the hand, finish the session, then open the review.</li>
+        <li>Live, assume TDA Rule 5 unless the room posts otherwise.</li>
+      </ul>
+
+      <p>If you suspect someone else, there's a tool for that too. GTO Wizard's Fair Play Check is open to players as well as operators, and it reports whether a board was searched inside a date window, with built-in delays (<a href="https://blog.gtowizard.com/towards-a-safer-poker-ecosystem/">GTO Wizard</a>). Use it before you post the accusation.</p>
+
+      <p>And keep the long view. Most of the moments where you're sure someone is on a solver are variance wearing a costume. <a href="/variance-calculator">Run your numbers through our variance calculator</a> before you decide a bad month was anything but a bad month.</p>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>Are poker solvers allowed?</summary>
+          <p>Yes, for study. PokerStars bans solvers only while its client is running (<a href="https://www.pokerstars.com/poker/room/prohibited/">PokerStars</a>); GGPoker bans any outside help during play; GTO Wizard's own terms bar use during a game. Own one, run one, review with one. Just not with a hand in progress.</p>
+        </details>
+        <details>
+          <summary>Is using a solver cheating?</summary>
+          <p>During a hand, yes. That's real-time assistance, and every major site treats it as cheating; GGPoker's stated penalty is a permanent ban with funds confiscated (<a href="https://ggpoker.com/network/security-ecology-policy/">GGPoker</a>). After the session, with the client closed, it's how everyone serious studies, and no operator objects to it.</p>
+        </details>
+        <details>
+          <summary>Can you check a hand in a solver between hands or on a break?</summary>
+          <p>Don't. Thomas Clack said he only looked hands up after they'd been played and still lost a £40,000 Grosvenor sponsorship after an iPoker suspension in February 2026 (<a href="https://www.pokernews.com/news/2026/02/thomas-clack-loses-grosvenor-poker-sponsorship-50567.htm">PokerNews</a>). The rule keys on the tool being open while the client runs, not on your intent.</p>
+        </details>
+        <details>
+          <summary>Are HUDs allowed in 2026?</summary>
+          <p>It depends on the site. PokerStars permits HUDs built only from hands you played yourself and bans datamining; GGPoker and WPT Global prohibit third-party HUDs (<a href="https://www.gipsyteam.com/news/23-05-2026/huds-on-poker-sites">GipsyTeam</a>). Live, there's no HUD at all, so you build reads by hand and <a href="/blog/how-to-read-players-without-a-hud">write them down</a>.</p>
+        </details>
+        <details>
+          <summary>Can you use your phone at a live poker table?</summary>
+          <p>Under the 2024 TDA rules: not with a live hand (Rule 5C), never resting on the table (5B), and never for strategy tools (5D) (<a href="https://www.pokertda.com/view-poker-tda-rules/">Poker TDA</a>). The 2026 WSOP goes further: devices removed at the final three tables, and charts, apps, and artificial intelligence banned in the tournament room for players and spectators alike.</p>
+        </details>
+        <details>
+          <summary>Is a bankroll tracker app allowed?</summary>
+          <p>Yes. A tracker doesn't touch the hand in progress. Online, PokerStars permits tools that use only data from your own play, and GGPoker doesn't flag tools that don't interact with its client during gameplay. Live, log between hands with the phone off the felt.</p>
+        </details>
+      </section>
+
+      <h2>The bottom line</h2>
+
+      <p>Solvers compute; you decide. That's the whole principle, and every rule-writer quoted here draws it in the same place: the line is when, not what. Intent isn't a defense, a minimized window is still a running one, and the vendor's terms let it confirm the timestamp if asked. Study hard, with the client closed. Live, keep the phone off the felt and out of your hand while you've got cards. TableLab lives on the after-the-session side of that line on purpose. <a href="/">Record the hand, log the session</a>, and open the review once the cards are in the muck.</p>
+
+      <h3>Sources</h3>
+      <ul class="sources">
+        <li>PokerStars &mdash; "Prohibited Tools and Services" (fetched 2026-08-30), <a href="https://www.pokerstars.com/poker/room/prohibited/">pokerstars.com</a></li>
+        <li>GGPoker &mdash; "Security Ecology Policy," v20260313 (fetched 2026-08-30), <a href="https://ggpoker.com/network/security-ecology-policy/">ggpoker.com</a></li>
+        <li>GGPoker &mdash; "GGPoker and GTO Wizard Join Forces" (2025-03-05), <a href="https://ggpoker.com/blog/ggpoker-gto-wizard-join-forces/">ggpoker.com</a></li>
+        <li>PokerNews &mdash; "GGPoker and GTO Wizard Team Up to Keep Poker Fair" (2025-03-06), <a href="https://www.pokernews.com/news/2025/03/ggpoker-and-gto-wizard-team-up-to-keep-poker-fair-48110.htm">pokernews.com</a></li>
+        <li>GTO Wizard &mdash; "Towards a Safer Poker Ecosystem" (2023-09-19), <a href="https://blog.gtowizard.com/towards-a-safer-poker-ecosystem/">blog.gtowizard.com</a></li>
+        <li>GTO Wizard &mdash; "Supporting Operators in Protecting Online Poker" (2025-05-27), <a href="https://blog.gtowizard.com/supporting_operators_in_protecting_online_poker/">blog.gtowizard.com</a></li>
+        <li>GTO Wizard &mdash; "Terms of Service," §7.1 and §7.2 (fetched 2026-08-30), <a href="https://gtowizard.com/terms/">gtowizard.com</a></li>
+        <li>poker.org &mdash; "GTO Wizard Teams Up With Major Online Operators to Help Combat Cheating" (2023-09-19), <a href="https://www.poker.org/gto-wizard-teams-up-with-major-online-operators-to-help-combat-cheating/">poker.org</a></li>
+        <li>PokerNews &mdash; "GGPoker Responds to Cheating Scandal" (2020-09-30), <a href="https://www.pokernews.com/news/2020/09/ggpoker-responds-cheating-scandal-38050.htm">pokernews.com</a></li>
+        <li>pokerfuse &mdash; "GGPoker Reimburses Over 4,000 Players Following Recent RTA" (2020-10-07), <a href="https://pokerfuse.com/news/poker-room-news/211765-ggpoker-reimburses-over-4000-players-following-recent-rta/">pokerfuse.com</a></li>
+        <li>pokerfuse &mdash; "Inside PokerStars' Arsenal: How It Combats RTA" (2023-10-06), <a href="https://pokerfuse.com/news/poker-room-news/219952-inside-pokerstars-arsenal-how-it-combats-rta/">pokerfuse.com</a></li>
+        <li>PokerNews &mdash; "What Is Meant by Real-Time Assistance (RTA)?" (2020-10), <a href="https://www.pokernews.com/news/2020/10/what-is-meant-by-real-time-assistance-rta-38054.htm">pokernews.com</a></li>
+        <li>Poker TDA &mdash; "2024 Poker TDA Rules," v1.0 (2024-10-09), Rule 5, <a href="https://www.pokertda.com/view-poker-tda-rules/">pokertda.com</a></li>
+        <li>WSOP &mdash; "2026 WSOP Tournament Rules," Rules 63&ndash;64 (2026), <a href="https://assets.wsopcdn.com/wsop/1a72ba28-781c-409d-a9c3-5ca13c4c5718.pdf">assets.wsopcdn.com</a></li>
+        <li>WSOP &mdash; "2026 WSOP Live-Action Rules," Rules 21, 27, 82 (2026), <a href="https://assets.wsopcdn.com/wsop/853ee602-e1e9-4019-a0cf-381419d805c6.pdf">assets.wsopcdn.com</a></li>
+        <li>poker.org &mdash; "What's New in the 2024 TDA Poker Tournament Rules Update" (2024-10-11), <a href="https://www.poker.org/latest-news/whats-new-in-the-2024-tda-poker-tournament-rules-update-ayEOG4F466jL/">poker.org</a></li>
+        <li>PokerNews &mdash; "WSOP Paradise Makes Rule Change" (2024-12-01), <a href="https://www.pokernews.com/news/2024/12/wsop-paradise-makes-rule-change-47473.htm">pokernews.com</a></li>
+        <li>PokerNews &mdash; "Thomas Clack Loses Grosvenor Poker Sponsorship" (2026-02-06), <a href="https://www.pokernews.com/news/2026/02/thomas-clack-loses-grosvenor-poker-sponsorship-50567.htm">pokernews.com</a></li>
+        <li>PokerNews &mdash; "Online Poker Cheating Allegations at ACR Poker" (2025-01), <a href="https://www.pokernews.com/news/2025/01/online-poker-cheating-acr-poker-47859.htm">pokernews.com</a></li>
+        <li>PokerNews &mdash; "ACR Releases RTA Allegation Findings" (2025-02-03), <a href="https://www.pokernews.com/news/2025/02/acr-releases-rta-allegation-findings-47877.htm">pokernews.com</a></li>
+        <li>ACR Poker &mdash; "Partnering for Poker Integrity: How ACR Poker and GTO Wizard Are Raising the Bar" (2025-06-09), <a href="https://www.acrpoker.eu/acr-poker/partnering-for-poker-integrity-how-acr-poker-and-gto-wizard-are-raising-the-bar-for-game-integrity/">acrpoker.eu</a></li>
+        <li>PokerNews &mdash; "WSOP Names GTO Wizard Official Poker Training Partner" (2026-06-11), <a href="https://www.pokernews.com/news/2026/06/wsop-gto-wizard-official-poker-training-partner-2026-partner-51512.htm">pokernews.com</a></li>
+        <li>GTO Wizard &mdash; "GTO Wizard at the 2026 World Series of Poker" (2026-06-24), <a href="https://blog.gtowizard.com/gto-wizard-at-the-2026-world-series-of-poker/">blog.gtowizard.com</a></li>
+        <li>PokerNews &mdash; "GGPoker Unveils 2026 WSOP Online Schedule: 33 Bracelets" (2026-08), <a href="https://www.pokernews.com/news/2026/08/ggpoker-unveils-2026-wsop-online-schedule-33-bracelets-52081.htm">pokernews.com</a></li>
+        <li>GipsyTeam &mdash; "HUDs on Poker Sites" (2026-05-23; secondary source, HUD matrix only), <a href="https://www.gipsyteam.com/news/23-05-2026/huds-on-poker-sites">gipsyteam.com</a></li>
+      </ul>
+
+      <p class="disclaimer-line">Rule text is quoted as published on the fetch date, 2026-08-30; operators change policies without notice, so check the current page before you play. The house rule at any live venue outranks anything written here. Nothing here is legal or financial advice.</p>
+
+      <aside class="author-box">
+        <h3>About the author</h3>
+        <p><strong>Rohit Kaul</strong> is a winning live cash-game player and a data-analytics
+        professional (Master's in Business Analytics, Purdue) who builds the quantitative models behind
+        TableLab &mdash; profitable every year since 2023, across roughly 3,200 hours of tracked live cash.
+        Find him on
+        <a href="https://www.linkedin.com/in/rohit-kaul-a761171a2" rel="me noopener" target="_blank">LinkedIn</a>,
+        <a href="https://www.youtube.com/@rohitkaul1990" rel="me noopener" target="_blank">YouTube</a>, and
+        <a href="https://pokerdb.thehendonmob.com/player.php?a=r&amp;n=877305" rel="me noopener" target="_blank">The Hendon Mob</a>.</p>
+      </aside>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/gto-library">GTO Library</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+</body>
+</html>

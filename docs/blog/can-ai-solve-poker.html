@@ -17,7 +17,7 @@
   <meta property="og:image:alt" content="TableLab — solver-grounded poker analysis.">
   <meta property="og:locale" content="en_US">
   <meta property="article:published_time" content="2026-06-29">
-  <meta property="article:modified_time" content="2026-07-20">
+  <meta property="article:modified_time" content="2026-08-30">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Can AI Solve Poker? What LLMs Do vs. What Solvers Do">
   <meta name="twitter:description" content="AI beat poker pros in 2019 — with CFR solvers, not language models. What LLMs do, what they can't, and how to spot the hype.">
@@ -49,7 +49,7 @@
         "headline": "Can AI Solve Poker? What LLMs Do vs. What Solvers Do",
         "description": "AI beat poker pros in 2019, but with CFR solvers, not language models. Here's what LLMs actually do for your game, what they can't, and how to spot hype.",
         "datePublished": "2026-06-29",
-        "dateModified": "2026-07-20",
+        "dateModified": "2026-08-30",
         "author": { "@id": "https://tablelab.app/#rohit" },
         "publisher": { "@id": "https://tablelab.app/#organization" },
         "image": { "@id": "https://tablelab.app/blog/can-ai-solve-poker#primaryimage" },
@@ -308,7 +308,7 @@
 
       <p>Put a wall between the two layers. The solver owns the numbers. The language model owns the words and the judgment calls solvers can't reach, and it never crosses the wall to invent a frequency. That separation isn't a feature detail. It's the whole basis for trusting the output.</p>
 
-      <p>We built TableLab this way on purpose. A real CFR solver (TexasSolver, run offline) produces the GTO frequencies, while an on-device engine computes the equity and pot odds. Either way, the numbers are computed, not guessed by the model. The language model receives those figures as hard facts injected into its prompt, explains them in plain English, and reasons about the spots the solver can't tractably cover, but it's barred from stating a GTO number it wasn't handed. When a read is heuristic, the tool says so.</p>
+      <p>We built TableLab this way on purpose. A real CFR solver (TexasSolver, run offline) produces the GTO frequencies, while an on-device engine computes the equity and pot odds. Either way, the numbers are computed, not guessed by the model. The language model receives those figures as hard facts injected into its prompt, explains them in plain English, and reasons about the spots the solver can't tractably cover, but it's barred from stating a GTO number it wasn't handed. When a read is heuristic, the tool says so. And because every review happens after the session, the whole thing sits on the allowed side of every operator's rules &mdash; we lay out exactly where that line is in <a href="/blog/are-poker-solvers-allowed">Are Poker Solvers Allowed?</a>.</p>
 
       <figure>
         <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two-layer architecture: a CFR solver produces the numbers; a grounded language model produces the words." style="max-width:100%;height:auto">
