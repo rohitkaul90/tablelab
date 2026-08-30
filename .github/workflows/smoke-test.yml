@@ -19,6 +19,12 @@ on:
         type: boolean
         default: false
 
+# `pages: read` lets the daily deep run read the Pages API https_certificate
+# state (catches a stuck Let's Encrypt renewal weeks before the cert expires).
+permissions:
+  contents: read
+  pages: read
+
 # Don't pile up runs if one hangs.
 concurrency:
   group: smoke-test
@@ -40,6 +46,7 @@ jobs:
           SMOKE_TEST_EMAIL: ${{ secrets.SMOKE_TEST_EMAIL }}
           SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
           SMOKE_ALERT_WEBHOOK: ${{ secrets.SMOKE_ALERT_WEBHOOK }}
+          GITHUB_TOKEN: ${{ github.token }}
           # Deep on the daily cron OR when manually dispatched with deep=true.
           SMOKE_DEEP: ${{ (github.event.schedule == '15 8 * * *' || github.event.inputs.deep == 'true') && '1' || '0' }}
         run: node scripts/smoke-test.mjs

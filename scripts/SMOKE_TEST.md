@@ -27,6 +27,17 @@ a broken `logUsage` insert, an RLS regression after a migration.
    `forceRefresh:true` to force a real Claude call, then asserts a **fresh row
    appeared in `ai_usage_log`**. This is the smoking-gun check: a forced call
    that 200s but leaves no new log row means the write path is silently broken.
+6. **Web TLS certificate** ($0; runs first) — a real HTTPS handshake to
+   `tablelab.app` must present a valid cert and `/` must return 200. On the
+   DEEP run it additionally probes the **origin** cert on GitHub Pages directly
+   (by IP with SNI, so the Cloudflare proxy can't mask it) and requires ≥21
+   days left, and reads the Pages API `https_certificate.state`, which must be
+   `approved` with "Enforce HTTPS" on. **Why:** the apex A/AAAA are proxied
+   through Cloudflare, which blocks Let's Encrypt's HTTP-01 validation, so
+   GitHub's renewal can silently stall in `bad_authz`. On 2026-08-30 that
+   expired the cert (Aug 21) and Cloudflare Full-strict served **526** for nine
+   days before a user reported it. Renewal starts ~30 days out, so the ≥21-day
+   + `approved` checks alert weeks before users see anything.
 
 Exit 0 = all green; non-zero fails the CI job (→ GitHub emails you) and, if
 `SMOKE_ALERT_WEBHOOK` is set, POSTs a one-line alert to it.
@@ -107,6 +118,16 @@ Failure surfaces two ways:
 - Scheduled-cron timing on GitHub is best-effort (can lag minutes under load) —
   fine for monitoring, don't treat run times as exact.
 - If you rotate the test account's password, update the secret.
+- **Step 6 goes red (cert renewal stuck / 526):** in Cloudflare → DNS, flip the
+  apex A/AAAA (+ `www`) to **DNS only**; if the site is already 526ing, also set
+  SSL/TLS to **Full** (not strict) so the expired origin cert is accepted while
+  you fix it. Then in GitHub Settings → Pages clear the custom domain, save,
+  re-enter `tablelab.app`, save — that restarts the ACME order (issues in
+  ~5–15 min). Re-tick **Enforce HTTPS**, set Cloudflare back to **Full
+  (strict)**, and re-proxy the apex (the security headers are Cloudflare
+  transform rules, so they're absent while DNS-only). The step needs
+  `pages: read` on the workflow token for the Pages-API part; without a
+  `GITHUB_TOKEN` it skips that sub-check and still runs the cert probes.
 - The fixed `SMOKE_HAND_ID` keeps step 4 free; don't randomize it. The matching
   row in `hands` must persist (FK target for the analysis cache) — deleting it
   cascades away the cached analysis; the next run re-creates both at the cost of

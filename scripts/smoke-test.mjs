@@ -20,6 +20,16 @@
 //                       hit — a broken cache write path fails here.
 //   5. analyze-hand   — forceRefresh call, then assert a FRESH ai_usage_log row
 //                       appeared (the full AI write path). DEEP only — costs ~$0.034.
+//   6. web TLS cert   — real HTTPS handshake to tablelab.app (valid cert + 200).
+//                       DEEP adds: the ORIGIN cert on GitHub Pages (probed by IP
+//                       with SNI, so it's visible even behind the Cloudflare
+//                       proxy) must have ≥21 days left, and the Pages API
+//                       https_certificate.state must be "approved". The 2026-08-30
+//                       outage: the proxied apex blocked Let's Encrypt's HTTP
+//                       validation, renewal sat in `bad_authz` for weeks, the cert
+//                       expired Aug 21 and Cloudflare (Full-strict) 526'd for 9 days
+//                       before a user noticed. Fix = grey-cloud the apex, re-add the
+//                       custom domain in Settings → Pages (see scripts/SMOKE_TEST.md).
 //
 // Exit code 0 = all green. Non-zero = a step failed (fail the CI job → GitHub
 // emails you; optionally also POSTs to SMOKE_ALERT_WEBHOOK).
@@ -31,9 +41,13 @@
 //   SMOKE_TEST_PASSWORD     its password
 //   SMOKE_DEEP              "1" to run the costed step 4 (daily). Omit/0 = skip.
 //   SMOKE_ALERT_WEBHOOK     optional — Slack/Discord/Telegram-bridge incoming webhook
+//   GITHUB_TOKEN            optional — enables the Pages-API cert-state check (step 6,
+//                           DEEP). Needs `pages: read` on rohitkaul90/tablelab.
 //
 // Run locally:  node scripts/smoke-test.mjs
 // ─────────────────────────────────────────────────────────────────────────────
+
+import tls from "node:tls";
 
 const SUPABASE_URL = requireEnv("SUPABASE_URL").replace(/\/+$/, "");
 const ANON_KEY = requireEnv("SUPABASE_ANON_KEY");
@@ -41,6 +55,14 @@ const EMAIL = requireEnv("SMOKE_TEST_EMAIL");
 const PASSWORD = requireEnv("SMOKE_TEST_PASSWORD");
 const DEEP = process.env.SMOKE_DEEP === "1";
 const ALERT_WEBHOOK = process.env.SMOKE_ALERT_WEBHOOK || "";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
+
+// Step 6 constants. The site is GitHub Pages behind (optionally) the Cloudflare
+// proxy; the ORIGIN cert is the one Let's Encrypt renews via GitHub.
+const SITE_HOST = "tablelab.app";
+const GITHUB_PAGES_ORIGIN_IP = "185.199.108.153"; // any of 185.199.108-111.153
+const PAGES_REPO = "rohitkaul90/tablelab";
+const CERT_MIN_DAYS_LEFT = 21; // LE renews at ~30d; <21d means renewal is failing
 
 // Fixed hand id so the cache-hit path (step 3) stays free across runs.
 const SMOKE_HAND_ID = "00000000-0000-4000-8000-000000000001";
@@ -324,6 +346,84 @@ async function latestUsageLogAt() {
   return new Date(body[0].called_at).getTime();
 }
 
+// ── Step 6: web TLS certificate ──────────────────────────────────────────────
+
+// Resolve the peer certificate served for `servername` at `host:443`.
+function fetchPeerCert(host, servername) {
+  return new Promise((resolve, reject) => {
+    const sock = tls.connect(
+      { host, port: 443, servername, rejectUnauthorized: false, timeout: 10_000 },
+      () => {
+        const cert = sock.getPeerCertificate();
+        const authorized = sock.authorized;
+        const authError = sock.authorizationError;
+        sock.end();
+        resolve({ cert, authorized, authError });
+      },
+    );
+    sock.on("timeout", () => { sock.destroy(); reject(new Error(`TLS connect to ${host} timed out`)); });
+    sock.on("error", reject);
+  });
+}
+
+function daysUntil(dateStr) {
+  return (new Date(dateStr).getTime() - Date.now()) / 86_400_000;
+}
+
+async function webTlsCert() {
+  // (a) What real users see: a fully valid chain at the public hostname + a 200.
+  const live = await fetchPeerCert(SITE_HOST, SITE_HOST);
+  assert(live.authorized, `live TLS cert for ${SITE_HOST} is NOT valid: ${live.authError}`);
+  const liveDays = daysUntil(live.cert.valid_to);
+  assert(liveDays > 0, `live TLS cert for ${SITE_HOST} EXPIRED ${live.cert.valid_to}`);
+
+  const res = await fetch(`https://${SITE_HOST}/`, { redirect: "manual" });
+  assert(
+    res.status === 200,
+    `https://${SITE_HOST}/ returned HTTP ${res.status} (526 = Cloudflare rejected the origin cert; ` +
+      `grey-cloud the apex + re-add the custom domain in GitHub Settings → Pages)`,
+  );
+
+  if (!DEEP) return;
+
+  // (b) The origin cert on GitHub Pages, probed by IP with SNI so the Cloudflare
+  // proxy can't mask it. This is the cert that actually has to renew.
+  const origin = await fetchPeerCert(GITHUB_PAGES_ORIGIN_IP, SITE_HOST);
+  const originDays = daysUntil(origin.cert.valid_to);
+  assert(
+    originDays >= CERT_MIN_DAYS_LEFT,
+    `GitHub Pages ORIGIN cert for ${SITE_HOST} has ${originDays.toFixed(1)} days left ` +
+      `(expires ${origin.cert.valid_to}) — Let's Encrypt renewal is failing. ` +
+      `Grey-cloud the apex A/AAAA in Cloudflare so the HTTP-01 challenge reaches GitHub, ` +
+      `then re-add the custom domain in Settings → Pages.`,
+  );
+
+  // (c) The Pages API tells us renewal is stuck BEFORE the cert runs out.
+  if (!GITHUB_TOKEN) {
+    console.log("  (GITHUB_TOKEN unset — skipping Pages API cert-state check)");
+    return;
+  }
+  const api = await fetch(`https://api.github.com/repos/${PAGES_REPO}/pages`, {
+    headers: {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+  const body = await api.json().catch(() => ({}));
+  assert(api.ok, `Pages API HTTP ${api.status}: ${JSON.stringify(body).slice(0, 200)}`);
+  const cert = body.https_certificate || {};
+  assert(
+    cert.state === "approved",
+    `GitHub Pages https_certificate.state = "${cert.state}" (${cert.description || "no description"}) — ` +
+      `expected "approved". Renewal is stuck; grey-cloud the apex + re-add the custom domain.`,
+  );
+  assert(
+    body.https_enforced === true,
+    `GitHub Pages "Enforce HTTPS" is OFF (it drops when a cert fails to renew) — re-enable it in Settings → Pages`,
+  );
+}
+
 // ── Alerting ─────────────────────────────────────────────────────────────────
 
 async function alert(summary) {
@@ -344,6 +444,7 @@ async function alert(summary) {
 async function main() {
   console.log(`TableLab smoke test — ${new Date().toISOString()} (deep=${DEEP})`);
 
+  await step("web: TLS certificate healthy" + (DEEP ? " (origin expiry + Pages cert state)" : ""), webTlsCert);
   await step("auth: password sign-in", signIn);
 
   // Everything below needs a token; bail early if auth failed.
