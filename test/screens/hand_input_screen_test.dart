@@ -65,6 +65,21 @@ void main() {
     expect(find.byType(HandInputScreen), findsNothing);
   });
 
+  testWidgets('typed setup work (player name) arms the back guard',
+      (tester) async {
+    // Regression: the setup step's typed fields (names/stacks/blinds) didn't
+    // count as dirty, so a back gesture silently discarded them.
+    await pumpWizard(tester);
+
+    await tester.enterText(find.byType(TextField).first, 'Bob');
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Discard hand?'), findsOneWidget);
+    expect(find.byType(HandInputScreen), findsOneWidget);
+  });
+
   testWidgets('hero cards picked → back asks to discard; Cancel keeps it, Discard pops',
       (tester) async {
     await pumpWizard(tester);

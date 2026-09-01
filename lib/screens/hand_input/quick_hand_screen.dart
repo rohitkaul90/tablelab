@@ -71,6 +71,19 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   bool get _sessionLocked => widget.prefilledSessionId != null;
 
+  late final List<TextEditingController> _allCtrls = [
+    _customStakesCtrl, _tournSbCtrl, _tournBbCtrl, _anteCtrl,
+    _facingSizeCtrl, _heroSizeCtrl, _potBeforeCtrl, _effStackCtrl,
+    _resultAmountCtrl, _noteCtrl, _earlierBetCtrl,
+  ];
+
+  // Text fields don't rebuild the screen on their own, so PopScope.canPop
+  // would go stale for typed-only edits (e.g. a note with nothing else set) —
+  // rebuild on every controller change to keep the back guard current.
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -94,26 +107,30 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
         _customStakesCtrl.text = prefill;
       }
     }
+    // Everything seeded above is the pristine baseline — capture it AFTER the
+    // prefill so prefilled values never arm the back guard.
+    _initialFingerprint = _entryFingerprint;
+    for (final c in _allCtrls) {
+      c.addListener(_onFieldChanged);
+    }
   }
 
   @override
   void dispose() {
-    for (final c in [
-      _customStakesCtrl, _tournSbCtrl, _tournBbCtrl, _anteCtrl,
-      _facingSizeCtrl, _heroSizeCtrl, _potBeforeCtrl, _effStackCtrl,
-      _resultAmountCtrl, _noteCtrl, _earlierBetCtrl,
-    ]) {
+    for (final c in _allCtrls) {
       c.dispose();
     }
     super.dispose();
   }
 
-  /// Test hook — widget tests can't drive the card-picker bottom sheet.
-  @visibleForTesting
-  void debugSetHeroCards(List<String> cards) =>
+  void _setHeroCards(List<String> cards) =>
       setState(() => _heroCards
         ..clear()
         ..addAll(cards));
+
+  /// Test hook — widget tests can't drive the card-picker bottom sheet.
+  @visibleForTesting
+  void debugSetHeroCards(List<String> cards) => _setHeroCards(cards);
 
   // ── parsing ──────────────────────────────────────────────────────────────────
 
@@ -150,19 +167,25 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
       _blinds != null &&
       _heroAction != null;
 
-  /// True once the user has actively entered anything worth protecting from an
-  /// accidental back gesture. Prefill seeds (session link, game type, stakes —
-  /// set in initState) deliberately don't count; the stack field's '100'
-  /// default doesn't either. Gates the PopScope and the Full-mode switch.
-  bool get _isDirty =>
-      _heroCards.isNotEmpty ||
-      _position != null ||
-      _heroAction != null ||
-      _board.isNotEmpty ||
-      _street != Street.preflop ||
-      _facing != QuickFacing.unopened ||
-      _result != null ||
-      _noteCtrl.text.trim().isNotEmpty;
+  /// Fingerprint of every user-editable entry field. Captured once at the end
+  /// of initState (so prefill seeds and field defaults never count as dirty)
+  /// and compared in [_isDirty]: any deviation from the just-opened state means
+  /// the user has entered something worth protecting from an accidental back
+  /// gesture. Gates the PopScope and the Full-mode switch.
+  String get _entryFingerprint => [
+        _isTournament, _selectedStakes, _customStakes, _customStakesCtrl.text,
+        _tournSbCtrl.text, _tournBbCtrl.text, _anteCtrl.text,
+        _tournamentStage ?? '', _heroCards.join(','), _numSeats,
+        _position ?? '', _street.name, _board.join(','), _facing.name,
+        _heroAction?.name ?? '', _potType.name, _earlier.name,
+        _earlierBetCtrl.text, _facingSizeCtrl.text, _heroSizeCtrl.text,
+        _potBeforeCtrl.text, _effStackCtrl.text, _result?.name ?? '',
+        _resultAmountCtrl.text, _noteCtrl.text, _selectedSessionId ?? '',
+      ].join('|');
+
+  late final String _initialFingerprint;
+
+  bool get _isDirty => _entryFingerprint != _initialFingerprint;
 
   // ── street/facing/action option logic ────────────────────────────────────────
 
@@ -318,9 +341,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
     final cards = await showHandCardPicker(context,
         count: 2, used: _board.toSet());
     if (!mounted || cards == null) return;
-    setState(() => _heroCards
-      ..clear()
-      ..addAll(cards));
+    _setHeroCards(cards);
   }
 
   Future<void> _pickBoard() async {

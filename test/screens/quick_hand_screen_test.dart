@@ -308,6 +308,21 @@ void main() {
       expect(find.text('open'), findsOneWidget);
     });
 
+    testWidgets('typing only a note arms the back guard', (tester) async {
+      // Regression: text controllers don't rebuild the screen, so canPop went
+      // stale and a note-only entry was silently discarded by system back.
+      await pumpWithHost(tester, FakeHandService());
+
+      await tester.enterText(
+          find.widgetWithText(TextField, 'Note — optional'), 'villain tilted');
+      await tester.pump();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Discard hand?'), findsOneWidget);
+      expect(find.byType(QuickHandScreen), findsOneWidget);
+    });
+
     testWidgets('dirty form confirms before switching to Full mode',
         (tester) async {
       final fake = FakeHandService();

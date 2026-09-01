@@ -284,7 +284,38 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
       _selectedStakes = widget.prefilledStakes!;
     }
     _isTournamentHand = widget.isTournamentSession;
+    // Everything seeded above is the pristine baseline — capture it AFTER the
+    // prefill so prefilled values never arm the back guard.
+    _initialSetupFingerprint = _setupFingerprint;
+    // Text fields don't rebuild the screen on their own, so PopScope.canPop
+    // would go stale for typed-only setup edits (names, stacks, blinds) —
+    // rebuild on every controller change to keep the back guard current.
+    for (final c in _setupCtrls) {
+      c.addListener(_onSetupFieldChanged);
+    }
   }
+
+  late final List<TextEditingController> _setupCtrls = [
+    ..._nameCtrl, ..._stackCtrl, _anteCtrl, _tournSbCtrl, _tournBbCtrl,
+  ];
+
+  void _onSetupFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Fingerprint of the setup step's user-editable fields. Compared against
+  /// the post-initState baseline in [_isDirty] so any typed setup work (player
+  /// names, stacks, blinds, straddle, session link…) arms the back guard, not
+  /// just picked hero cards.
+  String get _setupFingerprint => [
+        _numSeats, _heroSeat, _selectedStakes, _hasStraddle,
+        _isTournamentHand, _tournamentStage ?? '', _selectedSessionId ?? '',
+        _anteCtrl.text, _tournSbCtrl.text, _tournBbCtrl.text,
+        for (final c in _nameCtrl) c.text,
+        for (final c in _stackCtrl) c.text,
+      ].join('|');
+
+  late final String _initialSetupFingerprint;
 
   // ── setup → start ────────────────────────────────────────────────────────────
   void _startHand() {
@@ -594,17 +625,17 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
   Future<void> _pickHeroCards() async {
     final cards = await _pickCards(2);
     if (!mounted || cards == null) return;
-    setState(() => _heroCards
-      ..clear()
-      ..addAll(cards));
+    _setHeroCards(cards);
   }
 
-  /// Test hook — widget tests can't drive the card-picker bottom sheet.
-  @visibleForTesting
-  void debugSetHeroCards(List<String> cards) =>
+  void _setHeroCards(List<String> cards) =>
       setState(() => _heroCards
         ..clear()
         ..addAll(cards));
+
+  /// Test hook — widget tests can't drive the card-picker bottom sheet.
+  @visibleForTesting
+  void debugSetHeroCards(List<String> cards) => _setHeroCards(cards);
 
   // ── build ─────────────────────────────────────────────────────────────────────
   @override
@@ -614,13 +645,16 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
       Theme(data: AppTheme.dark, child: _build(context));
 
   /// True while the user has an unsaved hand in progress: anything past the
-  /// setup step (until the hand is saved at [_Step.done]), or hero cards
-  /// already picked on the setup screen. Gates both the system back gesture
-  /// (PopScope) and the AppBar close button, so a pristine or already-saved
-  /// screen pops without a "Discard hand?" prompt.
+  /// setup step (until the hand is saved at [_Step.done]), or any setup-step
+  /// entry (hero cards, or a deviation from the post-initState baseline —
+  /// see [_setupFingerprint]). Gates both the system back gesture (PopScope)
+  /// and the AppBar close button, so a pristine or already-saved screen pops
+  /// without a "Discard hand?" prompt.
   bool get _isDirty =>
       _step != _Step.done &&
-      (_step != _Step.setup || _heroCards.isNotEmpty);
+      (_step != _Step.setup ||
+          _heroCards.isNotEmpty ||
+          _setupFingerprint != _initialSetupFingerprint);
 
   Widget _build(BuildContext context) {
     return PopScope(
