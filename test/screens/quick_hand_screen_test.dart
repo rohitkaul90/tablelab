@@ -248,4 +248,81 @@ void main() {
     expect(fake.capturedSetup!.smallBlind, equals(2));
     expect(fake.capturedSetup!.bigBlind, equals(5));
   });
+
+  group('back-gesture discard guard', () {
+    // Pushed from a host so the system back gesture (handlePopRoute →
+    // Navigator.maybePop → PopScope) has a route to pop back to.
+    Future<void> pumpWithHost(WidgetTester tester, FakeHandService fake) async {
+      useTallViewport(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [handServiceProvider.overrideWithValue(fake)],
+          child: MaterialApp(
+            home: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () => Navigator.push(
+                  ctx,
+                  MaterialPageRoute(builder: (_) => const QuickHandScreen()),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('pristine form pops on system back without a prompt',
+        (tester) async {
+      await pumpWithHost(tester, FakeHandService());
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Discard hand?'), findsNothing);
+      expect(find.byType(QuickHandScreen), findsNothing);
+      expect(find.text('open'), findsOneWidget);
+    });
+
+    testWidgets('dirty form asks to discard; Cancel keeps it, Discard pops',
+        (tester) async {
+      await pumpWithHost(tester, FakeHandService());
+      stateOf(tester).debugSetHeroCards(['As', 'Kd']);
+      await tester.pump();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Discard hand?'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(QuickHandScreen), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Discard'));
+      await tester.pumpAndSettle();
+      expect(find.byType(QuickHandScreen), findsNothing);
+      expect(find.text('open'), findsOneWidget);
+    });
+
+    testWidgets('dirty form confirms before switching to Full mode',
+        (tester) async {
+      final fake = FakeHandService();
+      await pumpQuickHand(tester, fake);
+      stateOf(tester).debugSetHeroCards(['As', 'Kd']);
+      await tester.pump();
+
+      await tester.tap(find.text('Full mode'));
+      await tester.pumpAndSettle();
+      expect(find.text('Switch to Full mode?'), findsOneWidget);
+
+      // Cancel keeps the quick form (and its state) intact.
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(QuickHandScreen), findsOneWidget);
+    });
+  });
 }

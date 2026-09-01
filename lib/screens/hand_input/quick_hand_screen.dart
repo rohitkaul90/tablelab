@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/helpers.dart';
 import '../../utils/quick_hand_synthesis.dart';
+import '../../widgets/discard_hand_dialog.dart';
 import '../../widgets/hand_card_picker.dart';
 import '../../widgets/playing_card_widget.dart';
 import '../../widgets/session_picker_tile.dart';
@@ -148,6 +149,20 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
       _position != null &&
       _blinds != null &&
       _heroAction != null;
+
+  /// True once the user has actively entered anything worth protecting from an
+  /// accidental back gesture. Prefill seeds (session link, game type, stakes —
+  /// set in initState) deliberately don't count; the stack field's '100'
+  /// default doesn't either. Gates the PopScope and the Full-mode switch.
+  bool get _isDirty =>
+      _heroCards.isNotEmpty ||
+      _position != null ||
+      _heroAction != null ||
+      _board.isNotEmpty ||
+      _street != Street.preflop ||
+      _facing != QuickFacing.unopened ||
+      _result != null ||
+      _noteCtrl.text.trim().isNotEmpty;
 
   // ── street/facing/action option logic ────────────────────────────────────────
 
@@ -379,7 +394,16 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
     }
   }
 
-  void _switchToFullMode() {
+  Future<void> _switchToFullMode() async {
+    if (_isDirty) {
+      final ok = await confirmDiscardHand(
+        context,
+        title: 'Switch to Full mode?',
+        message: "Your quick entries won't carry over.",
+        confirmLabel: 'Switch',
+      );
+      if (!ok || !mounted) return;
+    }
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -397,6 +421,22 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _confirmBackDiscard();
+      },
+      child: _build(context),
+    );
+  }
+
+  Future<void> _confirmBackDiscard() async {
+    final ok = await confirmDiscardHand(context);
+    if (ok && mounted) Navigator.pop(context);
+  }
+
+  Widget _build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
