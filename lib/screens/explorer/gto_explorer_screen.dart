@@ -195,7 +195,14 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   onPressed: () =>
                       mainScaffoldKey.currentState?.openDrawer(),
                 ),
-                title: const Text('GTO Study'),
+                title: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('GTO Study'),
+                    const SizedBox(width: 8),
+                    _betaChip(context),
+                  ],
+                ),
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.fullscreen),
@@ -234,6 +241,58 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                 ],
               )
             : body,
+      ),
+    );
+  }
+
+  /// Small tappable "BETA" pill next to the title. Study's solved ranges are
+  /// still being calibrated (preflop-range migration in progress), so the
+  /// frequencies shown can change between releases — the chip discloses that
+  /// without burying the screen under a banner. Remove together with the
+  /// bottom-nav Badge (main.dart) when Study leaves beta.
+  Widget _betaChip(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.tertiaryContainer,
+      borderRadius: BorderRadius.circular(8),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _showBetaInfo(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          child: Text(
+            'BETA',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+              color: scheme.onTertiaryContainer,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBetaInfo(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Study is in beta'),
+        content: const Text(
+          'The solved strategies behind Study are still being calibrated — '
+          'we are refining the preflop ranges the solutions are built on and '
+          're-solving spots as they improve.\n\n'
+          'Frequencies and strategies shown here can change between updates '
+          'and should be treated as a study aid, not a definitive answer. '
+          'The rest of the app (sessions, stats, hands) is unaffected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Got it'),
+          ),
+        ],
       ),
     );
   }
