@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
 import '../../utils/helpers.dart';
 import '../../utils/quick_hand_synthesis.dart';
+import '../../widgets/discard_hand_dialog.dart';
 import '../../widgets/hand_card_picker.dart';
 import '../../widgets/playing_card_widget.dart';
 import '../../widgets/session_picker_tile.dart';
@@ -70,6 +71,19 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   bool get _sessionLocked => widget.prefilledSessionId != null;
 
+  late final List<TextEditingController> _allCtrls = [
+    _customStakesCtrl, _tournSbCtrl, _tournBbCtrl, _anteCtrl,
+    _facingSizeCtrl, _heroSizeCtrl, _potBeforeCtrl, _effStackCtrl,
+    _resultAmountCtrl, _noteCtrl, _earlierBetCtrl,
+  ];
+
+  // Text fields don't rebuild the screen on their own, so PopScope.canPop
+  // would go stale for typed-only edits (e.g. a note with nothing else set) —
+  // rebuild on every controller change to keep the back guard current.
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -93,26 +107,30 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
         _customStakesCtrl.text = prefill;
       }
     }
+    // Everything seeded above is the pristine baseline — capture it AFTER the
+    // prefill so prefilled values never arm the back guard.
+    _initialFingerprint = _entryFingerprint;
+    for (final c in _allCtrls) {
+      c.addListener(_onFieldChanged);
+    }
   }
 
   @override
   void dispose() {
-    for (final c in [
-      _customStakesCtrl, _tournSbCtrl, _tournBbCtrl, _anteCtrl,
-      _facingSizeCtrl, _heroSizeCtrl, _potBeforeCtrl, _effStackCtrl,
-      _resultAmountCtrl, _noteCtrl, _earlierBetCtrl,
-    ]) {
+    for (final c in _allCtrls) {
       c.dispose();
     }
     super.dispose();
   }
 
-  /// Test hook — widget tests can't drive the card-picker bottom sheet.
-  @visibleForTesting
-  void debugSetHeroCards(List<String> cards) =>
+  void _setHeroCards(List<String> cards) =>
       setState(() => _heroCards
         ..clear()
         ..addAll(cards));
+
+  /// Test hook — widget tests can't drive the card-picker bottom sheet.
+  @visibleForTesting
+  void debugSetHeroCards(List<String> cards) => _setHeroCards(cards);
 
   // ── parsing ──────────────────────────────────────────────────────────────────
 
@@ -148,6 +166,26 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
       _position != null &&
       _blinds != null &&
       _heroAction != null;
+
+  /// Fingerprint of every user-editable entry field. Captured once at the end
+  /// of initState (so prefill seeds and field defaults never count as dirty)
+  /// and compared in [_isDirty]: any deviation from the just-opened state means
+  /// the user has entered something worth protecting from an accidental back
+  /// gesture. Gates the PopScope and the Full-mode switch.
+  String get _entryFingerprint => [
+        _isTournament, _selectedStakes, _customStakes, _customStakesCtrl.text,
+        _tournSbCtrl.text, _tournBbCtrl.text, _anteCtrl.text,
+        _tournamentStage ?? '', _heroCards.join(','), _numSeats,
+        _position ?? '', _street.name, _board.join(','), _facing.name,
+        _heroAction?.name ?? '', _potType.name, _earlier.name,
+        _earlierBetCtrl.text, _facingSizeCtrl.text, _heroSizeCtrl.text,
+        _potBeforeCtrl.text, _effStackCtrl.text, _result?.name ?? '',
+        _resultAmountCtrl.text, _noteCtrl.text, _selectedSessionId ?? '',
+      ].join('|');
+
+  late final String _initialFingerprint;
+
+  bool get _isDirty => _entryFingerprint != _initialFingerprint;
 
   // ── street/facing/action option logic ────────────────────────────────────────
 
@@ -303,9 +341,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
     final cards = await showHandCardPicker(context,
         count: 2, used: _board.toSet());
     if (!mounted || cards == null) return;
-    setState(() => _heroCards
-      ..clear()
-      ..addAll(cards));
+    _setHeroCards(cards);
   }
 
   Future<void> _pickBoard() async {
@@ -379,7 +415,16 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
     }
   }
 
-  void _switchToFullMode() {
+  Future<void> _switchToFullMode() async {
+    if (_isDirty) {
+      final ok = await confirmDiscardHand(
+        context,
+        title: 'Switch to Full mode?',
+        message: "Your quick entries won't carry over.",
+        confirmLabel: 'Switch',
+      );
+      if (!ok || !mounted) return;
+    }
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -397,6 +442,22 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _confirmBackDiscard();
+      },
+      child: _build(context),
+    );
+  }
+
+  Future<void> _confirmBackDiscard() async {
+    final ok = await confirmDiscardHand(context);
+    if (ok && mounted) Navigator.pop(context);
+  }
+
+  Widget _build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
