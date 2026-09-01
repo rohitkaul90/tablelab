@@ -254,9 +254,18 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               label: 'Reads',
             ),
             if (showStudy)
+              // Badged while the solved ranges are still being calibrated —
+              // the Study screen's BETA chip carries the full explanation.
+              // Remove both together when Study leaves beta.
               const NavigationDestination(
-                icon: Icon(Icons.school_outlined),
-                selectedIcon: Icon(Icons.school),
+                icon: Badge(
+                  label: Text('BETA'),
+                  child: Icon(Icons.school_outlined),
+                ),
+                selectedIcon: Badge(
+                  label: Text('BETA'),
+                  child: Icon(Icons.school),
+                ),
                 label: 'Study',
               ),
           ],
