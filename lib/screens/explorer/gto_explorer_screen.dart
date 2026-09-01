@@ -198,8 +198,17 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                 title: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('GTO Study'),
-                    const SizedBox(width: 8),
+                    // Flexible + ellipsis: a bare Text in a Row loses the
+                    // AppBar's built-in title truncation, overflowing on
+                    // narrow phones / large font scales.
+                    const Flexible(
+                      child: Text(
+                        'GTO Study',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     _betaChip(context),
                   ],
                 ),
@@ -251,22 +260,39 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   /// without burying the screen under a banner. Remove together with the
   /// bottom-nav Badge (main.dart) when Study leaves beta.
   Widget _betaChip(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.tertiaryContainer,
-      borderRadius: BorderRadius.circular(8),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _showBetaInfo(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-          child: Text(
-            'BETA',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.8,
-              color: scheme.onTertiaryContainer,
+    // AppTheme.dark directly, NOT Theme.of(context): this State's context sits
+    // ABOVE the Theme(data: AppTheme.dark) wrapper, so the ambient scheme
+    // would flip the chip to light-mode colors on this always-dark screen.
+    final scheme = AppTheme.dark.colorScheme;
+    // The visual pill stays small, but the tappable area is padded out to the
+    // ~48dp minimum; Tooltip + Semantics make the affordance discoverable.
+    return Semantics(
+      button: true,
+      label: 'Study beta information',
+      child: Tooltip(
+        message: 'Study is in beta — tap for details',
+        child: InkWell(
+          onTap: () => _showBetaInfo(context),
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: scheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              child: Text(
+                'BETA',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                  color: scheme.onTertiaryContainer,
+                ),
+              ),
             ),
           ),
         ),
@@ -277,22 +303,28 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   void _showBetaInfo(BuildContext context) {
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Study is in beta'),
-        content: const Text(
-          'The solved strategies behind Study are still being calibrated — '
-          'we are refining the preflop ranges the solutions are built on and '
-          're-solving spots as they improve.\n\n'
-          'Frequencies and strategies shown here can change between updates '
-          'and should be treated as a study aid, not a definitive answer. '
-          'The rest of the app (sessions, stats, hands) is unaffected.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Got it'),
+      // Dialog routes inherit from the root navigator, not this screen's
+      // Theme(AppTheme.dark) subtree — wrap explicitly to keep the felt-screen
+      // convention in light mode.
+      builder: (ctx) => Theme(
+        data: AppTheme.dark,
+        child: AlertDialog(
+          title: const Text('Study is in beta'),
+          content: const Text(
+            'The solved strategies behind Study are still being calibrated — '
+            'we are refining the preflop ranges the solutions are built on and '
+            're-solving spots as they improve.\n\n'
+            'Frequencies and strategies shown here can change between updates '
+            'and should be treated as a study aid, not a definitive answer. '
+            'The rest of the app (sessions, stats, hands) is unaffected.',
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Got it'),
+            ),
+          ],
+        ),
       ),
     );
   }
