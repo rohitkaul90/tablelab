@@ -115,6 +115,7 @@ Review every trend post at **90 days**: either refresh the peg with current figu
 |---|---|---|
 | `/blog/are-poker-solvers-allowed` | **2026-09-30** | Intro says WSOP Online 2026 (Aug 16 – Sep 29, on GGPoker) is running "right now". The day after it ends: switch the intro to past tense, keep the scoped "Why 2026 is the year the line got enforced" H2 as history, re-check the PokerStars/GGPoker policy pages for wording changes, and bump the three dates together. |
 | `/blog/poker-tournament-variance` | **2026-08-06** | Written before the WSOP Main Event final table (Aug 3–5). Its intro, conclusion, and FAQ #5 use future tense about a result that will exist by Aug 6. Swap to past tense, name the champion, and consider replacing the pure-news FAQ with an evergreen question. |
+| `/blog/how-poker-pros-handle-downswings` | **2026-12-15**, then **every January** | Book peg decays slowly; the real freshness hook is Negreanu posting his next year-end results each January — refresh the chart + the "was it variance?" numbers, bump the three dates together. |
 
 ### Trend backlog
 
@@ -122,6 +123,7 @@ Review every trend post at **90 days**: either refresh the peg with current figu
 |---|---|---|---|
 | **LLMs vs GTO: the 2026 scoreboard** — PokerSkill (arXiv 2605.30094, 2026-05-28) has LLMs playing near-solver poker with no training and no solver, yet still **losing** to the GTO Wizard benchmark: GPT‑5.5 XHigh −57 ± 21 mbb/hand, Claude Opus 4.6 −80 ± 29, Opus 4.7 −87 ± 64. "Expert-level" in the title ≠ beating GTO. | B | arXiv paper | High |
 | ~~**Which poker tools are actually allowed in 2026**~~ — **SHIPPED 2026-08-30** as `/blog/are-poker-solvers-allowed` (evergreen keyword `are poker solvers allowed`; the 2026 peg confined to intro/hero/one H2 per the rule above). | Pillar 2 → B | RTA arms race | High |
+| **How poker pros handle downswings** — Garrett Adelstein's memoir *Beneath the Cards* (Simon & Schuster, 2026-09-01) is the peg; the evergreen keyword is `poker downswing` and the body is Negreanu's self-published year-end results + Ivey's HighstakesDB online arc run through our variance model. Names in the H1 as modifiers only (long-tail like "phil ivey downswing"); the book gets ONE scoped H2. **IN PROGRESS 2026-09-08** (branch `blog/how-poker-pros-handle-downswings`; gated on a first-hand read of the book). | A | Book release | Medium |
 | **WSOP Online series** (Aug 16 – Sep 29, 2026) | A | Calendar | Low |
 
 ## AI-Citation / GEO Surface Strategy
@@ -154,6 +156,8 @@ Primary goal — so this is weighted heavily.
 | Visuals | ≥2 charts + ≥3 images; **disclose method** wherever solver/AI output appears |
 | Internal links | ≥5 per post, within-cluster |
 | Words | Spokes 1,500+; pillars 3,000+ |
+
+**Prose-bold house rule (since 2026-08-05, commit `f6758bb`, user feedback):** bold appears ONLY in headings, bullet-point lead-ins, and block labels (`TL;DR:`, callout lead-ins, the author name, 18+). Never mid-sentence — alongside link colours it makes reading arduous and reads as AI-written. Paraphrase by default; quote verbatim only where the exact wording IS the argument.
 
 **Non-negotiable from `BRAND.md`:** every piece that shows analysis must separate **solver output (deterministic)** from **AI prose/heuristic**, and state the fallibility line. Never imply the LLM solves poker.
 

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How Pros Handle a Poker Downswing: Ivey, Negreanu — TableLab</title>
+  <meta name="description" content="Negreanu&#x27;s $2.2M 2023, Ivey&#x27;s $6.3M online slide, Adelstein&#x27;s memoir: what pro ledgers say a poker downswing really is, and how to tell luck from leaks.">
+  <link rel="canonical" href="https://tablelab.app/blog/how-poker-pros-handle-downswings">
+  <meta property="og:title" content="How Poker Pros Handle Downswings: What Negreanu, Ivey and Adelstein&#x27;s Results Show">
+  <meta property="og:description" content="Negreanu&#x27;s $2.2M 2023, Ivey&#x27;s $6.3M online slide, Adelstein&#x27;s memoir: what pro ledgers say a poker downswing really is, and how to tell luck from leaks.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://tablelab.app/blog/how-poker-pros-handle-downswings">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How Poker Pros Handle Downswings: Negreanu, Ivey, Adelstein">
+  <meta name="twitter:description" content="Negreanu&#x27;s $2.2M 2023, Ivey&#x27;s $6.3M online slide, Adelstein&#x27;s memoir: what pro ledgers say a poker downswing really is, and how to tell luck from leaks.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta property="article:published_time" content="2026-09-08">
+  <meta property="article:modified_time" content="2026-09-08">
+  <meta name="author" content="Rohit Kaul">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="stylesheet" href="/site.css?v=2e84643698">
+  <script src="/site.js?v=302dfa2fc7" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://tablelab.app/blog/how-poker-pros-handle-downswings#article",
+        "headline": "How Poker Pros Handle Downswings: What Negreanu, Ivey and Adelstein's Results Show",
+        "description": "Negreanu lost $2.2 million in 2023, Ivey dropped $6.3 million on one online account, and Adelstein has just published a book about what winning cost him. We put their published ledgers through a variance model to show what a real poker downswing looks like in buy-ins, and how to tell yours from a leak.",
+        "datePublished": "2026-09-08",
+        "dateModified": "2026-09-08",
+        "author": {
+          "@id": "https://tablelab.app/#rohit"
+        },
+        "publisher": {
+          "@id": "https://tablelab.app/#organization"
+        },
+        "image": {
+          "@id": "https://tablelab.app/blog/how-poker-pros-handle-downswings#primaryimage"
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://tablelab.app/blog/how-poker-pros-handle-downswings"
+        },
+        "isPartOf": {
+          "@id": "https://tablelab.app/blog#blog"
+        },
+        "wordCount": 3371,
+        "keywords": [
+          "poker downswing",
+          "how to handle a poker downswing",
+          "phil ivey downswing",
+          "daniel negreanu results",
+          "garrett adelstein book",
+          "beneath the cards",
+          "tournament downswing in buy-ins"
+        ],
+        "articleSection": "Bankroll & Variance"
+      },
+      {
+        "@type": "Blog",
+        "@id": "https://tablelab.app/blog#blog",
+        "name": "The TableLab Blog",
+        "url": "https://tablelab.app/blog/",
+        "publisher": {
+          "@id": "https://tablelab.app/#organization"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": [
+          "https://magpiq.com",
+          "https://www.youtube.com/channel/UCaslEsv-BMGKuOY4ssKQqVQ"
+        ],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://tablelab.app/#rohit",
+        "name": "Rohit Kaul",
+        "givenName": "Rohit",
+        "description": "Live cash-game poker player and data-analytics professional; maker of TableLab. Around 20 years playing poker, focused on live cash as a winning player, with over a decade building quantitative models in Python.",
+        "jobTitle": "Founder",
+        "worksFor": {
+          "@id": "https://tablelab.app/#organization"
+        },
+        "knowsAbout": [
+          "Poker strategy",
+          "Cash game poker",
+          "Game theory optimal (GTO) poker",
+          "Poker bankroll management",
+          "Data analytics",
+          "Quantitative modeling"
+        ],
+        "alumniOf": [
+          {
+            "@type": "CollegeOrUniversity",
+            "name": "Purdue University"
+          },
+          {
+            "@type": "CollegeOrUniversity",
+            "name": "University of Mumbai"
+          }
+        ],
+        "sameAs": [
+          "https://www.linkedin.com/in/rohit-kaul-a761171a2",
+          "https://x.com/RohitKaul90",
+          "https://www.youtube.com/@rohitkaul1990",
+          "https://pokerdb.thehendonmob.com/player.php?a=r&n=877305"
+        ]
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://tablelab.app/blog/how-poker-pros-handle-downswings#primaryimage",
+        "url": "https://tablelab.app/og-cover.png",
+        "width": 2400,
+        "height": 1260
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/blog/how-poker-pros-handle-downswings#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://tablelab.app"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://tablelab.app/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "How Poker Pros Handle Downswings",
+            "item": "https://tablelab.app/blog/how-poker-pros-handle-downswings"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/blog/how-poker-pros-handle-downswings#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How long does a poker downswing last?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "There's no fixed length; the honest measure is how often a winning player posts a losing stretch. Galfond's figures for a cash player at 25,000 hands a year: a 13% chance of a losing year at 5bb/100, 26.4% at 2bb/100 (Galfond). For a super-high-roller schedule modelled on Primedope, a winning player has a 15% chance of losing money over a full decade of 1,800 tournaments (PokerStrategy)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is a normal downswing in buy-ins for tournaments?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It depends on field size more than on skill. In our deterministic model of a 145-event year, the median worst drawdown for a 10–20% ROI player runs from 29–33 buy-ins in a tight small-field model (3 buy-ins of standard deviation per event) to 66–71 buy-ins in a big-field, re-entry model (6 buy-ins). Primedope puts the 95% confidence interval for a 20% ROI player at 500 tournaments at roughly -140% to +180% ROI (Primedope)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How much did Phil Ivey lose online?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "By HighstakesDB's tracking as reported by CardPlayer, Ivey's \"Polarizing\" account on Full Tilt was down $6.3 million from late 2012 to December 2015, after his original account there had won $19.24 million over about 319,000 hands (CardPlayer). In 2015 alone he lost $3.73 million across Full Tilt and PokerStars over roughly 160,000 hands, while winning $1.7 million in tournaments. As of May 2018 HighstakesDB still had his lifetime online result at +$10.44 million."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What was Daniel Negreanu's worst year?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "2023. By his own year-end vlog he lost $2,228,174 (PokerNews), across 145 tournaments with 39 cashes, the biggest losing year of his career (PokerStrategy). At his 2022 average buy-in of $30,136 that's roughly 74 buy-ins. His own diagnosis was that he was playing far too often; his 2024 plan cut volume and dropped the WSOP Player of the Year chase."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Beneath the Cards about the Jack-Four hand?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Only partly. The alleged cheating incident makes up about 10 percent of the book by Adelstein's own estimate, and the PokerNews review warns that readers looking for a Jack-Four smoking gun won't find one (PokerNews). Jennifer Shahade's review calls the jack-four chapters extremely detailed (Deep Reads). The rest is a memoir of a high-stakes live cash career: the swings, the anxiety, going broke, and what happens when winning is no longer enough."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Should you move down in stakes during a downswing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "If the bankroll math says so, yes, and the math is the only good reason. GTO Wizard's guidance is 75–125 buy-ins for tournaments and never more than 2% of your roll in a single event, with a warning that the 100-buy-in rule is far too aggressive for most large-field MTTs (GTO Wizard). PokerStrategy notes that variance calculators don't account for moving up or down in stakes, which is exactly why moving down is the one lever that changes your risk of ruin."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-H4D9DBVXDD');
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/gto-library">GTO Library</a>
+      <a class="link" href="/about">About</a>
+            <details class="nav-dropdown">
+        <summary>Tools<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <nav aria-label="Free poker calculators">
+          <a href="/variance-calculator">Variance Calculator</a>
+          <a href="/icm-calculator">ICM Calculator</a>
+        </nav>
+      </details>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+    <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / How Poker Pros Handle Downswings</div>
+
+      <h1>How Poker Pros Handle Downswings: What Negreanu, Ivey and Adelstein&rsquo;s Results Show</h1>
+      <p class="byline">By Rohit Kaul · September 8, 2026 · 15 min read</p>
+
+      <div class="hero-banner">
+        <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Every pro's graph has a hole in it. Negreanu's self-reported minus 2.2 million year, Ivey's 6.3 million online slide on one account, and what Garrett Adelstein's memoir says about the cost of winning — read through a bankroll lens.">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0d130d"/>
+              <stop offset="1" stop-color="#16201a"/>
+            </linearGradient>
+          </defs>
+          <rect width="1200" height="380" fill="url(#bg)"/>
+          <rect x="0" y="0" width="6" height="380" fill="#4CAF50"/>
+          <text x="70" y="86" fill="#81C784" font-size="22" letter-spacing="3" font-family="sans-serif">BANKROLL &amp; VARIANCE</text>
+          <text x="68" y="170" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">Every pro&rsquo;s graph</text>
+          <text x="68" y="242" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">has a hole in it.</text>
+          <text x="70" y="300" fill="#b0bec5" font-size="26" font-family="sans-serif">Negreanu&rsquo;s &minus;$2.2M year. Ivey&rsquo;s $6.3M online slide. Adelstein&rsquo;s book on what winning costs.</text>
+          <rect x="70" y="324" width="700" height="40" rx="8" fill="rgba(76,175,80,0.14)" stroke="#4CAF50" stroke-opacity="0.5"/>
+          <text x="86" y="351" fill="#eceff1" font-size="20" font-family="sans-serif"><tspan fill="#81C784" font-weight="700">self-reported ledgers · a variance model · one memoir</tspan>  &mdash;  no hero worship</text>
+        </svg>
+      </div>
+
+      <p>Garrett Adelstein's memoir, <em>Beneath the Cards</em>, arrived this month from Permuted Press (<a href="https://www.pokernews.com/news/2026/09/garrett-adelstein-beneath-the-cards-book-review-52288.htm">PokerNews</a>). Its author is the player the publisher calls the best high-stakes cash game player on earth, and by the publisher's own framing the book is about the cost of winning (<a href="https://permutedpress.com/book/beneath-the-cards-a-high-stakes-high-anxiety-poker-journey">Permuted Press</a>).</p>
+
+      <p>Every pro's graph has a hole in it, and a poker downswing is what that hole is called. Negreanu's worst year is more than two million dollars deep. Ivey's online one is deeper still. The difference between those players and the reg quietly reloading at $2/$5 isn't the size of the hole. It's that they can measure it, and they know what a hole that size is supposed to look like.</p>
+
+      <div class="tldr">
+        <p><strong>TL;DR:</strong> A poker downswing is measured in buy-ins, not dollars, against the spread your edge and your fields allow. Negreanu's worst year looks like proof of a problem under one reasonable assumption about that spread and like ordinary bad luck under another, and a single year can't tell those two readings apart. Ivey's tracked online losses ran to millions while he was winning millions live in the same year. The practical response is the boring one: move down when the bankroll math says so, cut volume before you cut strategy, and keep logging every session so the diagnosis is yours and not a feeling.</p>
+      </div>
+
+      <h2>What is a poker downswing, really?</h2>
+
+      <p>A downswing is a run of results well below what your edge should produce, counted in buy-ins for tournaments and in buy-ins or big blinds for cash. Never in dollars. The first thing the number has to answer is not how much you lost but how many units of your normal game it represents, because that's the only scale your edge lives on.</p>
+
+      <p>Dollars don't scale. The same losing month is a shrug for someone who plays big and a bankroll emergency for someone who plays small, and it can be either for the same person depending on which games they were in that month. Converting to buy-ins puts the loss on the same axis as your expectation, and only then can you ask whether it sits inside the normal spread or outside it.</p>
+
+      <p>Two things shape that spread. The first is your edge, which pulls the whole distribution up or down. The second is the size of the fields you play, which widens it. GTO Wizard's simulations make the point cleanly: give the same winning player the same volume and move them from mid-sized fields into huge ones, and the chance of finishing a long sample in the red more than doubles (<a href="https://blog.gtowizard.com/understanding-the-impact-of-field-size-on-icm-in-poker/">GTO Wizard</a>). Same skill, same work, far more room for a losing year.</p>
+
+      <p>So the question has two halves: is the result below expectation, and is it further below than the spread allows? <a href="/blog/poker-bankroll-management">Our bankroll guide</a> covers what the spread means for how many buy-ins to hold, and <a href="/blog/poker-tournament-variance">the tournament variance post</a> ran the second question on a generic schedule. Here we ask it of three real ledgers.</p>
+
+      <h2>How bad was Negreanu's 2023, and was it variance?</h2>
+
+      <p>Daniel Negreanu lost about $2.2 million in 2023 by his own year-end accounting, across 145 tournaments, the biggest losing year of his career (<a href="https://www.pokernews.com/news/2024/01/daniel-negreanu-2023-poker-tournaments-45184.htm">PokerNews</a>; <a href="https://www.pokerstrategy.com/news/world-of-poker/Negreanu-has-biggest-losing-year-of-career_129779/">PokerStrategy</a>). His own diagnosis was that he was "playing far too often." Whether the year was variance or a problem depends on what you assume about the spread, and that's the useful part.</p>
+
+      <p>He's rare in publishing a ledger at all. His site lists five years of events, buy-ins and payouts, and the press has quoted his year-end tweets and vlogs for the years since (<a href="https://danielnegreanu.com/year-end-results/">danielnegreanu.com</a>). Read together they show a decade that was mostly profitable, with a couple of losing years mixed in, and a pattern worth noticing: the losing years tend to arrive right after the big winning ones.</p>
+
+      <figure>
+              <svg viewBox="0 0 580 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bar chart of Daniel Negreanu's self-reported tournament profit or loss by year, 2013 to 2023, in millions of dollars. 2013 plus 1.96, 2014 plus 7.10, 2015 plus 0.95, 2016 minus 1.25, 2017 minus 0.09, 2018 plus 1.41, 2019 plus 0.83, 2020 zero because of COVID, 2021 plus 0.58, 2022 plus 1.63, 2023 minus 2.23. Seven winning years, three losing years, one year with no events, and the worst year comes right after a 1.63 million winning one." style="max-width:100%;height:auto">
+                <text x="20" y="22" fill="#eceff1" font-size="14">Negreanu&rsquo;s tournament net by year (self-reported, $M)</text>
+                <!-- scale: 18.18 px per $1M, zero line y=185.5, range -3..+8 -->
+                <line x1="44" y1="185.5" x2="560" y2="185.5" stroke="#90a4ae" stroke-width="1"/>
+                <line x1="44" y1="49" x2="560" y2="49" stroke="#37474f" stroke-width="1" stroke-dasharray="3 3"/>
+                <text x="40" y="53" fill="#90a4ae" font-size="10" text-anchor="end">+7.5</text>
+                <line x1="44" y1="94.6" x2="560" y2="94.6" stroke="#37474f" stroke-width="1" stroke-dasharray="3 3"/>
+                <text x="40" y="98" fill="#90a4ae" font-size="10" text-anchor="end">+5</text>
+                <line x1="44" y1="140" x2="560" y2="140" stroke="#37474f" stroke-width="1" stroke-dasharray="3 3"/>
+                <text x="40" y="144" fill="#90a4ae" font-size="10" text-anchor="end">+2.5</text>
+                <text x="40" y="189" fill="#90a4ae" font-size="10" text-anchor="end">0</text>
+                <line x1="44" y1="231" x2="560" y2="231" stroke="#37474f" stroke-width="1" stroke-dasharray="3 3"/>
+                <text x="40" y="235" fill="#90a4ae" font-size="10" text-anchor="end">&minus;2.5</text>
+                <!-- 2013 +1.96 -->
+                <rect x="52" y="149.9" width="32" height="35.6" rx="2" fill="#4CAF50" fill-opacity="0.85"/>
+                <text x="68" y="145" fill="#cfd8dc" font-size="10" text-anchor="middle">+1.96</text>
+                <text x="68" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2013</text>
+                <!-- 2014 +7.10 -->
+                <rect x="98" y="56.4" width="32" height="129.1" rx="2" fill="#4CAF50" fill-opacity="0.85"/>
+                <text x="114" y="51" fill="#cfd8dc" font-size="10" text-anchor="middle">+7.10</text>
+                <text x="114" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2014</text>
+                <!-- 2015 +0.95 -->
+                <rect x="144" y="168.2" width="32" height="17.3" rx="2" fill="#4CAF50" fill-opacity="0.85"/>
+                <text x="160" y="163" fill="#cfd8dc" font-size="10" text-anchor="middle">+0.95</text>
+                <text x="160" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2015</text>
+                <!-- 2016 -1.25 -->
+                <rect x="190" y="185.5" width="32" height="22.7" rx="2" fill="#ef9a9a" fill-opacity="0.85"/>
+                <text x="206" y="219" fill="#cfd8dc" font-size="10" text-anchor="middle">&minus;1.25</text>
+                <text x="206" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2016</text>
+                <!-- 2017 -0.09 -->
+                <rect x="236" y="185.5" width="32" height="1.6" rx="1" fill="#ef9a9a" fill-opacity="0.85"/>
+                <text x="252" y="198" fill="#cfd8dc" font-size="10" text-anchor="middle">&minus;0.09</text>
+                <text x="252" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2017</text>
+                <!-- 2018 +1.41 -->
+                <rect x="282" y="159.9" width="32" height="25.6" rx="2" fill="#4CAF50" fill-opacity="0.85"/>
+                <text x="298" y="155" fill="#cfd8dc" font-size="10" text-anchor="middle">+1.41</text>
+                <text x="298" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2018</text>
+                <!-- 2019 +0.83 -->
+                <rect x="328" y="170.4" width="32" height="15.1" rx="2" fill="#4CAF50" fill-opacity="0.85"/>
+                <text x="344" y="165" fill="#cfd8dc" font-size="10" text-anchor="middle">+0.83</text>
+                <text x="344" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2019</text>
+                <!-- 2020: no events -->
+                <text x="390" y="180" fill="#90a4ae" font-size="10" text-anchor="middle">COVID</text>
+                <text x="390" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2020</text>
+                <!-- 2021 +0.58 -->
+                <rect x="420" y="175" width="32" height="10.5" rx="2" fill="#4CAF50" fill-opacity="0.85"/>
+                <text x="436" y="170" fill="#cfd8dc" font-size="10" text-anchor="middle">+0.58</text>
+                <text x="436" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2021</text>
+                <!-- 2022 +1.63 -->
+                <rect x="466" y="155.9" width="32" height="29.6" rx="2" fill="#4CAF50" fill-opacity="0.85"/>
+                <text x="482" y="151" fill="#cfd8dc" font-size="10" text-anchor="middle">+1.63</text>
+                <text x="482" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2022</text>
+                <!-- 2023 -2.23 -->
+                <rect x="512" y="185.5" width="32" height="40.5" rx="2" fill="#ef9a9a" fill-opacity="0.85"/>
+                <text x="528" y="237" fill="#cfd8dc" font-size="10" text-anchor="middle">&minus;2.23</text>
+                <text x="528" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2023</text>
+                <text x="20" y="288" fill="#90a4ae" font-size="10">2013&ndash;17: danielnegreanu.com. 2018&ndash;23: his tweets/vlog via poker.org, CardPlayer, PokerNews. Tournaments only.</text>
+              </svg>
+              <figcaption>Eleven self-reported years: mostly winning, three losing, and the worst of them landed straight after a big winning year.</figcaption>
+            </figure>
+
+      <p>The cash rate in 2023 was actually fine, a touch above his previous year. The money wasn't. That combination tells you the damage came from the top of the buy-in ladder, where a handful of deep runs decide the year, not from a collapse in how often he made the money.</p>
+
+      <p>To ask whether that's variance we have to convert the dollars. He hasn't published an average buy-in for 2023, so we use the previous year's figure as a stated proxy (<a href="https://www.cardplayer.com/poker-news/27525-how-much-did-daniel-negreanu-profit-on-4-9-million-in-poker-tournament-cashes">CardPlayer</a>), which makes the year roughly 74 buy-ins below zero over 145 events. Then we ran that schedule through the same deterministic model that drives <a href="/variance-calculator">our variance calculator</a>. Nothing was fitted, and no AI touched it: you give it an edge and a per-event spread, and it tells you how often a year like that happens.</p>
+
+      <div class="compare-wrap">
+      <table class="compare">
+        <caption>Negreanu's 145-event 2023 through TableLab's variance model, assuming a modest winning edge</caption>
+        <thead>
+          <tr><th>If his events swing like&hellip;</th><th>A losing year happens</th><th>Typical worst drawdown</th><th>A year this bad</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>tight, small-field high rollers</td><td>one year in three to five</td><td>about 30 buy-ins</td><td>once in a career, if that</td></tr>
+          <tr><td>big fields with re-entries</td><td>one year in three, or more</td><td>about 70 buy-ins</td><td>roughly once a decade</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="callout"><p>Our read: under the tight assumption a year that bad is a one-in-several-hundred event, and something beyond luck was going on. Under the wide assumption it's a once-a-decade year that a player of his volume should expect to see eventually. Both assumptions are defensible for his schedule. One year cannot tell those two worlds apart, and that's the lesson, not the number.</p></div>
+
+      <p>Negreanu's own verdict lands on the first reading: too much volume, sloppiness after a run of winning, and an end to the "shrug, gamble, and rebuy" approach (<a href="https://www.poker.org/latest-news/daniel-negreanu-reveals-biggest-losing-year-of-2.2m-recovery-plan-for-2024-asS8r3i4jG5m/">poker.org</a>). Notice what let him say that. He could put the year in units because he'd logged every buy-in and every cash for a decade. Without the ledger, 2023 is a bad feeling. With it, 2023 is a known number of buy-ins against a known schedule, and a plan follows.</p>
+
+      <p>One outside cross-check agrees with the shape of it. PokerStrategy modelled a super-high-roller schedule close to his and found that a losing year on it is routine, arriving more often than one year in three (<a href="https://www.pokerstrategy.com/news/world-of-poker/The-variance-of-Super-High-Rollers_130491/">PokerStrategy</a>). A losing year is not the anomaly. A year that deep is, unless his fields were far bigger than the model assumes.</p>
+
+      <h2>Phil Ivey's online downswing, in HighstakesDB's numbers</h2>
+
+      <p>Ivey's is the cleanest documented downswing in poker because the tracking sites logged it hand by hand. Under his own name on Full Tilt he was the biggest online winner of his era, nineteen million dollars over a few hundred thousand hands. After Black Friday he came back under a new screen name, "Polarizing", and that account gave back more than six million of it over three years (<a href="https://www.cardplayer.com/poker-news/19786-phil-ivey-continues-long-online-poker-downswing">CardPlayer</a>).</p>
+
+      <p>The upswing was long and real, and the downswing was just as real. What changed wasn't the player. The games got tougher, the stakes got bigger relative to the sample, and the sample was smaller than it looks: a few hundred thousand hands is a lifetime for a live player and a modest stretch at stakes where a single week could move seven figures. One week in June 2015 did exactly that (<a href="https://www.pokerstrategy.com/news/world-of-poker/Phil-Ivey-loses-$1M-online-in-a-week_91924/">PokerStrategy</a>).</p>
+
+      <figure>
+              <svg viewBox="0 0 580 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Line chart of Phil Ivey's cumulative online cash-game result from 2007 to 2018 in millions of dollars, per HighstakesDB figures. He rises from zero in 2007 to plus 19.24 million on Full Tilt under his own name by April 2011. From late 2012, playing as Polarizing on Full Tilt and RaiseOnce on PokerStars, the line falls to about plus 14.1 million by August 2014 and about plus 10.4 million by December 2015, with no further movement reported through May 2018. The peak-to-trough drop is roughly 8 to 9 million dollars." style="max-width:100%;height:auto">
+                <text x="20" y="22" fill="#eceff1" font-size="14">Ivey&rsquo;s cumulative online result, 2007&ndash;2018 ($M, HighstakesDB)</text>
+                <!-- y: 9.5 px per $1M, 0 at y=240, 20 at y=50. x: 41.7 px per year from 2007 at x=60 -->
+                <line x1="60" y1="240" x2="540" y2="240" stroke="#90a4ae" stroke-width="1"/>
+                <line x1="60" y1="145" x2="540" y2="145" stroke="#37474f" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="60" y1="50" x2="540" y2="50" stroke="#37474f" stroke-width="1" stroke-dasharray="3 3"/>
+                <text x="54" y="244" fill="#90a4ae" font-size="10" text-anchor="end">0</text>
+                <text x="54" y="149" fill="#90a4ae" font-size="10" text-anchor="end">+10</text>
+                <text x="54" y="54" fill="#90a4ae" font-size="10" text-anchor="end">+20</text>
+                <text x="60" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2007</text>
+                <text x="226.8" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2011</text>
+                <text x="352" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2014</text>
+                <text x="393.6" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2015</text>
+                <text x="518.7" y="262" fill="#cfd8dc" font-size="11" text-anchor="middle">2018</text>
+                <!-- Black Friday / gap between accounts -->
+                <rect x="239.3" y="50" width="62.6" height="190" fill="#37474f" fill-opacity="0.35"/>
+                <text x="270.6" y="222" fill="#90a4ae" font-size="9" text-anchor="middle">Black Friday</text>
+                <text x="270.6" y="232" fill="#90a4ae" font-size="9" text-anchor="middle">to late 2012</text>
+                <!-- rise: own-name Full Tilt -->
+                <polyline points="60,240 239.3,57.2" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+                <!-- flat through the gap -->
+                <polyline points="239.3,57.2 301.9,57.2" fill="none" stroke="#90a4ae" stroke-width="2" stroke-dasharray="4 4"/>
+                <!-- fall: Polarizing + RaiseOnce -->
+                <polyline points="301.9,57.2 377,105.7 433.3,140.8" fill="none" stroke="#ef9a9a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- flat to 2018 -->
+                <polyline points="433.3,140.8 535.4,140.8" fill="none" stroke="#ef9a9a" stroke-width="2" stroke-dasharray="4 4"/>
+                <circle cx="239.3" cy="57.2" r="4" fill="#4CAF50"/>
+                <circle cx="377" cy="105.7" r="4" fill="#ef9a9a"/>
+                <circle cx="433.3" cy="140.8" r="4" fill="#ef9a9a"/>
+                <text x="232" y="47" fill="#4CAF50" font-size="11" text-anchor="end">+$19.24M, own name, Apr 2011</text>
+                <text x="386" y="96" fill="#ef9a9a" font-size="11">&minus;$5.1M as Polarizing by Aug 2014</text>
+                <text x="440" y="160" fill="#ef9a9a" font-size="11">&minus;$3.73M in 2015 alone</text>
+                <text x="440" y="174" fill="#ef9a9a" font-size="11">(both sites, ~160k hands)</text>
+                <text x="540" y="200" fill="#cfd8dc" font-size="11" text-anchor="end">+$10.44M lifetime, May 2018</text>
+                <line x1="535.4" y1="146" x2="535.4" y2="188" stroke="#90a4ae" stroke-width="1" stroke-dasharray="2 3"/>
+                <text x="20" y="288" fill="#90a4ae" font-size="10">HighstakesDB figures via HSDB and CardPlayer. Own-name Full Tilt, then Polarizing (FTP) + RaiseOnce (Stars).</text>
+              </svg>
+              <figcaption>The best player of his era gave back roughly a third of his online winnings on a second screen name. Nobody revised his skill; they revised what a sample at those stakes can say.</figcaption>
+            </figure>
+
+      <p>Two things about that graph. It didn't erase him: three years later HighstakesDB still had his lifetime online result comfortably in eight figures, and described the whole post-Black-Friday stretch as one long downswing rather than a verdict (<a href="https://highstakesdb.com/news/popular/the-biggest-online-cash-game-winners-of-all-time">HighstakesDB</a>). And in the same year his online accounts were bleeding, he won well over a million in live tournaments (<a href="https://www.cardplayer.com/poker-news/19786-phil-ivey-continues-long-online-poker-downswing">CardPlayer</a>). A downswing on one axis says nothing about the others.</p>
+
+      <div class="callout"><p>Our read: nobody re-rated Ivey's skill off that graph, rightly. Sample and stakes did the damage. In units of his own edge and spread it's a documented, survivable hole, and the reason it looks catastrophic in dollars is only that his units are enormous. <a href="/blog/good-live-poker-win-rate">The win-rate post</a> covers why the hands, not the dollars, decide how much a graph can tell you.</p></div>
+
+      <h2>What does Garrett Adelstein's book, <em>Beneath the Cards</em>, say about winning?</h2>
+
+      <p><em>Beneath the Cards</em> came out at the start of September, in print, on Kindle and as an audiobook read by Adelstein (<a href="https://www.pokernews.com/news/2026/09/garrett-adelstein-beneath-the-cards-book-review-52288.htm">PokerNews</a>). In the publisher's framing it's a memoir about what happens once winning stops being enough (<a href="https://garrettadelstein.com/book/">garrettadelstein.com</a>). The Jack-Four hand takes up a small part of it, by Adelstein's own estimate.</p>
+
+      <p>For our readers this is the relevant one of the three. Negreanu and Ivey are tournament and nosebleed-online stories; Adelstein's game, live cash, is the one that looks like yours, scaled up. The publisher's description promises drunken binges, death threats, financial ruin and public backlash alongside the poker, and Phil Galfond's endorsement talks of seven-figure swings in a single session and the reality of going broke (<a href="https://somuchpoker.com/news/garrett-adelstein-book-by-phil-galfond">somuchpoker</a>).</p>
+
+      <p>The blurbs come from people who'd know. Galfond says it captures the high-stakes world better than anything he's read. PokerNews' reviewer, Chad Holloway, warns that readers hoping for a Jack-Four smoking gun won't get one, and still says it belongs on a poker player's shelf (<a href="https://www.pokernews.com/news/2026/09/garrett-adelstein-beneath-the-cards-book-review-52288.htm">PokerNews</a>).</p>
+
+      <p>The hand, for completeness: on Hustler Casino Live in September 2022, Adelstein got a draw in for a six-figure all-in and lost to Robbi Jade Lew's jack-four. The investigation HCL commissioned reported that "no conclusive evidence of wrongdoing related to the Sept. 29 hand was found" (<a href="https://hustlercasinolive.com/j4report/">Hustler Casino Live</a>; <a href="https://www.pokernews.com/news/2022/12/hustler-casino-live-poker-scandal-investigation-results-42706.htm">PokerNews</a>). The book's own line on it, quoted by Jennifer Shahade: "After a lifetime of running good, I can finally see that fateful day for what it was: I got really fucking unlucky." (<a href="https://jenshahade.substack.com/p/deep-reads-beneath-the-cards-by-garrett">Deep Reads</a>)</p>
+
+      <p>The downswing angle is the perfectionism. Adelstein describes himself as a "recovering perfectionist" who quit anything he couldn't be the best at (<a href="https://www.poker.org/latest-news/im-a-recovering-perfectionist-exclusive-interview-with-garrett-adelstein-aYDNo4i9D9sc/">poker.org</a>). That's the trait that produces a great win rate and a terrible relationship with variance, and it's why the book belongs in a post about downswings.</p>
+
+      <p>We read it, and the downswing that matters isn't the famous hand. It's 2008. He'd built roughly a million by twenty-one, refused to move down while running bad against the best heads-up players alive, and rode it down to almost nothing with nobody told (pp. 63&ndash;65). The rebuild is the most useful stretch in the book for anyone who keeps a log: a two-column note of mistakes and fixes, a restart at the smallest stakes in the room, fifty buy-ins banked before any move up, a hard daily stop-loss, and no play when not calm (pp. 66&ndash;68). Offered a large stake, he took a loan a tenth the size, on the grounds that more capital would put him right back where he was. He never went broke again.</p>
+
+      <p>Two lines from that section are the book's real advice on downswings, and neither is about cards. On game selection: the ninth-best player in the world should be rich, "unless that guy is foolish enough to sit at the same table with the eight opponents better than him every day" (p. 70). On the swings themselves: he learned to see poker "as one long session, without a finite beginning or end," which let him amortize losses over time (p. 71). The rest of the memoir tests both ideas against far bigger numbers, and the same conclusion holds each time. The one he lands on at the end is the one we'd put on the wall: "true success isn't found in winning, but in overcoming" (p. 331).</p>
+
+      <h2>How do you know if you're in a downswing or just playing badly?</h2>
+
+      <p>Mostly you can't, not from results alone. Phil Galfond's worked examples show that a solidly winning cash player still posts a losing year more often than intuition allows, and that a smaller edge makes it far more likely still (<a href="https://www.philgalfond.com/articles/variance-beyond-the-surface">Galfond</a>). Primedope's tournament calculator makes the same point from the other side: strip a handful of your biggest scores out of a long tournament sample and a winning player's graph can go flat or negative (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>).</p>
+
+      <p>Results are a noisy instrument for measuring play. Negreanu cashed more often in his worst year than in the winning year before it, and still lost more than two million. What actually works is four dull habits.</p>
+
+      <ul>
+        <li>Know your sample before you name the swing. A few hundred tournaments can describe a downswing; they can't diagnose one. The spread on a sample that size is wide enough to hold a losing stretch for a genuinely good player and a winning stretch for a bad one.</li>
+        <li>Keep expenses out of the result. Travel, tips and food belong in a separate column, so a bad month on the road doesn't read as a bad month at the table.</li>
+        <li>Compare against your own logged rate, not a feeling. The question is how far this stretch sits below your tracked win rate, hours attached, not below the rate you'd like to have. <a href="/blog/good-live-poker-win-rate">The win-rate post</a> is about why that number needs its sample stated.</li>
+        <li>Review hands, not results. Negreanu's diagnosis came from reviewing his schedule; yours comes from the hands. Record the ones where you weren't sure, and revisit them when you're not tilted. <a href="/">Logging sessions and hands in one place</a> is what makes that review possible a month later.</li>
+      </ul>
+
+      <p>None of the four tells you the answer. They make it checkable: where this stretch sits against the drawdown your edge and volume should produce, and whether the month's biggest pots were correct decisions. Without the log, all you can say is that it feels bad.</p>
+
+      <h2>How to handle a poker downswing: what should you actually change?</h2>
+
+      <p>Less than instinct says, and almost none of it is strategy. The first lever is the stake. GTO Wizard's bankroll guidance for tournaments runs to a hundred buy-ins and more, with a warning that the old hundred-buy-in rule is far too aggressive for large fields and that no single event should take more than a small slice of the roll (<a href="https://blog.gtowizard.com/variance-and-bankroll-management/">GTO Wizard</a>).</p>
+
+      <ul>
+        <li>Move down when the roll says so, not when the mood does. PokerStrategy notes that variance calculators don't account for moving up or down in stakes (<a href="https://www.pokerstrategy.com/news/content/How-likely-is-it-I-go-broke-in-tournaments-_126227/">PokerStrategy</a>); that's the point. Moving down is the one lever that changes the risk-of-ruin math the calculators can't see.</li>
+        <li>Cut volume before you cut strategy. Negreanu's plan after 2023 was fewer events, no Player of the Year chase, and no more shrug-gamble-rebuy (<a href="https://www.pokernews.com/news/2024/01/daniel-negreanu-2023-poker-tournaments-45184.htm">PokerNews</a>; <a href="https://www.poker.org/latest-news/daniel-negreanu-reveals-biggest-losing-year-of-2.2m-recovery-plan-for-2024-asS8r3i4jG5m/">poker.org</a>). His summers since: a small losing World Series, then his first winning one in years, then a clearly winning one (<a href="https://www.cardplayer.com/poker-news/1683784-daniel-negreanu-shaun-deeb-and-other-top-poker-pros-reveal-wsop-profit">CardPlayer</a>; <a href="https://www.pokernews.com/news/2025/07/negreanu-hellmuth-ivey-2025-wsop-performance-49243.htm">PokerNews</a>). Three summers prove nothing about luck. What they show is a player adjusting the inputs he controls.</li>
+        <li>Don't try to reduce variance. Galfond's line: "If your goal is to reduce your swings, you don't need to reduce your variance. You need to get better at poker." (<a href="https://www.philgalfond.com/articles/variance-beyond-the-surface">Galfond</a>) The spread is the price of the edge, and the edge is the only part you own. A specific leak beats a vague resolution; <a href="/blog/how-to-beat-calling-stations">the calling-stations post</a> is one concrete place to start.</li>
+        <li>Keep the log honest through the hole. The temptation is to stop entering losing sessions until the graph looks better. Negreanu could diagnose 2023 because the log ran straight through it. Galfond was posting through the losing start of his 2020 challenge, telling worried followers not to be (<a href="https://www.pokerstrategy.com/news/world-of-poker/Galfond-s-advice-for-a-massive-downswing_111730/">PokerStrategy</a>).</li>
+        <li>Borrow the mindset lines that aren't fluff. Ryan Fee: "A lot of people treat poker like a sprint, when it's really a marathon." Matt Waxman's version: you can't control one tournament's outcome, so focus on what you can (<a href="https://www.cardplayer.com/cardplayer-poker-magazines/66458-doug-polk-defeats-daniel-negreanu-in-high-stakes-grudge-match-34-7/articles/24206-head-games-training-your-mind-to-withstand-variance">CardPlayer</a>).</li>
+      </ul>
+
+      <p>Then put your own logged edge and spread into <a href="/variance-calculator">the variance calculator</a> and look at the typical worst drawdown for your volume. If your current hole sits inside it, the plan is the stake and the volume. If it sits well outside, the plan is the hands.</p>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>How long does a poker downswing last?</summary>
+          <p>There's no fixed length, and the honest measure is how often a winning player posts a losing stretch. Galfond's examples put a losing year for a solid cash winner at roughly one in eight, and far more often for a thin edge (<a href="https://www.philgalfond.com/articles/variance-beyond-the-surface">Galfond</a>). For a high-roller tournament schedule, PokerStrategy's model found a winning player can lose money over an entire decade (<a href="https://www.pokerstrategy.com/news/world-of-poker/The-variance-of-Super-High-Rollers_130491/">PokerStrategy</a>).</p>
+        </details>
+        <details>
+          <summary>What is a normal downswing in buy-ins for tournaments?</summary>
+          <p>It depends on field size more than on skill. In our model of a full-time year, the typical worst drawdown for a modestly winning player is around thirty buy-ins if the events swing tightly, and more than double that in big re-entry fields. Primedope's calculator shows the same thing: at a few hundred tournaments the plausible range of outcomes for a good player runs from a heavy loss to a huge win (<a href="https://www.primedope.com/tournament-variance-calculator/">Primedope</a>).</p>
+        </details>
+        <details>
+          <summary>How much did Phil Ivey lose online?</summary>
+          <p>By HighstakesDB's tracking as reported by CardPlayer, his "Polarizing" account on Full Tilt lost about $6.3 million between late 2012 and the end of 2015, after his original account had won around $19 million (<a href="https://www.cardplayer.com/poker-news/19786-phil-ivey-continues-long-online-poker-downswing">CardPlayer</a>). His lifetime online result stayed well into eight figures.</p>
+        </details>
+        <details>
+          <summary>What was Daniel Negreanu's worst year?</summary>
+          <p>2023. By his own year-end vlog he lost about $2.2 million across 145 tournaments, the biggest losing year of his career (<a href="https://www.pokernews.com/news/2024/01/daniel-negreanu-2023-poker-tournaments-45184.htm">PokerNews</a>; <a href="https://www.pokerstrategy.com/news/world-of-poker/Negreanu-has-biggest-losing-year-of-career_129779/">PokerStrategy</a>). His own diagnosis was that he was playing far too often, and his plan for the following year cut volume and dropped the Player of the Year chase.</p>
+        </details>
+        <details>
+          <summary>Is <em>Beneath the Cards</em> about the Jack-Four hand?</summary>
+          <p>Only partly. The hand makes up a small part of the book by Adelstein's own estimate, and the PokerNews review warns that readers looking for a smoking gun won't find one (<a href="https://www.pokernews.com/news/2026/09/garrett-adelstein-beneath-the-cards-book-review-52288.htm">PokerNews</a>). Jennifer Shahade's review calls the jack-four chapters extremely detailed (<a href="https://jenshahade.substack.com/p/deep-reads-beneath-the-cards-by-garrett">Deep Reads</a>). The rest is a memoir of a high-stakes live cash career: the swings, the anxiety, going broke, and what happens when winning is no longer enough.</p>
+        </details>
+        <details>
+          <summary>Should you move down in stakes during a downswing?</summary>
+          <p>If the bankroll math says so, yes, and the math is the only good reason. GTO Wizard's guidance runs to a hundred buy-ins and more for tournaments, with a warning that a hundred is too few for large fields (<a href="https://blog.gtowizard.com/variance-and-bankroll-management/">GTO Wizard</a>). Variance calculators don't account for moving down, which is exactly why it's the one lever that changes your risk of ruin.</p>
+        </details>
+      </section>
+
+      <h2>The bottom line</h2>
+
+      <p>Every graph in this post has a hole in it, and each of the three players could tell you how deep, in buy-ins, against a known schedule. That's the real difference between a pro's downswing and everyone else's. Not size, not stoicism: measurement, and the honesty to say when the number is inside the distribution.</p>
+
+      <p>The math is the same at $2/$5 as at a high-roller seat: buy-ins, not dollars; spread, not feeling; hands, not results. Poker carries real variance and real risk, and nothing here is financial advice. <a href="/">Start logging every session and every hand that bothered you</a>, and the next time your graph dips you'll know what you're looking at.</p>
+
+      <h3>Sources</h3>
+      <ul class="sources">
+        <li>Daniel Negreanu &mdash; "Year End Results" (2013&ndash;2017), <a href="https://danielnegreanu.com/year-end-results/">danielnegreanu.com</a></li>
+        <li>CardPlayer &mdash; "How Much Did Daniel Negreanu Profit On $4.9 Million In Poker Tournament Cashes?" (Dec 28, 2022), <a href="https://www.cardplayer.com/poker-news/27525-how-much-did-daniel-negreanu-profit-on-4-9-million-in-poker-tournament-cashes">cardplayer.com</a></li>
+        <li>PokerNews (Jon Sofen) &mdash; "Daniel Negreanu Says Changes Coming After Losing $2 Million in 2023 Poker Tournaments" (Jan 2, 2024), <a href="https://www.pokernews.com/news/2024/01/daniel-negreanu-2023-poker-tournaments-45184.htm">pokernews.com</a></li>
+        <li>poker.org (Andrew Burnett) &mdash; "Daniel Negreanu reveals biggest losing year of $2.2m &amp; recovery plan for 2024" (Jan 2, 2024), <a href="https://www.poker.org/latest-news/daniel-negreanu-reveals-biggest-losing-year-of-2.2m-recovery-plan-for-2024-asS8r3i4jG5m/">poker.org</a></li>
+        <li>CardPlayer &mdash; "Phil Ivey Continues Long Online Poker Downswing" (Dec 22, 2015), <a href="https://www.cardplayer.com/poker-news/19786-phil-ivey-continues-long-online-poker-downswing">cardplayer.com</a></li>
+        <li>HighstakesDB &mdash; "The Biggest Online Cash Game Winners of All Time" (May 2018), <a href="https://highstakesdb.com/news/popular/the-biggest-online-cash-game-winners-of-all-time">highstakesdb.com</a></li>
+        <li>Permuted Press &mdash; "Beneath the Cards: A High-Stakes, High-Anxiety Poker Journey" (Sept 1, 2026), <a href="https://permutedpress.com/book/beneath-the-cards-a-high-stakes-high-anxiety-poker-journey">permutedpress.com</a></li>
+        <li>PokerNews (Chad Holloway) &mdash; "Book Review: Is Garrett Adelstein's New Memoir '<em>Beneath the Cards</em>' Worth Checking Out?" (Sept 2, 2026), <a href="https://www.pokernews.com/news/2026/09/garrett-adelstein-beneath-the-cards-book-review-52288.htm">pokernews.com</a></li>
+        <li>Jennifer Shahade &mdash; "Deep Reads: <em>Beneath the Cards</em> by Garrett Adelstein" (Aug 27, 2026), <a href="https://jenshahade.substack.com/p/deep-reads-beneath-the-cards-by-garrett">jenshahade.substack.com</a></li>
+        <li>Hustler Casino Live &mdash; "J4 Report" (Dec 14, 2022), <a href="https://hustlercasinolive.com/j4report/">hustlercasinolive.com</a></li>
+        <li>Primedope &mdash; "Tournament Variance Calculator", <a href="https://www.primedope.com/tournament-variance-calculator/">primedope.com</a></li>
+        <li>GTO Wizard &mdash; "Understanding the Impact of Field Size on ICM in Poker" (Aug 15, 2023), <a href="https://blog.gtowizard.com/understanding-the-impact-of-field-size-on-icm-in-poker/">blog.gtowizard.com</a></li>
+        <li>GTO Wizard &mdash; "Variance and Bankroll Management" (Oct 5, 2022), <a href="https://blog.gtowizard.com/variance-and-bankroll-management/">blog.gtowizard.com</a></li>
+        <li>Phil Galfond &mdash; "Variance: Beyond the Surface" (Mar 12, 2024), <a href="https://www.philgalfond.com/articles/variance-beyond-the-surface">philgalfond.com</a></li>
+        <li>poker.org &mdash; "Daniel Negreanu reveals how much he really makes from tourneys" (Jul 28, 2021), <a href="https://www.poker.org/latest-news/daniel-negreanu-reveals-how-much-he-really-makes-from-tourneys-a6By46e06wIm/">poker.org</a></li>
+        <li>poker.org &mdash; "Daniel Negreanu publishes annual tournament profits of $584,000" (Dec 27, 2021), <a href="https://www.poker.org/poker-tours/daniel-negreanu-publishes-annual-tournament-profits-of-584000-avWf34h4ZSGp/">poker.org</a></li>
+        <li>HighstakesDB &mdash; "Daniel Negreanu Reveals His 2021 Poker Profits" (Dec 27, 2021), <a href="https://highstakesdb.com/news/high-stakes-reports/daniel-negreanu-reveals-his-2021-poker-profits">highstakesdb.com</a></li>
+        <li>PokerStrategy (Barry Carter) &mdash; "Negreanu has biggest losing year of career" (Jan 2024), <a href="https://www.pokerstrategy.com/news/world-of-poker/Negreanu-has-biggest-losing-year-of-career_129779/">pokerstrategy.com</a></li>
+        <li>CardPlayer (Julio Rodriguez) &mdash; "Daniel Negreanu, Shaun Deeb And Other Top Poker Pros Reveal WSOP Profit" (Jul 18, 2026), <a href="https://www.cardplayer.com/poker-news/1683784-daniel-negreanu-shaun-deeb-and-other-top-poker-pros-reveal-wsop-profit">cardplayer.com</a></li>
+        <li>PokerNews (Jon Sofen) &mdash; Negreanu, Hellmuth and Ivey at the 2025 WSOP (Jul 20, 2025), <a href="https://www.pokernews.com/news/2025/07/negreanu-hellmuth-ivey-2025-wsop-performance-49243.htm">pokernews.com</a></li>
+        <li>HighstakesDB &mdash; "Biggest Online Poker Winners" (Jan 4, 2022), <a href="https://highstakesdb.com/news/online-poker-news/biggest-online-poker-winners">highstakesdb.com</a></li>
+        <li>CardPlayer (Brian Pempus) &mdash; "Phil Ivey Now Down $5.1 Million Under His 'Polarizing' Online Poker Screen Name" (Aug 29, 2014), <a href="https://www.cardplayer.com/poker-news/17739-phil-ivey-now-down-5-1-million-under-his-polarizing-online-poker-screen-name">cardplayer.com</a></li>
+        <li>PokerNewsDaily (Dan Katz) &mdash; "Phil Ivey's 2015 Online Poker Losses Were Absurd" (Dec 22, 2015), <a href="https://www.pokernewsdaily.com/phil-iveys-2015-online-poker-losses-were-absurd-27904/">pokernewsdaily.com</a></li>
+        <li>PokerStrategy &mdash; "Phil Ivey loses $1M online in a week" (Jun 2015), <a href="https://www.pokerstrategy.com/news/world-of-poker/Phil-Ivey-loses-$1M-online-in-a-week_91924/">pokerstrategy.com</a></li>
+        <li>Garrett Adelstein &mdash; "Beneath the Cards" book page and blurbs, <a href="https://garrettadelstein.com/book/">garrettadelstein.com</a></li>
+        <li>somuchpoker &mdash; Phil Galfond on Garrett Adelstein's book (Aug 2026), <a href="https://somuchpoker.com/news/garrett-adelstein-book-by-phil-galfond">somuchpoker.com</a></li>
+        <li>poker.org (Craig Tapscott) &mdash; "'I'm a recovering perfectionist': exclusive interview with Garrett Adelstein" (Aug 21, 2026), <a href="https://www.poker.org/latest-news/im-a-recovering-perfectionist-exclusive-interview-with-garrett-adelstein-aYDNo4i9D9sc/">poker.org</a></li>
+        <li>PokerNews (Jon Sofen) &mdash; Hustler Casino Live investigation results (Dec 14, 2022), <a href="https://www.pokernews.com/news/2022/12/hustler-casino-live-poker-scandal-investigation-results-42706.htm">pokernews.com</a></li>
+        <li>PokerStrategy (Barry Carter) &mdash; "The variance of Super High Rollers", <a href="https://www.pokerstrategy.com/news/world-of-poker/The-variance-of-Super-High-Rollers_130491/">pokerstrategy.com</a></li>
+        <li>PokerStrategy (Barry Carter) &mdash; "How likely is it I go broke in tournaments?" (Feb 21, 2026), <a href="https://www.pokerstrategy.com/news/content/How-likely-is-it-I-go-broke-in-tournaments-_126227/">pokerstrategy.com</a></li>
+        <li>PokerStrategy &mdash; "Galfond's advice for a massive downswing" (Jan 2020), <a href="https://www.pokerstrategy.com/news/world-of-poker/Galfond-s-advice-for-a-massive-downswing_111730/">pokerstrategy.com</a></li>
+        <li>CardPlayer (Craig Tapscott) &mdash; "Head Games: Training Your Mind To Withstand Variance" (Mar 18, 2021), <a href="https://www.cardplayer.com/cardplayer-poker-magazines/66458-doug-polk-defeats-daniel-negreanu-in-high-stakes-grudge-match-34-7/articles/24206-head-games-training-your-mind-to-withstand-variance">cardplayer.com</a></li>
+      </ul>
+
+      <p class="disclaimer-line">Figures are as published by the named sources on the fetch date, 2026-09-08. Player results are self-reported tournament or tracked online figures, not audited accounts. Poker carries real variance and real risk; nothing here is financial advice.</p>
+
+      <aside class="author-box">
+        <h3>About the author</h3>
+        <p><strong>Rohit Kaul</strong> is a winning live cash-game player and a data-analytics
+        professional (Master's in Business Analytics, Purdue) who builds the quantitative models behind
+        TableLab &mdash; profitable every year since 2023, across roughly 3,200 hours of tracked live cash.
+        Find him on
+        <a href="https://www.linkedin.com/in/rohit-kaul-a761171a2" rel="me noopener" target="_blank">LinkedIn</a>,
+        <a href="https://www.youtube.com/@rohitkaul1990" rel="me noopener" target="_blank">YouTube</a>, and
+        <a href="https://pokerdb.thehendonmob.com/player.php?a=r&amp;n=877305" rel="me noopener" target="_blank">The Hendon Mob</a>.</p>
+      </aside>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/gto-library">GTO Library</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+</body>
+</html>
