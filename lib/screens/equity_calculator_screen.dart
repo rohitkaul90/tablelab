@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../equity/card.dart';
+import '../providers/pc_ranges_provider.dart';
 import '../services/analytics_service.dart';
 import '../equity/simulator.dart';
 import '../widgets/app_drawer.dart';
@@ -43,15 +45,17 @@ class _PlayerState {
   }
 }
 
-class EquityCalculatorScreen extends StatefulWidget {
+class EquityCalculatorScreen extends ConsumerStatefulWidget {
   final bool showScaffold;
   const EquityCalculatorScreen({super.key, this.showScaffold = true});
 
   @override
-  State<EquityCalculatorScreen> createState() => _EquityCalculatorScreenState();
+  ConsumerState<EquityCalculatorScreen> createState() =>
+      _EquityCalculatorScreenState();
 }
 
-class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
+class _EquityCalculatorScreenState
+    extends ConsumerState<EquityCalculatorScreen> {
   final List<_PlayerState> _players = [];
   final List<int?> _board = List.filled(5, null); // 0-2=flop, 3=turn, 4=river
   SimulationResult? _result;
@@ -63,6 +67,9 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
   void initState() {
     super.initState();
     _players.addAll(_defaultPlayers());
+    // Warm the PC range library so the preset picker has the weighted-chart
+    // presets by the time the range editor opens.
+    ref.read(pcRangeLibraryProvider);
   }
 
   // The calculator opens ready to use: the canonical heads-up pair (positions
@@ -106,6 +113,10 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
 
   void _openRangeEditor(int idx) {
     final p = _players[idx];
+    // Pin the preset source for this sheet's lifetime: reading it inside the
+    // builder would let the list swap legacy→PC on a mid-sheet rebuild,
+    // stranding the dropdown's selected key.
+    final pcPresets = ref.read(pcEquityPresetsProvider);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -113,6 +124,8 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => PlayerRangeEditor(
+        // PC weighted-chart presets once loaded; legacy presets meanwhile.
+        presets: pcPresets,
         position: p.position,
         selectedCells: p.selectedCells,
         takenPositions: _takenPositions..remove(p.position),

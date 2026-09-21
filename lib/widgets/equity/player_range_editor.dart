@@ -19,6 +19,11 @@ class PlayerRangeEditor extends StatefulWidget {
   final void Function(String position, Set<int> cells, bool isExactHand, int? card1, int? card2) onSave;
   final VoidCallback? onDelete;
 
+  /// Preset list to offer; null falls back to the legacy [gtoPresets] (used
+  /// only while the PC weighted library is still loading — the caller passes
+  /// the PC-derived presets once available).
+  final List<GtoPreset>? presets;
+
   const PlayerRangeEditor({
     super.key,
     required this.position,
@@ -30,6 +35,7 @@ class PlayerRangeEditor extends StatefulWidget {
     this.card2,
     this.excludedCards = const {},
     this.onDelete,
+    this.presets,
   });
 
   @override
@@ -54,10 +60,27 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
     _card2 = widget.card2;
   }
 
-  Map<String, List<GtoPreset>> get _presetsByCategory => gtoPresetsByCategory;
+  // Pinned for the sheet's lifetime (the caller resolves the PC-vs-legacy
+  // choice ONCE at sheet-open) and memoized: the range-matrix drag paints a
+  // setState per crossed cell, so per-build regrouping would run dozens of
+  // times per stroke.
+  late final List<GtoPreset> _presets = widget.presets ?? gtoPresets;
+  late final Map<String, List<GtoPreset>> _presetsByCategory =
+      widget.presets == null ? gtoPresetsByCategory : _groupByCategory();
+
+  Map<String, List<GtoPreset>> _groupByCategory() {
+    final out = <String, List<GtoPreset>>{};
+    for (final p in _presets) {
+      out.putIfAbsent(p.category, () => []).add(p);
+    }
+    return out;
+  }
 
   void _applyPreset(String key) {
-    final preset = gtoPresets.firstWhere((p) => p.key == key);
+    // orElse guard: a stale key (e.g. state restored across a preset-source
+    // change) must never throw in release — it just doesn't apply.
+    final preset = _presets.where((p) => p.key == key).firstOrNull;
+    if (preset == null) return;
     setState(() {
       _selectedPreset = key;
       _cells = handSetToCells(preset.hands);
