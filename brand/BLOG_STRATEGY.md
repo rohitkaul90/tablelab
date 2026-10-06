@@ -195,6 +195,8 @@ Primary goal — so this is weighted heavily.
 
 **Prose-bold house rule (since 2026-08-05, commit `f6758bb`, user feedback):** bold appears ONLY in headings, bullet-point lead-ins, and block labels (`TL;DR:`, callout lead-ins, the author name, 18+). Never mid-sentence — alongside link colours it makes reading arduous and reads as AI-written. Paraphrase by default; quote verbatim only where the exact wording IS the argument.
 
+**Quotation-mark house rule (since 2026-10-06, owner feedback):** no quotation marks around nicknames, screen names or short borrowed phrases; write "Ossi Ketola, who plays as Monarch" and attribute a short phrase in plain words. They read as AI-written. A post keeps a direct quote only where the exact wording is the news, is a person's own denial, or is a caveat the argument rests on, and that should be a handful per post at most. Article titles in the Sources list keep their quotation marks.
+
 **Non-negotiable from `BRAND.md`:** every piece that shows analysis must separate **solver output (deterministic)** from **AI prose/heuristic**, and state the fallibility line. Never imply the LLM solves poker.
 
 ## 90-Day Roadmap (~1 post/week, 13 posts)
