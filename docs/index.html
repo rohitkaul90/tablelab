@@ -186,8 +186,14 @@
        lost (which is what happened from launch until 2026-10).
        The key and host MUST match lib/config/analytics_config.dart
        (test/web/posthog_web_snippet_test.dart enforces it).
-       - persistence 'memory': no cookie and no localStorage. Signed-in users are
-         re-identified by the app on every load, so nothing needs storing.
+       - persistence 'memory': PostHog stores no cookie and no localStorage.
+         Memory persistence alone would mint a NEW anonymous id on every page
+         load and merge it into the person on identify(), piling up distinct
+         ids. So a returning signed-in user is bootstrapped from the Supabase
+         session the app already keeps in localStorage (read-only; PostHog
+         still stores nothing). Logged-out visitors do get a fresh id per load:
+         count web USERS on identified events, and treat anonymous
+         'Application Opened' on web as page loads.
        - before_send strips ?query and #hash from every URL property: auth
          redirects carry one-time codes and tokens in the address bar.
        - Sends on tablelab.app only; any other host (localhost, previews) is
@@ -207,6 +213,22 @@
           if (/(url|referrer|href)$/i.test(k)) o[k] = stripUrl(o[k]);
         }
       }
+      // The signed-in user's id, from the session supabase_flutter persists on
+      // web as localStorage['sb-<project>-auth-token'] = JSON {..., user:{id}}.
+      window.tlStoredUserId = function () {
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (!/^sb-.+-auth-token$/.test(k)) continue;
+            var v = JSON.parse(localStorage.getItem(k));
+            if (typeof v === 'string') v = JSON.parse(v);
+            var id = v && v.user && v.user.id;
+            if (typeof id === 'string' && id) return id;
+          }
+        } catch (err) { /* storage blocked or malformed: stay anonymous */ }
+        return null;
+      };
+      var uid = window.tlStoredUserId();
       window.tlSanitizePosthogEvent = function (e) {
         if (!e) return e;
         clean(e.properties); clean(e.$set); clean(e.$set_once);
@@ -225,8 +247,10 @@
         enable_heatmaps: false,
         capture_dead_clicks: false,
         capture_performance: false,
+        capture_exceptions: false,
         advanced_disable_flags: true,
         opt_out_capturing_by_default: !isProd,
+        bootstrap: uid ? { distinctID: uid, isIdentifiedID: true } : {},
         before_send: window.tlSanitizePosthogEvent
       });
       posthog.capture('Application Opened', { from_background: false });
