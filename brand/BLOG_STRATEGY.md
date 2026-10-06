@@ -1,7 +1,8 @@
 # Blog Strategy: TableLab
 
-> Built on `BRAND.md` + `VOICE.md` (project root) and the `tablelab` persona. Last updated: 2026-06-29.
+> Built on `BRAND.md` + `VOICE.md` (project root) and the `tablelab` persona. Last updated: 2026-10-06.
 > Primary goal: **organic authority + AI citations** (SEO long-game). Cadence: **~1 post/week**. Mix: **~70% owned / 30% earned**.
+> **Editorial mix since 2026-10-06: ~70% news and trends / ~30% evergreen** (owner decision; see "News & Trend Layer"). The cluster tables and the 90-day roadmap below are now the evergreen 30% pool, not the publishing sequence.
 
 ## Executive Summary
 
@@ -67,21 +68,40 @@ Hub-and-spoke; every spoke links to the pillar and to ≥2 sibling spokes.
 
 **Internal-linking rule:** the two pillar pages cross-link (bankroll discipline ↔ honest strategy). B3 (multiway) links to the Pillar 2 leaks piece. A3 (variance) and the leaks piece both link to product how-tos. Anchor text = descriptive keyword phrases, never "click here."
 
-## Trend & Freshness Layer
+## News & Trend Layer
 
-> Added 2026-07-27. The cluster roadmap above is entirely evergreen, which left us unable to catch the search spikes that drive most poker traffic and forfeited the freshness signals that help both rankings and AI-engine citation. This layer is **additive** — it does not displace cluster work.
+> Added 2026-07-27 as an additive 30% layer. **Promoted to the primary mode on 2026-10-06:** the owner's call was that the blog already carries plenty of technical content and should cover what the poker world is talking about. The 2026-10-06 audit supports it: the one post with a news hook in its topic indexed in days and ranks on page one, evergreen posts rank but earn almost no clicks, and no post has an external link.
 
-**Mix: ~70% evergreen cluster / ~30% trend-pegged.**
+**Mix: ~70% news and trends / ~30% evergreen.**
 
-### The news-peg rule (non-negotiable)
+### The news-post rule (replaces the old "news-peg rule")
 
-Every trend post must **land in an existing cluster and target an evergreen keyword.** The news lives in the intro, the hero banner, and *one* clearly-scoped section — **never** in the H1, the slug, or the target keyword. When the news decays, the page must still rank on its evergreen query.
+The story may lead the H1, the slug and the meta description. Two conditions still apply to every news post:
 
-We are not a news aggregator. We are a tracker that reads the news through a bankroll, variance, or honesty lens. If a story has no such lens, we skip it — traffic alone is not a reason to publish.
+1. **A TableLab lens.** We are a tracker, not a news desk, and PokerNews and pokerfuse will always be faster. Each post reads the story through one of: money (who actually profits), variance and swings, results tracking, honesty about tools and AI, or what it means for a live player. If a story has none of these, we skip it.
+2. **One lasting section.** Somewhere in the post is a section that answers a question people will still ask in a year (how staking works, what a rule says, how a format changes bankroll needs). That section carries the search term and keeps the page useful after the news fades.
 
-### Monthly trend scan
+News posts run shorter than evergreen ones: about 1,800–2,400 words.
 
-Named sources, checked once a month: **PokerNews**, **pokerfuse** (especially "The Rail" community roundup), **poker.org**, **WSOP.com**, **arXiv** (cs.AI / cs.GT poker papers), **GTO Wizard blog**. Log each candidate with a fit score against Clusters A and B, plus a note on shelf life.
+### Naming real people
+
+- State only what a named tier-1 source reported, attributed and dated.
+- Mark anything disputed as alleged, say who alleges it, and give the other side's stated position where one exists.
+- No accusation appears in the title, meta description, TL;DR or FAQ schema.
+- Leave out side-claims that do not serve the post's lens.
+
+### Formats
+
+| Format | Use for | Example |
+|---|---|---|
+| Money-angle analysis | Several stories that share an economic thread | Post #9: who makes money in high-stakes poker |
+| Controversy explainer | One developing story: timeline, what is established vs alleged, what changes | Hole-card malware |
+| Event preview / wrap | A dated festival or series, read through a bankroll lens | Mystery-bounty wave before WSOP Paradise |
+| Monthly roundup | Six to eight stories with a short take each | Optional; not yet started |
+
+### News scan (before every post, at least twice a month)
+
+Named sources: **PokerNews**, **pokerfuse** (especially "The Rail"), **poker.org**, **Card Player**, **PokerListings**, **WSOP.com / Triton / PokerGO Tour / WPT** official sites, **arXiv** (cs.AI / cs.GT poker papers), **GTO Wizard blog**. Run it as three beats: the live circuit; industry, online and regulation; community and personalities. Log each candidate with its lens and shelf life.
 
 ### Seasonal calendar
 
@@ -103,27 +123,43 @@ Breaking coverage is error-prone and poker SEO content farms recycle stale claim
 
 - ❌ "PokerStars partnered with GTO Wizard for Fair Play Check in 2026." → It was **GGPoker**, announced **March 2025** (PokerNews, 2025-03-06).
 - ❌ "PokerTracker / Hold'em Manager merger" presented as current news. → That merger is from **August 2014**.
+- ❌ "EPT Malta, October 2026." → Not on PokerStars' own EPT page (Paris, Monte Carlo, Barcelona, Prague only); looks like a recycled 2025 listing (checked 2026-10-06).
+- ❌ "PokerStars' 2026 anti-cheating measures ban solvers and preflop charts." → Content-farm source only. The PokerStars policy re-fetched 2026-10-06 still prohibits these tools only while its software is open.
+- ❌ PokerSkill (arXiv 2605.30094) dated "Aug 24, 2026". → Submitted **May 28, 2026**; v1 only.
+- ⚠️ PokerNews listing pages sometimes show dates later than the article's own date; always take the date from the article page.
 - ⚠️ At least one PokerNews page summary garbles the 2026 vs 2025 WSOP Main Event field comparison. The 2026 field (**9,208**) was **smaller** than 2025 (**9,735**); the record remains 2024 (**10,112**). Total WSOP entries hit a record while the Main Event field and total prize money both fell — always state that divergence correctly.
 
 ### Decay policy
 
-Review every trend post at **90 days**: either refresh the peg with current figures (updating `article:modified_time`, JSON-LD `dateModified`, and `sitemap.xml` `lastmod` together) or let the evergreen body carry the page unchanged.
+Review every news post at **30 days** and every older trend-pegged post at **90 days**: either refresh it with current facts (updating `article:modified_time`, JSON-LD `dateModified`, and `sitemap.xml` `lastmod` together) or let the lasting section carry the page unchanged.
 
-**90 days is the default, not the rule — set the review date from the peg's own expiry.** A post pegged to a scheduled future event goes stale the day after it happens, not in three months.
+**These are defaults, not rules — set the review date from the story's own expiry.** A post about a scheduled event goes stale the day after it happens; a post about an open dispute goes stale the day it is resolved.
 
 | Post | Review by | Why |
 |---|---|---|
-| `/blog/are-poker-solvers-allowed` | **2026-09-30** | Intro says WSOP Online 2026 (Aug 16 – Sep 29, on GGPoker) is running "right now". The day after it ends: switch the intro to past tense, keep the scoped "Why 2026 is the year the line got enforced" H2 as history, re-check the PokerStars/GGPoker policy pages for wording changes, and bump the three dates together. |
+| `/blog/who-makes-money-in-high-stakes-poker` | **2026-11-06** | Check the outcome of the Hustler Casino Live review, any reply from Negreanu to Mateos, and whether a Ketola–Antonius rematch was announced. Update the three stories or mark them resolved. |
+| `/blog/are-poker-solvers-allowed` | ~~2026-09-30~~ **done 2026-10-06**; next **2027-01-06** | Past-tense refresh shipped; PokerStars and GGPoker policy pages re-checked unchanged (GGPoker version 20260313). Re-check the policy pages again at the next review. |
 | `/blog/poker-tournament-variance` | **2026-08-06** | Written before the WSOP Main Event final table (Aug 3–5). Its intro, conclusion, and FAQ #5 use future tense about a result that will exist by Aug 6. Swap to past tense, name the champion, and consider replacing the pure-news FAQ with an evergreen question. |
 | `/blog/how-poker-pros-handle-downswings` | **2026-12-15**, then **every January** | Book peg decays slowly; the real freshness hook is Negreanu posting his next year-end results each January — refresh the chart + the "was it variance?" numbers, bump the three dates together. |
 
-### Trend backlog
+### News backlog (from the 2026-10-06 scan)
+
+| Candidate | Lens | Key dated facts | Shelf life |
+|---|---|---|---|
+| **Hole-card malware explainer** — tampered third-party software updates exposed about 30 high-stakes players' hole cards; ACR shipped "Screen Shield" (Oct 2); GGPoker is accused of ignoring a warning. Account names and loss totals are alleged, not established. | Honesty about tools | PokerNews Sep 29 – Oct 2; poker.org Oct 2 | Weeks to months |
+| **Live rooms under pressure** — Maverick Gaming closing 10 Washington cardrooms (Nov 1 and Nov 30); Las Vegas high-stakes games squeezed by anti-money-laundering enforcement; sweepstakes poker retreating. | Live-player relevance | Card Player Sep 29, Oct 2 | Months |
+| **US gambling-loss deduction** — House Ways and Means voted 38–5 (Sep 16) to restore the full deduction from tax year 2026; needs full House and Senate votes; House returns Nov 9. | Results tracking | TheLines, SportsBettingDime | Months |
+| **Canada** — WSOP Super Circuit Montreal paid C$24.5M on a C$14M guarantee (Sep 18); Supreme Court of Canada shared-liquidity hearing (Oct 7); Alberta market opening. | Live-player relevance (the author plays in Ontario) | pokerfuse Sep 1, Sep 18 | Months |
+| **Mystery-bounty wave** — Winamax €922K bounty haul (Sep 25), GGPoker Ocean KO (Oct 5), WPT World Championship moving to mystery bounty; peg to WSOP Paradise (Dec 2–17) and the WPT Championship (Dec 13–20). | Variance | pokerfuse | Publish mid-November |
+| **Monthly roundup** — six to eight stories with a short take each. | Mixed | — | Recurring |
+
+### Older trend backlog
 
 | Candidate | Cluster | Peg | Shelf life |
 |---|---|---|---|
 | **LLMs vs GTO: the 2026 scoreboard** — PokerSkill (arXiv 2605.30094, 2026-05-28) has LLMs playing near-solver poker with no training and no solver, yet still **losing** to the GTO Wizard benchmark: GPT‑5.5 XHigh −57 ± 21 mbb/hand, Claude Opus 4.6 −80 ± 29, Opus 4.7 −87 ± 64. "Expert-level" in the title ≠ beating GTO. | B | arXiv paper | High |
 | ~~**Which poker tools are actually allowed in 2026**~~ — **SHIPPED 2026-08-30** as `/blog/are-poker-solvers-allowed` (evergreen keyword `are poker solvers allowed`; the 2026 peg confined to intro/hero/one H2 per the rule above). | Pillar 2 → B | RTA arms race | High |
-| **How poker pros handle downswings** — Garrett Adelstein's memoir *Beneath the Cards* (Simon & Schuster, 2026-09-01) is the peg; the evergreen keyword is `poker downswing` and the body is Negreanu's self-published year-end results + Ivey's HighstakesDB online arc run through our variance model. Names in the H1 as modifiers only (long-tail like "phil ivey downswing"); the book gets ONE scoped H2. **IN PROGRESS 2026-09-08** (branch `blog/how-poker-pros-handle-downswings`; gated on a first-hand read of the book). | A | Book release | Medium |
+| **How poker pros handle downswings** — Garrett Adelstein's memoir *Beneath the Cards* (Simon & Schuster, 2026-09-01) is the peg; the evergreen keyword is `poker downswing` and the body is Negreanu's self-published year-end results + Ivey's HighstakesDB online arc run through our variance model. Names in the H1 as modifiers only (long-tail like "phil ivey downswing"); the book gets ONE scoped H2. **SHIPPED 2026-09-08** as `/blog/how-poker-pros-handle-downswings`. | A | Book release | Medium |
 | **WSOP Online series** (Aug 16 – Sep 29, 2026) | A | Calendar | Low |
 
 ## AI-Citation / GEO Surface Strategy
