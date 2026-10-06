@@ -85,7 +85,13 @@ void main() async {
 
   // PostHog analytics — no-op until posthogApiKey is replaced in analytics_config.dart.
   // Not supported on Windows desktop (skipped automatically by AnalyticsService).
-  if (posthogApiKey != 'phc_REPLACE_WITH_YOUR_KEY' &&
+  // On WEB this block is skipped on purpose: posthog_flutter's `setup` is a no-op
+  // there and the SDK only forwards calls to window.posthog, which the snippet in
+  // web/index.html loads and initialises (same key/host; a test keeps them in sync).
+  // `kIsWeb` must be checked explicitly — in a browser on Windows
+  // `defaultTargetPlatform` is `windows`, which is not what this guard means.
+  if (!kIsWeb &&
+      posthogApiKey != 'phc_REPLACE_WITH_YOUR_KEY' &&
       defaultTargetPlatform != TargetPlatform.windows) {
     try {
       final phConfig = PostHogConfig(posthogApiKey)

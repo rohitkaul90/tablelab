@@ -179,6 +179,59 @@
       .nojs footer { margin-top: 28px; font-size: 13px; color: #8A968A; }
     </style>
   </noscript>
+  <!-- PostHog product analytics for the WEB app.
+       posthog_flutter does not send anything itself on web: it forwards every
+       Dart call (identify / capture / reset) to window.posthog, so this loader
+       must exist before Flutter boots or every analytics call throws and is
+       lost (which is what happened from launch until 2026-10).
+       The key and host MUST match lib/config/analytics_config.dart
+       (test/web/posthog_web_snippet_test.dart enforces it).
+       - persistence 'memory': no cookie and no localStorage. Signed-in users are
+         re-identified by the app on every load, so nothing needs storing.
+       - before_send strips ?query and #hash from every URL property: auth
+         redirects carry one-time codes and tokens in the address bar.
+       - Sends on tablelab.app only; any other host (localhost, previews) is
+         opted out so test builds do not pollute the numbers.
+       - 'Application Opened' is sent once per load so web shows up in the same
+         DAU / retention insights as the mobile SDK's lifecycle event.
+       - Autocapture, replay, surveys, heatmaps and flag calls are off: Flutter
+         draws to a canvas and none of them are used. -->
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    (function () {
+      var isProd = /(^|\.)tablelab\.app$/.test(location.hostname);
+      function stripUrl(v) { return typeof v === 'string' ? v.split(/[?#]/)[0] : v; }
+      function clean(o) {
+        if (!o || typeof o !== 'object') return;
+        for (var k in o) {
+          if (/(url|referrer|href)$/i.test(k)) o[k] = stripUrl(o[k]);
+        }
+      }
+      window.tlSanitizePosthogEvent = function (e) {
+        if (!e) return e;
+        clean(e.properties); clean(e.$set); clean(e.$set_once);
+        if (e.properties) { clean(e.properties.$set); clean(e.properties.$set_once); }
+        return e;
+      };
+      posthog.init('phc_CntrvwFgyvniRrazRkRK9w9TwoUk4Yybcje6kmkxtimg', {
+        api_host: 'https://us.i.posthog.com',
+        persistence: 'memory',
+        person_profiles: 'identified_only',
+        autocapture: false,
+        capture_pageview: false,
+        capture_pageleave: false,
+        disable_session_recording: true,
+        disable_surveys: true,
+        enable_heatmaps: false,
+        capture_dead_clicks: false,
+        capture_performance: false,
+        advanced_disable_flags: true,
+        opt_out_capturing_by_default: !isProd,
+        before_send: window.tlSanitizePosthogEvent
+      });
+      posthog.capture('Application Opened', { from_background: false });
+    })();
+  </script>
 </head>
 <body>
   <!-- Branded splash shown while Flutter initialises -->
