@@ -64,6 +64,16 @@ class DataPrivacyScreen extends StatelessWidget {
                 'information with any third party for marketing purposes.',
           ),
           _Section(
+            icon: Icons.mail_outline,
+            title: 'Emails from us',
+            body:
+                'We may send account holders a one-time email asking how the '
+                'app is working for them. Product updates are sent only if you '
+                'opt in, and every one includes an unsubscribe link. Emails are '
+                'delivered by Loops, which receives your email address only — '
+                'never your session or hand data.',
+          ),
+          _Section(
             icon: Icons.manage_accounts_outlined,
             title: 'Your rights',
             body:
@@ -104,7 +114,7 @@ class DataPrivacyScreen extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           Text(
-            'Last updated: June 2026',
+            'Last updated: October 2026',
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.outline),
             textAlign: TextAlign.center,
