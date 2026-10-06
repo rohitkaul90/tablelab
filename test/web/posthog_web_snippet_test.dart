@@ -34,6 +34,18 @@ void main() {
     expect(html, contains("persistence: 'memory'"));
     expect(html, contains('before_send: window.tlSanitizePosthogEvent'));
     expect(html, contains(r'v.split(/[?#]/)[0]'));
+    // The key filter decides WHICH properties get stripped; narrowing it
+    // would let a URL-bearing property through untouched.
+    expect(html, contains(r'/(url|referrer|href)$/i.test(k)'));
+  });
+
+  test('returning signed-in users are bootstrapped, not re-minted per load',
+      () {
+    expect(html, contains(r'/^sb-.+-auth-token$/.test(k)'));
+    expect(
+      html,
+      contains('bootstrap: uid ? { distinctID: uid, isIdentifiedID: true } : {}'),
+    );
   });
 
   test('only sends from the production host', () {
@@ -47,6 +59,7 @@ void main() {
       'capture_pageview: false',
       'disable_session_recording: true',
       'disable_surveys: true',
+      'capture_exceptions: false',
       'advanced_disable_flags: true',
     ]) {
       expect(html, contains(setting));
