@@ -33,6 +33,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # gen-l10n only PRINTS untranslated keys; check_arb is the hard gate
+      # (missing/extra keys, placeholder mismatches, stale translations).
+      - name: Generate localizations
+        run: flutter gen-l10n
+
+      - name: Check ARB files
+        run: dart run tool/l10n/check_arb.dart
+
       - name: Generate Supabase config
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

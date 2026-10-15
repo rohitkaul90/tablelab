@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13+ per-app language picker (Settings → Apps → TableLab → Language).
+     Keep in sync with lib/l10n/app_*.arb — the app's "System" language mode
+     follows whatever the user picks here. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en"/>
+    <locale android:name="es"/>
+    <locale android:name="fr"/>
+    <locale android:name="it"/>
+    <locale android:name="nl"/>
+</locale-config>

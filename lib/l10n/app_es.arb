@@ -1,0 +1,15 @@
+{
+  "@@locale": "es",
+  "navStats": "Estadísticas",
+  "navSessions": "Sesiones",
+  "navHands": "Manos",
+  "navReads": "Lecturas",
+  "navStudy": "Estudio",
+  "settingsAppearance": "APARIENCIA",
+  "settingsTheme": "Tema",
+  "themeModeSystem": "Sistema",
+  "themeModeLight": "Claro",
+  "themeModeDark": "Oscuro",
+  "settingsLanguage": "Idioma",
+  "languageSystem": "Sistema"
+}

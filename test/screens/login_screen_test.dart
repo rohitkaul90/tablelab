@@ -2,22 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/screens/auth/login_screen.dart';
 
-// Wrap LoginScreen in a minimal MaterialApp so Theme / Navigator work.
-Widget _buildLoginScreen() => const MaterialApp(home: LoginScreen());
+import '../helpers/pump_app.dart';
 
-// Pumps LoginScreen on a tall surface so the full scrolling form (including the
-// bottom sign-in/register toggle and legal links) is laid out within the test
-// viewport — otherwise off-screen widgets can't be tapped.
-Future<void> _pumpLogin(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(1080, 2600);
-  tester.view.devicePixelRatio = 1.0;
-  addTearDown(() {
-    tester.view.resetPhysicalSize();
-    tester.view.resetDevicePixelRatio();
-  });
-  await tester.pumpWidget(_buildLoginScreen());
-  await tester.pump();
-}
+// Pumps LoginScreen through the shared localized harness on a tall surface so
+// the full scrolling form (including the bottom sign-in/register toggle and
+// legal links) is laid out within the test viewport — otherwise off-screen
+// widgets can't be tapped.
+Future<void> _pumpLogin(WidgetTester tester) =>
+    pumpApp(tester, const LoginScreen(), size: const Size(1080, 2600));
 
 void main() {
   // Flutter test runner can't load real font glyphs; suppress asset warnings.

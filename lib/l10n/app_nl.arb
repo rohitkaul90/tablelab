@@ -1,0 +1,15 @@
+{
+  "@@locale": "nl",
+  "navStats": "Stats",
+  "navSessions": "Sessies",
+  "navHands": "Handen",
+  "navReads": "Reads",
+  "navStudy": "Studie",
+  "settingsAppearance": "WEERGAVE",
+  "settingsTheme": "Thema",
+  "themeModeSystem": "Systeem",
+  "themeModeLight": "Licht",
+  "themeModeDark": "Donker",
+  "settingsLanguage": "Taal",
+  "languageSystem": "Systeem"
+}

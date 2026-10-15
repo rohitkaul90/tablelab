@@ -1,0 +1,46 @@
+{
+  "_comment": "Locked poker glossary for tool/l10n/translate.dart. `keepInEnglish` terms are never translated (standard table vocabulary in every market). `terms` pins the per-locale rendering of words that DO translate so every screen uses the same word. `register` sets the form of address.",
+  "register": {
+    "es": "informal (tú), neutral Latin/European Spanish",
+    "fr": "informal (tu)",
+    "it": "informal (tu)",
+    "nl": "informal (je/jij)"
+  },
+  "keepInEnglish": [
+    "fold", "check", "call", "raise", "bet", "all-in", "c-bet", "3-bet", "4-bet", "5-bet",
+    "squeeze", "float", "barrel", "donk", "limp", "straddle", "rake",
+    "nit", "fish", "TAG", "LAG", "maniac", "calling station",
+    "bankroll", "tilt", "bubble", "showdown", "heads-up", "6-max", "full ring",
+    "SPR", "GTO", "EV", "ITM", "ICM", "ROI", "bb/100", "BB", "bb",
+    "Pre-flop", "Flop", "Turn", "River",
+    "BTN", "SB", "BB", "UTG", "UTG+1", "UTG+2", "MP", "HJ", "CO", "IP", "OOP",
+    "FOLD", "CHECK", "CALL", "RAISE", "BET", "ALL-IN",
+    "TableLab", "MagpiQ", "Google Play", "Supabase"
+  ],
+  "terms": {
+    "Tournament":   { "es": "Torneo",        "fr": "Tournoi",         "it": "Torneo",        "nl": "Toernooi" },
+    "Tournaments":  { "es": "Torneos",       "fr": "Tournois",        "it": "Tornei",        "nl": "Toernooien" },
+    "Cash game":    { "es": "Cash",          "fr": "Cash game",       "it": "Cash game",     "nl": "Cashgame" },
+    "Session":      { "es": "Sesión",        "fr": "Session",         "it": "Sessione",      "nl": "Sessie" },
+    "Sessions":     { "es": "Sesiones",      "fr": "Sessions",        "it": "Sessioni",      "nl": "Sessies" },
+    "Hand":         { "es": "Mano",          "fr": "Main",            "it": "Mano",          "nl": "Hand" },
+    "Hands":        { "es": "Manos",         "fr": "Mains",           "it": "Mani",          "nl": "Handen" },
+    "Reads":        { "es": "Lecturas",      "fr": "Lectures",        "it": "Letture",       "nl": "Reads" },
+    "Read":         { "es": "Lectura",       "fr": "Lecture",         "it": "Lettura",       "nl": "Read" },
+    "Stakes":       { "es": "Ciegas",        "fr": "Blindes",         "it": "Bui",           "nl": "Blinds" },
+    "Buy-in":       { "es": "Buy-in",        "fr": "Buy-in",          "it": "Buy-in",        "nl": "Buy-in" },
+    "Cash-out":     { "es": "Cash-out",      "fr": "Cash-out",        "it": "Cash-out",      "nl": "Cash-out" },
+    "Stats":        { "es": "Estadísticas",  "fr": "Stats",           "it": "Statistiche",   "nl": "Stats" },
+    "Profit":       { "es": "Beneficio",     "fr": "Gain",            "it": "Profitto",      "nl": "Winst" },
+    "Study":        { "es": "Estudio",       "fr": "Étude",           "it": "Studio",        "nl": "Studie" },
+    "Live":         { "es": "Presencial",    "fr": "Live",            "it": "Live",          "nl": "Live" },
+    "Online":       { "es": "Online",        "fr": "En ligne",        "it": "Online",        "nl": "Online" },
+    "Hero":         { "es": "Hero",          "fr": "Hero",            "it": "Hero",          "nl": "Hero" },
+    "Villain":      { "es": "Villano",       "fr": "Vilain",          "it": "Villain",       "nl": "Villain" },
+    "Position":     { "es": "Posición",      "fr": "Position",        "it": "Posizione",     "nl": "Positie" },
+    "Range":        { "es": "Rango",         "fr": "Range",           "it": "Range",         "nl": "Range" },
+    "Equity":       { "es": "Equity",        "fr": "Équité",          "it": "Equity",        "nl": "Equity" },
+    "Pot odds":     { "es": "Pot odds",      "fr": "Cote du pot",     "it": "Pot odds",      "nl": "Pot odds" },
+    "Coaching":     { "es": "Coaching",      "fr": "Coaching",        "it": "Coaching",      "nl": "Coaching" }
+  }
+}
