@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../l10n/l10n.dart';
 import '../../models/hand_model.dart';
 import '../../services/analytics_service.dart';
 import '../../models/session_model.dart';
@@ -89,7 +90,7 @@ class HandReplayerScreen extends ConsumerStatefulWidget {
 }
 
 class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
-  late final List<_Frame> _frames;
+  List<_Frame> _frames = const [];
   int _currentIndex = 0;
   bool _isPlaying = false;
   double _speed = 1.0;
@@ -99,9 +100,17 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
   @override
   void initState() {
     super.initState();
-    _frames = _buildFrames();
     _sessionId = widget.hand.sessionId;
     AnalyticsService.handReplayerOpened(isTournament: widget.hand.isTournament);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Frame messages are localized, so they're built here (not initState) and
+    // rebuilt when the ambient locale changes; the cursor is preserved.
+    _frames = _buildFrames(context.l10n);
+    _currentIndex = _currentIndex.clamp(0, _frames.length - 1);
   }
 
   @override
@@ -112,7 +121,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
 
   // ── Frame construction ────────────────────────────────────────────────────
 
-  List<_Frame> _buildFrames() {
+  List<_Frame> _buildFrames(AppLocalizations l10n) {
     final hand = widget.hand;
     final setup = hand.tableSetup;
     final frames = <_Frame>[];
@@ -164,15 +173,15 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
         ? heroStartStack ~/ setup.bigBlind
         : null;
 
+    final details = isTournament
+        ? '${setup.smallBlind}/${setup.bigBlind}'
+            '${setup.ante != null ? ' ${l10n.replayerAnte('${setup.ante}')}' : ''}'
+            '${heroEffBb != null ? ' · ${l10n.replayerHeroDepth(heroEffBb)}' : ''}'
+        : '\$${setup.smallBlind}/\$${setup.bigBlind}'
+            '${setup.straddle != null ? '/\$${setup.straddle}' : ''}';
     addFrame(
-      isTournament
-          ? 'Hand starts · ${setup.numSeats}-max · ${setup.smallBlind}/${setup.bigBlind}'
-              '${setup.ante != null ? ' ante ${setup.ante}' : ''}'
-              '${heroEffBb != null ? ' · Hero ${heroEffBb}bb' : ''}'
-          : 'Hand starts · ${setup.numSeats}-max · '
-              '\$${setup.smallBlind}/\$${setup.bigBlind}'
-              '${setup.straddle != null ? '/\$${setup.straddle}' : ''}',
-      'Pre-flop',
+      l10n.replayerHandStarts(setup.numSeats, details),
+      Street.preflop.label,
     );
 
     for (final streetData in hand.streets) {
@@ -185,7 +194,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
           (k, v) => MapEntry(k, v.copyWith(betThisStreet: 0)),
         );
         communityCards.addAll(streetData.communityCards);
-        addFrame('$streetLabel dealt', streetLabel);
+        addFrame(l10n.replayerStreetDealt(streetLabel), streetLabel);
       }
 
       for (final action in streetData.actions) {
@@ -246,7 +255,8 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
         seats[p.seatIndex] = seats[p.seatIndex]!.copyWith(cards: p.holeCards);
       }
     }
-    addFrame('Hand complete', 'Showdown');
+    // "Showdown" is poker vocabulary and stays in English (l10n glossary).
+    addFrame(l10n.replayerHandComplete, 'Showdown');
 
     return frames;
   }
@@ -338,7 +348,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${frame.streetLabel} · $total-max',
+              context.l10n.replayerTitle(frame.streetLabel, total),
               style:
                   const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
@@ -354,7 +364,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
                       color: Colors.amber.withAlpha(120), width: 0.5),
                 ),
                 child: Text(
-                  _stageBadgeLabel(widget.hand.tournamentStage!),
+                  _stageBadgeLabel(context.l10n, widget.hand.tournamentStage!),
                   style: const TextStyle(
                       fontSize: 10,
                       color: Colors.amber,
@@ -367,7 +377,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.auto_awesome, size: 20),
-            tooltip: 'AI Coaching',
+            tooltip: context.l10n.replayerAiCoachingTooltip,
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -377,7 +387,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.share_outlined, size: 20),
-            tooltip: 'Share hand',
+            tooltip: context.l10n.replayerShareTooltip,
             onPressed: _shareHand,
           ),
           IconButton(
@@ -386,7 +396,9 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
               size: 20,
               color: _sessionId != null ? Colors.green.shade400 : Colors.white54,
             ),
-            tooltip: _sessionId != null ? 'Linked to session (tap to change)' : 'Link to session',
+            tooltip: _sessionId != null
+                ? context.l10n.replayerLinkedTooltip
+                : context.l10n.replayerLinkTooltip,
             onPressed: _showLinkSheet,
           ),
           if (widget.hand.notes?.isNotEmpty == true)
@@ -553,6 +565,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
   // ── Link to session ───────────────────────────────────────────────────────
 
   Future<void> _showLinkSheet() async {
+    final l10n = context.l10n;
     // A live (in-progress) session isn't a link target — record hands into it
     // from the live screen instead; it becomes linkable once finalized.
     final sessions =
@@ -562,7 +575,7 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
     if (sessions.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No sessions saved yet. Log a session first.')),
+          SnackBar(content: Text(l10n.replayerNoSessions)),
         );
       }
       return;
@@ -591,14 +604,14 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.sessionId == null
-              ? 'Session link removed.'
-              : 'Hand linked to session.'),
+              ? l10n.replayerLinkRemoved
+              : l10n.replayerLinked),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update: $e')),
+        SnackBar(content: Text(l10n.replayerUpdateFailed('$e'))),
       );
     }
   }
@@ -694,14 +707,15 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
 
   static int _hour12(int h) => h == 0 ? 12 : h > 12 ? h - 12 : h;
 
-  static String _stageBadgeLabel(String stage) => switch (stage) {
-        'early' => 'EARLY STAGES',
-        'middle' => 'MIDDLE STAGES',
-        'late' => 'LATE STAGES',
-        'bubble' => 'BUBBLE',
-        'itm' => 'IN THE MONEY',
-        'ft_bubble' => 'FT BUBBLE',
-        'final_table' => 'FINAL TABLE',
+  static String _stageBadgeLabel(AppLocalizations l10n, String stage) =>
+      switch (stage) {
+        'early' => l10n.stageBadgeEarly,
+        'middle' => l10n.stageBadgeMiddle,
+        'late' => l10n.stageBadgeLate,
+        'bubble' => l10n.stageBadgeBubble,
+        'itm' => l10n.stageBadgeItm,
+        'ft_bubble' => l10n.stageBadgeFtBubble,
+        'final_table' => l10n.stageBadgeFinalTable,
         _ => stage.toUpperCase(),
       };
 
@@ -709,12 +723,12 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Notes'),
+        title: Text(context.l10n.replayerNotesTitle),
         content: Text(widget.hand.notes!),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(context.l10n.commonClose),
           ),
         ],
       ),
@@ -838,7 +852,7 @@ class _CenterPanel extends StatelessWidget {
               border: Border.all(color: Colors.white12),
             ),
             child: Text(
-              'POT  \$$pot',
+              context.l10n.tablePot('\$$pot'),
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -1057,13 +1071,13 @@ class _SessionLinkSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: Text(
-              'Link to Session',
+              context.l10n.replayerLinkSheetTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
           ListTile(
             leading: const Icon(Icons.link_off_outlined, color: Colors.white38, size: 20),
-            title: const Text('None (remove link)'),
+            title: Text(context.l10n.replayerLinkNone),
             selected: currentSessionId == null,
             selectedTileColor: Colors.white10,
             onTap: () => Navigator.of(ctx).pop(const _LinkPick(null)),

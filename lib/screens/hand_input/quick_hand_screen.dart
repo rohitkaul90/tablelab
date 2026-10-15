@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../models/hand_model.dart';
 import '../../providers/providers.dart';
 import '../../services/analytics_service.dart';
@@ -189,26 +190,28 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   // ── street/facing/action option logic ────────────────────────────────────────
 
-  static const _facingLabels = {
-    QuickFacing.unopened: 'Unopened',
-    QuickFacing.limp: 'Limper(s)',
-    QuickFacing.openRaise: 'Open',
-    QuickFacing.threeBet: '3-bet',
-    QuickFacing.fourBetPlus: '4-bet+',
-    QuickFacing.checkedTo: 'Checked to me',
-    QuickFacing.bet: 'Bet',
-    QuickFacing.raise: 'Raise',
-    QuickFacing.allIn: 'All-in',
-  };
+  static String _facingLabel(AppLocalizations l10n, QuickFacing f) =>
+      switch (f) {
+        QuickFacing.unopened => l10n.quickFacingUnopened,
+        QuickFacing.limp => l10n.quickFacingLimp,
+        QuickFacing.openRaise => l10n.quickFacingOpen,
+        QuickFacing.threeBet => l10n.quickFacingThreeBet,
+        QuickFacing.fourBetPlus => l10n.quickFacingFourBetPlus,
+        QuickFacing.checkedTo => l10n.quickFacingCheckedTo,
+        QuickFacing.bet => l10n.quickFacingBet,
+        QuickFacing.raise => l10n.quickFacingRaise,
+        QuickFacing.allIn => l10n.quickFacingAllIn,
+      };
 
-  static const _actionLabels = {
-    QuickHeroAction.fold: 'Fold',
-    QuickHeroAction.check: 'Check',
-    QuickHeroAction.call: 'Call',
-    QuickHeroAction.bet: 'Bet',
-    QuickHeroAction.raise: 'Raise',
-    QuickHeroAction.allIn: 'All-in',
-  };
+  static String _actionLabel(AppLocalizations l10n, QuickHeroAction a) =>
+      switch (a) {
+        QuickHeroAction.fold => l10n.quickActionFold,
+        QuickHeroAction.check => l10n.quickActionCheck,
+        QuickHeroAction.call => l10n.quickActionCall,
+        QuickHeroAction.bet => l10n.quickActionBet,
+        QuickHeroAction.raise => l10n.quickActionRaise,
+        QuickHeroAction.allIn => l10n.quickActionAllIn,
+      };
 
   List<QuickFacing> get _facingOptions => _street == Street.preflop
       ? const [
@@ -357,6 +360,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   Future<void> _save() async {
     if (_saving || !_canSave) return;
+    final l10n = context.l10n;
     setState(() => _saving = true);
     try {
       final (sb, bb) = _blinds!;
@@ -403,12 +407,12 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           isTournament: _isTournament, entryMode: 'quick');
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Hand saved')));
+          .showSnackBar(SnackBar(content: Text(l10n.quickHandSaved)));
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save hand. Please try again.')),
+        SnackBar(content: Text(l10n.handSaveFailed)),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -417,11 +421,12 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   Future<void> _switchToFullMode() async {
     if (_isDirty) {
+      final l10n = context.l10n;
       final ok = await confirmDiscardHand(
         context,
-        title: 'Switch to Full mode?',
-        message: "Your quick entries won't carry over.",
-        confirmLabel: 'Switch',
+        title: l10n.quickHandSwitchTitle,
+        message: l10n.quickHandSwitchMessage,
+        confirmLabel: l10n.quickHandSwitchConfirm,
       );
       if (!ok || !mounted) return;
     }
@@ -459,13 +464,14 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
 
   Widget _build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quick Hand'),
+        title: Text(l10n.quickHandTitle),
         actions: [
           TextButton(
             onPressed: _switchToFullMode,
-            child: const Text('Full mode'),
+            child: Text(l10n.quickHandFullMode),
           ),
         ],
       ),
@@ -480,21 +486,22 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
               onChanged: (id) => setState(() => _selectedSessionId = id),
             ),
           const SizedBox(height: 12),
-          _sectionLabel('GAME'),
+          _sectionLabel(l10n.quickHandSectionGame),
           if (_sessionLocked)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
-                _isTournament ? 'Tournament · from session' : 'Cash · from session',
+                l10n.quickHandFromSession(_isTournament ? 'tournament' : 'cash'),
                 style: TextStyle(color: cs.onSurfaceVariant),
               ),
             )
           else
             SegmentedButton<bool>(
               showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: false, label: Text('Cash')),
-                ButtonSegment(value: true, label: Text('Tournament')),
+              segments: [
+                ButtonSegment(value: false, label: Text(l10n.quickHandCash)),
+                ButtonSegment(
+                    value: true, label: Text(l10n.quickHandTournament)),
               ],
               selected: {_isTournament},
               onSelectionChanged: (s) =>
@@ -503,7 +510,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           const SizedBox(height: 12),
           if (_isTournament) _tournamentStakesFields(cs) else _cashStakesChips(),
           const SizedBox(height: 16),
-          _sectionLabel('YOUR CARDS'),
+          _sectionLabel(l10n.quickHandSectionCards),
           Row(children: [
             GestureDetector(
               onTap: _pickHeroCards,
@@ -521,17 +528,19 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
             TextButton.icon(
               onPressed: _pickHeroCards,
               icon: const Icon(Icons.style_outlined, size: 18),
-              label: Text(_heroCards.isEmpty ? 'Pick cards' : 'Change'),
+              label: Text(_heroCards.isEmpty
+                  ? l10n.quickHandPickCards
+                  : l10n.quickHandChangeCards),
             ),
           ]),
           const SizedBox(height: 16),
-          _sectionLabel('POSITION'),
+          _sectionLabel(l10n.quickHandSectionPosition),
           Row(children: [
             DropdownButton<int>(
               value: _numSeats,
               items: [
                 for (var n = 2; n <= 9; n++)
-                  DropdownMenuItem(value: n, child: Text('$n-max')),
+                  DropdownMenuItem(value: n, child: Text(l10n.quickHandSeats(n))),
               ],
               onChanged: (n) => setState(() {
                 _numSeats = n!;
@@ -556,7 +565,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _sectionLabel('THE DECISION'),
+          _sectionLabel(l10n.quickHandSectionDecision),
           SegmentedButton<Street>(
             // The default selected checkmark widens the segment and wraps the
             // 4-pill row on phones.
@@ -565,7 +574,8 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
               for (final s in Street.values)
                 ButtonSegment(
                     value: s,
-                    label: Text(s == Street.preflop ? 'Pre' : s.label)),
+                    label: Text(
+                        s == Street.preflop ? l10n.quickHandStreetPre : s.label)),
             ],
             selected: {_street},
             onSelectionChanged: (s) => _setStreet(s.first),
@@ -581,20 +591,20 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
                 onPressed: _pickBoard,
                 icon: const Icon(Icons.dashboard_outlined, size: 18),
                 label: Text(_board.isEmpty
-                    ? 'Add board ($_boardCount cards) — optional'
-                    : 'Change board'),
+                    ? l10n.quickHandAddBoard(_boardCount)
+                    : l10n.quickHandChangeBoard),
               ),
             ]),
           ],
           const SizedBox(height: 10),
-          Text('Facing', style: Theme.of(context).textTheme.bodySmall),
+          Text(l10n.quickHandFacing, style: Theme.of(context).textTheme.bodySmall),
           Wrap(
             spacing: 6,
             runSpacing: 0,
             children: [
               for (final f in _facingOptions)
                 ChoiceChip(
-                  label: Text(_facingLabels[f]!),
+                  label: Text(_facingLabel(l10n, f)),
                   selected: _facing == f,
                   onSelected: (_) => setState(() {
                     final wasShown = _showEarlier;
@@ -613,10 +623,10 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
             ],
           ),
           if (_facingHasSize)
-            _bbField(_facingSizeCtrl, 'Size (BB) — optional'),
+            _bbField(_facingSizeCtrl, l10n.quickHandSizeOptional),
           if (_showEarlier) ...[
             const SizedBox(height: 10),
-            Text('Earlier this street',
+            Text(l10n.quickHandEarlier,
                 style: Theme.of(context).textTheme.bodySmall),
             Wrap(
               spacing: 6,
@@ -625,9 +635,9 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
                 for (final e in _earlierOptions)
                   ChoiceChip(
                     label: Text(switch (e) {
-                      QuickEarlierAction.none => 'Villain acted first',
-                      QuickEarlierAction.checked => 'I checked first',
-                      QuickEarlierAction.bet => 'I bet first',
+                      QuickEarlierAction.none => l10n.quickEarlierNone,
+                      QuickEarlierAction.checked => l10n.quickEarlierChecked,
+                      QuickEarlierAction.bet => l10n.quickEarlierBet,
                     }),
                     selected: _earlier == e,
                     onSelected: (_) => setState(() => _earlier = e),
@@ -635,29 +645,28 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
               ],
             ),
             if (_earlier == QuickEarlierAction.bet)
-              _bbField(_earlierBetCtrl, 'Your earlier bet (BB) — optional'),
+              _bbField(_earlierBetCtrl, l10n.quickHandEarlierBetOptional),
           ],
           const SizedBox(height: 10),
-          Text('You', style: Theme.of(context).textTheme.bodySmall),
+          Text(l10n.quickHandYou, style: Theme.of(context).textTheme.bodySmall),
           Wrap(
             spacing: 6,
             runSpacing: 0,
             children: [
               for (final a in _actionOptions)
                 ChoiceChip(
-                  label: Text(_actionLabels[a]!),
+                  label: Text(_actionLabel(l10n, a)),
                   selected: _heroAction == a,
                   onSelected: (_) => setState(() => _heroAction = a),
                 ),
             ],
           ),
           if (_heroActionHasSize)
-            _bbField(_heroSizeCtrl, 'Your size (BB) — optional'),
+            _bbField(_heroSizeCtrl, l10n.quickHandYourSizeOptional),
           if (_street != Street.preflop) ...[
-            _bbField(_potBeforeCtrl,
-                'Pot entering this street (BB) — optional'),
+            _bbField(_potBeforeCtrl, l10n.quickHandPotEntering),
             const SizedBox(height: 10),
-            Text('How preflop went — optional',
+            Text(l10n.quickHandPreflopHow,
                 style: Theme.of(context).textTheme.bodySmall),
             Wrap(
               spacing: 6,
@@ -666,11 +675,11 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
                 for (final t in QuickPotType.values)
                   ChoiceChip(
                     label: Text(switch (t) {
-                      QuickPotType.auto => 'Auto',
-                      QuickPotType.limped => 'Limped',
-                      QuickPotType.singleRaised => 'Single-raised',
-                      QuickPotType.threeBet => '3-bet pot',
-                      QuickPotType.fourBet => '4-bet pot',
+                      QuickPotType.auto => l10n.quickPotAuto,
+                      QuickPotType.limped => l10n.quickPotLimped,
+                      QuickPotType.singleRaised => l10n.quickPotSingleRaised,
+                      QuickPotType.threeBet => l10n.quickPotThreeBet,
+                      QuickPotType.fourBet => l10n.quickPotFourBet,
                     }),
                     selected: _potType == t,
                     onSelected: (_) => setState(() => _potType = t),
@@ -678,9 +687,9 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
               ],
             ),
           ],
-          _bbField(_effStackCtrl, 'Effective stacks (BB)'),
+          _bbField(_effStackCtrl, l10n.quickHandEffStacks),
           const SizedBox(height: 16),
-          _sectionLabel('RESULT — OPTIONAL'),
+          _sectionLabel(l10n.quickHandSectionResult),
           Wrap(
             spacing: 6,
             runSpacing: 0,
@@ -688,9 +697,9 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
               for (final r in QuickResult.values)
                 ChoiceChip(
                   label: Text(switch (r) {
-                    QuickResult.won => 'Won',
-                    QuickResult.lost => 'Lost',
-                    QuickResult.chopped => 'Chopped',
+                    QuickResult.won => l10n.quickResultWon,
+                    QuickResult.lost => l10n.quickResultLost,
+                    QuickResult.chopped => l10n.quickResultChopped,
                   }),
                   selected: _result == r,
                   onSelected: (sel) =>
@@ -699,13 +708,13 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
             ],
           ),
           if (_result != null)
-            _bbField(_resultAmountCtrl, 'Final pot (BB) — optional'),
+            _bbField(_resultAmountCtrl, l10n.quickHandFinalPot),
           const SizedBox(height: 8),
           TextField(
             controller: _noteCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Note — optional',
-              hintText: 'Reads, dynamics, why it was close…',
+            decoration: InputDecoration(
+              labelText: l10n.quickHandNoteLabel,
+              hintText: l10n.quickHandNoteHint,
             ),
             textCapitalization: TextCapitalization.sentences,
           ),
@@ -713,7 +722,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           FilledButton(
             onPressed: _canSave && !_saving ? _save : null,
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-            child: Text(_saving ? 'Saving…' : 'Save Hand'),
+            child: Text(_saving ? l10n.quickHandSaving : l10n.quickHandSave),
           ),
           SizedBox(height: MediaQuery.paddingOf(context).bottom),
         ],
@@ -748,7 +757,7 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
               }),
             ),
           ChoiceChip(
-            label: const Text('Custom'),
+            label: Text(context.l10n.quickHandCustom),
             selected: _customStakes,
             onSelected: (_) => setState(() => _customStakes = true),
           ),
@@ -757,8 +766,8 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
               width: 120,
               child: TextField(
                 controller: _customStakesCtrl,
-                decoration: const InputDecoration(
-                    hintText: 'e.g. 2/5', isDense: true),
+                decoration: InputDecoration(
+                    hintText: context.l10n.quickHandCustomHint, isDense: true),
                 keyboardType: TextInputType.text,
                 onChanged: (_) => setState(() {}),
               ),
@@ -795,8 +804,8 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
             Expanded(
               child: TextField(
                 controller: _anteCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Ante', isDense: true),
+                decoration: InputDecoration(
+                    labelText: context.l10n.quickHandAnte, isDense: true),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
@@ -805,11 +814,13 @@ class QuickHandScreenState extends ConsumerState<QuickHandScreen> {
           const SizedBox(height: 8),
           DropdownButtonFormField<String?>(
             initialValue: _tournamentStage,
-            decoration: const InputDecoration(
-                labelText: 'Stage — optional', isDense: true),
+            decoration: InputDecoration(
+                labelText: context.l10n.quickHandStageOptional, isDense: true),
             items: [
-              for (final (value, label) in kTournamentStages)
-                DropdownMenuItem(value: value, child: Text(label)),
+              for (final value in kTournamentStages)
+                DropdownMenuItem(
+                    value: value,
+                    child: Text(tournamentStageLabel(context.l10n, value))),
             ],
             onChanged: (v) => setState(() => _tournamentStage = v),
           ),
