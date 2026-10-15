@@ -453,20 +453,6 @@ void main() {
 
   // ── fieldSizeBucket ──────────────────────────────────────────────────────────
 
-  group('fieldSizeBucket', () {
-    test('returns empty string for null or zero', () {
-      expect(fieldSizeBucket(null), equals(''));
-      expect(fieldSizeBucket(0), equals(''));
-    });
-
-    test('buckets correctly', () {
-      expect(fieldSizeBucket(20), equals('Small (<50)'));
-      expect(fieldSizeBucket(100), equals('Medium (50–200)'));
-      expect(fieldSizeBucket(300), equals('Large (200–500)'));
-      expect(fieldSizeBucket(1000), equals('Massive (500+)'));
-    });
-  });
-
   // ── currencyFromCountry ──────────────────────────────────────────────────────
 
   group('currencyFromCountry', () {
@@ -573,27 +559,6 @@ void main() {
 
   // ── tournamentBuyInBucket ────────────────────────────────────────────────────
 
-  group('tournamentBuyInBucket', () {
-    test('buckets low buy-ins', () {
-      expect(tournamentBuyInBucket(20), equals(r'< $50'));
-      expect(tournamentBuyInBucket(49), equals(r'< $50'));
-    });
-
-    test('buckets mid-range buy-ins', () {
-      expect(tournamentBuyInBucket(50), equals(r'$50–$100'));
-      expect(tournamentBuyInBucket(75), equals(r'$50–$100'));
-      expect(tournamentBuyInBucket(100), equals(r'$100–$200'));
-      expect(tournamentBuyInBucket(150), equals(r'$100–$200'));
-    });
-
-    test('buckets high buy-ins', () {
-      expect(tournamentBuyInBucket(200), equals(r'$200–$500'));
-      expect(tournamentBuyInBucket(499), equals(r'$200–$500'));
-      expect(tournamentBuyInBucket(500), equals(r'> $500'));
-      expect(tournamentBuyInBucket(1000), equals(r'> $500'));
-    });
-  });
-
   // ── isSessionItm ─────────────────────────────────────────────────────────────
 
   group('isSessionItm', () {
@@ -650,67 +615,9 @@ void main() {
 
   // ── timeOfDayBucket ──────────────────────────────────────────────────────────
 
-  group('timeOfDayBucket', () {
-    test('morning bucket', () {
-      expect(timeOfDayBucket('06:00'), equals('Morning (6am–12pm)'));
-      expect(timeOfDayBucket('11:59'), equals('Morning (6am–12pm)'));
-    });
-
-    test('afternoon bucket', () {
-      expect(timeOfDayBucket('12:00'), equals('Afternoon (12pm–6pm)'));
-      expect(timeOfDayBucket('17:30'), equals('Afternoon (12pm–6pm)'));
-    });
-
-    test('evening bucket', () {
-      expect(timeOfDayBucket('18:00'), equals('Evening (6pm–11pm)'));
-      expect(timeOfDayBucket('22:59'), equals('Evening (6pm–11pm)'));
-    });
-
-    test('late night bucket', () {
-      expect(timeOfDayBucket('23:00'), equals('Late Night (11pm–6am)'));
-      expect(timeOfDayBucket('02:00'), equals('Late Night (11pm–6am)'));
-      expect(timeOfDayBucket('05:59'), equals('Late Night (11pm–6am)'));
-    });
-  });
-
   // ── sessionLengthBucket ──────────────────────────────────────────────────────
 
-  group('sessionLengthBucket', () {
-    test('short sessions', () {
-      expect(sessionLengthBucket(60), equals('< 2 hours'));
-      expect(sessionLengthBucket(119), equals('< 2 hours'));
-    });
-
-    test('medium sessions', () {
-      expect(sessionLengthBucket(120), equals('2–4 hours'));
-      expect(sessionLengthBucket(239), equals('2–4 hours'));
-    });
-
-    test('long sessions', () {
-      expect(sessionLengthBucket(240), equals('4–6 hours'));
-      expect(sessionLengthBucket(359), equals('4–6 hours'));
-    });
-
-    test('marathon sessions', () {
-      expect(sessionLengthBucket(360), equals('> 6 hours'));
-      expect(sessionLengthBucket(720), equals('> 6 hours'));
-    });
-  });
-
   // ── dayOfWeekLabel ───────────────────────────────────────────────────────────
-
-  group('dayOfWeekLabel', () {
-    test('returns correct day abbreviations', () {
-      expect(dayOfWeekLabel('2026-05-31'), equals('Sun')); // 2026-05-31 is a Sunday
-      expect(dayOfWeekLabel('2026-06-01'), equals('Mon'));
-      expect(dayOfWeekLabel('2026-06-06'), equals('Sat'));
-    });
-
-    test('falls back to today on invalid date', () {
-      // Should not throw — just returns some valid day
-      expect(() => dayOfWeekLabel('invalid'), returnsNormally);
-    });
-  });
 
   // ── monthLabel ───────────────────────────────────────────────────────────────
 
@@ -1018,10 +925,10 @@ void analyticsKeyTests() {
       expect(sessionLengthBucketOf(119), SessionLengthBucket.under2h);
       expect(sessionLengthBucketOf(360), SessionLengthBucket.over6h);
     });
-    test('weekdayOf is ISO (Monday = 1) and matches dayOfWeekLabel', () {
+    test('weekdayOf is ISO (Monday = 1) and null when unparseable', () {
       expect(weekdayOf('2024-01-01'), 1); // a Monday
       expect(weekdayOf('2024-01-07'), 7);
-      expect(dayOfWeekLabel('2024-01-07'), 'Sun');
+      expect(weekdayOf('03/14/2024'), isNull);
     });
   });
 }

@@ -41,10 +41,6 @@
   "tableQuality4": "Facile",
   "tableQuality5": "Très facile",
   "tableQualityNotRated": "Non notée",
-  "tableSizeHeadsUp": "Heads-up (2)",
-  "tableSize6Max": "6-max",
-  "tableSize9Max": "9-max (full ring)",
-  "tableSizeNHanded": "{n} joueurs",
   "venueLive": "Live",
   "venueOnline": "En ligne"
 }

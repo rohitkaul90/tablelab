@@ -189,27 +189,6 @@
   "@tableQualityNotRated": {
     "description": "Table quality when the session has no rating."
   },
-  "tableSizeHeadsUp": "Heads-up (2)",
-  "@tableSizeHeadsUp": {
-    "description": "Table size: two players."
-  },
-  "tableSize6Max": "6-max",
-  "@tableSize6Max": {
-    "description": "Table size: six-handed table (poker term, keep 6-max)."
-  },
-  "tableSize9Max": "9-max (full ring)",
-  "@tableSize9Max": {
-    "description": "Table size: nine-handed full-ring table (keep 9-max)."
-  },
-  "tableSizeNHanded": "{n}-handed",
-  "@tableSizeNHanded": {
-    "description": "Table size for other player counts; {n} is the number of seats.",
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "venueLive": "Live",
   "@venueLive": {
     "description": "Venue label: in-person casino or home game (not online)."

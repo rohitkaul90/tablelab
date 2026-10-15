@@ -53,13 +53,13 @@ String sessionLengthBucketLabel(AppLocalizations l10n, SessionLengthBucket b) =>
     };
 
 /// Abbreviated weekday name ("Mon", "lun.") for an ISO weekday 1–7 in the
-/// current `Intl.defaultLocale` (set by locale_provider.dart), so no ARB keys
-/// are needed.
-String weekdayShortLabel(int weekday) {
+/// language of [l10n] (intl's symbols, so no ARB keys are needed; the app
+/// loads them via applyIntlLocale before any frame renders).
+String weekdayShortLabel(AppLocalizations l10n, int weekday) {
   // 2024-01-01 is a Monday; offsetting from it yields any weekday.
   final date = DateTime(2024, 1, weekday);
   try {
-    return DateFormat.E().format(date);
+    return DateFormat.E(l10n.localeName).format(date);
   } on Object {
     // intl throws if the locale's symbols were never loaded
     // (initializeDateFormatting) — fall back to English rather than crash.
@@ -83,13 +83,6 @@ String tableQualityKeyLabel(AppLocalizations l10n, int? quality) =>
       4 => l10n.tableQuality4,
       5 => l10n.tableQuality5,
       _ => l10n.tableQualityNotRated,
-    };
-
-String tableSizeKeyLabel(AppLocalizations l10n, int n) => switch (n) {
-      2 => l10n.tableSizeHeadsUp,
-      6 => l10n.tableSize6Max,
-      9 => l10n.tableSize9Max,
-      _ => l10n.tableSizeNHanded(n),
     };
 
 /// Label for a venue key ('live' | 'online').

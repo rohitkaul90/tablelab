@@ -41,10 +41,6 @@
   "tableQuality4": "Blanda",
   "tableQuality5": "Muy blanda",
   "tableQualityNotRated": "Sin valorar",
-  "tableSizeHeadsUp": "Heads-up (2)",
-  "tableSize6Max": "6-max",
-  "tableSize9Max": "9-max (full ring)",
-  "tableSizeNHanded": "{n} jugadores",
   "venueLive": "Presencial",
   "venueOnline": "Online"
 }

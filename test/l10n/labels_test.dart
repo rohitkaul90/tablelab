@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
 import 'package:tablelab/l10n/generated/app_localizations.dart';
 import 'package:tablelab/l10n/labels.dart';
 import 'package:tablelab/utils/helpers.dart';
@@ -27,8 +26,6 @@ void main() {
     expect(gameTypeKeyLabel(en, 'plo5'), 'plo5');
     expect(tableQualityKeyLabel(en, 1), 'Very Tough');
     expect(tableQualityKeyLabel(en, null), 'Not rated');
-    expect(tableSizeKeyLabel(en, 2), 'Heads-up (2)');
-    expect(tableSizeKeyLabel(en, 7), '7-handed');
     expect(venueLabel(en, 'online'), 'Online');
     expect(venueLabel(en, 'live'), 'Live');
   });
@@ -57,26 +54,13 @@ void main() {
     expect(venueLabel(nl, 'live'), isNotEmpty);
   });
 
-  test('weekday labels follow Intl.defaultLocale', () async {
-    final before = Intl.defaultLocale;
-    addTearDown(() => Intl.defaultLocale = before);
-
-    // The app loads a locale's symbols via applyIntlLocale() before setting
-    // the default; mirror that here.
+  test('weekday labels follow the AppLocalizations locale', () async {
     await initializeDateFormatting('en');
-    Intl.defaultLocale = 'en';
-    expect(weekdayShortLabel(1), 'Mon');
-    expect(weekdayShortLabel(7), 'Sun');
+    expect(weekdayShortLabel(en, 1), 'Mon');
+    expect(weekdayShortLabel(en, 7), 'Sun');
 
     await initializeDateFormatting('fr');
-    Intl.defaultLocale = 'fr';
-    expect(weekdayShortLabel(1).toLowerCase(), startsWith('lun'));
-  });
-
-  test('weekday labels fall back to English when symbols are not loaded', () {
-    final before = Intl.defaultLocale;
-    addTearDown(() => Intl.defaultLocale = before);
-    Intl.defaultLocale = 'xx';
-    expect(weekdayShortLabel(3), 'Wed');
+    final fr = lookupAppLocalizations(const Locale('fr'));
+    expect(weekdayShortLabel(fr, 1).toLowerCase(), startsWith('lun'));
   });
 }

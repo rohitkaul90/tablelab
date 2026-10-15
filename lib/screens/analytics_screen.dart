@@ -9,7 +9,7 @@ import '../models/session_model.dart';
 import '../models/stats_filter.dart';
 import '../utils/helpers.dart';
 import '../widgets/ai_coaching_card.dart';
-import '../widgets/game_type_filter.dart' show gameTypeChipLabel, gameTypeKey;
+import '../widgets/game_type_filter.dart' show gameTypeChipLabel;
 import 'import_source_screen.dart';
 import 'live_session_screen.dart';
 import 'metric_chart_screen.dart';
@@ -319,7 +319,11 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         tabLabel: 'Buy-ins',
         title: 'By Buy-in Level',
         sessions: d.tSessions,
-        keyFn: (s) => buyInBucketOf(s.buyIn).name,
+        // Bucket on the DISPLAY-currency amount so the band label's symbol
+        // (and the converted ROI beside it) describe the same number.
+        keyFn: (s) => buyInBucketOf(
+                convertCurrency(s.buyIn, s.currency, d.displayCurrency))
+            .name,
         orderedKeys: [for (final b in BuyInBucket.values) b.name],
         labelFn: (l10n, k) => buyInBucketLabel(
             l10n, BuyInBucket.values.byName(k), currencySymbol(d.displayCurrency)),
@@ -344,16 +348,19 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         tabLabel: 'Game Type',
         title: 'By Game Type',
         sessions: filtered,
-        keyFn: gameTypeKey,
+        // Tournament variants fold together; any other raw game_type value
+        // (legacy / import-edited) stays its own row, as before.
+        keyFn: (s) => isTournamentType(s.gameType) ? 'tournament' : s.gameType,
         labelFn: gameTypeKeyLabel,
       ),
     AnalyticsFactor(
       tabLabel: 'Day',
       title: 'By Day of Week',
       sessions: filtered,
-      keyFn: (s) => '${weekdayOf(s.date)}',
+      // '' = unparseable date → the row is skipped by _InsightCard.
+      keyFn: (s) => weekdayOf(s.date)?.toString() ?? '',
       orderedKeys: const ['1', '2', '3', '4', '5', '6', '7'],
-      labelFn: (_, k) => weekdayShortLabel(int.parse(k)),
+      labelFn: (l10n, k) => weekdayShortLabel(l10n, int.parse(k)),
       isTournament: mixedTournament,
     ),
     // Time of Day — cash only; less actionable for tournaments.
@@ -1597,7 +1604,9 @@ class _RecommendationsCard extends StatelessWidget {
     if (_isTournament) {
       // Tournament factors — scored by ROI
       checkFactor(
-        keyFn: (s) => buyInBucketOf(s.buyIn).name,
+        keyFn: (s) => buyInBucketOf(
+                convertCurrency(s.buyIn, s.currency, displayCurrency))
+            .name,
         labelFn: (k) =>
             buyInBucketLabel(l10n, BuyInBucket.values.byName(k), sym),
         icon: Icons.attach_money,
@@ -1611,8 +1620,8 @@ class _RecommendationsCard extends StatelessWidget {
         dimension: 'field size',
       );
       checkFactor(
-        keyFn: (s) => '${weekdayOf(s.date)}',
-        labelFn: (k) => weekdayShortLabel(int.parse(k)),
+        keyFn: (s) => weekdayOf(s.date)?.toString(),
+        labelFn: (k) => weekdayShortLabel(l10n, int.parse(k)),
         icon: Icons.calendar_today,
         dimension: 'day',
       );
@@ -1638,8 +1647,8 @@ class _RecommendationsCard extends StatelessWidget {
         dimension: 'time slot',
       );
       checkFactor(
-        keyFn: (s) => '${weekdayOf(s.date)}',
-        labelFn: (k) => weekdayShortLabel(int.parse(k)),
+        keyFn: (s) => weekdayOf(s.date)?.toString(),
+        labelFn: (k) => weekdayShortLabel(l10n, int.parse(k)),
         icon: Icons.calendar_today,
         dimension: 'day',
       );
