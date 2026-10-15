@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 import '../models/session_model.dart';
 import '../models/stats_filter.dart';
 import '../utils/helpers.dart';
@@ -261,10 +263,17 @@ class AnalyticsFactor {
   final String tabLabel; // short — the Tab text
   final String title; // the card title
   final List<SessionModel> sessions;
+
+  /// STABLE grouping key per session (enum names, weekday ints, ids) — never
+  /// display text, so the breakdown survives a language switch.
   final String Function(SessionModel) keyFn;
   final List<String>? orderedKeys;
   final bool isTournament;
   final int Function(String, String)? naturalCompare;
+
+  /// Localized label for a key (null = the key is already display text, e.g.
+  /// stakes or a location name).
+  final String Function(AppLocalizations l10n, String key)? labelFn;
 
   const AnalyticsFactor({
     required this.tabLabel,
@@ -274,6 +283,7 @@ class AnalyticsFactor {
     this.orderedKeys,
     this.isTournament = false,
     this.naturalCompare,
+    this.labelFn,
   });
 }
 
@@ -309,14 +319,14 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         tabLabel: 'Buy-ins',
         title: 'By Buy-in Level',
         sessions: d.tSessions,
-        keyFn: (s) => tournamentBuyInBucket(s.buyIn),
-        orderedKeys: const [
-          '< \$50',
-          '\$50–\$100',
-          '\$100–\$200',
-          '\$200–\$500',
-          '> \$500'
-        ],
+        // Bucket on the DISPLAY-currency amount so the band label's symbol
+        // (and the converted ROI beside it) describe the same number.
+        keyFn: (s) => buyInBucketOf(
+                convertCurrency(s.buyIn, s.currency, d.displayCurrency))
+            .name,
+        orderedKeys: [for (final b in BuyInBucket.values) b.name],
+        labelFn: (l10n, k) => buyInBucketLabel(
+            l10n, BuyInBucket.values.byName(k), currencySymbol(d.displayCurrency)),
         isTournament: true,
       ),
     // Field size — only when enough sessions have entrant counts.
@@ -327,13 +337,10 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         title: 'By Field Size',
         sessions:
             d.tSessions.where((s) => (s.totalEntrants ?? 0) > 0).toList(),
-        keyFn: (s) => fieldSizeBucket(s.totalEntrants),
-        orderedKeys: const [
-          'Small (<50)',
-          'Medium (50–200)',
-          'Large (200–500)',
-          'Massive (500+)',
-        ],
+        keyFn: (s) => fieldSizeBucketOf(s.totalEntrants)?.name ?? '',
+        orderedKeys: [for (final b in FieldSizeBucket.values) b.name],
+        labelFn: (l10n, k) =>
+            fieldSizeBucketLabel(l10n, FieldSizeBucket.values.byName(k)),
         isTournament: true,
       ),
     if (d.showingCash && d.showingTournaments)
@@ -341,14 +348,19 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         tabLabel: 'Game Type',
         title: 'By Game Type',
         sessions: filtered,
-        keyFn: (s) => gameTypeLabel(s.gameType),
+        // Tournament variants fold together; any other raw game_type value
+        // (legacy / import-edited) stays its own row, as before.
+        keyFn: (s) => isTournamentType(s.gameType) ? 'tournament' : s.gameType,
+        labelFn: gameTypeKeyLabel,
       ),
     AnalyticsFactor(
       tabLabel: 'Day',
       title: 'By Day of Week',
       sessions: filtered,
-      keyFn: (s) => dayOfWeekLabel(s.date),
-      orderedKeys: const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      // '' = unparseable date → the row is skipped by _InsightCard.
+      keyFn: (s) => weekdayOf(s.date)?.toString() ?? '',
+      orderedKeys: const ['1', '2', '3', '4', '5', '6', '7'],
+      labelFn: (l10n, k) => weekdayShortLabel(l10n, int.parse(k)),
       isTournament: mixedTournament,
     ),
     // Time of Day — cash only; less actionable for tournaments.
@@ -357,7 +369,10 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         tabLabel: 'Time',
         title: 'By Time of Day',
         sessions: d.cashSessions,
-        keyFn: (s) => timeOfDayBucket(s.startTime),
+        keyFn: (s) => timeOfDayBucketOf(s.startTime).name,
+        orderedKeys: [for (final b in TimeOfDayBucket.values) b.name],
+        labelFn: (l10n, k) =>
+            timeOfDayBucketLabel(l10n, TimeOfDayBucket.values.byName(k)),
       ),
     // Session Length — cash only (tournament duration = finish depth).
     if (d.showingCash)
@@ -365,10 +380,10 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         tabLabel: 'Length',
         title: 'By Session Length',
         sessions: d.cashSessions,
-        keyFn: (s) => sessionLengthBucket(s.durationMinutes),
-        orderedKeys: const [
-          '< 2 hours', '2–4 hours', '4–6 hours', '> 6 hours' //
-        ],
+        keyFn: (s) => sessionLengthBucketOf(s.durationMinutes).name,
+        orderedKeys: [for (final b in SessionLengthBucket.values) b.name],
+        labelFn: (l10n, k) =>
+            sessionLengthBucketLabel(l10n, SessionLengthBucket.values.byName(k)),
       ),
     // Table Quality — cash only, when any session is rated.
     if (d.showingCash && d.cashSessions.any((s) => s.tableQuality != null))
@@ -377,10 +392,10 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         title: 'By Table Quality',
         sessions:
             d.cashSessions.where((s) => s.tableQuality != null).toList(),
-        keyFn: (s) =>
-            '${s.tableQuality}★ ${tableQualityLabel(s.tableQuality)}',
-        orderedKeys:
-            List.generate(5, (i) => '${i + 1}★ ${tableQualityLabel(i + 1)}'),
+        keyFn: (s) => '${s.tableQuality}',
+        orderedKeys: const ['1', '2', '3', '4', '5'],
+        labelFn: (l10n, k) =>
+            '$k★ ${tableQualityKeyLabel(l10n, int.tryParse(k))}',
       ),
     if (_hasMultipleLocations(filtered))
       AnalyticsFactor(
@@ -396,8 +411,9 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         tabLabel: 'Live/Online',
         title: 'Live vs Online',
         sessions: filtered,
-        keyFn: (s) => isOnlineSession(s.location) ? 'Online' : 'Live',
-        orderedKeys: const ['Live', 'Online'],
+        keyFn: (s) => isOnlineSession(s.location) ? 'online' : 'live',
+        orderedKeys: const ['live', 'online'],
+        labelFn: venueLabel,
         isTournament: mixedTournament,
       ),
   ];
@@ -594,6 +610,7 @@ class AnalyticsFactorTab extends StatelessWidget {
           sessions: factor.sessions,
           keyFn: factor.keyFn,
           orderedKeys: factor.orderedKeys,
+          labelFn: factor.labelFn,
           displayCurrency: data.displayCurrency,
           isTournament: factor.isTournament,
           sort: sort,
@@ -1127,6 +1144,9 @@ class _InsightCard extends StatelessWidget {
   /// [orderedKeys] (e.g. By Stakes sorts by blind size). Falls back to A–Z.
   final int Function(String a, String b)? naturalCompare;
 
+  /// Localized label for a group key; null = the key is display text.
+  final String Function(AppLocalizations l10n, String key)? labelFn;
+
   const _InsightCard({
     required this.title,
     required this.sessions,
@@ -1136,6 +1156,7 @@ class _InsightCard extends StatelessWidget {
     this.isTournament = false,
     this.sort = InsightSort.rate,
     this.naturalCompare,
+    this.labelFn,
   });
 
   @override
@@ -1206,7 +1227,7 @@ class _InsightCard extends StatelessWidget {
             const SizedBox(height: 12),
             for (final key in keys) ...[
               _InsightRow(
-                label: key,
+                label: labelFn?.call(context.l10n, key) ?? key,
                 stats: stats[key]!,
                 maxAbsValue: maxAbsValue,
                 displayCurrency: displayCurrency,
@@ -1378,7 +1399,7 @@ class _RecommendationsCard extends StatelessWidget {
         ),
       );
     }
-    final recs = _buildRecommendations();
+    final recs = _buildRecommendations(context.l10n);
     if (recs.isEmpty) {
       return Card(
         child: Padding(
@@ -1517,14 +1538,17 @@ class _RecommendationsCard extends StatelessWidget {
         ' Your overall rate is $overallFmt/hr.';
   }
 
-  List<_Rec> _buildRecommendations() {
+  List<_Rec> _buildRecommendations(AppLocalizations l10n) {
     final recs = <_Rec>[];
     final overallScore = _overallScore();
 
+    // [keyFn] yields a STABLE key (enum name / id); [labelFn] turns it into
+    // the localized text embedded in the sentences (null = key is the text).
     void checkFactor({
       required String? Function(SessionModel) keyFn,
       required IconData icon,
       required String dimension,
+      String Function(String key)? labelFn,
     }) {
       if (sessions.length < 4) return;
 
@@ -1565,29 +1589,39 @@ class _RecommendationsCard extends StatelessWidget {
       final tStat = _welchT(best.scores, restScores);
       if (tStat < 1.8) return;
 
+      final bestLabel = labelFn?.call(best.key) ?? best.key;
+      final worstLabel = labelFn?.call(worst.key) ?? worst.key;
       recs.add(_Rec(
         icon: icon,
-        title: _actionTitle(dimension, best.key, worst.key, best.mean),
-        explanation: _explanation(
-            dimension, best.key, worst.key, best.mean, worst.mean, overallScore),
+        title: _actionTitle(dimension, bestLabel, worstLabel, best.mean),
+        explanation: _explanation(dimension, bestLabel, worstLabel, best.mean,
+            worst.mean, overallScore),
         tStat: tStat,
       ));
     }
 
+    final sym = currencySymbol(displayCurrency);
     if (_isTournament) {
       // Tournament factors — scored by ROI
       checkFactor(
-        keyFn: (s) => tournamentBuyInBucket(s.buyIn),
+        keyFn: (s) => buyInBucketOf(
+                convertCurrency(s.buyIn, s.currency, displayCurrency))
+            .name,
+        labelFn: (k) =>
+            buyInBucketLabel(l10n, BuyInBucket.values.byName(k), sym),
         icon: Icons.attach_money,
         dimension: 'buy-in level',
       );
       checkFactor(
-        keyFn: (s) => fieldSizeBucket(s.totalEntrants),
+        keyFn: (s) => fieldSizeBucketOf(s.totalEntrants)?.name,
+        labelFn: (k) =>
+            fieldSizeBucketLabel(l10n, FieldSizeBucket.values.byName(k)),
         icon: Icons.people_outline,
         dimension: 'field size',
       );
       checkFactor(
-        keyFn: (s) => dayOfWeekLabel(s.date),
+        keyFn: (s) => weekdayOf(s.date)?.toString(),
+        labelFn: (k) => weekdayShortLabel(l10n, int.parse(k)),
         icon: Icons.calendar_today,
         dimension: 'day',
       );
@@ -1597,29 +1631,37 @@ class _RecommendationsCard extends StatelessWidget {
         dimension: 'location',
       );
       checkFactor(
-        keyFn: (s) => isOnlineSession(s.location) ? 'Online' : 'Live',
+        keyFn: (s) => isOnlineSession(s.location) ? 'online' : 'live',
+        labelFn: (k) => venueLabel(l10n, k),
         icon: Icons.wifi_outlined,
         dimension: 'live/online',
       );
     } else {
       // Cash factors — scored by hourly rate
       checkFactor(
-        keyFn: (s) => _shortTime(timeOfDayBucket(s.startTime)),
+        keyFn: (s) => timeOfDayBucketOf(s.startTime).name,
+        labelFn: (k) => timeOfDayBucketLabel(
+            l10n, TimeOfDayBucket.values.byName(k),
+            short: true),
         icon: Icons.access_time,
         dimension: 'time slot',
       );
       checkFactor(
-        keyFn: (s) => dayOfWeekLabel(s.date),
+        keyFn: (s) => weekdayOf(s.date)?.toString(),
+        labelFn: (k) => weekdayShortLabel(l10n, int.parse(k)),
         icon: Icons.calendar_today,
         dimension: 'day',
       );
       checkFactor(
-        keyFn: (s) => sessionLengthBucket(s.durationMinutes),
+        keyFn: (s) => sessionLengthBucketOf(s.durationMinutes).name,
+        labelFn: (k) =>
+            sessionLengthBucketLabel(l10n, SessionLengthBucket.values.byName(k)),
         icon: Icons.timer_outlined,
         dimension: 'session length',
       );
       checkFactor(
-        keyFn: (s) => s.tableQuality != null ? '${s.tableQuality}★' : null,
+        keyFn: (s) => s.tableQuality?.toString(),
+        labelFn: (k) => '$k★',
         icon: Icons.star_border,
         dimension: 'table quality',
       );
@@ -1644,14 +1686,6 @@ class _RecommendationsCard extends StatelessWidget {
     }
 
     return top;
-  }
-
-  String _shortTime(String? bucket) {
-    if (bucket == null) return '';
-    if (bucket.startsWith('Morning')) return 'Morning';
-    if (bucket.startsWith('Afternoon')) return 'Afternoon';
-    if (bucket.startsWith('Evening')) return 'Evening';
-    return 'Late Night';
   }
 }
 
