@@ -3,6 +3,8 @@ import 'package:tablelab/utils/helpers.dart';
 import 'package:tablelab/models/session_model.dart';
 
 void main() {
+  analyticsKeyTests();
+
   // ── sessionDefaultsFor ───────────────────────────────────────────────────────
 
   group('sessionDefaultsFor', () {
@@ -987,6 +989,39 @@ void main() {
       expect(parseTableSize('0'), isNull);
       expect(parseTableSize('heads-up'), isNull);
       expect(parseTableSize(''), isNull);
+    });
+  });
+}
+
+// ── Stable analytics keys (i18n PR 5a) ──────────────────────────────────────
+// The enum/id forms are the grouping keys; the English helpers above must stay
+// consistent with them.
+void analyticsKeyTests() {
+  group('bucket keys', () {
+    test('buyInBucketOf thresholds match tournamentBuyInBucket', () {
+      expect(buyInBucketOf(49), BuyInBucket.under50);
+      expect(buyInBucketOf(50), BuyInBucket.from50to100);
+      expect(buyInBucketOf(199), BuyInBucket.from100to200);
+      expect(buyInBucketOf(200), BuyInBucket.from200to500);
+      expect(buyInBucketOf(500), BuyInBucket.over500);
+    });
+    test('fieldSizeBucketOf is null when entrants are unknown', () {
+      expect(fieldSizeBucketOf(null), isNull);
+      expect(fieldSizeBucketOf(0), isNull);
+      expect(fieldSizeBucketOf(49), FieldSizeBucket.small);
+      expect(fieldSizeBucketOf(500), FieldSizeBucket.massive);
+    });
+    test('timeOfDayBucketOf and sessionLengthBucketOf', () {
+      expect(timeOfDayBucketOf('06:00'), TimeOfDayBucket.morning);
+      expect(timeOfDayBucketOf('23:00'), TimeOfDayBucket.lateNight);
+      expect(timeOfDayBucketOf('garbage'), TimeOfDayBucket.lateNight);
+      expect(sessionLengthBucketOf(119), SessionLengthBucket.under2h);
+      expect(sessionLengthBucketOf(360), SessionLengthBucket.over6h);
+    });
+    test('weekdayOf is ISO (Monday = 1) and matches dayOfWeekLabel', () {
+      expect(weekdayOf('2024-01-01'), 1); // a Monday
+      expect(weekdayOf('2024-01-07'), 7);
+      expect(dayOfWeekLabel('2024-01-07'), 'Sun');
     });
   });
 }

@@ -103,21 +103,79 @@ String formatROI(double roiPercent) {
   return '${roiPercent >= 0 ? '+' : ''}${roiPercent.toStringAsFixed(0)}%';
 }
 
-String tournamentBuyInBucket(double buyIn) {
-  if (buyIn < 50) return '< \$50';
-  if (buyIn < 100) return '\$50–\$100';
-  if (buyIn < 200) return '\$100–\$200';
-  if (buyIn < 500) return '\$200–\$500';
-  return '> \$500';
+// ─── Analytics buckets ────────────────────────────────────────────────────────
+// Each bucket is an enum whose `name` is the STABLE grouping/ordering key used
+// by the Stats factor tabs and the recommendations engine. Display text lives
+// in lib/l10n/labels.dart (localized); the English `String` helpers below are
+// legacy wrappers kept for callers not yet on l10n (removed in the i18n
+// formatting PR) — never use their output as a key.
+
+/// Tournament buy-in bands.
+enum BuyInBucket { under50, from50to100, from100to200, from200to500, over500 }
+
+BuyInBucket buyInBucketOf(double buyIn) {
+  if (buyIn < 50) return BuyInBucket.under50;
+  if (buyIn < 100) return BuyInBucket.from50to100;
+  if (buyIn < 200) return BuyInBucket.from100to200;
+  if (buyIn < 500) return BuyInBucket.from200to500;
+  return BuyInBucket.over500;
 }
 
-String fieldSizeBucket(int? totalEntrants) {
-  if (totalEntrants == null || totalEntrants <= 0) return '';
-  if (totalEntrants < 50) return 'Small (<50)';
-  if (totalEntrants < 200) return 'Medium (50–200)';
-  if (totalEntrants < 500) return 'Large (200–500)';
-  return 'Massive (500+)';
+/// English-only legacy label — see [buyInBucketOf] + `buyInBucketLabel`.
+String tournamentBuyInBucket(double buyIn) => switch (buyInBucketOf(buyIn)) {
+      BuyInBucket.under50 => '< \$50',
+      BuyInBucket.from50to100 => '\$50–\$100',
+      BuyInBucket.from100to200 => '\$100–\$200',
+      BuyInBucket.from200to500 => '\$200–\$500',
+      BuyInBucket.over500 => '> \$500',
+    };
+
+/// Tournament field-size bands; null when the entrant count is unknown.
+enum FieldSizeBucket { small, medium, large, massive }
+
+FieldSizeBucket? fieldSizeBucketOf(int? totalEntrants) {
+  if (totalEntrants == null || totalEntrants <= 0) return null;
+  if (totalEntrants < 50) return FieldSizeBucket.small;
+  if (totalEntrants < 200) return FieldSizeBucket.medium;
+  if (totalEntrants < 500) return FieldSizeBucket.large;
+  return FieldSizeBucket.massive;
 }
+
+/// English-only legacy label — see [fieldSizeBucketOf] + `fieldSizeBucketLabel`.
+String fieldSizeBucket(int? totalEntrants) =>
+    switch (fieldSizeBucketOf(totalEntrants)) {
+      null => '',
+      FieldSizeBucket.small => 'Small (<50)',
+      FieldSizeBucket.medium => 'Medium (50–200)',
+      FieldSizeBucket.large => 'Large (200–500)',
+      FieldSizeBucket.massive => 'Massive (500+)',
+    };
+
+/// Cash-session start-time bands.
+enum TimeOfDayBucket { morning, afternoon, evening, lateNight }
+
+TimeOfDayBucket timeOfDayBucketOf(String startTime) {
+  final hour = int.tryParse(startTime.split(':')[0]) ?? 0;
+  if (hour >= 6 && hour < 12) return TimeOfDayBucket.morning;
+  if (hour >= 12 && hour < 18) return TimeOfDayBucket.afternoon;
+  if (hour >= 18 && hour < 23) return TimeOfDayBucket.evening;
+  return TimeOfDayBucket.lateNight;
+}
+
+/// Cash-session duration bands.
+enum SessionLengthBucket { under2h, from2to4h, from4to6h, over6h }
+
+SessionLengthBucket sessionLengthBucketOf(int minutes) {
+  if (minutes < 120) return SessionLengthBucket.under2h;
+  if (minutes < 240) return SessionLengthBucket.from2to4h;
+  if (minutes < 360) return SessionLengthBucket.from4to6h;
+  return SessionLengthBucket.over6h;
+}
+
+/// ISO weekday of a `yyyy-MM-dd` session date: 1 = Monday … 7 = Sunday
+/// (today when unparseable). The stable key for the by-day breakdown.
+int weekdayOf(String date) =>
+    (DateTime.tryParse(date) ?? DateTime.now()).weekday;
 
 bool isTournamentType(String gameType) =>
     gameType == 'tournament' || gameType == 'sit_and_go';
@@ -223,25 +281,28 @@ int? parseTableSize(String raw) {
   return (n != null && n >= 2 && n <= 9) ? n : null;
 }
 
-String timeOfDayBucket(String startTime) {
-  final hour = int.tryParse(startTime.split(':')[0]) ?? 0;
-  if (hour >= 6 && hour < 12) return 'Morning (6am–12pm)';
-  if (hour >= 12 && hour < 18) return 'Afternoon (12pm–6pm)';
-  if (hour >= 18 && hour < 23) return 'Evening (6pm–11pm)';
-  return 'Late Night (11pm–6am)';
-}
+/// English-only legacy label — see [timeOfDayBucketOf] + `timeOfDayBucketLabel`.
+String timeOfDayBucket(String startTime) =>
+    switch (timeOfDayBucketOf(startTime)) {
+      TimeOfDayBucket.morning => 'Morning (6am–12pm)',
+      TimeOfDayBucket.afternoon => 'Afternoon (12pm–6pm)',
+      TimeOfDayBucket.evening => 'Evening (6pm–11pm)',
+      TimeOfDayBucket.lateNight => 'Late Night (11pm–6am)',
+    };
 
-String sessionLengthBucket(int minutes) {
-  if (minutes < 120) return '< 2 hours';
-  if (minutes < 240) return '2–4 hours';
-  if (minutes < 360) return '4–6 hours';
-  return '> 6 hours';
-}
+/// English-only legacy label — see [sessionLengthBucketOf] + `sessionLengthBucketLabel`.
+String sessionLengthBucket(int minutes) =>
+    switch (sessionLengthBucketOf(minutes)) {
+      SessionLengthBucket.under2h => '< 2 hours',
+      SessionLengthBucket.from2to4h => '2–4 hours',
+      SessionLengthBucket.from4to6h => '4–6 hours',
+      SessionLengthBucket.over6h => '> 6 hours',
+    };
 
+/// English-only legacy label — see [weekdayOf] + `weekdayShortLabel`.
 String dayOfWeekLabel(String date) {
-  final dt = DateTime.tryParse(date) ?? DateTime.now();
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  return days[dt.weekday - 1];
+  return days[weekdayOf(date) - 1];
 }
 
 String monthLabel(String date) {

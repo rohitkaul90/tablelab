@@ -1,6 +1,5 @@
 {
   "@@locale": "en",
-
   "navStats": "Stats",
   "@navStats": {
     "description": "Bottom navigation tab: the statistics dashboard (first tab). Keep short — 5 tabs share one row."
@@ -21,7 +20,6 @@
   "@navStudy": {
     "description": "Bottom navigation tab: the GTO solver-strategy explorer for studying spots. Keep short."
   },
-
   "settingsAppearance": "APPEARANCE",
   "@settingsAppearance": {
     "description": "Settings screen section header, rendered in uppercase letters."
@@ -49,5 +47,175 @@
   "languageSystem": "System",
   "@languageSystem": {
     "description": "Language option: follow the device language (falls back to English when unsupported)."
+  },
+  "bucketBuyInUnder50": "< {sym}50",
+  "@bucketBuyInUnder50": {
+    "description": "Tournament buy-in band; {sym} is the currency symbol. Keep the sign and number.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "bucketBuyIn50to100": "{sym}50–{sym}100",
+  "@bucketBuyIn50to100": {
+    "description": "Tournament buy-in band; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "bucketBuyIn100to200": "{sym}100–{sym}200",
+  "@bucketBuyIn100to200": {
+    "description": "Tournament buy-in band; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "bucketBuyIn200to500": "{sym}200–{sym}500",
+  "@bucketBuyIn200to500": {
+    "description": "Tournament buy-in band; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "bucketBuyInOver500": "> {sym}500",
+  "@bucketBuyInOver500": {
+    "description": "Tournament buy-in band; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "bucketFieldSmall": "Small (<50)",
+  "@bucketFieldSmall": {
+    "description": "Tournament field-size band: fewer than 50 entrants."
+  },
+  "bucketFieldMedium": "Medium (50–200)",
+  "@bucketFieldMedium": {
+    "description": "Tournament field-size band: 50 to 200 entrants."
+  },
+  "bucketFieldLarge": "Large (200–500)",
+  "@bucketFieldLarge": {
+    "description": "Tournament field-size band: 200 to 500 entrants."
+  },
+  "bucketFieldMassive": "Massive (500+)",
+  "@bucketFieldMassive": {
+    "description": "Tournament field-size band: over 500 entrants."
+  },
+  "bucketTimeMorning": "Morning (6am–12pm)",
+  "@bucketTimeMorning": {
+    "description": "Session start-time band with its hour range; use the locale clock convention (e.g. 6–12 h)."
+  },
+  "bucketTimeAfternoon": "Afternoon (12pm–6pm)",
+  "@bucketTimeAfternoon": {
+    "description": "Session start-time band with its hour range; use the locale clock convention."
+  },
+  "bucketTimeEvening": "Evening (6pm–11pm)",
+  "@bucketTimeEvening": {
+    "description": "Session start-time band with its hour range; use the locale clock convention."
+  },
+  "bucketTimeLateNight": "Late Night (11pm–6am)",
+  "@bucketTimeLateNight": {
+    "description": "Session start-time band with its hour range; use the locale clock convention."
+  },
+  "bucketTimeMorningShort": "Morning",
+  "@bucketTimeMorningShort": {
+    "description": "One-word time-of-day band used inside a sentence (e.g. schedule more sessions in the morning)."
+  },
+  "bucketTimeAfternoonShort": "Afternoon",
+  "@bucketTimeAfternoonShort": {
+    "description": "One-word time-of-day band used inside a sentence."
+  },
+  "bucketTimeEveningShort": "Evening",
+  "@bucketTimeEveningShort": {
+    "description": "One-word time-of-day band used inside a sentence."
+  },
+  "bucketTimeLateNightShort": "Late Night",
+  "@bucketTimeLateNightShort": {
+    "description": "Short time-of-day band (about 11pm–6am) used inside a sentence."
+  },
+  "bucketLengthUnder2h": "< 2 hours",
+  "@bucketLengthUnder2h": {
+    "description": "Session duration band: under two hours."
+  },
+  "bucketLength2to4h": "2–4 hours",
+  "@bucketLength2to4h": {
+    "description": "Session duration band."
+  },
+  "bucketLength4to6h": "4–6 hours",
+  "@bucketLength4to6h": {
+    "description": "Session duration band."
+  },
+  "bucketLengthOver6h": "> 6 hours",
+  "@bucketLengthOver6h": {
+    "description": "Session duration band: over six hours."
+  },
+  "gameTypeCash": "Cash Game",
+  "@gameTypeCash": {
+    "description": "Game-type label for cash games (as opposed to tournaments)."
+  },
+  "gameTypeTournament": "Tournament",
+  "@gameTypeTournament": {
+    "description": "Game-type label for tournaments."
+  },
+  "tableQuality1": "Very Tough",
+  "@tableQuality1": {
+    "description": "Table-quality rating 1 of 5: the hardest opponents."
+  },
+  "tableQuality2": "Tough",
+  "@tableQuality2": {
+    "description": "Table-quality rating 2 of 5."
+  },
+  "tableQuality3": "Average",
+  "@tableQuality3": {
+    "description": "Table-quality rating 3 of 5."
+  },
+  "tableQuality4": "Soft",
+  "@tableQuality4": {
+    "description": "Table-quality rating 4 of 5: weak opponents."
+  },
+  "tableQuality5": "Very Soft",
+  "@tableQuality5": {
+    "description": "Table-quality rating 5 of 5: the weakest opponents."
+  },
+  "tableQualityNotRated": "Not rated",
+  "@tableQualityNotRated": {
+    "description": "Table quality when the session has no rating."
+  },
+  "tableSizeHeadsUp": "Heads-up (2)",
+  "@tableSizeHeadsUp": {
+    "description": "Table size: two players."
+  },
+  "tableSize6Max": "6-max",
+  "@tableSize6Max": {
+    "description": "Table size: six-handed table (poker term, keep 6-max)."
+  },
+  "tableSize9Max": "9-max (full ring)",
+  "@tableSize9Max": {
+    "description": "Table size: nine-handed full-ring table (keep 9-max)."
+  },
+  "tableSizeNHanded": "{n}-handed",
+  "@tableSizeNHanded": {
+    "description": "Table size for other player counts; {n} is the number of seats.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "venueLive": "Live",
+  "@venueLive": {
+    "description": "Venue label: in-person casino or home game (not online)."
+  },
+  "venueOnline": "Online",
+  "@venueOnline": {
+    "description": "Venue label: online poker."
   }
 }
