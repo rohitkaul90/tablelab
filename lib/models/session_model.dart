@@ -37,26 +37,24 @@ class BuyinEvent {
 
 /// Expense categories tracked per session. Kept SEPARATE from the poker result
 /// (profit_loss) — the app shows a derived net-after-expenses so win-rate /
-/// BB-100 / variance stay pure. `(value, label)` pairs; `value` is what's
-/// persisted, keep it stable.
-const List<(String, String)> kExpenseCategories = [
-  ('tip', 'Tips / tokes'),
-  ('food', 'Food & drink'),
-  ('massage', 'Massage'),
-  ('travel', 'Travel / trip'),
-  ('other', 'Other'),
+/// BB-100 / variance stay pure.
+/// Persisted expense-category ids (stored verbatim in the `expense_events`
+/// jsonb — never rename). Display labels live in `lib/l10n/labels.dart`
+/// (`expenseCategoryLabel(l10n, id)`).
+const List<String> kExpenseCategoryIds = [
+  'tip',
+  'food',
+  'massage',
+  'travel',
+  'other',
 ];
-
-String expenseCategoryLabel(String value) =>
-    kExpenseCategories.where((c) => c.$1 == value).map((c) => c.$2).firstOrNull ??
-    'Other';
 
 /// A single non-poker expense incurred during a session (tip, food, massage,
 /// travel, …). Serialized into the `expense_events` JSONB column. Tracked
 /// separately from buy-in/cash-out so it never distorts the poker result.
 class ExpenseEvent {
   final double amount;
-  final String category; // one of kExpenseCategories values
+  final String category; // one of kExpenseCategoryIds
   final String? note;
   final DateTime ts;
 

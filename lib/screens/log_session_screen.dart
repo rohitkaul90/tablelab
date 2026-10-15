@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../data/poker_rooms.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 import '../models/session_model.dart';
 import '../providers/providers.dart';
 import '../services/analytics_service.dart';
@@ -346,6 +348,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_saving) return;
     setState(() => _saving = true);
+    final l10n = context.l10n;
 
     final stakesVal = _isTournament
         ? 'N/A'
@@ -429,7 +432,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save session: $e')),
+          SnackBar(content: Text(l10n.logSessionSaveFailed('$e'))),
         );
       }
     }
@@ -438,11 +441,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final sym = currencySymbol(_currency);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.session == null ? 'Log Session' : 'Edit Session'),
+        title: Text(widget.session == null
+            ? l10n.logSessionTitle
+            : l10n.logSessionEditTitle),
       ),
       body: Form(
         key: _formKey,
@@ -457,7 +463,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today),
-              title: const Text('Date'),
+              title: Text(l10n.logSessionDate),
               subtitle: Text(DateFormat('EEEE, MMM d, yyyy').format(_date)),
               onTap: _pickDate,
             ),
@@ -466,9 +472,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
 
             // Game Type
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'cash', label: Text('Cash Game')),
-                ButtonSegment(value: 'tournament', label: Text('Tournament')),
+              segments: [
+                ButtonSegment(value: 'cash', label: Text(l10n.gameTypeCash)),
+                ButtonSegment(
+                    value: 'tournament', label: Text(l10n.gameTypeTournament)),
               ],
               selected: {_gameType},
               onSelectionChanged: (v) {
@@ -498,15 +505,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               borderRadius: BorderRadius.circular(4),
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: 'Location',
+                  labelText: l10n.logSessionLocation,
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.search),
-                  errorText:
-                      (_submitted && _locationName.isEmpty) ? 'Select a location' : null,
+                  errorText: (_submitted && _locationName.isEmpty)
+                      ? l10n.logSessionSelectLocation
+                      : null,
                 ),
                 child: Text(
                   _locationName.isEmpty
-                      ? 'Select poker room...'
+                      ? l10n.logSessionSelectRoomHint
                       : _locationName,
                   style: _locationName.isEmpty
                       ? theme.textTheme.bodyMedium
@@ -521,14 +529,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             DropdownButtonFormField<String?>(
               key: ValueKey(_country),
               initialValue: _countries.contains(_country) ? _country : null,
-              decoration: const InputDecoration(
-                labelText: 'Country',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.logSessionCountry,
+                border: const OutlineInputBorder(),
               ),
               items: [
                 DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('Not specified',
+                  child: Text(l10n.logSessionNotSpecified,
                       style: TextStyle(
                           color: Theme.of(context)
                               .colorScheme
@@ -546,9 +554,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             DropdownButtonFormField<String>(
               key: ValueKey(_currency),
               initialValue: _currency,
-              decoration: const InputDecoration(
-                labelText: 'Currency',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.logSessionCurrency,
+                border: const OutlineInputBorder(),
               ),
               items: kCurrencies
                   .map((c) => DropdownMenuItem(
@@ -564,12 +572,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               DropdownButtonFormField<String>(
                 key: ValueKey(_selectedStake),
                 initialValue: _selectedStake,
-                decoration: const InputDecoration(
-                  labelText: 'Stakes',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.logSessionStakes,
+                  border: const OutlineInputBorder(),
                 ),
                 items: kStakeOptions
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .map((s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(
+                            s == 'Other' ? l10n.logSessionStakesOther : s)))
                     .toList(),
                 onChanged: (v) {
                   setState(() {
@@ -583,15 +594,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _customStakeCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Custom Stakes',
-                    hintText: 'e.g. 3/6',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.logSessionCustomStakes,
+                    hintText: l10n.logSessionCustomStakesHint,
+                    border: const OutlineInputBorder(),
                   ),
                   onChanged: (_) => _fetchRakePreset(),
                   validator: (v) =>
                       (_isCustomStake && (v == null || v.trim().isEmpty))
-                          ? 'Enter stakes'
+                          ? l10n.logSessionEnterStakes
                           : null,
                 ),
               ],
@@ -601,14 +612,17 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               DropdownButtonFormField<int?>(
                 key: ValueKey(_tableSize),
                 initialValue: _tableSize,
-                decoration: const InputDecoration(
-                  labelText: 'Table Size (optional)',
-                  border: OutlineInputBorder(),
+                // Fill the field width — the intrinsic-width dropdown overflowed
+                // by a few px on 360dp phones (caught by the l10n smoke test).
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.logSessionTableSize,
+                  border: const OutlineInputBorder(),
                 ),
                 items: [
                   DropdownMenuItem<int?>(
                     value: null,
-                    child: Text('Not specified',
+                    child: Text(l10n.logSessionNotSpecified,
                         style: TextStyle(
                             color: theme.colorScheme.onSurfaceVariant
                                 .withValues(alpha: 0.75))),
@@ -626,16 +640,17 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             TextFormField(
               controller: _buyInCtrl,
               decoration: InputDecoration(
-                labelText:
-                    _isTournament ? 'Buy-in (entry fee)' : 'Buy-in',
+                labelText: _isTournament
+                    ? l10n.logSessionBuyInTournament
+                    : l10n.logSessionBuyIn,
                 prefixText: '$sym ',
                 border: const OutlineInputBorder(),
               ),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Required';
-                if (double.tryParse(v) == null) return 'Invalid';
+                if (v == null || v.trim().isEmpty) return l10n.commonRequired;
+                if (double.tryParse(v) == null) return l10n.commonInvalid;
                 return null;
               },
             ),
@@ -646,16 +661,16 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               TextFormField(
                 controller: _prizeWonCtrl,
                 decoration: InputDecoration(
-                  labelText: 'Prize Won',
+                  labelText: l10n.logSessionPrizeWon,
                   prefixText: '$sym ',
-                  hintText: '0 if no cash',
+                  hintText: l10n.logSessionPrizeWonHint,
                   border: const OutlineInputBorder(),
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Required';
-                  if (double.tryParse(v) == null) return 'Invalid';
+                  if (v == null || v.trim().isEmpty) return l10n.commonRequired;
+                  if (double.tryParse(v) == null) return l10n.commonInvalid;
                   return null;
                 },
               ),
@@ -665,10 +680,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _finishPositionCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Finish Position',
-                        hintText: 'e.g. 3',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.logSessionFinishPosition,
+                        hintText: l10n.logSessionFinishPositionHint,
+                        border: const OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
                     ),
@@ -677,10 +692,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _totalEntrantsCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Total Entrants',
-                        hintText: 'e.g. 120',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.logSessionTotalEntrants,
+                        hintText: l10n.logSessionTotalEntrantsHint,
+                        border: const OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
                     ),
@@ -691,7 +706,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               TextFormField(
                 controller: _cashOutCtrl,
                 decoration: InputDecoration(
-                  labelText: 'Cash-out',
+                  labelText: l10n.logSessionCashOut,
                   prefixText: '$sym ',
                   border: const OutlineInputBorder(),
                 ),
@@ -699,8 +714,8 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                     const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) {
                   if (!_isTournament) {
-                    if (v == null || v.trim().isEmpty) return 'Required';
-                    if (double.tryParse(v) == null) return 'Invalid';
+                    if (v == null || v.trim().isEmpty) return l10n.commonRequired;
+                    if (double.tryParse(v) == null) return l10n.commonInvalid;
                   }
                   return null;
                 },
@@ -711,11 +726,12 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             TextFormField(
               controller: _rakeCtrl,
               decoration: InputDecoration(
-                labelText: 'Rake / Fees (optional)',
+                labelText: l10n.logSessionRake,
                 prefixText: '$sym ',
-                hintText: 'Informational — does not affect profit',
+                hintText: l10n.logSessionRakeHint,
                 border: const OutlineInputBorder(),
-                suffixText: _rakePresetLoaded ? 'auto-filled' : null,
+                suffixText:
+                    _rakePresetLoaded ? l10n.logSessionAutoFilled : null,
                 suffixStyle: TextStyle(
                     color: theme.colorScheme.primary, fontSize: 11),
               ),
@@ -733,8 +749,9 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             TextFormField(
               controller: _handsPerHourCtrl,
               decoration: InputDecoration(
-                labelText: 'Hands per Hour',
-                hintText: _isOnline ? '25/table (e.g. 2 tables = 50)' : '25',
+                labelText: l10n.logSessionHandsPerHour,
+                hintText:
+                    _isOnline ? l10n.logSessionHandsPerHourOnlineHint : '25',
                 border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
@@ -748,7 +765,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.access_time),
-                    title: const Text('Start'),
+                    title: Text(l10n.logSessionStart),
                     subtitle: Text(_startTime.format(context)),
                     onTap: _pickStartTime,
                   ),
@@ -758,7 +775,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.access_time_filled),
-                    title: const Text('End'),
+                    title: Text(l10n.logSessionEnd),
                     subtitle: Text(_endTime.format(context)),
                     onTap: _pickEndTime,
                   ),
@@ -770,10 +787,10 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             // Break time (optional) — excluded from played hours / hourly rate
             TextFormField(
               controller: _breakMinutesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Break time (minutes, optional)',
-                hintText: 'Excluded from hours played',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.logSessionBreak,
+                hintText: l10n.logSessionBreakHint,
+                border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
             ),
@@ -789,7 +806,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     Column(children: [
-                      Text('Duration',
+                      Text(l10n.logSessionDuration,
                           style: theme.textTheme.bodySmall),
                       const SizedBox(height: 4),
                       Text(formatDuration(_liveDuration),
@@ -798,7 +815,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                     ]),
                     if (_livePL != null) ...[
                       Column(children: [
-                        Text('Result',
+                        Text(l10n.logSessionResult,
                             style: theme.textTheme.bodySmall),
                         const SizedBox(height: 4),
                         Text(
@@ -847,15 +864,15 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             ],
 
             // Expenses (optional)
-            _buildExpensesSection(theme),
+            _buildExpensesSection(theme, l10n),
             const SizedBox(height: 16),
 
             // Notes
             TextFormField(
               controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.logSessionNotes,
+                border: const OutlineInputBorder(),
               ),
               maxLines: 3,
             ),
@@ -870,7 +887,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Save Session'),
+                  : Text(l10n.logSessionSave),
             ),
           ],
         ),
@@ -878,7 +895,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     );
   }
 
-  Widget _buildExpensesSection(ThemeData theme) {
+  Widget _buildExpensesSection(ThemeData theme, AppLocalizations l10n) {
     final cs = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -886,14 +903,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Expenses (optional)', style: theme.textTheme.titleSmall),
+            Text(l10n.logSessionExpensesTitle, style: theme.textTheme.titleSmall),
             Text(formatPLWithCurrency(_totalExpenses, _currency),
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: 4),
         Text(
-          'Tips, food, massage, travel — tracked separately from your result.',
+          l10n.logSessionExpensesHint,
           style: theme.textTheme.bodySmall
               ?.copyWith(color: cs.onSurfaceVariant),
         ),
@@ -903,7 +920,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
             margin: const EdgeInsets.only(bottom: 6),
             child: ListTile(
               dense: true,
-              title: Text(expenseCategoryLabel(_expenses[i].category)),
+              title: Text(expenseCategoryLabel(l10n, _expenses[i].category)),
               subtitle:
                   (_expenses[i].note != null && _expenses[i].note!.isNotEmpty)
                       ? Text(_expenses[i].note!)
@@ -914,7 +931,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
                   Text(formatPLWithCurrency(_expenses[i].amount, _currency)),
                   IconButton(
                     icon: const Icon(Icons.close, size: 18),
-                    tooltip: 'Remove',
+                    tooltip: l10n.commonRemove,
                     onPressed: () => setState(() => _expenses.removeAt(i)),
                   ),
                 ],
@@ -925,14 +942,14 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
         OutlinedButton.icon(
           onPressed: _addExpense,
           icon: const Icon(Icons.add, size: 18),
-          label: const Text('Add expense'),
+          label: Text(l10n.logSessionAddExpense),
         ),
         if (_totalExpenses > 0 && _livePL != null) ...[
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Net after expenses', style: theme.textTheme.bodyMedium),
+              Text(l10n.logSessionNetAfterExpenses, style: theme.textTheme.bodyMedium),
               Text(
                 formatPLWithCurrency(_livePL! - _totalExpenses, _currency),
                 style: TextStyle(
@@ -997,10 +1014,10 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
               child: TextField(
                 controller: _searchCtrl,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search by name, city, or region...',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: context.l10n.locationPickerSearchHint,
+                  prefixIcon: const Icon(Icons.search),
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
                 onChanged: (v) =>
@@ -1050,8 +1067,8 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                     const SizedBox(height: 12),
                     ListTile(
                       leading: const Icon(Icons.add_location_alt_outlined),
-                      title: Text(
-                          'Use "${_searchCtrl.text.trim()}" as custom location'),
+                      title: Text(context.l10n
+                          .locationPickerUseCustom(_searchCtrl.text.trim())),
                       onTap: () => Navigator.pop(
                           context, (null, _searchCtrl.text.trim())),
                     ),
@@ -1060,8 +1077,8 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                     ListTile(
                       dense: true,
                       leading: const Icon(Icons.add_location_alt_outlined),
-                      title: Text(
-                          'Use "${_searchCtrl.text.trim()}" as custom location'),
+                      title: Text(context.l10n
+                          .locationPickerUseCustom(_searchCtrl.text.trim())),
                       onTap: () => Navigator.pop(
                           context, (null, _searchCtrl.text.trim())),
                     ),

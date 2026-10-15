@@ -196,5 +196,822 @@
   "venueOnline": "Online",
   "@venueOnline": {
     "description": "Venue label: online poker."
+  },
+  "commonCancel": "Cancel",
+  "@commonCancel": {
+    "description": "Dialog/sheet dismiss button."
+  },
+  "commonSave": "Save",
+  "@commonSave": {
+    "description": "Confirm button that persists the current form/dialog."
+  },
+  "commonDelete": "Delete",
+  "@commonDelete": {
+    "description": "Destructive confirm button."
+  },
+  "commonAdd": "Add",
+  "@commonAdd": {
+    "description": "Confirm button that adds the entered item."
+  },
+  "commonEdit": "Edit",
+  "@commonEdit": {
+    "description": "Tooltip/button that opens the edit form."
+  },
+  "commonRemove": "Remove",
+  "@commonRemove": {
+    "description": "Tooltip on the small X that removes a list item."
+  },
+  "commonRequired": "Required",
+  "@commonRequired": {
+    "description": "Form validation error: the field must not be empty."
+  },
+  "commonInvalid": "Invalid",
+  "@commonInvalid": {
+    "description": "Form validation error: the value isn't a valid number."
+  },
+  "commonErrorWithDetail": "Error: {error}",
+  "@commonErrorWithDetail": {
+    "description": "Generic error line with the raw error detail appended.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "expenseCategoryTip": "Tips / tokes",
+  "@expenseCategoryTip": {
+    "description": "Session expense category: dealer tips (tokes)."
+  },
+  "expenseCategoryFood": "Food & drink",
+  "@expenseCategoryFood": {
+    "description": "Session expense category."
+  },
+  "expenseCategoryMassage": "Massage",
+  "@expenseCategoryMassage": {
+    "description": "Session expense category: table-side massage."
+  },
+  "expenseCategoryTravel": "Travel / trip",
+  "@expenseCategoryTravel": {
+    "description": "Session expense category: travel, hotel, trip costs."
+  },
+  "expenseCategoryOther": "Other",
+  "@expenseCategoryOther": {
+    "description": "Session expense category fallback."
+  },
+  "expenseDialogAddTitle": "Add expense",
+  "@expenseDialogAddTitle": {
+    "description": "Dialog title when adding a new session expense."
+  },
+  "expenseDialogEditTitle": "Edit expense",
+  "@expenseDialogEditTitle": {
+    "description": "Dialog title when editing an existing session expense."
+  },
+  "expenseDialogCategory": "Category",
+  "@expenseDialogCategory": {
+    "description": "Dropdown label for the expense category."
+  },
+  "expenseDialogAmount": "Amount",
+  "@expenseDialogAmount": {
+    "description": "Text field label for a money amount (currency symbol is a prefix)."
+  },
+  "expenseDialogNote": "Note (optional)",
+  "@expenseDialogNote": {
+    "description": "Text field label for an optional free-text note."
+  },
+  "linkedSessionBannerWithLabel": "Linked to: {label}",
+  "@linkedSessionBannerWithLabel": {
+    "description": "Banner on the hand recorder when the hand is locked to a session; label = date · stakes summary.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "linkedSessionBanner": "Linked to session",
+  "@linkedSessionBanner": {
+    "description": "Banner on the hand recorder when the hand is locked to a session (no summary available)."
+  },
+  "sessionPickerTitle": "Link to Session (optional)",
+  "@sessionPickerTitle": {
+    "description": "Heading above the dropdown that links a recorded hand to a session."
+  },
+  "sessionPickerNone": "None",
+  "@sessionPickerNone": {
+    "description": "Dropdown option: link the hand to no session."
+  },
+  "sessionPickerSelected": "Session: {summary}",
+  "@sessionPickerSelected": {
+    "description": "Caption under the picker showing the chosen session; summary = date · stakes · location.",
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionTilePerHour": "{rate}/hr",
+  "@sessionTilePerHour": {
+    "description": "Signed hourly win rate, e.g. '+$163/hr'; rate is already formatted with sign and currency symbol.",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionTileTournamentHeader": "{date} · Tournament",
+  "@sessionTileTournamentHeader": {
+    "description": "Session card header line for a tournament session; date is already formatted.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionTileDuration": "Duration",
+  "@sessionTileDuration": {
+    "description": "Metric label on the session card (rendered uppercase)."
+  },
+  "sessionTileWinRate": "Win rate",
+  "@sessionTileWinRate": {
+    "description": "Metric label on the session card for the hourly rate (rendered uppercase)."
+  },
+  "sessionDetailTitle": "Session Detail",
+  "@sessionDetailTitle": {
+    "description": "App bar title of the single-session detail screen."
+  },
+  "sessionDetailRoi": "ROI: {roi}",
+  "@sessionDetailRoi": {
+    "description": "Return on investment line under the tournament result; roi is a formatted percentage.",
+    "placeholders": {
+      "roi": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionDetailStakes": "Stakes",
+  "@sessionDetailStakes": {
+    "description": "Row label: cash-game blinds, e.g. 1/2."
+  },
+  "sessionDetailTableSize": "Table Size",
+  "@sessionDetailTableSize": {
+    "description": "Row label: number of seats at the table."
+  },
+  "sessionDetailBuyIn": "Buy-in",
+  "@sessionDetailBuyIn": {
+    "description": "Row label: total money put in play."
+  },
+  "sessionDetailPrizeWon": "Prize Won",
+  "@sessionDetailPrizeWon": {
+    "description": "Row label: tournament payout received."
+  },
+  "sessionDetailFinish": "Finish",
+  "@sessionDetailFinish": {
+    "description": "Row label: tournament finishing position (e.g. 3 / 120)."
+  },
+  "sessionDetailCashOut": "Cash-out",
+  "@sessionDetailCashOut": {
+    "description": "Row label: money taken off the table at the end."
+  },
+  "sessionDetailRake": "Rake / Fees",
+  "@sessionDetailRake": {
+    "description": "Row label: rake or tournament fees paid."
+  },
+  "sessionDetailExpenses": "Expenses",
+  "@sessionDetailExpenses": {
+    "description": "Row label: total non-poker expenses during the session."
+  },
+  "sessionDetailNetAfterExpenses": "Net (after exp.)",
+  "@sessionDetailNetAfterExpenses": {
+    "description": "Row label: profit minus expenses. Keep short."
+  },
+  "sessionDetailCurrency": "Currency",
+  "@sessionDetailCurrency": {
+    "description": "Row label."
+  },
+  "sessionDetailDuration": "Duration",
+  "@sessionDetailDuration": {
+    "description": "Row label: time played."
+  },
+  "sessionDetailBreak": "Break",
+  "@sessionDetailBreak": {
+    "description": "Row label: total break time."
+  },
+  "sessionDetailTime": "Time",
+  "@sessionDetailTime": {
+    "description": "Row label: start → end clock times."
+  },
+  "sessionDetailHandsPerHour": "Hands/hr",
+  "@sessionDetailHandsPerHour": {
+    "description": "Row label: hands dealt per hour. Keep short."
+  },
+  "sessionDetailTable": "Table",
+  "@sessionDetailTable": {
+    "description": "Row label for the table-quality star rating."
+  },
+  "sessionDetailLocation": "Location",
+  "@sessionDetailLocation": {
+    "description": "Row label: venue / poker room."
+  },
+  "sessionDetailCountry": "Country",
+  "@sessionDetailCountry": {
+    "description": "Row label."
+  },
+  "sessionDetailNotes": "Notes",
+  "@sessionDetailNotes": {
+    "description": "Row label: free-text session notes."
+  },
+  "sessionDetailExpensesHeader": "EXPENSES",
+  "@sessionDetailExpensesHeader": {
+    "description": "Section header (uppercase) listing each expense."
+  },
+  "sessionDetailAiAnalysis": "AI Analysis",
+  "@sessionDetailAiAnalysis": {
+    "description": "Button that opens the AI session coaching screen."
+  },
+  "sessionDetailRecordHand": "Record a Hand",
+  "@sessionDetailRecordHand": {
+    "description": "Button that opens the hand recorder linked to this session."
+  },
+  "sessionDetailDelete": "Delete Session",
+  "@sessionDetailDelete": {
+    "description": "Destructive button at the bottom of the detail screen."
+  },
+  "sessionDetailDeleteTitle": "Delete Session?",
+  "@sessionDetailDeleteTitle": {
+    "description": "Confirmation dialog title."
+  },
+  "sessionDetailDeleteBody": "This action cannot be undone.",
+  "@sessionDetailDeleteBody": {
+    "description": "Confirmation dialog body."
+  },
+  "sessionDetailDeleteFailed": "Failed to delete session: {error}",
+  "@sessionDetailDeleteFailed": {
+    "description": "Snackbar after a failed delete.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionDetailHandsHeader": "HANDS THIS SESSION",
+  "@sessionDetailHandsHeader": {
+    "description": "Section header (uppercase) for hands linked to the session, while the count is loading."
+  },
+  "sessionDetailHandsHeaderCount": "HANDS THIS SESSION ({count})",
+  "@sessionDetailHandsHeaderCount": {
+    "description": "Section header (uppercase) with the number of linked hands.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionDetailHandsLoadFailed": "Could not load hands.",
+  "@sessionDetailHandsLoadFailed": {
+    "description": "Error line when the hands list fails to load."
+  },
+  "sessionDetailNoHands": "No hands linked to this session yet. Use \"Record a Hand\" below and they'll appear here.",
+  "@sessionDetailNoHands": {
+    "description": "Empty state under the hands header; 'Record a Hand' names the button below."
+  },
+  "sessionDetailHandPot": "Pot {amount} · {street}",
+  "@sessionDetailHandPot": {
+    "description": "Compact hand row: final pot (already formatted with currency) and the last street reached (Pre-flop/Flop/Turn/River stay in English).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "street": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionHistoryTitle": "Sessions",
+  "@sessionHistoryTitle": {
+    "description": "App bar title of the sessions list."
+  },
+  "sessionHistoryFilterTooltip": "Filter",
+  "@sessionHistoryFilterTooltip": {
+    "description": "Tooltip of the filter icon button."
+  },
+  "sessionHistoryImportExportTooltip": "Import / Export",
+  "@sessionHistoryImportExportTooltip": {
+    "description": "Tooltip of the import/export icon button."
+  },
+  "sessionHistoryLogTooltip": "Log session",
+  "@sessionHistoryLogTooltip": {
+    "description": "Tooltip of the + floating button."
+  },
+  "sessionHistoryNoMatch": "No sessions match your filters",
+  "@sessionHistoryNoMatch": {
+    "description": "Empty-state title when a filter excludes everything."
+  },
+  "sessionHistoryEmpty": "No sessions yet",
+  "@sessionHistoryEmpty": {
+    "description": "Empty-state title for a brand-new account."
+  },
+  "sessionHistoryNoMatchHint": "Try adjusting or clearing your filters.",
+  "@sessionHistoryNoMatchHint": {
+    "description": "Empty-state hint under the no-match title."
+  },
+  "sessionHistoryEmptyHint": "Log your first session — or import your\nhistory from another app.",
+  "@sessionHistoryEmptyHint": {
+    "description": "Empty-state hint for a new account; keep the line break."
+  },
+  "sessionHistoryClearFilters": "Clear Filters",
+  "@sessionHistoryClearFilters": {
+    "description": "Button in the no-match empty state."
+  },
+  "sessionHistoryLogSession": "Log Session",
+  "@sessionHistoryLogSession": {
+    "description": "Primary button in the empty state."
+  },
+  "sessionHistoryImportCta": "Import from another app",
+  "@sessionHistoryImportCta": {
+    "description": "Secondary button in the empty state."
+  },
+  "filterSheetTitle": "Filter Sessions",
+  "@filterSheetTitle": {
+    "description": "Title of the session filter bottom sheet."
+  },
+  "filterGameType": "Game Type",
+  "@filterGameType": {
+    "description": "Filter section label."
+  },
+  "filterResult": "Result",
+  "@filterResult": {
+    "description": "Filter section label (winning / losing)."
+  },
+  "filterWinning": "Winning",
+  "@filterWinning": {
+    "description": "Filter chip: sessions with a profit."
+  },
+  "filterLosing": "Losing",
+  "@filterLosing": {
+    "description": "Filter chip: sessions with a loss."
+  },
+  "filterStakes": "Stakes",
+  "@filterStakes": {
+    "description": "Filter section label."
+  },
+  "filterLocation": "Location",
+  "@filterLocation": {
+    "description": "Filter section label."
+  },
+  "filterDateRange": "Date Range",
+  "@filterDateRange": {
+    "description": "Filter section label."
+  },
+  "filterFrom": "From",
+  "@filterFrom": {
+    "description": "Date-range start button label."
+  },
+  "filterTo": "To",
+  "@filterTo": {
+    "description": "Date-range end button label."
+  },
+  "filterAny": "Any",
+  "@filterAny": {
+    "description": "Date button value when no date is set."
+  },
+  "filterClearAll": "Clear All",
+  "@filterClearAll": {
+    "description": "Button that resets every filter."
+  },
+  "filterApply": "Apply",
+  "@filterApply": {
+    "description": "Button that applies the filter draft."
+  },
+  "sessionHistoryMonthSessions": "{month} · {count, plural, one{{count} session} other{{count} sessions}}",
+  "@sessionHistoryMonthSessions": {
+    "description": "Title of the month breakdown sheet; month is already formatted (e.g. 'June 2026').",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionHistoryApproxTotal": "≈ Total ({currency})",
+  "@sessionHistoryApproxTotal": {
+    "description": "Converted-total row label in the month breakdown; currency is a code like USD.",
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionHistoryApproxNote": "Converted at approximate static rates.",
+  "@sessionHistoryApproxNote": {
+    "description": "Footnote under the converted month total."
+  },
+  "logSessionTitle": "Log Session",
+  "@logSessionTitle": {
+    "description": "App bar title of the manual session form (new session)."
+  },
+  "logSessionEditTitle": "Edit Session",
+  "@logSessionEditTitle": {
+    "description": "App bar title of the manual session form (editing)."
+  },
+  "logSessionDate": "Date",
+  "@logSessionDate": {
+    "description": "Date row label."
+  },
+  "logSessionLocation": "Location",
+  "@logSessionLocation": {
+    "description": "Required field label for the venue / poker room."
+  },
+  "logSessionSelectLocation": "Select a location",
+  "@logSessionSelectLocation": {
+    "description": "Validation error shown when no venue was chosen."
+  },
+  "logSessionSelectRoomHint": "Select poker room...",
+  "@logSessionSelectRoomHint": {
+    "description": "Placeholder in the venue picker field."
+  },
+  "logSessionCountry": "Country",
+  "@logSessionCountry": {
+    "description": "Dropdown label."
+  },
+  "logSessionNotSpecified": "Not specified",
+  "@logSessionNotSpecified": {
+    "description": "Dropdown option meaning no value."
+  },
+  "logSessionCurrency": "Currency",
+  "@logSessionCurrency": {
+    "description": "Dropdown label."
+  },
+  "logSessionStakes": "Stakes",
+  "@logSessionStakes": {
+    "description": "Dropdown label for cash-game blinds."
+  },
+  "logSessionStakesOther": "Other",
+  "@logSessionStakesOther": {
+    "description": "Stakes dropdown option that reveals a custom-stakes text field."
+  },
+  "logSessionCustomStakes": "Custom Stakes",
+  "@logSessionCustomStakes": {
+    "description": "Text field label for non-preset blinds."
+  },
+  "logSessionCustomStakesHint": "e.g. 3/6",
+  "@logSessionCustomStakesHint": {
+    "description": "Placeholder for custom blinds."
+  },
+  "logSessionEnterStakes": "Enter stakes",
+  "@logSessionEnterStakes": {
+    "description": "Validation error when custom stakes are empty."
+  },
+  "logSessionTableSize": "Table Size (optional)",
+  "@logSessionTableSize": {
+    "description": "Dropdown label for the number of seats."
+  },
+  "logSessionBuyIn": "Buy-in",
+  "@logSessionBuyIn": {
+    "description": "Money field label (cash game)."
+  },
+  "logSessionBuyInTournament": "Buy-in (entry fee)",
+  "@logSessionBuyInTournament": {
+    "description": "Money field label (tournament)."
+  },
+  "logSessionPrizeWon": "Prize Won",
+  "@logSessionPrizeWon": {
+    "description": "Money field label for the tournament payout."
+  },
+  "logSessionPrizeWonHint": "0 if no cash",
+  "@logSessionPrizeWonHint": {
+    "description": "Placeholder: enter 0 when the player didn't cash."
+  },
+  "logSessionFinishPosition": "Finish Position",
+  "@logSessionFinishPosition": {
+    "description": "Number field label (tournament)."
+  },
+  "logSessionFinishPositionHint": "e.g. 3",
+  "@logSessionFinishPositionHint": {
+    "description": "Placeholder for finish position."
+  },
+  "logSessionTotalEntrants": "Total Entrants",
+  "@logSessionTotalEntrants": {
+    "description": "Number field label: field size of the tournament."
+  },
+  "logSessionTotalEntrantsHint": "e.g. 120",
+  "@logSessionTotalEntrantsHint": {
+    "description": "Placeholder for total entrants."
+  },
+  "logSessionCashOut": "Cash-out",
+  "@logSessionCashOut": {
+    "description": "Money field label (cash game)."
+  },
+  "logSessionRake": "Rake / Fees (optional)",
+  "@logSessionRake": {
+    "description": "Money field label."
+  },
+  "logSessionRakeHint": "Informational — does not affect profit",
+  "@logSessionRakeHint": {
+    "description": "Placeholder explaining rake is not subtracted from profit."
+  },
+  "logSessionAutoFilled": "auto-filled",
+  "@logSessionAutoFilled": {
+    "description": "Small suffix shown when the rake was pre-filled from a saved preset."
+  },
+  "logSessionHandsPerHour": "Hands per Hour",
+  "@logSessionHandsPerHour": {
+    "description": "Number field label."
+  },
+  "logSessionHandsPerHourOnlineHint": "25/table (e.g. 2 tables = 50)",
+  "@logSessionHandsPerHourOnlineHint": {
+    "description": "Placeholder for online sessions: hands per hour scales with tables played."
+  },
+  "logSessionStart": "Start",
+  "@logSessionStart": {
+    "description": "Start-time row label."
+  },
+  "logSessionEnd": "End",
+  "@logSessionEnd": {
+    "description": "End-time row label."
+  },
+  "logSessionBreak": "Break time (minutes, optional)",
+  "@logSessionBreak": {
+    "description": "Number field label."
+  },
+  "logSessionBreakHint": "Excluded from hours played",
+  "@logSessionBreakHint": {
+    "description": "Placeholder under the break field."
+  },
+  "logSessionDuration": "Duration",
+  "@logSessionDuration": {
+    "description": "Summary card label."
+  },
+  "logSessionResult": "Result",
+  "@logSessionResult": {
+    "description": "Summary card label for profit/loss."
+  },
+  "logSessionNotes": "Notes (optional)",
+  "@logSessionNotes": {
+    "description": "Multi-line text field label."
+  },
+  "logSessionSave": "Save Session",
+  "@logSessionSave": {
+    "description": "Submit button of the session form."
+  },
+  "logSessionSaveFailed": "Failed to save session: {error}",
+  "@logSessionSaveFailed": {
+    "description": "Snackbar after a failed save.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logSessionExpensesTitle": "Expenses (optional)",
+  "@logSessionExpensesTitle": {
+    "description": "Section title of the expenses list."
+  },
+  "logSessionExpensesHint": "Tips, food, massage, travel — tracked separately from your result.",
+  "@logSessionExpensesHint": {
+    "description": "Helper text under the expenses title."
+  },
+  "logSessionAddExpense": "Add expense",
+  "@logSessionAddExpense": {
+    "description": "Button that opens the expense dialog."
+  },
+  "logSessionNetAfterExpenses": "Net after expenses",
+  "@logSessionNetAfterExpenses": {
+    "description": "Row label: result minus expenses."
+  },
+  "locationPickerSearchHint": "Search by name, city, or region...",
+  "@locationPickerSearchHint": {
+    "description": "Placeholder of the poker-room search field."
+  },
+  "locationPickerUseCustom": "Use \"{query}\" as custom location",
+  "@locationPickerUseCustom": {
+    "description": "Option to use the typed text as a free-form venue name.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "liveChooserResume": "Resume live session",
+  "@liveChooserResume": {
+    "description": "Log-session chooser option when a session is already live."
+  },
+  "liveChooserStart": "Start live session",
+  "@liveChooserStart": {
+    "description": "Log-session chooser option."
+  },
+  "liveChooserStartHint": "Running clock, rebuys, hands as you play",
+  "@liveChooserStartHint": {
+    "description": "Subtitle of the start-live option."
+  },
+  "liveChooserPast": "Log a past session",
+  "@liveChooserPast": {
+    "description": "Log-session chooser option."
+  },
+  "liveChooserPastHint": "Enter buy-in, cash-out and times by hand",
+  "@liveChooserPastHint": {
+    "description": "Subtitle of the log-past option."
+  },
+  "liveCardTitle": "Live session in progress",
+  "@liveCardTitle": {
+    "description": "Title of the banner shown while a session is live."
+  },
+  "liveStartTitle": "Start Live Session",
+  "@liveStartTitle": {
+    "description": "App bar title of the live-session start form."
+  },
+  "liveStartAlreadyLive": "A live session is already in progress.",
+  "@liveStartAlreadyLive": {
+    "description": "Snackbar when a second live session is attempted."
+  },
+  "liveStartFailed": "Failed to start session: {error}",
+  "@liveStartFailed": {
+    "description": "Snackbar after a failed start.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "liveStartMustBePositive": "Must be > 0",
+  "@liveStartMustBePositive": {
+    "description": "Validation error for a non-positive buy-in."
+  },
+  "liveStartStarting": "Starting…",
+  "@liveStartStarting": {
+    "description": "Start button label while saving."
+  },
+  "liveStartButton": "Start Session",
+  "@liveStartButton": {
+    "description": "Start button label."
+  },
+  "liveStartHint": "The clock starts now. You can add rebuys, your current stack, and record hands while you play, then cash out at the end.",
+  "@liveStartHint": {
+    "description": "Helper text under the start button."
+  },
+  "liveUpdateFailed": "Update failed: {error}",
+  "@liveUpdateFailed": {
+    "description": "Snackbar after a failed live update.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "liveAddRebuy": "Add rebuy",
+  "@liveAddRebuy": {
+    "description": "Amount dialog title."
+  },
+  "liveAddAddon": "Add add-on",
+  "@liveAddAddon": {
+    "description": "Amount dialog title (tournament add-on)."
+  },
+  "liveEndTitle": "End session",
+  "@liveEndTitle": {
+    "description": "End-session dialog title."
+  },
+  "liveTotalBoughtIn": "Total bought in: {amount}",
+  "@liveTotalBoughtIn": {
+    "description": "Line in the end-session dialog; amount already formatted with currency.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "liveFinalCashOut": "Final cash-out",
+  "@liveFinalCashOut": {
+    "description": "Money field label in the end dialog (cash game)."
+  },
+  "livePrizeWon": "Prize won",
+  "@livePrizeWon": {
+    "description": "Money field label in the end dialog (tournament)."
+  },
+  "liveBustedHint": "0 if busted",
+  "@liveBustedHint": {
+    "description": "Placeholder: enter 0 when the player lost everything."
+  },
+  "liveEndSave": "End & Save",
+  "@liveEndSave": {
+    "description": "Confirm button of the end dialog."
+  },
+  "liveEndFailed": "Failed to end session: {error}",
+  "@liveEndFailed": {
+    "description": "Snackbar after a failed finalize.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "liveDiscardTitle": "Discard live session?",
+  "@liveDiscardTitle": {
+    "description": "Confirmation dialog title."
+  },
+  "liveDiscardBody": "This deletes the session and any buy-ins recorded. Hands you recorded during it are kept but unlinked. This cannot be undone.",
+  "@liveDiscardBody": {
+    "description": "Confirmation dialog body."
+  },
+  "liveDiscard": "Discard",
+  "@liveDiscard": {
+    "description": "Destructive confirm button / tooltip."
+  },
+  "liveDiscardFailed": "Failed to discard: {error}",
+  "@liveDiscardFailed": {
+    "description": "Snackbar after a failed discard.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "liveTitle": "Live Session",
+  "@liveTitle": {
+    "description": "App bar title of the live recorder."
+  },
+  "liveOnBreak": "On break — clock paused",
+  "@liveOnBreak": {
+    "description": "Caption under the clock while paused."
+  },
+  "liveTimePlayed": "Time played",
+  "@liveTimePlayed": {
+    "description": "Caption under the clock."
+  },
+  "liveTimePlayedWithBreak": "Time played · {breaks} on break",
+  "@liveTimePlayedWithBreak": {
+    "description": "Caption under the clock when breaks were taken; breaks is a formatted duration like '1h 20m'.",
+    "placeholders": {
+      "breaks": {
+        "type": "String"
+      }
+    }
+  },
+  "liveResume": "Resume",
+  "@liveResume": {
+    "description": "Button that ends a break."
+  },
+  "liveTakeBreak": "Take a break",
+  "@liveTakeBreak": {
+    "description": "Button that pauses the clock."
+  },
+  "liveBuyInsHeader": "BUY-INS",
+  "@liveBuyInsHeader": {
+    "description": "Section header (uppercase)."
+  },
+  "liveTotalBoughtInLabel": "Total bought in",
+  "@liveTotalBoughtInLabel": {
+    "description": "Row label."
+  },
+  "liveRebuy": "Rebuy",
+  "@liveRebuy": {
+    "description": "Button / event label."
+  },
+  "liveAddon": "Add-on",
+  "@liveAddon": {
+    "description": "Button / event label (tournament add-on)."
+  },
+  "liveKindBuyIn": "Buy-in",
+  "@liveKindBuyIn": {
+    "description": "Event label for the initial buy-in."
+  },
+  "liveExpensesHeader": "EXPENSES",
+  "@liveExpensesHeader": {
+    "description": "Section header (uppercase)."
+  },
+  "liveTotalExpenses": "Total expenses",
+  "@liveTotalExpenses": {
+    "description": "Row label."
+  },
+  "liveExpensesNote": "Kept separate from your poker result — shown as a net after the session ends.",
+  "@liveExpensesNote": {
+    "description": "Helper text under the expenses card."
+  },
+  "liveStackHeader": "CURRENT STACK",
+  "@liveStackHeader": {
+    "description": "Section header (uppercase)."
+  },
+  "liveStackNow": "Stack now",
+  "@liveStackNow": {
+    "description": "Money field label for the current chip stack."
+  },
+  "liveSet": "Set",
+  "@liveSet": {
+    "description": "Button that saves the typed stack."
+  },
+  "liveNet": "Live net (stack − bought in)",
+  "@liveNet": {
+    "description": "Row label for the running result."
+  },
+  "liveNoteHeader": "QUICK NOTE",
+  "@liveNoteHeader": {
+    "description": "Section header (uppercase)."
+  },
+  "liveNoteHint": "Reads, dynamics, a spot to revisit…",
+  "@liveNoteHint": {
+    "description": "Placeholder of the quick-note field."
+  },
+  "liveEndSession": "End Session",
+  "@liveEndSession": {
+    "description": "Primary button that finalizes the live session."
   }
 }
