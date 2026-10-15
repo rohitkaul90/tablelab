@@ -68,25 +68,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  String _usageLabel({required bool isSession}) {
+  String _usageLabel(AppLocalizations l10n, {required bool isSession}) {
     if (_usageFailed) return '—';
     final u = _usage;
     if (u == null) return '…';
-    if (u.exempt) return 'Unlimited';
+    if (u.exempt) return l10n.settingsUsageUnlimited;
     return isSession
         ? '${u.session} / ${AiService.sessionDailyLimit}'
         : '${u.hand} / ${AiService.handDailyLimit}';
   }
 
   Future<void> _deleteAccount() async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Account?'),
-        content: const Text(
-          'This permanently deletes your account and ALL data — sessions, '
-          'hands, player reads, and AI analyses. This cannot be undone.',
-        ),
+        title: Text(l10n.settingsDeleteTitle),
+        content: Text(l10n.settingsDeleteBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -97,7 +95,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete Everything'),
+            child: Text(l10n.settingsDeleteConfirm),
           ),
         ],
       ),
@@ -110,11 +108,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final doubleConfirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Are you absolutely sure?'),
-        content: const Text(
-          'Your account and all poker data will be permanently erased. '
-          'There is no recovery option.',
-        ),
+        title: Text(l10n.settingsDeleteTitle2),
+        content: Text(l10n.settingsDeleteBody2),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -125,7 +120,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yes, Delete My Account'),
+            child: Text(l10n.settingsDeleteConfirm2),
           ),
         ],
       ),
@@ -147,7 +142,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete account: $e')),
+        SnackBar(content: Text(l10n.settingsDeleteFailed('$e'))),
       );
     } finally {
       if (mounted) setState(() => _deleting = false);
@@ -200,6 +195,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _pickDisplayCurrency(ProfileModel profile) async {
+    final l10n = context.l10n;
     // null = Auto (follow the most-recent session). Plain ListTiles (not
     // RadioListTile) to dodge the Radio groupValue deprecation that would trip
     // `flutter analyze --fatal-infos`.
@@ -210,14 +206,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: ListView(
           shrinkWrap: true,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text('Display currency',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(l10n.settingsDisplayCurrency,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
             ),
             for (final c in options)
               ListTile(
-                title: Text(c ?? 'Auto (most recent session)'),
+                title: Text(c ?? l10n.settingsCurrencyAutoOption),
                 trailing: c == profile.displayCurrency
                     ? Icon(Icons.check,
                         color: Theme.of(ctx).colorScheme.primary)
@@ -249,15 +246,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final theme = Theme.of(context);
     final profile = ref.watch(profileProvider).valueOrNull;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(context.l10n.settingsTitle)),
       body: _deleting
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Deleting account…'),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(context.l10n.settingsDeletingAccount),
                 ],
               ),
             )
@@ -266,7 +263,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 8),
                 ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text('Version'),
+                  title: Text(context.l10n.settingsVersion),
                   trailing: Text(
                     _version,
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -338,7 +335,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Text(
-                    'STATS',
+                    context.l10n.settingsSectionStats,
                     style: theme.textTheme.labelSmall?.copyWith(
                       letterSpacing: 1.2,
                       color: theme.colorScheme.primary,
@@ -348,11 +345,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.payments_outlined),
-                  title: const Text('Display currency'),
-                  subtitle: const Text(
-                      'Currency stats totals are shown in. "Auto" follows your most recent session.'),
+                  title: Text(context.l10n.settingsDisplayCurrency),
+                  subtitle: Text(context.l10n.settingsDisplayCurrencySubtitle),
                   trailing: Text(
-                    profile?.displayCurrency ?? 'Auto',
+                    profile?.displayCurrency ?? context.l10n.settingsCurrencyAuto,
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: theme.colorScheme.outline),
                   ),
@@ -366,7 +362,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   key: _aiUsageKey,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Text(
-                    'AI USAGE',
+                    context.l10n.settingsSectionAiUsage,
                     style: theme.textTheme.labelSmall?.copyWith(
                       letterSpacing: 1.2,
                       color: theme.colorScheme.primary,
@@ -376,9 +372,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.auto_awesome_outlined),
-                  title: const Text('Session analyses'),
+                  title: Text(context.l10n.settingsSessionAnalyses),
                   trailing: Text(
-                    _usageLabel(isSession: true),
+                    _usageLabel(context.l10n, isSession: true),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
@@ -386,9 +382,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.auto_awesome_outlined),
-                  title: const Text('Hand analyses'),
+                  title: Text(context.l10n.settingsHandAnalyses),
                   trailing: Text(
-                    _usageLabel(isSession: false),
+                    _usageLabel(context.l10n, isSession: false),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
@@ -397,7 +393,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: Text(
-                    'Free daily limits, on a rolling 24-hour window.',
+                    context.l10n.settingsAiUsageNote,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
@@ -408,7 +404,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Text(
-                    'DATA',
+                    context.l10n.settingsSectionData,
                     style: theme.textTheme.labelSmall?.copyWith(
                       letterSpacing: 1.2,
                       color: theme.colorScheme.primary,
@@ -418,10 +414,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.import_export),
-                  title: const Text('Import / Export Sessions'),
-                  subtitle: const Text(
-                    'Migrate from another app, or back up your data',
-                    style: TextStyle(fontSize: 12),
+                  title: Text(context.l10n.settingsImportExport),
+                  subtitle: Text(
+                    context.l10n.settingsImportExportSubtitle,
+                    style: const TextStyle(fontSize: 12),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
@@ -435,7 +431,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Text(
-                    'DANGER ZONE',
+                    context.l10n.settingsSectionDanger,
                     style: theme.textTheme.labelSmall?.copyWith(
                       letterSpacing: 1.2,
                       color: theme.colorScheme.error,
@@ -447,12 +443,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   leading: Icon(Icons.delete_forever_outlined,
                       color: theme.colorScheme.error),
                   title: Text(
-                    'Delete Account',
+                    context.l10n.settingsDeleteAccount,
                     style: TextStyle(color: theme.colorScheme.error),
                   ),
-                  subtitle: const Text(
-                    'Permanently delete your account and all data',
-                    style: TextStyle(fontSize: 12),
+                  subtitle: Text(
+                    context.l10n.settingsDeleteAccountSubtitle,
+                    style: const TextStyle(fontSize: 12),
                   ),
                   onTap: _deleteAccount,
                 ),
@@ -460,9 +456,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'Deleting your account is permanent. All sessions, hands, '
-                    'player reads, and AI analyses will be erased immediately '
-                    'and cannot be recovered. Export your data first if needed.',
+                    context.l10n.settingsDeleteAccountNote,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.outline,
                       height: 1.5,

@@ -153,4 +153,18 @@ void main() {
       expect(find.text('At least 6 characters'), findsNothing);
     });
   });
+
+  group('LoginScreen — localized', () {
+    testWidgets('renders in Dutch on a narrow phone without overflow',
+        (tester) async {
+      await pumpApp(tester, const LoginScreen(),
+          locale: const Locale('nl'), size: const Size(360, 800));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // A translated label is on screen and the English one is gone.
+      expect(find.text('Sign In'), findsNothing);
+      expect(find.byType(FilledButton), findsOneWidget);
+    });
+  });
 }

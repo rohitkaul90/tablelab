@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import '../models/profile_model.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/profile_avatar.dart';
@@ -78,6 +79,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _save() async {
     final id = _uid;
     if (id == null) return;
+    final l10n = context.l10n;
     setState(() => _saving = true);
     try {
       final profile = ProfileModel(
@@ -97,14 +99,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ref.invalidate(profileProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile saved')),
+          SnackBar(content: Text(l10n.profileSaved)),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text(l10n.profileSaveError('$e'))),
         );
       }
     } finally {
@@ -115,6 +117,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final svc = ref.read(profileServiceProvider);
     final email = svc.email ?? '';
     final avatarUrl = svc.googleAvatarUrl;
@@ -126,7 +129,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(l10n.profileTitle),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -135,7 +138,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save'),
+                : Text(l10n.commonSave),
           ),
         ],
       ),
@@ -190,7 +193,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 28),
 
                     // ── Basic Info ───────────────────────────────────────────
-                    _SectionHeader('Basic Info'),
+                    _SectionHeader(l10n.profileSectionBasicInfo),
                     const SizedBox(height: 10),
                     Card(
                       margin: EdgeInsets.zero,
@@ -200,15 +203,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           children: [
                             _field(
                               controller: _nameCtrl,
-                              label: 'Display Name',
-                              hint: 'How you want to be known',
+                              label: l10n.profileDisplayName,
+                              hint: l10n.profileDisplayNameHint,
                               icon: Icons.badge_outlined,
                               onChanged: (_) => setState(() {}),
                             ),
                             const SizedBox(height: 14),
                             _field(
                               controller: _phoneCtrl,
-                              label: 'Phone Number',
+                              label: l10n.profilePhoneNumber,
                               hint: '+1 555 000 0000',
                               icon: Icons.phone_outlined,
                               keyboardType: TextInputType.phone,
@@ -216,8 +219,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             const SizedBox(height: 14),
                             _field(
                               controller: _cityCtrl,
-                              label: 'Home City',
-                              hint: 'e.g. Las Vegas, Toronto',
+                              label: l10n.profileHomeCity,
+                              hint: l10n.profileHomeCityHint,
                               icon: Icons.location_city_outlined,
                             ),
                           ],
@@ -227,7 +230,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 20),
 
                     // ── Game Preferences ─────────────────────────────────────
-                    _SectionHeader('Game Preferences'),
+                    _SectionHeader(l10n.profileSectionGamePreferences),
                     const SizedBox(height: 10),
                     Card(
                       margin: EdgeInsets.zero,
@@ -236,7 +239,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Preferred Game',
+                            Text(l10n.profilePreferredGame,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.outline)),
                             const SizedBox(height: 8),
@@ -244,9 +247,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               spacing: 8,
                               children: [
                                 for (final entry in [
-                                  ('cash', 'Cash'),
-                                  ('tournament', 'Tournament'),
-                                  ('both', 'Both'),
+                                  ('cash', l10n.profileGameCash),
+                                  ('tournament', l10n.profileGameTournament),
+                                  ('both', l10n.profileGameBoth),
                                 ])
                                   ChoiceChip(
                                     label: Text(entry.$2),
@@ -259,8 +262,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             const SizedBox(height: 14),
                             _field(
                               controller: _stakesCtrl,
-                              label: 'Preferred Stakes',
-                              hint: 'e.g. 1/2 NL, 2/5 PLO',
+                              label: l10n.profilePreferredStakes,
+                              hint: l10n.profilePreferredStakesHint,
                               icon: Icons.attach_money_outlined,
                             ),
                           ],
@@ -270,7 +273,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 20),
 
                     // ── Goals & Background ───────────────────────────────────
-                    _SectionHeader('Goals & Background'),
+                    _SectionHeader(l10n.profileSectionGoals),
                     const SizedBox(height: 10),
                     Card(
                       margin: EdgeInsets.zero,
@@ -280,16 +283,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           children: [
                             _field(
                               controller: _sincCtrl,
-                              label: 'Playing Since (year)',
-                              hint: 'e.g. 2018',
+                              label: l10n.profilePlayingSince,
+                              hint: l10n.profilePlayingSinceHint,
                               icon: Icons.history_outlined,
                               keyboardType: TextInputType.number,
                             ),
                             const SizedBox(height: 14),
                             _field(
                               controller: _rateCtrl,
-                              label: 'Hourly Rate Goal (\$/hr)',
-                              hint: 'e.g. 25',
+                              label: l10n.profileHourlyRateGoal,
+                              hint: l10n.profileHourlyRateGoalHint,
                               icon: Icons.trending_up_outlined,
                               keyboardType: const TextInputType.numberWithOptions(
                                   decimal: true),
@@ -301,7 +304,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 20),
 
                     // ── Bankroll ─────────────────────────────────────────────
-                    _SectionHeader('Bankroll'),
+                    _SectionHeader(l10n.profileSectionBankroll),
                     const SizedBox(height: 10),
                     Card(
                       margin: EdgeInsets.zero,
@@ -311,7 +314,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Starting bankroll',
+                              l10n.profileStartingBankroll,
                               style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.outline),
                             ),
@@ -321,8 +324,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 Expanded(
                                   child: _field(
                                     controller: _bankrollCtrl,
-                                    label: 'Amount',
-                                    hint: 'e.g. 5000',
+                                    label: l10n.profileAmount,
+                                    hint: l10n.profileAmountHint,
                                     icon: Icons.account_balance_wallet_outlined,
                                     keyboardType:
                                         const TextInputType.numberWithOptions(
@@ -343,7 +346,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Used to calculate your Current Bankroll on the dashboard.',
+                              l10n.profileBankrollNote,
                               style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.outline),
                             ),
@@ -365,7 +368,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   color:
                                       Theme.of(context).colorScheme.onPrimary))
                           : const Icon(Icons.save_outlined),
-                      label: Text(_saving ? 'Saving…' : 'Save Profile'),
+                      label: Text(_saving ? l10n.profileSaving : l10n.profileSaveProfile),
                       style: FilledButton.styleFrom(
                           minimumSize: const Size(double.infinity, 48)),
                     ),

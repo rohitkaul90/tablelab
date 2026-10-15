@@ -6,6 +6,7 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'import_mapping_screen.dart';
+import '../l10n/l10n.dart';
 
 // ─── Source app data ──────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
   // ─── Source selection ───────────────────────────────────────────────────
 
   Future<void> _onSourceSelected(String? presetId) async {
+    final l10n = context.l10n;
     // Open file picker first; set busy only during parsing.
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -69,7 +71,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
     setState(() => _busy = true);
     try {
       final file = result.files.first;
-      final parsed = await _parseFile(file);
+      final parsed = await _parseFile(file, l10n);
       if (parsed == null) return; // user cancelled sheet selection
 
       if (!mounted) return;
@@ -86,7 +88,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not read file: $e')),
+          SnackBar(content: Text(l10n.importSourceReadFailed('$e'))),
         );
       }
     } finally {
@@ -97,7 +99,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
   // ─── File parsing ────────────────────────────────────────────────────────
 
   Future<(List<String>, List<List<dynamic>>)?> _parseFile(
-      PlatformFile file) async {
+      PlatformFile file, AppLocalizations l10n) async {
     final ext = (file.extension ?? '').toLowerCase();
     List<String> headers;
     List<List<dynamic>> rows;
@@ -119,7 +121,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
         fieldDelimiter: delimiter,
         eol: '\n',
       ).convert(content);
-      if (all.isEmpty) throw Exception('File is empty.');
+      if (all.isEmpty) throw Exception(l10n.importSourceFileEmpty);
       // Poker Bankroll Tracker prefixes with "—PBT Bankroll Export—"
       final skipMeta = all.length > 1 &&
           all[0].length == 1 &&
@@ -141,20 +143,20 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
         }
       }
       final sheetNames = excel.tables.keys.toList();
-      if (sheetNames.isEmpty) throw Exception('No sheets found.');
+      if (sheetNames.isEmpty) throw Exception(l10n.importSourceNoSheets);
 
       String sheetName;
       if (sheetNames.length == 1) {
         sheetName = sheetNames.first;
       } else {
         if (!mounted) return null;
-        final picked = await _pickSheet(sheetNames);
+        final picked = await _pickSheet(sheetNames, l10n);
         if (picked == null) return null;
         sheetName = picked;
       }
       final sheet = excel.tables[sheetName]!;
       final allRows = sheet.rows;
-      if (allRows.isEmpty) throw Exception('Sheet is empty.');
+      if (allRows.isEmpty) throw Exception(l10n.importSourceSheetEmpty);
       headers = allRows.first
           .map((c) => _cellStr(c?.value).trim())
           .toList();
@@ -164,7 +166,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
           .where((r) => r.any((c) => c.isNotEmpty))
           .toList();
     } else {
-      throw Exception('Unsupported file type: $ext');
+      throw Exception(l10n.importSourceUnsupportedType(ext));
     }
 
     // Drop fully empty header columns (keep row data in sync)
@@ -178,8 +180,8 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
         .where((r) => r.any((c) => c.isNotEmpty))
         .toList();
 
-    if (headers.isEmpty) throw Exception('No headers found.');
-    if (rows.isEmpty) throw Exception('No data rows found.');
+    if (headers.isEmpty) throw Exception(l10n.importSourceNoHeaders);
+    if (rows.isEmpty) throw Exception(l10n.importSourceNoRows);
     return (headers, rows);
   }
 
@@ -195,10 +197,11 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
     return ',';
   }
 
-  Future<String?> _pickSheet(List<String> names) => showDialog<String>(
+  Future<String?> _pickSheet(List<String> names, AppLocalizations l10n) =>
+      showDialog<String>(
         context: context,
         builder: (_) => SimpleDialog(
-          title: const Text('Select sheet'),
+          title: Text(l10n.importSourceSelectSheet),
           children: names
               .map((n) => SimpleDialogOption(
                     onPressed: () => Navigator.pop(context, n),
@@ -240,8 +243,9 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Import Sessions')),
+      appBar: AppBar(title: Text(l10n.importSourceTitle)),
       body: _busy
           ? const Center(child: CircularProgressIndicator())
           : Align(
@@ -253,19 +257,19 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
                       16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
                   children: [
                     Text(
-                      'Where are you importing from?',
+                      l10n.importSourceWhereFrom,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Select your app and we\'ll pick the right column mapping automatically.',
+                      l10n.importSourceSelectApp,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.outline,
                           ),
                     ),
                     const SizedBox(height: 24),
 
-                    _SectionHeader('Mobile & Web Apps'),
+                    _SectionHeader(l10n.importSourceMobileApps),
                     const SizedBox(height: 8),
                     _AppGroup(
                       sources: _mobileApps,
@@ -274,10 +278,10 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    _SectionHeader('Desktop HUD Software'),
+                    _SectionHeader(l10n.importSourceDesktopHud),
                     const SizedBox(height: 4),
                     Text(
-                      'These apps export profit (not cash-out). Cash-out is derived automatically.',
+                      l10n.importSourceHudNote,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.outline,
                           ),
@@ -290,7 +294,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    _SectionHeader('Tournament Databases'),
+                    _SectionHeader(l10n.importSourceTournamentDbs),
                     const SizedBox(height: 8),
                     _AppGroup(
                       sources: _tournamentDbs,
@@ -299,7 +303,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    _SectionHeader('Other'),
+                    _SectionHeader(l10n.importSourceOther),
                     const SizedBox(height: 8),
                     Card(
                       child: ListTile(
@@ -310,9 +314,8 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
                               size: 20,
                               color: Theme.of(context).colorScheme.outline),
                         ),
-                        title: const Text('Generic CSV / Excel'),
-                        subtitle: const Text(
-                            "Any spreadsheet — you'll map columns manually"),
+                        title: Text(l10n.importSourceGeneric),
+                        subtitle: Text(l10n.importSourceGenericSubtitle),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _onSourceSelected(null),
                       ),

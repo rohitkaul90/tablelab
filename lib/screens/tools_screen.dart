@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import 'equity_calculator_screen.dart';
 import 'icm_calculator_screen.dart';
 import 'variance_calculator_screen.dart';
@@ -24,7 +25,7 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tools'),
+        title: Text(context.l10n.toolsTitle),
       ),
       body: Column(
         children: [
@@ -37,10 +38,11 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
               // Stretch to the full padded width — the intrinsic pill left
               // dead space either side on phones.
               expandedInsets: EdgeInsets.zero,
-              segments: const [
-                ButtonSegment(value: 0, label: Text('Equity')),
-                ButtonSegment(value: 1, label: Text('ICM')),
-                ButtonSegment(value: 2, label: Text('Variance')),
+              segments: [
+                ButtonSegment(value: 0, label: Text(context.l10n.toolsEquity)),
+                ButtonSegment(value: 1, label: Text(context.l10n.toolsIcm)),
+                ButtonSegment(
+                    value: 2, label: Text(context.l10n.toolsVariance)),
               ],
               selected: {_selected},
               onSelectionChanged: (s) => setState(() => _selected = s.first),

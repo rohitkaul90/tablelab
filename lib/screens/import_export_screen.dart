@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../l10n/l10n.dart';
 import '../providers/providers.dart';
 import '../services/analytics_service.dart';
 import '../utils/save_bytes.dart';
@@ -68,6 +69,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
   }
 
   Future<void> _exportCsv() async {
+    final l10n = context.l10n;
     setState(() => _busy = true);
     try {
       // Exclude any in-progress live session — it has no cash-out yet and
@@ -76,7 +78,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
           .where((s) => !s.isLive)
           .toList();
       if (sessions.isEmpty) {
-        _showSnack('No sessions to export.');
+        _showSnack(l10n.exportNoSessions);
         return;
       }
       final rows = [kSessionExportHeaders, ...sessions.map(sessionExportRow)];
@@ -90,20 +92,21 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
             'poker_sessions_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
         extension: 'csv',
         mimeType: 'text/csv',
-        dialogTitle: 'Export sessions as CSV',
+        dialogTitle: l10n.exportCsvDialogTitle,
       );
       if (saved) {
         AnalyticsService.exportTriggered(format: 'csv');
-        _showSnack('Exported ${sessions.length} sessions to CSV.');
+        _showSnack(l10n.exportedCsv(sessions.length));
       }
     } catch (e) {
-      _showSnack('Export failed: $e');
+      _showSnack(l10n.exportFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _exportExcel() async {
+    final l10n = context.l10n;
     setState(() => _busy = true);
     try {
       // Exclude any in-progress live session (see _exportCsv).
@@ -111,7 +114,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
           .where((s) => !s.isLive)
           .toList();
       if (sessions.isEmpty) {
-        _showSnack('No sessions to export.');
+        _showSnack(l10n.exportNoSessions);
         return;
       }
       final excel = Excel.createExcel();
@@ -139,7 +142,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
       }
       final encoded = excel.encode();
       if (encoded == null) {
-        _showSnack('Export failed: could not encode Excel file.');
+        _showSnack(l10n.exportEncodeFailed);
         return;
       }
       final saved = await _saveExportFile(
@@ -149,14 +152,14 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
         extension: 'xlsx',
         mimeType:
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        dialogTitle: 'Export sessions as Excel',
+        dialogTitle: l10n.exportExcelDialogTitle,
       );
       if (saved) {
         AnalyticsService.exportTriggered(format: 'xlsx');
-        _showSnack('Exported ${sessions.length} sessions to Excel.');
+        _showSnack(l10n.exportedExcel(sessions.length));
       }
     } catch (e) {
-      _showSnack('Export failed: $e');
+      _showSnack(l10n.exportFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -171,38 +174,37 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Import / Export')),
+      appBar: AppBar(title: Text(l10n.importExportTitle)),
       body: _busy
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: EdgeInsets.fromLTRB(
                   16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
               children: [
-                _SectionHeader(title: 'Export'),
+                _SectionHeader(title: l10n.importExportSectionExport),
                 const SizedBox(height: 8),
                 _ActionCard(
                   icon: Icons.table_chart_outlined,
-                  title: 'Export to CSV',
-                  subtitle:
-                      'Save all sessions as a .csv file. Can be opened in Excel, Google Sheets, etc.',
+                  title: l10n.exportToCsv,
+                  subtitle: l10n.exportToCsvSubtitle,
                   onTap: _exportCsv,
                 ),
                 const SizedBox(height: 8),
                 _ActionCard(
                   icon: Icons.grid_on_outlined,
-                  title: 'Export to Excel',
-                  subtitle: 'Save all sessions as a .xlsx file.',
+                  title: l10n.exportToExcel,
+                  subtitle: l10n.exportToExcelSubtitle,
                   onTap: _exportExcel,
                 ),
                 const SizedBox(height: 24),
-                _SectionHeader(title: 'Import'),
+                _SectionHeader(title: l10n.importExportSectionImport),
                 const SizedBox(height: 8),
                 _ActionCard(
                   icon: Icons.upload_file_outlined,
-                  title: 'Import Sessions',
-                  subtitle:
-                      'Import from Poker Income, BankrollMob, PokerTracker 4, and 15 more apps — or any custom CSV / Excel file.',
+                  title: l10n.importSessions,
+                  subtitle: l10n.importSessionsSubtitle,
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -226,7 +228,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
                               size: 16,
                               color: Theme.of(context).colorScheme.outline),
                           const SizedBox(width: 8),
-                          Text('Import Tips',
+                          Text(l10n.importTipsTitle,
                               style: Theme.of(context)
                                   .textTheme
                                   .labelMedium
@@ -238,11 +240,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '• Select your source app for automatic column mapping\n'
-                        '• Only Date and Buy-in are required — everything else is optional\n'
-                        '• If your file has only a Profit column (no Cash-out), cash-out is derived automatically\n'
-                        '• Duration accepts minutes, decimal hours, "1h 30m", "1:30", and more\n'
-                        '• Duplicate sessions (same date + buy-in + cash-out) are skipped by default',
+                        l10n.importTipsBody,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.outline,
                             ),

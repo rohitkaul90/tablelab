@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../l10n/l10n.dart';
 import '../providers/providers.dart';
 import '../services/analytics_service.dart';
 import '../services/feedback_service.dart';
@@ -25,12 +26,20 @@ Future<bool?> showFeedbackSheet(
   );
 }
 
-const _categories = <String, ({String label, IconData icon})>{
-  'bug': (label: 'Bug', icon: Icons.bug_report_outlined),
-  'idea': (label: 'Idea', icon: Icons.lightbulb_outline),
-  'praise': (label: 'Praise', icon: Icons.favorite_outline),
-  'other': (label: 'Other', icon: Icons.chat_bubble_outline),
+// Category ids are the wire format (feedback.category); labels are localized.
+const _categoryIcons = <String, IconData>{
+  'bug': Icons.bug_report_outlined,
+  'idea': Icons.lightbulb_outline,
+  'praise': Icons.favorite_outline,
+  'other': Icons.chat_bubble_outline,
 };
+
+String _categoryLabel(AppLocalizations l10n, String id) => switch (id) {
+      'bug' => l10n.feedbackCategoryBug,
+      'idea' => l10n.feedbackCategoryIdea,
+      'praise' => l10n.feedbackCategoryPraise,
+      _ => l10n.feedbackCategoryOther,
+    };
 
 class _FeedbackSheet extends ConsumerStatefulWidget {
   final String? initialCategory;
@@ -52,7 +61,7 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
   @override
   void initState() {
     super.initState();
-    _category = _categories.containsKey(widget.initialCategory)
+    _category = _categoryIcons.containsKey(widget.initialCategory)
         ? widget.initialCategory!
         : 'bug';
     _controller = TextEditingController(text: widget.prefillMessage ?? '');
@@ -69,9 +78,10 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
     // Captured before any pop so the success snackbar lands on the app's
     // ScaffoldMessenger, not this sheet's (defunct) context.
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     if (message.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Please write a little something first.')),
+        SnackBar(content: Text(l10n.feedbackWriteSomething)),
       );
       return;
     }
@@ -87,36 +97,37 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
       if (!mounted) return;
       Navigator.pop(context, true);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Thanks for the feedback! 🙏')),
+        SnackBar(content: Text(l10n.feedbackThanks)),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
       messenger.showSnackBar(
-        SnackBar(content: Text(_friendlyError(e))),
+        SnackBar(content: Text(_friendlyError(l10n, e))),
       );
     }
   }
 
-  String _friendlyError(Object e) {
+  String _friendlyError(AppLocalizations l10n, Object e) {
     if (e is FeedbackException) {
       if (e.status == 429) {
-        return 'Daily feedback limit reached — try again tomorrow.';
+        return l10n.feedbackLimitReached;
       }
       // 4xx validation errors carry a useful server message; show it verbatim.
       if (e.status < 500 && (e.message?.isNotEmpty ?? false)) {
         return e.message!;
       }
-      return "Couldn't send feedback. Please try again.";
+      return l10n.feedbackSendFailed;
     }
     // Network / transport error — couldn't reach the server.
-    return "Couldn't send feedback. Check your connection and try again.";
+    return l10n.feedbackSendFailedNetwork;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final l10n = context.l10n;
     return Padding(
       // Lift above the keyboard when the text field is focused.
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -126,20 +137,20 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Send feedback', style: theme.textTheme.titleLarge),
+            Text(l10n.feedbackTitle, style: theme.textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-              'Bugs, ideas, suggestions — it all helps shape TableLab.',
+              l10n.feedbackSubtitle,
               style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
             ),
             const SizedBox(height: 16),
             Wrap(
               spacing: 8,
               children: [
-                for (final entry in _categories.entries)
+                for (final entry in _categoryIcons.entries)
                   ChoiceChip(
-                    label: Text(entry.value.label),
-                    avatar: Icon(entry.value.icon, size: 18),
+                    label: Text(_categoryLabel(l10n, entry.key)),
+                    avatar: Icon(entry.value, size: 18),
                     selected: _category == entry.key,
                     onSelected:
                         _saving ? null : (_) => setState(() => _category = entry.key),
@@ -155,13 +166,13 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
               maxLines: 6,
               maxLength: 4000,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'What happened, or what would make TableLab better?',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: l10n.feedbackHint,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 8),
-            Text('Rate your experience (optional)',
+            Text(l10n.feedbackRate,
                 style: theme.textTheme.bodySmall?.copyWith(color: cs.outline)),
             const SizedBox(height: 4),
             Row(
@@ -187,7 +198,7 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
               value: _shareEmail,
               onChanged:
                   _saving ? null : (v) => setState(() => _shareEmail = v ?? false),
-              title: const Text("It's OK to email me about this"),
+              title: Text(l10n.feedbackOkToEmail),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -200,7 +211,7 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
                         width: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Send'),
+                    : Text(l10n.feedbackSend),
               ),
             ),
             Center(
@@ -212,7 +223,7 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
                           path: 'feedback@tablelab.app',
                           queryParameters: {'subject': 'TableLab Feedback'},
                         )),
-                child: const Text('Email support instead'),
+                child: Text(l10n.feedbackEmailInstead),
               ),
             ),
           ],

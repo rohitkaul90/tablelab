@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tablelab/models/profile_model.dart';
 import 'package:tablelab/providers/profile_provider.dart';
 import 'package:tablelab/screens/profile_screen.dart';
 import 'package:tablelab/services/profile_service.dart';
+
+import '../helpers/pump_app.dart';
 
 /// Fake that avoids Supabase entirely (enabled by the ProfileService DI
 /// refactor — the super constructor no longer touches Supabase.instance).
@@ -46,21 +47,19 @@ void main() {
     );
 
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [profileServiceProvider.overrideWithValue(fake)],
-        child: MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (ctx) => ElevatedButton(
-                onPressed: () => Navigator.push(
-                  ctx,
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                ),
-                child: const Text('open'),
+      wrapApp(
+        Scaffold(
+          body: Builder(
+            builder: (ctx) => ElevatedButton(
+              onPressed: () => Navigator.push(
+                ctx,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
               ),
+              child: const Text('open'),
             ),
           ),
         ),
+        overrides: [profileServiceProvider.overrideWithValue(fake)],
       ),
     );
 

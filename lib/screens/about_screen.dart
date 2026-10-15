@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../l10n/l10n.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -7,11 +8,12 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final primary = theme.colorScheme.primary;
     final onSurface = theme.colorScheme.onSurface;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('About TableLab')),
+      appBar: AppBar(title: Text(l10n.aboutTitle)),
       body: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -33,7 +35,7 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Your edge, quantified.',
+                  l10n.aboutTagline,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: primary,
                     fontStyle: FontStyle.italic,
@@ -41,90 +43,68 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 _Prose(
-                  "Most players keep results in their head.\n"
-                  "The best players keep them in a database.",
+                  l10n.aboutQuote,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: onSurface,
                   ),
                 ),
                 const SizedBox(height: 12),
-                _Prose(
-                  "Poker rewards pattern recognition — and TableLab is built to surface yours. "
-                  "Maybe your best game is live \$2/\$5 on Saturday nights. Maybe you leak chips "
-                  "in every online session past midnight. Maybe you haven't noticed yet. "
-                  "TableLab notices.",
-                ),
+                _Prose(l10n.aboutIntro),
                 const SizedBox(height: 28),
                 _FeatureTile(
                   icon: Icons.receipt_long_outlined,
                   color: Colors.teal,
-                  title: 'Session Tracker',
-                  body: 'Log every cash game and tournament — buy-ins, rake, duration, location, '
-                      'table quality, and more. Your history, always at hand, never in a spreadsheet '
-                      'named "poker stuff v3 FINAL.xlsx".',
+                  title: l10n.aboutFeatureSessionTrackerTitle,
+                  body: l10n.aboutFeatureSessionTrackerBody,
                 ),
                 _FeatureTile(
                   icon: Icons.bar_chart_rounded,
                   color: Colors.indigo,
-                  title: 'Deep Analytics',
-                  body: 'Profit over time, win rates by stakes, location, game type, day of week, '
-                      'and time of day. Statistical recommendations that flag where you\'re actually '
-                      'making money — not where you think you are.',
+                  title: l10n.aboutFeatureAnalyticsTitle,
+                  body: l10n.aboutFeatureAnalyticsBody,
                 ),
                 _FeatureTile(
                   icon: Icons.play_circle_outline_rounded,
                   color: Colors.orange,
-                  title: 'Hand Replayer',
-                  body: 'Record hands from memory and replay them frame-by-frame on a full table view. '
-                      'Cash and tournament hands both supported — enter any blind level, from 100/200 '
-                      'to 5M/10M. Study, share, and plug the leaks.',
+                  title: l10n.aboutFeatureReplayerTitle,
+                  body: l10n.aboutFeatureReplayerBody,
                 ),
                 _FeatureTile(
                   icon: Icons.auto_awesome_outlined,
                   color: Colors.amber,
-                  title: 'AI Coaching',
-                  body: 'Get a coaching breakdown of any recorded hand or session. '
-                      'The AI reviews your lines, flags sizing mistakes, and gives you something '
-                      'to think about before your next session. Like a coach, but available at 2am.',
+                  title: l10n.aboutFeatureAiTitle,
+                  body: l10n.aboutFeatureAiBody,
                 ),
                 _FeatureTile(
                   icon: Icons.psychology_outlined,
                   color: Colors.purple,
-                  title: 'Player Reads',
-                  body: 'Your private database of tells, tendencies, and opponent notes. '
-                      'The felt has a memory — now so do you. Names autocomplete in the hand recorder '
-                      'so your reads stay connected to the hands they came from.',
+                  title: l10n.aboutFeatureReadsTitle,
+                  body: l10n.aboutFeatureReadsBody,
                 ),
                 _FeatureTile(
                   icon: Icons.event_outlined,
                   color: Colors.cyan,
-                  title: 'Tournament Calendar',
-                  body: 'Upcoming live tournaments worldwide, updated weekly from PokerNews. '
-                      'WSOP, WPT, EPT, and regional series — filter by country and never miss '
-                      'an event worth playing.',
+                  title: l10n.aboutFeatureCalendarTitle,
+                  body: l10n.aboutFeatureCalendarBody,
                 ),
                 _FeatureTile(
                   icon: Icons.calculate_outlined,
                   color: Colors.green,
-                  title: 'ICM Deal Calculator',
-                  body: 'When the final table bubbles down to a deal, know your number. '
-                      'The ICM calculator uses the Malmuth-Harville model to compute fair deals '
-                      'based on chip counts and remaining prizes — up to 9 players, instantly.',
+                  title: l10n.aboutFeatureIcmTitle,
+                  body: l10n.aboutFeatureIcmBody,
                 ),
                 _FeatureTile(
                   icon: Icons.percent,
                   color: Colors.lightBlue,
-                  title: 'Equity Calculator',
-                  body: 'Hand vs range equity, calculated across all run-outs. '
-                      'Know whether you\'re 60/40 or 40/60 before you make the call.',
+                  title: l10n.aboutFeatureEquityTitle,
+                  body: l10n.aboutFeatureEquityBody,
                 ),
                 _FeatureTile(
                   icon: Icons.currency_exchange_rounded,
                   color: Colors.blueGrey,
-                  title: 'Multi-Currency Bankroll',
-                  body: 'CAD, USD, GBP, EUR — play anywhere in the world and your bankroll '
-                      'stays accurate across every currency.',
+                  title: l10n.aboutFeatureCurrencyTitle,
+                  body: l10n.aboutFeatureCurrencyBody,
                 ),
                 const SizedBox(height: 28),
                 Container(
@@ -143,7 +123,7 @@ class AboutScreen extends StatelessWidget {
                           Icon(Icons.rocket_launch_outlined, color: primary, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            'The Vision',
+                            l10n.aboutVisionTitle,
                             style: theme.textTheme.titleSmall?.copyWith(
                               color: primary,
                               fontWeight: FontWeight.bold,
@@ -153,10 +133,7 @@ class AboutScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        "A full-stack poker intelligence platform — tracking, analysis, study tools, "
-                        "real-time coaching, and eventually, community — for every player who takes "
-                        "the game seriously enough to put in the work away from the table. "
-                        "Built by a player, for players.",
+                        l10n.aboutVisionBody,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: onSurface.withAlpha(220),
                           height: 1.5,
@@ -185,7 +162,7 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Operated by MagpiQ',
+                  l10n.aboutOperatedBy,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

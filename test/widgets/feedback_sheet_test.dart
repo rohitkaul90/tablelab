@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tablelab/providers/providers.dart';
 import 'package:tablelab/services/feedback_service.dart';
 import 'package:tablelab/widgets/feedback_sheet.dart';
+
+import '../helpers/pump_app.dart';
 
 /// Fake that records submit() calls instead of hitting the Edge Function.
 class _FakeFeedbackService extends FeedbackService {
@@ -33,18 +34,16 @@ class _FakeFeedbackService extends FeedbackService {
 
 Future<void> _open(WidgetTester tester, _FakeFeedbackService fake) async {
   await tester.pumpWidget(
-    ProviderScope(
-      overrides: [feedbackServiceProvider.overrideWithValue(fake)],
-      child: MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (ctx) => ElevatedButton(
-              onPressed: () => showFeedbackSheet(ctx, initialCategory: 'idea'),
-              child: const Text('open'),
-            ),
+    wrapApp(
+      Scaffold(
+        body: Builder(
+          builder: (ctx) => ElevatedButton(
+            onPressed: () => showFeedbackSheet(ctx, initialCategory: 'idea'),
+            child: const Text('open'),
           ),
         ),
       ),
+      overrides: [feedbackServiceProvider.overrideWithValue(fake)],
     ),
   );
   await tester.tap(find.text('open'));
