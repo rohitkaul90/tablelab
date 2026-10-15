@@ -101,7 +101,7 @@
   "sessionDetailHandsHeader": "MANOS DE ESTA SESIÓN",
   "sessionDetailHandsHeaderCount": "MANOS DE ESTA SESIÓN ({count})",
   "sessionDetailHandsLoadFailed": "No se pudieron cargar las manos.",
-  "sessionDetailNoHands": "Aún no hay manos vinculadas a esta sesión. Usa Registrar mano abajo y aparecerán aquí.",
+  "sessionDetailNoHands": "Aún no hay manos vinculadas a esta sesión. Usa «Registrar Mano» abajo y aparecerán aquí.",
   "sessionDetailHandPot": "Bote {amount} · {street}",
   "sessionHistoryTitle": "Sesiones",
   "sessionHistoryFilterTooltip": "Filtrar",

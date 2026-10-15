@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
+import '../utils/helpers.dart' show isTournamentType;
 import '../providers/providers.dart';
 
 /// Read-only banner shown when a hand is being recorded from a locked session
@@ -105,7 +107,9 @@ class SessionPickerTile extends ConsumerWidget {
                       : '';
                   // Location distinguishes multiple same-day sessions at
                   // different venues.
-                  final label = '$date  ·  ${s.gameType}  ·  ${s.stakes}$loc';
+                  final gameType = gameTypeKeyLabel(context.l10n,
+                      isTournamentType(s.gameType) ? 'tournament' : s.gameType);
+                  final label = '$date  ·  $gameType  ·  ${s.stakes}$loc';
                   return DropdownMenuItem<String?>(
                     value: s.id,
                     child: Text(label,

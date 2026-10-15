@@ -37,8 +37,7 @@ class BuyinEvent {
 
 /// Expense categories tracked per session. Kept SEPARATE from the poker result
 /// (profit_loss) — the app shows a derived net-after-expenses so win-rate /
-/// BB-100 / variance stay pure. `(value, label)` pairs; `value` is what's
-/// persisted, keep it stable.
+/// BB-100 / variance stay pure.
 /// Persisted expense-category ids (stored verbatim in the `expense_events`
 /// jsonb — never rename). Display labels live in `lib/l10n/labels.dart`
 /// (`expenseCategoryLabel(l10n, id)`).

@@ -101,7 +101,7 @@
   "sessionDetailHandsHeader": "MAINS DE LA SESSION",
   "sessionDetailHandsHeaderCount": "MAINS DE LA SESSION ({count})",
   "sessionDetailHandsLoadFailed": "Impossible de charger les mains.",
-  "sessionDetailNoHands": "Aucune main liée à cette session. Utilise « Enregistrer une main » ci-dessous et elles apparaîtront ici.",
+  "sessionDetailNoHands": "Aucune main liée à cette session. Utilise « Noter une main » ci-dessous et elles apparaîtront ici.",
   "sessionDetailHandPot": "Pot {amount} · {street}",
   "sessionHistoryTitle": "Sessions",
   "sessionHistoryFilterTooltip": "Filtrer",

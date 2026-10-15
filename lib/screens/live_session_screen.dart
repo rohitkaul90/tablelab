@@ -24,9 +24,14 @@ String _formatElapsed(Duration d) {
   return '$h:$m:$s';
 }
 
-String _sessionLabel(SessionModel s) {
+String _sessionLabel(AppLocalizations l10n, SessionModel s) {
   final date = s.date.length >= 10 ? s.date.substring(0, 10) : s.date;
-  final stakes = s.stakes == 'N/A' ? s.gameType : s.stakes;
+  // Tournaments carry no stakes — show the localized game type, never the
+  // raw DB enum ('sit_and_go').
+  final stakes = s.stakes == 'N/A'
+      ? gameTypeKeyLabel(
+          l10n, isTournamentType(s.gameType) ? 'tournament' : s.gameType)
+      : s.stakes;
   return '$date · $stakes';
 }
 
@@ -47,7 +52,7 @@ Future<void> showLogSessionChooser(BuildContext context, WidgetRef ref) async {
             ListTile(
               leading: const Icon(Icons.circle, color: Colors.red, size: 14),
               title: Text(ctx.l10n.liveChooserResume),
-              subtitle: Text(_sessionLabel(live)),
+              subtitle: Text(_sessionLabel(context.l10n, live)),
               onTap: () => Navigator.pop(ctx, 'resume'),
             )
           else
@@ -105,7 +110,7 @@ class LiveSessionCard extends ConsumerWidget {
           title: Text(context.l10n.liveCardTitle,
               style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text(
-            '${_sessionLabel(live)}'
+            '${_sessionLabel(context.l10n, live)}'
             '${live.location != null && live.location!.isNotEmpty ? ' · ${live.location}' : ''}',
           ),
           trailing: const Icon(Icons.chevron_right),
@@ -635,7 +640,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
       context,
       prefilledSessionId: s.id,
       prefilledStakes: s.stakes == 'N/A' ? null : s.stakes,
-      prefilledSessionLabel: _sessionLabel(s),
+      prefilledSessionLabel: _sessionLabel(context.l10n, s),
       isTournamentSession: s.gameType != 'cash',
     );
     if (!mounted) return;
@@ -878,7 +883,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_sessionLabel(s)}'
+                    '${_sessionLabel(context.l10n, s)}'
                     '${s.location != null && s.location!.isNotEmpty ? ' · ${s.location}' : ''}',
                     style: theme.textTheme.bodySmall,
                   ),
@@ -907,7 +912,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(l10n.liveTotalBoughtInLabel, style: theme.textTheme.bodyMedium),
+                      Expanded(
+                        child: Text(l10n.liveTotalBoughtInLabel,
+                            style: theme.textTheme.bodyMedium,
+                            overflow: TextOverflow.ellipsis),
+                      ),
                       Text(
                         formatPLWithCurrency(s.totalBuyIn, s.currency),
                         style: const TextStyle(fontWeight: FontWeight.bold),
@@ -967,7 +976,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(l10n.liveTotalExpenses, style: theme.textTheme.bodyMedium),
+                      Expanded(
+                        child: Text(l10n.liveTotalExpenses,
+                            style: theme.textTheme.bodyMedium,
+                            overflow: TextOverflow.ellipsis),
+                      ),
                       Text(
                         formatPLWithCurrency(s.totalExpenses, s.currency),
                         style: const TextStyle(fontWeight: FontWeight.bold),
@@ -1050,8 +1063,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(l10n.liveNet,
-                      style: theme.textTheme.bodySmall),
+                  Expanded(
+                    child: Text(l10n.liveNet,
+                        style: theme.textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis),
+                  ),
                   Text(
                     formatPLWithCurrency(net, s.currency),
                     style: TextStyle(
