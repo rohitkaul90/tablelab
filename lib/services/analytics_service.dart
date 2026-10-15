@@ -20,6 +20,7 @@ class AnalyticsService {
     String userId, {
     String? email,
     String? signupMethod, // 'email' | 'google' — from user.appMetadata['provider']
+    String? language, // resolved UI language code ('en' | 'es' | …)
   }) async {
     if (!_analyticsSupported) return;
     await Posthog().identify(
@@ -28,10 +29,12 @@ class AnalyticsService {
       // name — without it testers are unmatchable anonymous device IDs.
       // `signup_method` is a person property (not an event) so Google-vs-email
       // signups can be cohorted against retention / AI-adoption; the
-      // server-of-record stays auth.identities.provider.
+      // server-of-record stays auth.identities.provider. `language` lets the
+      // non-English cohorts be sized; kept current by `languageChanged`.
       userProperties: {
         if (email != null) 'email': email,
         if (signupMethod != null) 'signup_method': signupMethod,
+        if (language != null) 'language': language,
       },
     );
   }
@@ -328,6 +331,32 @@ class AnalyticsService {
     Posthog().capture(
       eventName: 'theme_changed',
       properties: themeChangedProps(mode: mode), // 'system' | 'light' | 'dark'
+    );
+  }
+
+  /// `language` = the chosen option ('system' | 'en' | 'es' | …); `resolved` =
+  /// the language the UI actually renders in after the change. The `$set`
+  /// block updates the `language` person property in the same event so the
+  /// cohort stays current without a re-identify.
+  @visibleForTesting
+  static Map<String, Object> languageChangedProps({
+    required String language,
+    required String resolved,
+  }) =>
+      {
+        'language': language,
+        'resolved': resolved,
+        r'$set': {'language': resolved},
+      };
+
+  static void languageChanged({
+    required String language,
+    required String resolved,
+  }) {
+    if (!_analyticsSupported) return;
+    Posthog().capture(
+      eventName: 'language_changed',
+      properties: languageChangedProps(language: language, resolved: resolved),
     );
   }
 

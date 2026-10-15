@@ -128,6 +128,20 @@ void main() {
     });
   });
 
+  group('languageChangedProps', () {
+    test('carries the choice, the resolved language and a person-property set',
+        () {
+      expect(
+        AnalyticsService.languageChangedProps(language: 'system', resolved: 'fr'),
+        {
+          'language': 'system',
+          'resolved': 'fr',
+          r'$set': {'language': 'fr'},
+        },
+      );
+    });
+  });
+
   group('themeChangedProps', () {
     test('carries mode', () {
       expect(AnalyticsService.themeChangedProps(mode: 'dark'), {'mode': 'dark'});

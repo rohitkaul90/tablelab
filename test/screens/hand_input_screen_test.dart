@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/models/session_model.dart';
 import 'package:tablelab/providers/providers.dart';
 import 'package:tablelab/screens/hand_input/hand_input_screen.dart';
+
+import '../helpers/pump_app.dart';
 
 /// Back-gesture discard guard for the full wizard: a dirty in-progress hand
 /// must not be silently discarded by the system back gesture, while a pristine
@@ -14,26 +15,21 @@ void main() {
   // sessionsProvider override keeps the setup step's SessionPickerTile off
   // Supabase.
   Future<void> pumpWizard(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(800, 2600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sessionsProvider.overrideWith((ref) async => <SessionModel>[]),
-        ],
-        child: MaterialApp(
-          home: Builder(
-            builder: (ctx) => ElevatedButton(
-              onPressed: () => Navigator.push(
-                ctx,
-                MaterialPageRoute(builder: (_) => const HandInputScreen()),
-              ),
-              child: const Text('open'),
-            ),
+    await pumpApp(
+      tester,
+      Builder(
+        builder: (ctx) => ElevatedButton(
+          onPressed: () => Navigator.push(
+            ctx,
+            MaterialPageRoute(builder: (_) => const HandInputScreen()),
           ),
+          child: const Text('open'),
         ),
       ),
+      overrides: [
+        sessionsProvider.overrideWith((ref) async => <SessionModel>[]),
+      ],
+      size: const Size(800, 2600),
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();

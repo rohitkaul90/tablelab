@@ -1,0 +1,53 @@
+{
+  "@@locale": "en",
+
+  "navStats": "Stats",
+  "@navStats": {
+    "description": "Bottom navigation tab: the statistics dashboard (first tab). Keep short — 5 tabs share one row."
+  },
+  "navSessions": "Sessions",
+  "@navSessions": {
+    "description": "Bottom navigation tab: the list of logged poker sessions. Keep short."
+  },
+  "navHands": "Hands",
+  "@navHands": {
+    "description": "Bottom navigation tab: recorded poker hands. Keep short."
+  },
+  "navReads": "Reads",
+  "@navReads": {
+    "description": "Bottom navigation tab: 'player reads' — notes/tags the user keeps on opponents. Keep short; a poker term, translate to the natural local equivalent for 'notes on opponents'."
+  },
+  "navStudy": "Study",
+  "@navStudy": {
+    "description": "Bottom navigation tab: the GTO solver-strategy explorer for studying spots. Keep short."
+  },
+
+  "settingsAppearance": "APPEARANCE",
+  "@settingsAppearance": {
+    "description": "Settings screen section header, rendered in uppercase letters."
+  },
+  "settingsTheme": "Theme",
+  "@settingsTheme": {
+    "description": "Settings row label: the light/dark colour theme selector."
+  },
+  "themeModeSystem": "System",
+  "@themeModeSystem": {
+    "description": "Theme option: follow the device's light/dark setting. Segmented button label — keep very short."
+  },
+  "themeModeLight": "Light",
+  "@themeModeLight": {
+    "description": "Theme option: light colour theme. Segmented button label — keep very short."
+  },
+  "themeModeDark": "Dark",
+  "@themeModeDark": {
+    "description": "Theme option: dark colour theme. Segmented button label — keep very short."
+  },
+  "settingsLanguage": "Language",
+  "@settingsLanguage": {
+    "description": "Settings row label for choosing the app's display language; also the title of the language picker sheet."
+  },
+  "languageSystem": "System",
+  "@languageSystem": {
+    "description": "Language option: follow the device language (falls back to English when unsupported)."
+  }
+}

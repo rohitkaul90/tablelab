@@ -1,0 +1,15 @@
+{
+  "@@locale": "it",
+  "navStats": "Statistiche",
+  "navSessions": "Sessioni",
+  "navHands": "Mani",
+  "navReads": "Letture",
+  "navStudy": "Studio",
+  "settingsAppearance": "ASPETTO",
+  "settingsTheme": "Tema",
+  "themeModeSystem": "Sistema",
+  "themeModeLight": "Chiaro",
+  "themeModeDark": "Scuro",
+  "settingsLanguage": "Lingua",
+  "languageSystem": "Sistema"
+}

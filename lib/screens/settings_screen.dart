@@ -7,6 +7,8 @@ import '../models/profile_model.dart';
 import '../services/analytics_service.dart';
 import '../services/ai_service.dart';
 import '../utils/helpers.dart' show supportedDisplayCurrencies;
+import '../l10n/l10n.dart';
+import '../providers/locale_provider.dart';
 import '../providers/providers.dart';
 import '../providers/reads_provider.dart';
 import '../providers/profile_provider.dart';
@@ -152,6 +154,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _pickLanguage() async {
+    // null = System (follow the device). Same plain-ListTile sheet as the
+    // currency picker: a 6-segment SegmentedButton would overflow on phones
+    // and RadioListTile trips a deprecation under `--fatal-infos`. Endonyms
+    // are deliberately untranslated so a user stuck in the wrong language can
+    // still find their own.
+    final l10n = context.l10n;
+    final current = ref.read(localeProvider);
+    final options = <Locale?>[null, ...AppLocalizations.supportedLocales];
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(l10n.settingsLanguage,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            for (final loc in options)
+              ListTile(
+                title: Text(
+                    loc == null ? l10n.languageSystem : localeEndonym(loc)),
+                trailing: loc == current
+                    ? Icon(Icons.check,
+                        color: Theme.of(ctx).colorScheme.primary)
+                    : null,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await ref.read(localeProvider.notifier).set(loc);
+                  if (!mounted) return;
+                  AnalyticsService.languageChanged(
+                    language: loc?.languageCode ?? 'system',
+                    resolved: ref.read(resolvedLocaleProvider).languageCode,
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickDisplayCurrency(ProfileModel profile) async {
     // null = Auto (follow the most-recent session). Plain ListTiles (not
     // RadioListTile) to dodge the Radio groupValue deprecation that would trip
@@ -232,7 +279,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Text(
-                    'APPEARANCE',
+                    context.l10n.settingsAppearance,
                     style: theme.textTheme.labelSmall?.copyWith(
                       letterSpacing: 1.2,
                       color: theme.colorScheme.primary,
@@ -242,25 +289,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.brightness_6_outlined),
-                  title: const Text('Theme'),
+                  title: Text(context.l10n.settingsTheme),
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: SegmentedButton<ThemeMode>(
                       // Label-only (no per-segment icons): icon+label on three
                       // segments overflowed the row and wrapped "System" onto a
                       // second line on narrower phones.
-                      segments: const [
+                      segments: [
                         ButtonSegment(
                           value: ThemeMode.system,
-                          label: Text('System'),
+                          label: Text(context.l10n.themeModeSystem),
                         ),
                         ButtonSegment(
                           value: ThemeMode.light,
-                          label: Text('Light'),
+                          label: Text(context.l10n.themeModeLight),
                         ),
                         ButtonSegment(
                           value: ThemeMode.dark,
-                          label: Text('Dark'),
+                          label: Text(context.l10n.themeModeDark),
                         ),
                       ],
                       selected: {ref.watch(themeModeProvider)},
@@ -271,6 +318,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       },
                     ),
                   ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.language_outlined),
+                  title: Text(context.l10n.settingsLanguage),
+                  trailing: Text(
+                    switch (ref.watch(localeProvider)) {
+                      null => context.l10n.languageSystem,
+                      final loc => localeEndonym(loc),
+                    },
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  onTap: _pickLanguage,
                 ),
                 const Divider(),
                 const SizedBox(height: 8),

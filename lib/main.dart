@@ -10,6 +10,8 @@ import 'auth/auth_gate.dart';
 import 'config/analytics_config.dart';
 import 'config/supabase_config.dart';
 import 'firebase_options.dart';
+import 'l10n/l10n.dart';
+import 'providers/locale_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/analytics_service.dart';
 import 'theme/app_theme.dart';
@@ -105,6 +107,18 @@ void main() async {
     }
   }
 
+  // Load persisted preferences (theme mode, language) before the first frame
+  // so they apply immediately — no dark→light or English→translated flash on
+  // cold start. The display language is resolved here exactly as
+  // `resolvedLocaleProvider` will, and intl's number/date symbols for it are
+  // loaded BEFORE runApp so the first frame already formats correctly.
+  final prefs = await SharedPreferences.getInstance();
+  final initialLocale = resolveLocale(
+    LocaleNotifier.read(prefs),
+    WidgetsBinding.instance.platformDispatcher.locales,
+  );
+  await applyIntlLocale(initialLocale);
+
   // Tie PostHog persons to Supabase accounts so the People page shows real
   // users (by email) instead of anonymous device IDs. Reset on sign-out so a
   // shared device doesn't attribute the next user's events to the previous one.
@@ -120,15 +134,17 @@ void main() async {
         // GoTrue records the primary provider here ('email' | 'google');
         // mirrors auth.identities.provider, set once as a person property.
         signupMethod: user.appMetadata['provider'] as String?,
+        // Re-resolved per sign-in (not the captured startup value) so a
+        // language change before a later sign-in isn't regressed by identify.
+        language: resolveLocale(
+          LocaleNotifier.read(prefs),
+          WidgetsBinding.instance.platformDispatcher.locales,
+        ).languageCode,
       );
     } else if (event == AuthChangeEvent.signedOut) {
       AnalyticsService.reset();
     }
   });
-
-  // Load persisted preferences (theme mode) before the first frame so the
-  // chosen theme applies immediately — no dark→light flash on cold start.
-  final prefs = await SharedPreferences.getInstance();
 
   runApp(
     ProviderScope(
@@ -138,18 +154,59 @@ void main() async {
   );
 }
 
-class PokerTrackerApp extends ConsumerWidget {
+class PokerTrackerApp extends ConsumerStatefulWidget {
   const PokerTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PokerTrackerApp> createState() => _PokerTrackerAppState();
+}
+
+class _PokerTrackerAppState extends ConsumerState<PokerTrackerApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Future<void> didChangeLocales(List<Locale>? locales) async {
+    // "System" language mode tracks the device. Load intl's symbols for the
+    // new locale FIRST, then invalidate so the rebuild that follows already
+    // formats dates/numbers in it (invalidating first would render a
+    // mixed-language frame until some unrelated rebuild).
+    final next = resolveLocale(
+      ref.read(localeProvider),
+      WidgetsBinding.instance.platformDispatcher.locales,
+    );
+    await applyIntlLocale(next);
+    if (!mounted) return;
+    ref.invalidate(resolvedLocaleProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(resolvedLocaleProvider);
     return MaterialApp(
       title: 'TableLab',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      // The resolved locale is always one of supportedLocales (see
+      // resolveLocale), so no localeResolutionCallback is needed. The Global*
+      // delegates bundled in localizationsDelegates localize the Material date
+      // and time pickers for free.
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: const AuthGate(),
       // Incoming platform route pushes (the io.supabase.pokertracker OAuth /
       // email-confirmation deep link, or an OS-supplied launch route) are
@@ -239,40 +296,40 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
             setState(() => _currentIndex = i);
           },
           destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: 'Stats',
+            NavigationDestination(
+              icon: const Icon(Icons.dashboard_outlined),
+              selectedIcon: const Icon(Icons.dashboard),
+              label: context.l10n.navStats,
             ),
-            const NavigationDestination(
-              icon: Icon(Icons.list_outlined),
-              selectedIcon: Icon(Icons.list),
-              label: 'Sessions',
+            NavigationDestination(
+              icon: const Icon(Icons.list_outlined),
+              selectedIcon: const Icon(Icons.list),
+              label: context.l10n.navSessions,
             ),
-            const NavigationDestination(
-              icon: Icon(Icons.style_outlined),
-              selectedIcon: Icon(Icons.style),
-              label: 'Hands',
+            NavigationDestination(
+              icon: const Icon(Icons.style_outlined),
+              selectedIcon: const Icon(Icons.style),
+              label: context.l10n.navHands,
             ),
-            const NavigationDestination(
-              icon: Icon(Icons.psychology_outlined),
-              selectedIcon: Icon(Icons.psychology),
-              label: 'Reads',
+            NavigationDestination(
+              icon: const Icon(Icons.psychology_outlined),
+              selectedIcon: const Icon(Icons.psychology),
+              label: context.l10n.navReads,
             ),
             if (showStudy)
               // Badged while the solved ranges are still being calibrated —
               // the Study screen's BETA chip carries the full explanation.
               // Remove both together when Study leaves beta.
-              const NavigationDestination(
-                icon: Badge(
+              NavigationDestination(
+                icon: const Badge(
                   label: Text('BETA'),
                   child: Icon(Icons.school_outlined),
                 ),
-                selectedIcon: Badge(
+                selectedIcon: const Badge(
                   label: Text('BETA'),
                   child: Icon(Icons.school),
                 ),
-                label: 'Study',
+                label: context.l10n.navStudy,
               ),
           ],
         ),
