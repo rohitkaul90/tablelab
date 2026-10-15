@@ -1,3 +1,7 @@
+import 'dart:ui' show Locale;
+
+import 'package:tablelab/l10n/l10n.dart';
+import 'package:tablelab/l10n/labels.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/models/session_model.dart';
 
@@ -262,8 +266,13 @@ void main() {
     });
 
     test('expenseCategoryLabel maps known + unknown', () {
-      expect(expenseCategoryLabel('travel'), equals('Travel / trip'));
-      expect(expenseCategoryLabel('nonsense'), equals('Other'));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(expenseCategoryLabel(l10n, 'travel'), equals('Travel / trip'));
+      expect(expenseCategoryLabel(l10n, 'nonsense'), equals('Other'));
+      // Every persisted id has a label distinct from the fallback.
+      for (final id in kExpenseCategoryIds.where((i) => i != 'other')) {
+        expect(expenseCategoryLabel(l10n, id), isNot(equals('Other')));
+      }
     });
 
     test('a malformed event entry is skipped, not fatal to the fetch', () {

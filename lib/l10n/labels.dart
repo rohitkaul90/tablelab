@@ -88,3 +88,14 @@ String tableQualityKeyLabel(AppLocalizations l10n, int? quality) =>
 /// Label for a venue key ('live' | 'online').
 String venueLabel(AppLocalizations l10n, String key) =>
     key == 'online' ? l10n.venueOnline : l10n.venueLive;
+
+/// Display label for a persisted expense-category id (`kExpenseCategoryIds`
+/// in session_model.dart). Ids are stored in the `expense_events` jsonb and
+/// never change; only the label is localized. Unknown ids read as "Other".
+String expenseCategoryLabel(AppLocalizations l10n, String id) => switch (id) {
+      'tip' => l10n.expenseCategoryTip,
+      'food' => l10n.expenseCategoryFood,
+      'massage' => l10n.expenseCategoryMassage,
+      'travel' => l10n.expenseCategoryTravel,
+      _ => l10n.expenseCategoryOther,
+    };

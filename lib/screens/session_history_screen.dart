@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../l10n/l10n.dart';
 import '../models/session_model.dart';
 import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
@@ -21,6 +22,7 @@ class SessionHistoryScreen extends ConsumerWidget {
     final sessionsAsync = ref.watch(filteredSessionsProvider);
     final filter = ref.watch(filterProvider);
     final hasFilter = !filter.isEmpty;
+    final l10n = context.l10n;
     final homeCurrency =
         ref.watch(profileProvider).valueOrNull?.displayCurrency;
 
@@ -30,19 +32,19 @@ class SessionHistoryScreen extends ConsumerWidget {
           icon: const Icon(Icons.menu),
           onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
         ),
-        title: const Text('Sessions'),
+        title: Text(l10n.sessionHistoryTitle),
         actions: [
           IconButton(
             icon: Badge(
               isLabelVisible: hasFilter,
               child: const Icon(Icons.filter_list),
             ),
-            tooltip: 'Filter',
+            tooltip: l10n.sessionHistoryFilterTooltip,
             onPressed: () => _showFilterSheet(context, ref),
           ),
           IconButton(
             icon: const Icon(Icons.import_export),
-            tooltip: 'Import / Export',
+            tooltip: l10n.sessionHistoryImportExportTooltip,
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ImportExportScreen()),
@@ -53,7 +55,7 @@ class SessionHistoryScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_sessions',
         onPressed: () => showLogSessionChooser(context, ref),
-        tooltip: 'Log session',
+        tooltip: l10n.sessionHistoryLogTooltip,
         child: const Icon(Icons.add),
       ),
       body: Column(
@@ -62,7 +64,7 @@ class SessionHistoryScreen extends ConsumerWidget {
           Expanded(
             child: sessionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(l10n.commonErrorWithDetail('$e'))),
         data: (sessions) {
           if (sessions.isEmpty) {
             return Center(
@@ -82,15 +84,15 @@ class SessionHistoryScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     Text(
                       hasFilter
-                          ? 'No sessions match your filters'
-                          : 'No sessions yet',
+                          ? l10n.sessionHistoryNoMatch
+                          : l10n.sessionHistoryEmpty,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       hasFilter
-                          ? 'Try adjusting or clearing your filters.'
-                          : 'Log your first session — or import your\nhistory from another app.',
+                          ? l10n.sessionHistoryNoMatchHint
+                          : l10n.sessionHistoryEmptyHint,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context)
@@ -106,13 +108,13 @@ class SessionHistoryScreen extends ConsumerWidget {
                             .read(filterProvider.notifier)
                             .state = const SessionFilter(),
                         icon: const Icon(Icons.clear),
-                        label: const Text('Clear Filters'),
+                        label: Text(l10n.sessionHistoryClearFilters),
                       )
                     else ...[
                       FilledButton.icon(
                         onPressed: () => showLogSessionChooser(context, ref),
                         icon: const Icon(Icons.add),
-                        label: const Text('Log Session'),
+                        label: Text(l10n.sessionHistoryLogSession),
                       ),
                       const SizedBox(height: 8),
                       TextButton.icon(
@@ -122,7 +124,7 @@ class SessionHistoryScreen extends ConsumerWidget {
                               builder: (_) => const ImportSourceScreen()),
                         ),
                         icon: const Icon(Icons.upload_file_outlined),
-                        label: const Text('Import from another app'),
+                        label: Text(l10n.sessionHistoryImportCta),
                       ),
                     ],
                   ],
@@ -169,6 +171,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
   Widget build(BuildContext context) {
     final stakesAsync = ref.watch(distinctStakesProvider);
     final locationsAsync = ref.watch(distinctLocationsProvider);
+    final l10n = context.l10n;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -190,20 +193,20 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                 ),
               ),
             ),
-            Text('Filter Sessions',
+            Text(l10n.filterSheetTitle,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
 
             // Game Type
-            Text('Game Type',
+            Text(l10n.filterGameType,
                 style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
                 for (final entry in [
-                  ('cash', 'Cash Game'),
-                  ('tournament', 'Tournament'),
+                  ('cash', l10n.gameTypeCash),
+                  ('tournament', l10n.gameTypeTournament),
                 ])
                   FilterChip(
                     label: Text(entry.$2),
@@ -216,19 +219,19 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
             const SizedBox(height: 16),
 
             // Result
-            Text('Result', style: Theme.of(context).textTheme.labelLarge),
+            Text(l10n.filterResult, style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
                 FilterChip(
-                  label: const Text('Winning'),
+                  label: Text(l10n.filterWinning),
                   selected: _draft.result == SessionResult.win,
                   onSelected: (on) => setState(() => _draft = _draft.copyWith(
                       result: on ? SessionResult.win : null)),
                 ),
                 FilterChip(
-                  label: const Text('Losing'),
+                  label: Text(l10n.filterLosing),
                   selected: _draft.result == SessionResult.loss,
                   onSelected: (on) => setState(() => _draft = _draft.copyWith(
                       result: on ? SessionResult.loss : null)),
@@ -246,7 +249,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Stakes',
+                    Text(l10n.filterStakes,
                         style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: 8),
                     Wrap(
@@ -282,7 +285,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Location',
+                    Text(l10n.filterLocation,
                         style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: 8),
                     Wrap(
@@ -310,14 +313,14 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
             ),
 
             // Date range
-            Text('Date Range',
+            Text(l10n.filterDateRange,
                 style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: _DateButton(
-                    label: 'From',
+                    label: l10n.filterFrom,
                     value: _draft.dateFrom,
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -340,7 +343,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _DateButton(
-                    label: 'To',
+                    label: l10n.filterTo,
                     value: _draft.dateTo,
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -374,7 +377,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                           .state = const SessionFilter();
                       Navigator.pop(context);
                     },
-                    child: const Text('Clear All'),
+                    child: Text(l10n.filterClearAll),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -384,7 +387,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       ref.read(filterProvider.notifier).state = _draft;
                       Navigator.pop(context);
                     },
-                    child: const Text('Apply'),
+                    child: Text(l10n.filterApply),
                   ),
                 ),
               ],
@@ -413,7 +416,7 @@ class _DateButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final display = value != null
         ? DateFormat('MMM d, yyyy').format(DateTime.parse(value!))
-        : 'Any';
+        : context.l10n.filterAny;
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: const Icon(Icons.calendar_today, size: 16),
@@ -640,7 +643,7 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$month · $count sessions',
+                Text(ctx.l10n.sessionHistoryMonthSessions(month, count),
                     style: theme.textTheme.titleMedium),
                 const SizedBox(height: 12),
                 for (final e in entries)
@@ -661,7 +664,7 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('≈ Total ($displayCurrency)',
+                    Text(ctx.l10n.sessionHistoryApproxTotal(displayCurrency),
                         style: theme.textTheme.bodyLarge
                             ?.copyWith(fontWeight: FontWeight.bold)),
                     Text(formatPLWithCurrency(converted, displayCurrency),
@@ -671,7 +674,7 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Converted at approximate static rates.',
+                Text(ctx.l10n.sessionHistoryApproxNote,
                     style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant)),
               ],

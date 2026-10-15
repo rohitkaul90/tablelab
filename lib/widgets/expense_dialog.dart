@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 import '../models/session_model.dart';
 import '../utils/helpers.dart';
 
@@ -14,23 +16,27 @@ Future<ExpenseEvent?> showExpenseDialog(
   final amountCtrl = TextEditingController(
       text: existing != null ? existing.amount.toStringAsFixed(0) : '');
   final noteCtrl = TextEditingController(text: existing?.note ?? '');
-  String category = existing?.category ?? kExpenseCategories.first.$1;
+  String category = existing?.category ?? kExpenseCategoryIds.first;
+  final l10n = context.l10n;
 
   final result = await showDialog<ExpenseEvent>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setLocal) => AlertDialog(
-        title: Text(existing == null ? 'Add expense' : 'Edit expense'),
+        title: Text(existing == null
+            ? l10n.expenseDialogAddTitle
+            : l10n.expenseDialogEditTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
               initialValue: category,
-              decoration:
-                  const InputDecoration(labelText: 'Category', isDense: true),
+              decoration: InputDecoration(
+                  labelText: l10n.expenseDialogCategory, isDense: true),
               items: [
-                for (final c in kExpenseCategories)
-                  DropdownMenuItem(value: c.$1, child: Text(c.$2)),
+                for (final id in kExpenseCategoryIds)
+                  DropdownMenuItem(
+                      value: id, child: Text(expenseCategoryLabel(l10n, id))),
               ],
               onChanged: (v) => setLocal(() => category = v!),
             ),
@@ -42,22 +48,22 @@ Future<ExpenseEvent?> showExpenseDialog(
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 prefixText: '${currencySymbol(currency)} ',
-                labelText: 'Amount',
+                labelText: l10n.expenseDialogAmount,
               ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: noteCtrl,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                  labelText: 'Note (optional)', isDense: true),
+              decoration: InputDecoration(
+                  labelText: l10n.expenseDialogNote, isDense: true),
             ),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(l10n.commonCancel)),
           FilledButton(
             onPressed: () {
               final amt = double.tryParse(amountCtrl.text.trim());
@@ -77,7 +83,7 @@ Future<ExpenseEvent?> showExpenseDialog(
                 ),
               );
             },
-            child: const Text('Save'),
+            child: Text(l10n.commonSave),
           ),
         ],
       ),

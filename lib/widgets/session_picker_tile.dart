@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
 import '../providers/providers.dart';
 
 /// Read-only banner shown when a hand is being recorded from a locked session
@@ -25,7 +26,9 @@ class LinkedSessionBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              label != null ? 'Linked to: $label' : 'Linked to session',
+              label != null
+                  ? context.l10n.linkedSessionBannerWithLabel(label!)
+                  : context.l10n.linkedSessionBanner,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: cs.primary,
                     fontWeight: FontWeight.w600,
@@ -76,8 +79,9 @@ class SessionPickerTile extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Link to Session (optional)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(context.l10n.sessionPickerTitle,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 14)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String?>(
               initialValue: selectedSessionId,
@@ -87,11 +91,11 @@ class SessionPickerTile extends ConsumerWidget {
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
-              hint: const Text('None'),
+              hint: Text(context.l10n.sessionPickerNone),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('None'),
+                  child: Text(context.l10n.sessionPickerNone),
                 ),
                 ...recent.map((s) {
                   final date =
@@ -116,8 +120,10 @@ class SessionPickerTile extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 5),
                 child: Text(
-                  'Session: ${selected.date.substring(0, 10)}  ·  ${selected.stakes}'
-                  '${selected.location != null && selected.location!.isNotEmpty ? '  ·  ${selected.location}' : ''}',
+                  context.l10n.sessionPickerSelected(
+                    '${selected.date.substring(0, 10)}  ·  ${selected.stakes}'
+                    '${selected.location != null && selected.location!.isNotEmpty ? '  ·  ${selected.location}' : ''}',
+                  ),
                   style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
                 ),
               ),

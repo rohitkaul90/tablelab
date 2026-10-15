@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/l10n.dart';
 import '../models/session_model.dart';
 import '../utils/helpers.dart';
 
@@ -18,18 +19,19 @@ class SessionTile extends StatelessWidget {
   static const int _kMinMinutesForRate = 15;
 
   /// Compact, signed hourly rate (e.g. "+CA$163/hr", "+CA$1.1k/hr").
-  static String _fmtPerHr(double rate, String currency) {
+  static String _fmtPerHr(AppLocalizations l10n, double rate, String currency) {
     final sym = currencySymbol(currency);
     final abs = rate.abs();
     final body = abs >= 1000
         ? '${(abs / 1000).toStringAsFixed(1)}k'
         : abs.round().toString();
-    return '${rate >= 0 ? '+' : '-'}$sym$body/hr';
+    return l10n.sessionTilePerHour('${rate >= 0 ? '+' : '-'}$sym$body');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final plColor = session.profitLoss >= 0 ? Colors.green : Colors.red;
     final date = DateFormat('MMM d').format(DateTime.parse(session.date));
     final dur = formatDuration(session.durationMinutes);
@@ -45,7 +47,7 @@ class SessionTile extends StatelessWidget {
     Color? winColor;
     if (session.durationMinutes >= _kMinMinutesForRate) {
       final rate = session.profitLoss / (session.durationMinutes / 60.0);
-      winRate = _fmtPerHr(rate, session.currency);
+      winRate = _fmtPerHr(l10n, rate, session.currency);
       winColor = rate >= 0 ? Colors.green : Colors.red;
     }
 
@@ -69,8 +71,8 @@ class SessionTile extends StatelessWidget {
     }
 
     final cells = <(String, String, Color?)>[
-      ('Duration', dur, null),
-      ('Win rate', winRate, winColor),
+      (l10n.sessionTileDuration, dur, null),
+      (l10n.sessionTileWinRate, winRate, winColor),
       (thirdLabel, thirdValue, thirdColor),
     ];
 
@@ -115,7 +117,7 @@ class SessionTile extends StatelessWidget {
                               children: [
                                 Text(
                                   isTournament
-                                      ? '$date · Tournament'
+                                      ? l10n.sessionTileTournamentHeader(date)
                                       : '$date · ${session.stakes}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,

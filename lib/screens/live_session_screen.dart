@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../data/poker_rooms.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 import '../models/session_model.dart';
 import '../providers/providers.dart';
 import '../services/analytics_service.dart';
@@ -44,21 +46,21 @@ Future<void> showLogSessionChooser(BuildContext context, WidgetRef ref) async {
           if (live != null)
             ListTile(
               leading: const Icon(Icons.circle, color: Colors.red, size: 14),
-              title: const Text('Resume live session'),
+              title: Text(ctx.l10n.liveChooserResume),
               subtitle: Text(_sessionLabel(live)),
               onTap: () => Navigator.pop(ctx, 'resume'),
             )
           else
             ListTile(
               leading: const Icon(Icons.play_circle_outline),
-              title: const Text('Start live session'),
-              subtitle: const Text('Running clock, rebuys, hands as you play'),
+              title: Text(ctx.l10n.liveChooserStart),
+              subtitle: Text(ctx.l10n.liveChooserStartHint),
               onTap: () => Navigator.pop(ctx, 'live'),
             ),
           ListTile(
             leading: const Icon(Icons.edit_note),
-            title: const Text('Log a past session'),
-            subtitle: const Text('Enter buy-in, cash-out and times by hand'),
+            title: Text(ctx.l10n.liveChooserPast),
+            subtitle: Text(ctx.l10n.liveChooserPastHint),
             onTap: () => Navigator.pop(ctx, 'past'),
           ),
           const SizedBox(height: 8),
@@ -100,8 +102,8 @@ class LiveSessionCard extends ConsumerWidget {
         clipBehavior: Clip.antiAlias,
         child: ListTile(
           leading: const Icon(Icons.circle, color: Colors.red, size: 14),
-          title: const Text('Live session in progress',
-              style: TextStyle(fontWeight: FontWeight.w600)),
+          title: Text(context.l10n.liveCardTitle,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text(
             '${_sessionLabel(live)}'
             '${live.location != null && live.location!.isNotEmpty ? ' · ${live.location}' : ''}',
@@ -243,12 +245,13 @@ class _LiveSessionStartScreenState
 
     // One live session at a time — guard against a stale second start.
     if (ref.read(liveSessionProvider).valueOrNull != null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('A live session is already in progress.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.liveStartAlreadyLive)));
       return;
     }
 
     setState(() => _saving = true);
+    final l10n = context.l10n;
     final now = DateTime.now();
     final buyIn = double.parse(_buyInCtrl.text);
     final stakesVal = _isTournament
@@ -296,7 +299,7 @@ class _LiveSessionStartScreenState
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to start session: $e')),
+        SnackBar(content: Text(l10n.liveStartFailed('$e'))),
       );
     }
   }
@@ -304,10 +307,11 @@ class _LiveSessionStartScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final sym = currencySymbol(_currency);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Start Live Session')),
+      appBar: AppBar(title: Text(l10n.liveStartTitle)),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -315,9 +319,10 @@ class _LiveSessionStartScreenState
               16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
           children: [
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'cash', label: Text('Cash Game')),
-                ButtonSegment(value: 'tournament', label: Text('Tournament')),
+              segments: [
+                ButtonSegment(value: 'cash', label: Text(l10n.gameTypeCash)),
+                ButtonSegment(
+                    value: 'tournament', label: Text(l10n.gameTypeTournament)),
               ],
               selected: {_gameType},
               onSelectionChanged: (v) => setState(() {
@@ -339,16 +344,16 @@ class _LiveSessionStartScreenState
               borderRadius: BorderRadius.circular(4),
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: 'Location',
+                  labelText: l10n.logSessionLocation,
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.search),
                   errorText: (_submitted && _locationName.isEmpty)
-                      ? 'Select a location'
+                      ? l10n.logSessionSelectLocation
                       : null,
                 ),
                 child: Text(
                   _locationName.isEmpty
-                      ? 'Select poker room...'
+                      ? l10n.logSessionSelectRoomHint
                       : _locationName,
                   style: _locationName.isEmpty
                       ? theme.textTheme.bodyMedium
@@ -362,9 +367,9 @@ class _LiveSessionStartScreenState
             DropdownButtonFormField<String>(
               key: ValueKey(_currency),
               initialValue: _currency,
-              decoration: const InputDecoration(
-                labelText: 'Currency',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.logSessionCurrency,
+                border: const OutlineInputBorder(),
               ),
               items: kCurrencies
                   .map((c) => DropdownMenuItem(
@@ -378,12 +383,15 @@ class _LiveSessionStartScreenState
               DropdownButtonFormField<String>(
                 key: ValueKey(_selectedStake),
                 initialValue: _selectedStake,
-                decoration: const InputDecoration(
-                  labelText: 'Stakes',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.logSessionStakes,
+                  border: const OutlineInputBorder(),
                 ),
                 items: kStakeOptions
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .map((s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(
+                            s == 'Other' ? l10n.logSessionStakesOther : s)))
                     .toList(),
                 onChanged: (v) => setState(() {
                   _selectedStake = v!;
@@ -394,14 +402,14 @@ class _LiveSessionStartScreenState
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _customStakeCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Custom Stakes',
-                    hintText: 'e.g. 3/6',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.logSessionCustomStakes,
+                    hintText: l10n.logSessionCustomStakesHint,
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (v) =>
                       (_isCustomStake && (v == null || v.trim().isEmpty))
-                          ? 'Enter stakes'
+                          ? l10n.logSessionEnterStakes
                           : null,
                 ),
               ],
@@ -409,14 +417,17 @@ class _LiveSessionStartScreenState
               DropdownButtonFormField<int?>(
                 key: ValueKey(_tableSize),
                 initialValue: _tableSize,
-                decoration: const InputDecoration(
-                  labelText: 'Table Size (optional)',
-                  border: OutlineInputBorder(),
+                // Fill the field width — the intrinsic-width dropdown overflowed
+                // by a few px on 360dp phones (caught by the l10n smoke test).
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.logSessionTableSize,
+                  border: const OutlineInputBorder(),
                 ),
                 items: [
                   DropdownMenuItem<int?>(
                     value: null,
-                    child: Text('Not specified',
+                    child: Text(l10n.logSessionNotSpecified,
                         style: TextStyle(
                             color: theme.colorScheme.onSurfaceVariant
                                 .withValues(alpha: 0.75))),
@@ -434,17 +445,19 @@ class _LiveSessionStartScreenState
               controller: _buyInCtrl,
               autofocus: false,
               decoration: InputDecoration(
-                labelText: _isTournament ? 'Buy-in (entry fee)' : 'Buy-in',
+                labelText: _isTournament
+                    ? l10n.logSessionBuyInTournament
+                    : l10n.logSessionBuyIn,
                 prefixText: '$sym ',
                 border: const OutlineInputBorder(),
               ),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Required';
+                if (v == null || v.trim().isEmpty) return l10n.commonRequired;
                 final n = double.tryParse(v);
-                if (n == null) return 'Invalid';
-                if (n <= 0) return 'Must be > 0';
+                if (n == null) return l10n.commonInvalid;
+                if (n <= 0) return l10n.liveStartMustBePositive;
                 return null;
               },
             ),
@@ -455,12 +468,11 @@ class _LiveSessionStartScreenState
               style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(52)),
               icon: const Icon(Icons.play_arrow),
-              label: Text(_saving ? 'Starting…' : 'Start Session'),
+              label: Text(_saving ? l10n.liveStartStarting : l10n.liveStartButton),
             ),
             const SizedBox(height: 8),
             Text(
-              'The clock starts now. You can add rebuys, your current stack, '
-              'and record hands while you play, then cash out at the end.',
+              l10n.liveStartHint,
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -507,6 +519,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   SupabaseService get _service => ref.read(supabaseServiceProvider);
 
   Future<void> _persist(SessionModel s, Map<String, dynamic> data) async {
+    final l10n = context.l10n;
     setState(() => _busy = true);
     try {
       await _service.updateSession(s.id, data);
@@ -514,7 +527,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Update failed: $e')));
+            .showSnackBar(SnackBar(content: Text(l10n.liveUpdateFailed('$e'))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -523,7 +536,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
 
   Future<void> _addBuyin(SessionModel s, String kind) async {
     final amount = await _promptAmount(
-      title: kind == 'rebuy' ? 'Add rebuy' : 'Add add-on',
+      title: kind == 'rebuy' ? context.l10n.liveAddRebuy : context.l10n.liveAddAddon,
       currency: s.currency,
     );
     if (amount == null || amount <= 0) return;
@@ -584,6 +597,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
 
   Future<double?> _promptAmount(
       {required String title, required String currency}) async {
+    final l10n = context.l10n;
     final ctrl = TextEditingController();
     final result = await showDialog<double>(
       context: context,
@@ -595,7 +609,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             prefixText: '${currencySymbol(currency)} ',
-            labelText: 'Amount',
+            labelText: l10n.expenseDialogAmount,
           ),
           onSubmitted: (_) =>
               Navigator.pop(ctx, double.tryParse(ctrl.text.trim())),
@@ -603,11 +617,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(l10n.commonCancel)),
           FilledButton(
             onPressed: () =>
                 Navigator.pop(ctx, double.tryParse(ctrl.text.trim())),
-            child: const Text('Add'),
+            child: Text(l10n.commonAdd),
           ),
         ],
       ),
@@ -629,6 +643,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   }
 
   Future<void> _endSession(SessionModel s) async {
+    final l10n = context.l10n;
     final ctrl = TextEditingController(
       text: s.currentStack != null
           ? s.currentStack!.toStringAsFixed(0)
@@ -637,12 +652,13 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
     final cashOut = await showDialog<double>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('End session'),
+        title: Text(l10n.liveEndTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Total bought in: ${formatPLWithCurrency(s.totalBuyIn, s.currency)}',
+              l10n.liveTotalBoughtIn(
+                  formatPLWithCurrency(s.totalBuyIn, s.currency)),
               style: Theme.of(ctx).textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -653,8 +669,10 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 prefixText: '${currencySymbol(s.currency)} ',
-                labelText: s.gameType == 'cash' ? 'Final cash-out' : 'Prize won',
-                hintText: '0 if busted',
+                labelText: s.gameType == 'cash'
+                    ? l10n.liveFinalCashOut
+                    : l10n.livePrizeWon,
+                hintText: l10n.liveBustedHint,
               ),
             ),
           ],
@@ -662,11 +680,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(l10n.commonCancel)),
           FilledButton(
             onPressed: () =>
                 Navigator.pop(ctx, double.tryParse(ctrl.text.trim()) ?? 0),
-            child: const Text('End & Save'),
+            child: Text(l10n.liveEndSave),
           ),
         ],
       ),
@@ -730,26 +748,26 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
         _leaving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to end session: $e')),
+        SnackBar(content: Text(l10n.liveEndFailed('$e'))),
       );
     }
   }
 
   Future<void> _discard(SessionModel s) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Discard live session?'),
-        content: const Text(
-            'This deletes the session and any buy-ins recorded. Hands you '
-            'recorded during it are kept but unlinked. This cannot be undone.'),
+        title: Text(l10n.liveDiscardTitle),
+        content: Text(l10n.liveDiscardBody),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(l10n.commonCancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Discard', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.liveDiscard,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -772,7 +790,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
         _leaving = false;
       });
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to discard: $e')));
+          .showSnackBar(SnackBar(content: Text(l10n.liveDiscardFailed('$e'))));
     }
   }
 
@@ -798,6 +816,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
 
   Widget _buildLive(BuildContext context, SessionModel s) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final cs = theme.colorScheme;
     final now = DateTime.now();
     final grossElapsed =
@@ -813,10 +832,10 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Live Session'),
+        title: Text(l10n.liveTitle),
         actions: [
           IconButton(
-            tooltip: 'Discard',
+            tooltip: l10n.liveDiscard,
             icon: const Icon(Icons.delete_outline),
             onPressed: _busy ? null : () => _discard(s),
           ),
@@ -850,9 +869,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                   const SizedBox(height: 4),
                   Text(
                     s.isOnBreak
-                        ? 'On break — clock paused'
-                        : 'Time played'
-                            '${breaksTotal.inMinutes > 0 ? ' · ${formatDuration(breaksTotal.inMinutes)} on break' : ''}',
+                        ? l10n.liveOnBreak
+                        : breaksTotal.inMinutes > 0
+                            ? l10n.liveTimePlayedWithBreak(
+                                formatDuration(breaksTotal.inMinutes))
+                            : l10n.liveTimePlayed,
                     style: theme.textTheme.bodySmall,
                   ),
                   const SizedBox(height: 2),
@@ -867,7 +888,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                     icon: Icon(
                         s.isOnBreak ? Icons.play_arrow : Icons.pause,
                         size: 18),
-                    label: Text(s.isOnBreak ? 'Resume' : 'Take a break'),
+                    label: Text(s.isOnBreak ? l10n.liveResume : l10n.liveTakeBreak),
                   ),
                 ],
               ),
@@ -876,7 +897,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           const SizedBox(height: 16),
 
           // Buy-ins
-          _sectionLabel(context, 'BUY-INS'),
+          _sectionLabel(context, l10n.liveBuyInsHeader),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -886,7 +907,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Total bought in', style: theme.textTheme.bodyMedium),
+                      Text(l10n.liveTotalBoughtInLabel, style: theme.textTheme.bodyMedium),
                       Text(
                         formatPLWithCurrency(s.totalBuyIn, s.currency),
                         style: const TextStyle(fontWeight: FontWeight.bold),
@@ -901,7 +922,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '${_kindLabel(e.kind)} · ${formatClockTime(e.ts.toLocal())}',
+                            '${_kindLabel(l10n, e.kind)} · ${formatClockTime(e.ts.toLocal())}',
                             style: theme.textTheme.bodySmall,
                           ),
                           Text(formatPLWithCurrency(e.amount, s.currency),
@@ -916,7 +937,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _busy ? null : () => _addBuyin(s, 'rebuy'),
                           icon: const Icon(Icons.add, size: 18),
-                          label: const Text('Rebuy'),
+                          label: Text(l10n.liveRebuy),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -924,7 +945,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _busy ? null : () => _addBuyin(s, 'addon'),
                           icon: const Icon(Icons.add, size: 18),
-                          label: const Text('Add-on'),
+                          label: Text(l10n.liveAddon),
                         ),
                       ),
                     ],
@@ -936,7 +957,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           const SizedBox(height: 16),
 
           // Expenses (tracked separately from the poker result)
-          _sectionLabel(context, 'EXPENSES'),
+          _sectionLabel(context, l10n.liveExpensesHeader),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -946,7 +967,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Total expenses', style: theme.textTheme.bodyMedium),
+                      Text(l10n.liveTotalExpenses, style: theme.textTheme.bodyMedium),
                       Text(
                         formatPLWithCurrency(s.totalExpenses, s.currency),
                         style: const TextStyle(fontWeight: FontWeight.bold),
@@ -962,7 +983,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${expenseCategoryLabel(e.category)} · ${formatClockTime(e.ts.toLocal())}'
+                              '${expenseCategoryLabel(l10n, e.category)} · ${formatClockTime(e.ts.toLocal())}'
                               '${e.note != null && e.note!.isNotEmpty ? ' · ${e.note}' : ''}',
                               style: theme.textTheme.bodySmall,
                               overflow: TextOverflow.ellipsis,
@@ -980,14 +1001,13 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _busy ? null : () => _addExpense(s),
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add expense'),
+                      label: Text(l10n.logSessionAddExpense),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      'Kept separate from your poker result — shown as a net '
-                      'after the session ends.',
+                      l10n.liveExpensesNote,
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: cs.onSurfaceVariant),
                     ),
@@ -999,7 +1019,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           const SizedBox(height: 16),
 
           // Current stack / live net
-          _sectionLabel(context, 'CURRENT STACK'),
+          _sectionLabel(context, l10n.liveStackHeader),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1010,7 +1030,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     prefixText: '${currencySymbol(s.currency)} ',
-                    labelText: 'Stack now',
+                    labelText: l10n.liveStackNow,
                     isDense: true,
                     border: const OutlineInputBorder(),
                   ),
@@ -1020,7 +1040,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
               const SizedBox(width: 8),
               FilledButton(
                 onPressed: _busy ? null : () => _setStack(s),
-                child: const Text('Set'),
+                child: Text(l10n.liveSet),
               ),
             ],
           ),
@@ -1030,7 +1050,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Live net (stack − bought in)',
+                  Text(l10n.liveNet,
                       style: theme.textTheme.bodySmall),
                   Text(
                     formatPLWithCurrency(net, s.currency),
@@ -1045,17 +1065,17 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           const SizedBox(height: 16),
 
           // Quick note
-          _sectionLabel(context, 'QUICK NOTE'),
+          _sectionLabel(context, l10n.liveNoteHeader),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _noteCtrl,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    hintText: 'Reads, dynamics, a spot to revisit…',
+                  decoration: InputDecoration(
+                    hintText: l10n.liveNoteHint,
                     isDense: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   onSubmitted: (_) => _addNote(s),
                 ),
@@ -1063,7 +1083,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
               const SizedBox(width: 8),
               FilledButton(
                 onPressed: _busy ? null : () => _addNote(s),
-                child: const Text('Add'),
+                child: Text(l10n.commonAdd),
               ),
             ],
           ),
@@ -1086,7 +1106,7 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
             style:
                 OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             icon: const Icon(Icons.add_card),
-            label: const Text('Record a Hand'),
+            label: Text(l10n.sessionDetailRecordHand),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
@@ -1094,17 +1114,18 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
             style:
                 FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
             icon: const Icon(Icons.stop_circle_outlined),
-            label: const Text('End Session'),
+            label: Text(l10n.liveEndSession),
           ),
         ],
       ),
     );
   }
 
-  static String _kindLabel(String kind) => switch (kind) {
-        'rebuy' => 'Rebuy',
-        'addon' => 'Add-on',
-        _ => 'Buy-in',
+  static String _kindLabel(AppLocalizations l10n, String kind) =>
+      switch (kind) {
+        'rebuy' => l10n.liveRebuy,
+        'addon' => l10n.liveAddon,
+        _ => l10n.liveKindBuyIn,
       };
 
   Widget _sectionLabel(BuildContext context, String text) => Padding(

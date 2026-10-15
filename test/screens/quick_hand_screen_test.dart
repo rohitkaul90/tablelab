@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/l10n/l10n.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/providers/providers.dart';
 import 'package:tablelab/screens/hand_input/quick_hand_screen.dart';
@@ -70,6 +71,10 @@ Future<void> pumpQuickHand(WidgetTester tester, FakeHandService fake,
     ProviderScope(
       overrides: [handServiceProvider.overrideWithValue(fake)],
       child: MaterialApp(
+        // QuickHandScreen embeds SessionPickerTile/LinkedSessionBanner, which
+        // read context.l10n (non-null getter) — the delegates are required.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: QuickHandScreen(
           prefilledSessionId: prefilledSessionId,
           prefilledStakes: prefilledStakes,
@@ -114,6 +119,10 @@ void main() {
       ProviderScope(
         overrides: [handServiceProvider.overrideWithValue(fake)],
         child: MaterialApp(
+        // QuickHandScreen embeds SessionPickerTile/LinkedSessionBanner, which
+        // read context.l10n (non-null getter) — the delegates are required.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (ctx) => ElevatedButton(
               onPressed: () => Navigator.push(
@@ -258,6 +267,10 @@ void main() {
         ProviderScope(
           overrides: [handServiceProvider.overrideWithValue(fake)],
           child: MaterialApp(
+        // QuickHandScreen embeds SessionPickerTile/LinkedSessionBanner, which
+        // read context.l10n (non-null getter) — the delegates are required.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
             home: Builder(
               builder: (ctx) => ElevatedButton(
                 onPressed: () => Navigator.push(

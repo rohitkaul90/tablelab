@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 import '../models/session_model.dart';
 import '../services/analytics_service.dart';
 import '../models/hand_model.dart';
@@ -20,6 +22,7 @@ class SessionDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final plColor = session.profitLoss >= 0 ? Colors.green : Colors.red;
     final dateStr =
         DateFormat('EEEE, MMMM d, yyyy').format(DateTime.parse(session.date));
@@ -32,11 +35,11 @@ class SessionDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Session Detail'),
+        title: Text(l10n.sessionDetailTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit',
+            tooltip: l10n.commonEdit,
             onPressed: () => Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -79,7 +82,7 @@ class SessionDetailScreen extends ConsumerWidget {
                   if (roi != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'ROI: ${formatROI(roi)}',
+                      l10n.sessionDetailRoi(formatROI(roi)),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: plColor,
                           ),
@@ -92,58 +95,58 @@ class SessionDetailScreen extends ConsumerWidget {
           const SizedBox(height: 16),
 
           if (!isTournament)
-            _Row(label: 'Stakes', value: session.stakes),
+            _Row(label: l10n.sessionDetailStakes, value: session.stakes),
 
           if (!isTournament && session.tableSize != null)
-            _Row(label: 'Table Size', value: tableSizeLabel(session.tableSize!)),
+            _Row(label: l10n.sessionDetailTableSize, value: tableSizeLabel(session.tableSize!)),
 
-          _Row(label: 'Buy-in', value: '$sym${session.buyIn.toStringAsFixed(0)}'),
+          _Row(label: l10n.sessionDetailBuyIn, value: '$sym${session.buyIn.toStringAsFixed(0)}'),
 
           if (isTournament) ...[
             _Row(
-                label: 'Prize Won',
+                label: l10n.sessionDetailPrizeWon,
                 value: '$sym${(session.prizeWon ?? 0).toStringAsFixed(0)}'),
             if (session.finishPosition != null)
               _Row(
-                label: 'Finish',
+                label: l10n.sessionDetailFinish,
                 value: session.totalEntrants != null
                     ? '${session.finishPosition} / ${session.totalEntrants}'
                     : '${session.finishPosition}',
               ),
           ] else
             _Row(
-                label: 'Cash-out',
+                label: l10n.sessionDetailCashOut,
                 value: '$sym${session.cashOut.toStringAsFixed(0)}'),
 
           if (session.rakePaid != null)
             _Row(
-                label: 'Rake / Fees',
+                label: l10n.sessionDetailRake,
                 value: '$sym${session.rakePaid!.toStringAsFixed(0)}'),
 
           if (session.expenseEvents.isNotEmpty) ...[
             _Row(
-                label: 'Expenses',
+                label: l10n.sessionDetailExpenses,
                 value: '-$sym${session.totalExpenses.toStringAsFixed(0)}'),
             _Row(
-                label: 'Net (after exp.)',
+                label: l10n.sessionDetailNetAfterExpenses,
                 value: formatPLWithCurrency(
                     session.netAfterExpenses, currency)),
           ],
 
-          _Row(label: 'Currency', value: currency),
+          _Row(label: l10n.sessionDetailCurrency, value: currency),
           _Row(
-              label: 'Duration',
+              label: l10n.sessionDetailDuration,
               value: formatDuration(session.durationMinutes)),
           if ((session.breakMinutes ?? 0) > 0)
             _Row(
-                label: 'Break',
+                label: l10n.sessionDetailBreak,
                 value: formatDuration(session.breakMinutes!)),
-          _Row(label: 'Time',
+          _Row(label: l10n.sessionDetailTime,
               value: '${session.startTime} → ${session.endTime}'),
 
           if (session.handsPerHour != null)
             _Row(
-                label: 'Hands/hr',
+                label: l10n.sessionDetailHandsPerHour,
                 value: '${session.handsPerHour}'),
 
           if (session.tableQuality != null && !isTournament) ...[
@@ -155,7 +158,7 @@ class SessionDetailScreen extends ConsumerWidget {
                   SizedBox(
                     width: 90,
                     child: Text(
-                      'Table',
+                      l10n.sessionDetailTable,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.outline,
                           ),
@@ -190,16 +193,16 @@ class SessionDetailScreen extends ConsumerWidget {
           ],
 
           if (session.location != null && session.location!.isNotEmpty)
-            _Row(label: 'Location', value: session.location!),
+            _Row(label: l10n.sessionDetailLocation, value: session.location!),
           if (session.country != null && session.country!.isNotEmpty)
-            _Row(label: 'Country', value: session.country!),
+            _Row(label: l10n.sessionDetailCountry, value: session.country!),
           if (session.notes != null && session.notes!.isNotEmpty)
-            _Row(label: 'Notes', value: session.notes!),
+            _Row(label: l10n.sessionDetailNotes, value: session.notes!),
 
           if (session.expenseEvents.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              'EXPENSES',
+              l10n.sessionDetailExpensesHeader,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     letterSpacing: 0.8,
@@ -215,7 +218,7 @@ class SessionDetailScreen extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '${expenseCategoryLabel(e.category)}'
+                        '${expenseCategoryLabel(l10n, e.category)}'
                         '${e.note != null && e.note!.isNotEmpty ? ' · ${e.note}' : ''}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
@@ -234,7 +237,7 @@ class SessionDetailScreen extends ConsumerWidget {
           const SizedBox(height: 32),
           FilledButton.icon(
             icon: const Icon(Icons.auto_awesome),
-            label: const Text('AI Analysis'),
+            label: Text(l10n.sessionDetailAiAnalysis),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
             ),
@@ -250,7 +253,7 @@ class SessionDetailScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           OutlinedButton.icon(
             icon: const Icon(Icons.style_outlined),
-            label: const Text('Record a Hand'),
+            label: Text(l10n.sessionDetailRecordHand),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
             ),
@@ -271,8 +274,8 @@ class SessionDetailScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           OutlinedButton.icon(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
-            label: const Text('Delete Session',
-                style: TextStyle(color: Colors.red)),
+            label: Text(l10n.sessionDetailDelete,
+                style: const TextStyle(color: Colors.red)),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
               side: const BorderSide(color: Colors.red),
@@ -285,19 +288,21 @@ class SessionDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Session?'),
-        content: const Text('This action cannot be undone.'),
+        title: Text(l10n.sessionDetailDeleteTitle),
+        content: Text(l10n.sessionDetailDeleteBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.commonDelete,
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -313,7 +318,7 @@ class SessionDetailScreen extends ConsumerWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete session: $e')),
+            SnackBar(content: Text(l10n.sessionDetailDeleteFailed('$e'))),
           );
         }
       }
@@ -332,11 +337,11 @@ class _HandsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final handsAsync = ref.watch(handsProvider);
 
-    final header = handsAsync.maybeWhen(
-      data: (hands) =>
-          hands.where((h) => h.sessionId == sessionId).length.toString(),
+    final count = handsAsync.maybeWhen(
+      data: (hands) => hands.where((h) => h.sessionId == sessionId).length,
       orElse: () => null,
     );
 
@@ -346,7 +351,9 @@ class _HandsSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
-            header == null ? 'HANDS THIS SESSION' : 'HANDS THIS SESSION ($header)',
+            count == null
+                ? l10n.sessionDetailHandsHeader
+                : l10n.sessionDetailHandsHeaderCount(count),
             style: theme.textTheme.labelSmall?.copyWith(
               letterSpacing: 1.2,
               color: theme.colorScheme.primary,
@@ -368,7 +375,7 @@ class _HandsSection extends ConsumerWidget {
           error: (_, _) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Could not load hands.',
+              l10n.sessionDetailHandsLoadFailed,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -383,8 +390,7 @@ class _HandsSection extends ConsumerWidget {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  'No hands linked to this session yet. Use "Record a Hand" '
-                  'below and they\'ll appear here.',
+                  l10n.sessionDetailNoHands,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     height: 1.4,
@@ -450,7 +456,8 @@ class _SessionHandTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pot \$$potStr · ${hand.streetReached}',
+                      context.l10n.sessionDetailHandPot(
+                          '\$$potStr', hand.streetReached),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
