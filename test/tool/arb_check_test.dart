@@ -102,6 +102,19 @@ void main() {
       expect(problems.join('\n'), contains('greeting: translation is stale'));
     });
 
+    test('a hand-added translation with no recorded hash is reported as such',
+        () {
+      final es = <String, dynamic>{
+        '@@locale': 'es',
+        'greeting': 'Hola {name}',
+        'close': 'Cerrar',
+      };
+      final problems = checkArb(template: template, targets: {'es': es}, state: {});
+      expect(problems, hasLength(2));
+      expect(problems.join('\n'), contains('no entry in translation_state.json'));
+      expect(problems.join('\n'), isNot(contains('stale')));
+    });
+
     test('short English messages need a description', () {
       final bare = <String, dynamic>{'@@locale': 'en', 'call': 'Call'};
       final problems = checkArb(template: bare, targets: {}, state: {});

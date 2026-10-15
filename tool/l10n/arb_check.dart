@@ -9,6 +9,10 @@ import 'package:crypto/crypto.dart';
 /// The ARB template locale (source of truth for every other locale).
 const kTemplateLocale = 'en';
 
+/// Sidecar recording, per locale and key, the sha256 of the English source
+/// each translation was made from.
+const kStateFileName = 'translation_state.json';
+
 /// sha256 of an English source string — the sidecar `translation_state.json`
 /// stores this per (locale, key) so a translation is re-generated only when its
 /// English source changes (a reviewer's hand edit is never overwritten until
@@ -167,7 +171,13 @@ List<String> checkArb({
       }
       problems.addAll(validateMessage(
           key: key, english: english, candidate: candidate, locale: locale));
-      if (localeState[key] != sourceHash(english)) {
+      final recorded = localeState[key];
+      if (recorded == null) {
+        problems.add(
+            '[$locale] $key: no entry in $kStateFileName — a hand-added '
+            'translation needs its source hash recorded (run '
+            'tool/l10n/translate.dart --record, or translate it)');
+      } else if (recorded != sourceHash(english)) {
         problems.add(
             '[$locale] $key: translation is stale — English changed since it '
             'was translated (run tool/l10n/translate.dart)');

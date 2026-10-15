@@ -14,7 +14,7 @@ import 'dart:io';
 import 'arb_check.dart';
 
 Future<void> main(List<String> args) async {
-  final arbDir = _flag(args, '--arb-dir') ?? 'lib/l10n';
+  final arbDir = flagValue(args, '--arb-dir') ?? 'lib/l10n';
   final files = loadArbDirectory(Directory(arbDir));
   final problems = checkArb(
     template: files.template,
@@ -34,7 +34,8 @@ Future<void> main(List<String> args) async {
   exitCode = 1;
 }
 
-String? _flag(List<String> args, String name) {
+/// `--name value` argument lookup shared with translate.dart.
+String? flagValue(List<String> args, String name) {
   final i = args.indexOf(name);
   return i >= 0 && i + 1 < args.length ? args[i + 1] : null;
 }
@@ -46,8 +47,6 @@ class ArbFiles {
   final Map<String, Map<String, dynamic>> targets;
   final Map<String, Map<String, String>> state;
 }
-
-const kStateFileName = 'translation_state.json';
 
 ArbFiles loadArbDirectory(Directory dir) {
   final templateFile = File('${dir.path}/app_$kTemplateLocale.arb');

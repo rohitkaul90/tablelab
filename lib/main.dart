@@ -134,7 +134,12 @@ void main() async {
         // GoTrue records the primary provider here ('email' | 'google');
         // mirrors auth.identities.provider, set once as a person property.
         signupMethod: user.appMetadata['provider'] as String?,
-        language: initialLocale.languageCode,
+        // Re-resolved per sign-in (not the captured startup value) so a
+        // language change before a later sign-in isn't regressed by identify.
+        language: resolveLocale(
+          LocaleNotifier.read(prefs),
+          WidgetsBinding.instance.platformDispatcher.locales,
+        ).languageCode,
       );
     } else if (event == AuthChangeEvent.signedOut) {
       AnalyticsService.reset();
@@ -171,11 +176,18 @@ class _PokerTrackerAppState extends ConsumerState<PokerTrackerApp>
   }
 
   @override
-  void didChangeLocales(List<Locale>? locales) {
-    // "System" language mode tracks the device: re-resolve and reload intl's
-    // symbols (fire-and-forget — the next frame picks up the new default).
+  Future<void> didChangeLocales(List<Locale>? locales) async {
+    // "System" language mode tracks the device. Load intl's symbols for the
+    // new locale FIRST, then invalidate so the rebuild that follows already
+    // formats dates/numbers in it (invalidating first would render a
+    // mixed-language frame until some unrelated rebuild).
+    final next = resolveLocale(
+      ref.read(localeProvider),
+      WidgetsBinding.instance.platformDispatcher.locales,
+    );
+    await applyIntlLocale(next);
+    if (!mounted) return;
     ref.invalidate(resolvedLocaleProvider);
-    applyIntlLocale(ref.read(resolvedLocaleProvider));
   }
 
   @override

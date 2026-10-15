@@ -1073,58 +1073,9 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
     return isHours ? (n * 60).round() : n.round();
   }
 
-  String? _parseDate(String raw) {
-    final cleaned = raw
-        .replaceAll(
-            RegExp(
-                r'^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*(,\s*|\s+)',
-                caseSensitive: false),
-            '')
-        .trim();
+  String? _parseDate(String raw) => parseImportDate(raw);
 
-    final asNum = double.tryParse(cleaned);
-    if (asNum != null && asNum >= 36526 && asNum <= 73050) {
-      final serial = asNum.truncate();
-      final effectiveDays = serial > 59 ? serial - 1 : serial;
-      final dt = DateTime.utc(1899, 12, 30).add(Duration(days: effectiveDays));
-      return '${dt.year.toString().padLeft(4, '0')}-'
-          '${dt.month.toString().padLeft(2, '0')}-'
-          '${dt.day.toString().padLeft(2, '0')}';
-    }
-
-    const formats = [
-      'yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy',
-      'd/M/yyyy', 'MMM d, yyyy', 'MMMM d, yyyy', 'dd-MM-yyyy',
-      'MM-dd-yyyy', 'd MMM yyyy', 'MMM dd yyyy', 'yyyy/MM/dd',
-      'dd.MM.yyyy', 'M/d/yy', 'd/M/yy', 'MMM-dd-yyyy',
-    ];
-    for (final fmt in formats) {
-      try {
-        return DateFormat('yyyy-MM-dd')
-            .format(DateFormat(fmt).parseStrict(cleaned));
-      } catch (_) {}
-    }
-    try {
-      final dt = DateTime.parse(cleaned).toUtc();
-      return '${dt.year.toString().padLeft(4, '0')}-'
-          '${dt.month.toString().padLeft(2, '0')}-'
-          '${dt.day.toString().padLeft(2, '0')}';
-    } catch (_) {}
-    return null;
-  }
-
-  String _normalizeTime(String raw) {
-    if (raw.isEmpty) return '00:00';
-    try {
-      if (RegExp(r'^\d{1,2}:\d{2}(:\d{2})?$').hasMatch(raw)) {
-        final parts = raw.split(':');
-        return '${parts[0].padLeft(2, '0')}:${parts[1]}';
-      }
-      return DateFormat('HH:mm').format(DateFormat('h:mm a').parseLoose(raw));
-    } catch (_) {
-      return '00:00';
-    }
-  }
+  String _normalizeTime(String raw) => normalizeImportTime(raw);
 
   // ─── Build ────────────────────────────────────────────────────────────────
 
@@ -1497,5 +1448,71 @@ class _PreviewCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ── Import value normalisers ─────────────────────────────────────────────────
+// Exported CSV/Excel files carry ENGLISH month names and AM/PM markers whatever
+// the user's UI language, so every DateFormat here is pinned to 'en_US'. A bare
+// DateFormat would follow Intl.defaultLocale (set from the app language by
+// locale_provider.dart) and silently reject "Jan 5, 2024" / "7:30 PM" for a
+// Spanish user. Top-level + @visibleForTesting so the regression test can run
+// them under a non-English Intl locale.
+
+/// Normalises an imported date cell to `yyyy-MM-dd`, or null if unparseable.
+@visibleForTesting
+String? parseImportDate(String raw) {
+  final cleaned = raw
+      .replaceAll(
+          RegExp(
+              r'^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*(,\s*|\s+)',
+              caseSensitive: false),
+          '')
+      .trim();
+
+  final asNum = double.tryParse(cleaned);
+  if (asNum != null && asNum >= 36526 && asNum <= 73050) {
+    final serial = asNum.truncate();
+    final effectiveDays = serial > 59 ? serial - 1 : serial;
+    final dt = DateTime.utc(1899, 12, 30).add(Duration(days: effectiveDays));
+    return '${dt.year.toString().padLeft(4, '0')}-'
+        '${dt.month.toString().padLeft(2, '0')}-'
+        '${dt.day.toString().padLeft(2, '0')}';
+  }
+
+  const formats = [
+    'yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy',
+    'd/M/yyyy', 'MMM d, yyyy', 'MMMM d, yyyy', 'dd-MM-yyyy',
+    'MM-dd-yyyy', 'd MMM yyyy', 'MMM dd yyyy', 'yyyy/MM/dd',
+    'dd.MM.yyyy', 'M/d/yy', 'd/M/yy', 'MMM-dd-yyyy',
+  ];
+  for (final fmt in formats) {
+    try {
+      return DateFormat('yyyy-MM-dd', 'en_US')
+          .format(DateFormat(fmt, 'en_US').parseStrict(cleaned));
+    } catch (_) {}
+  }
+  try {
+    final dt = DateTime.parse(cleaned).toUtc();
+    return '${dt.year.toString().padLeft(4, '0')}-'
+        '${dt.month.toString().padLeft(2, '0')}-'
+        '${dt.day.toString().padLeft(2, '0')}';
+  } catch (_) {}
+  return null;
+}
+
+/// Normalises an imported time cell to `HH:mm` (`00:00` when blank/unparseable).
+@visibleForTesting
+String normalizeImportTime(String raw) {
+  if (raw.isEmpty) return '00:00';
+  try {
+    if (RegExp(r'^\d{1,2}:\d{2}(:\d{2})?$').hasMatch(raw)) {
+      final parts = raw.split(':');
+      return '${parts[0].padLeft(2, '0')}:${parts[1]}';
+    }
+    return DateFormat('HH:mm', 'en_US')
+        .format(DateFormat('h:mm a', 'en_US').parseLoose(raw));
+  } catch (_) {
+    return '00:00';
   }
 }

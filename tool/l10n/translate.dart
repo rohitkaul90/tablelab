@@ -6,6 +6,9 @@
 //   dart run tool/l10n/translate.dart --key navStats  # only these keys (forces)
 //   dart run tool/l10n/translate.dart --all           # re-translate everything
 //   dart run tool/l10n/translate.dart --dry-run       # show the work, call nothing
+//   dart run tool/l10n/translate.dart --record        # no API: record source hashes
+//                                                     # for translations a reviewer
+//                                                     # hand-added to a target ARB
 //
 // For each target locale it selects the keys that are absent from
 // lib/l10n/app_<locale>.arb OR whose English source changed since they were
@@ -25,7 +28,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import 'arb_check.dart';
-import 'check_arb.dart' show kStateFileName, loadArbDirectory;
+import 'check_arb.dart' show flagValue, loadArbDirectory;
 
 const _endpoint = 'https://api.anthropic.com/v1/messages';
 const _defaultModel = 'claude-opus-5-5';
@@ -33,19 +36,20 @@ const _batchSize = 60;
 const _maxAttempts = 4;
 
 Future<void> main(List<String> args) async {
-  final arbDir = _flag(args, '--arb-dir') ?? 'lib/l10n';
-  final model = _flag(args, '--model') ?? _defaultModel;
+  final arbDir = flagValue(args, '--arb-dir') ?? 'lib/l10n';
+  final model = flagValue(args, '--model') ?? _defaultModel;
   final dryRun = args.contains('--dry-run');
+  final recordOnly = args.contains('--record');
   final forceAll = args.contains('--all');
-  final onlyKeys = _flag(args, '--key')?.split(',').toSet();
-  final glossary = jsonDecode(
-          File('tool/l10n/glossary.json').readAsStringSync())
+  final onlyKeys = flagValue(args, '--key')?.split(',').toSet();
+  final glossary = jsonDecode(_glossaryFile().readAsStringSync())
       as Map<String, dynamic>;
   final register = (glossary['register'] as Map).cast<String, String>();
-  final locales = _flag(args, '--locale')?.split(',') ?? register.keys.toList();
+  final locales =
+      flagValue(args, '--locale')?.split(',') ?? register.keys.toList();
 
   final apiKey = Platform.environment['ANTHROPIC_API_KEY'];
-  if (!dryRun && (apiKey == null || apiKey.isEmpty)) {
+  if (!dryRun && !recordOnly && (apiKey == null || apiKey.isEmpty)) {
     stderr.writeln('translate: ANTHROPIC_API_KEY is not set');
     exit(2);
   }
@@ -65,6 +69,24 @@ Future<void> main(List<String> args) async {
     }
     final target = Map<String, dynamic>.of(files.targets[locale] ?? {});
     final localeState = state.putIfAbsent(locale, () => {});
+    // Drop hashes for keys that no longer exist in app_en.arb so renames and
+    // deletions don't leave dead entries behind.
+    localeState.removeWhere((k, _) => !template.containsKey(k));
+
+    if (recordOnly) {
+      // A reviewer hand-added a translation without an API key: trust it and
+      // record the English hash it corresponds to.
+      var recorded = 0;
+      for (final key in enKeys) {
+        if (target.containsKey(key) && localeState[key] == null) {
+          localeState[key] = sourceHash(template[key] as String);
+          recorded++;
+        }
+      }
+      stdout.writeln('[$locale] recorded $recorded hand-added translation(s)');
+      continue;
+    }
+
     final pending = <String>[];
     for (final key in enKeys) {
       final english = template[key] as String;
@@ -132,6 +154,13 @@ Future<void> main(List<String> args) async {
     stdout.writeln('translate: $totalTranslated translation(s) written; '
         'now run `dart run tool/l10n/check_arb.dart` and `flutter gen-l10n`');
   }
+}
+
+/// glossary.json lives beside this script, wherever the script is run from.
+File _glossaryFile() {
+  final beside = File.fromUri(Platform.script.resolve('glossary.json'));
+  if (beside.existsSync()) return beside;
+  return File('tool/l10n/glossary.json');
 }
 
 Future<Map<String, String>> _translateBatch({
@@ -269,9 +298,4 @@ void _writeState(File file, Map<String, Map<String, String>> state) {
       },
   };
   file.writeAsStringSync('${const JsonEncoder.withIndent('  ').convert(out)}\n');
-}
-
-String? _flag(List<String> args, String name) {
-  final i = args.indexOf(name);
-  return i >= 0 && i + 1 < args.length ? args[i + 1] : null;
 }

@@ -186,6 +186,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () async {
                   Navigator.pop(ctx);
                   await ref.read(localeProvider.notifier).set(loc);
+                  if (!mounted) return;
                   AnalyticsService.languageChanged(
                     language: loc?.languageCode ?? 'system',
                     resolved: ref.read(resolvedLocaleProvider).languageCode,
