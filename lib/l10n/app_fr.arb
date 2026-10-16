@@ -1045,7 +1045,7 @@
   "varianceExpectedHeadline": "Attendu : {value}",
   "varianceReroll": "Relancer les simulations",
   "varianceChartCaption": "{range} · zones : 70 % et 95 % des résultats · lignes : 20 simulations · touche ou glisse sur le graphique pour voir un point (touche la ligne pour masquer)",
-  "varianceRange": "{low} à {high}",
+  "varianceRange": "{low} à {high} {unit}",
   "varianceTooltipExpected": "Attendu {value}",
   "varianceTooltipBand": "{pct} : {low} à {high}",
   "variance70": "70 % des résultats",

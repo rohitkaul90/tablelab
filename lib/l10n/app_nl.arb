@@ -1045,7 +1045,7 @@
   "varianceExpectedHeadline": "Verwacht: {value}",
   "varianceReroll": "Simulaties opnieuw draaien",
   "varianceChartCaption": "{range} · gearceerd: 70% en 95% van de uitkomsten · lijnen: 20 gesimuleerde runs · tik of sleep in de grafiek om een punt te bekijken (tik op de lijn om te verbergen)",
-  "varianceRange": "{low} tot {high}",
+  "varianceRange": "{low} tot {high} {unit}",
   "varianceTooltipExpected": "Verwacht {value}",
   "varianceTooltipBand": "{pct}: {low} tot {high}",
   "variance70": "70% van de uitkomsten",

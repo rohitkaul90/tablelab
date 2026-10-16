@@ -97,7 +97,9 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
         ],
       ),
     );
-    if (confirmed == true) _runAnalysis(forceRefresh: true);
+    // The screen can be popped while the dialog is open; _runAnalysis reads
+    // context.l10n, which throws on an unmounted element.
+    if (confirmed == true && mounted) _runAnalysis(forceRefresh: true);
   }
 
   @override

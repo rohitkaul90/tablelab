@@ -424,8 +424,9 @@ class _VarianceCalculatorScreenState
     }
 
     final dp = cash ? 0 : 1;
-    String range(double lo, double hi) => l10n.varianceRange(
-        '${fmt(lo, dp: dp)} $unit', '${fmt(hi, dp: dp)} $unit');
+    // Unit once, after the range ("-1,200 to 3,400 bb"), as before l10n.
+    String range(double lo, double hi) =>
+        l10n.varianceRange(fmt(lo, dp: dp), fmt(hi, dp: dp), unit);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

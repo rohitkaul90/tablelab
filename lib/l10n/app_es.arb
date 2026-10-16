@@ -1045,7 +1045,7 @@
   "varianceExpectedHeadline": "Esperado: {value}",
   "varianceReroll": "Volver a simular",
   "varianceChartCaption": "{range} · sombreado: 70% y 95% de resultados · líneas: 20 simulaciones · toca o arrastra el gráfico para ver un punto (toca la línea para ocultarla)",
-  "varianceRange": "{low} a {high}",
+  "varianceRange": "{low} a {high} {unit}",
   "varianceTooltipExpected": "Esperado {value}",
   "varianceTooltipBand": "{pct}: {low} a {high}",
   "variance70": "70% de resultados",

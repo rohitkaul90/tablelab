@@ -1045,7 +1045,7 @@
   "varianceExpectedHeadline": "Atteso: {value}",
   "varianceReroll": "Rigenera simulazioni",
   "varianceChartCaption": "{range} · aree: 70% e 95% dei risultati · linee: 20 simulazioni · tocca o trascina il grafico per vedere un punto (tocca la linea per nasconderla)",
-  "varianceRange": "da {low} a {high}",
+  "varianceRange": "da {low} a {high} {unit}",
   "varianceTooltipExpected": "Atteso {value}",
   "varianceTooltipBand": "{pct}: da {low} a {high}",
   "variance70": "70% dei risultati",

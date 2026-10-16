@@ -10,7 +10,6 @@ import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
 import '../../services/ai_service.dart';
 import '../../reads/tag_definitions.dart';
-import '../../l10n/l10n.dart';
 import '../../widgets/ai/ai_disclaimer_footer.dart';
 import '../../widgets/ai/analysis_feedback_bar.dart';
 import '../../widgets/playing_card_widget.dart';
@@ -153,7 +152,9 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
         ],
       ),
     );
-    if (confirmed == true) _runAnalysis(forceRefresh: true);
+    // The screen can be popped while the dialog is open; _runAnalysis reads
+    // context.l10n, which throws on an unmounted element.
+    if (confirmed == true && mounted) _runAnalysis(forceRefresh: true);
   }
 
   @override

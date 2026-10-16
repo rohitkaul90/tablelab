@@ -4920,14 +4920,17 @@
       }
     }
   },
-  "varianceRange": "{low} to {high}",
+  "varianceRange": "{low} to {high} {unit}",
   "@varianceRange": {
-    "description": "A value range; each side already includes its unit.",
+    "description": "A value range with its unit once at the end, e.g. \"-1,200 to 3,400 bb\"; {unit} is bb, $ or %.",
     "placeholders": {
       "low": {
         "type": "String"
       },
       "high": {
+        "type": "String"
+      },
+      "unit": {
         "type": "String"
       }
     }
