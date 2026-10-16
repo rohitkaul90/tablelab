@@ -5872,7 +5872,7 @@
   "@faqGettingStarted3Q": {
     "description": "Help & FAQ question (Getting Started section)."
   },
-  "faqGettingStarted3A": "The bottom navigation bar has five tabs: Stats, Sessions, Hands, Reads, and Tools (Equity Calculator and ICM Deal Calculator). Tap the menu icon (☰) in the top-left of any screen to open the side drawer. The drawer contains your profile, Tournament Calendar, Settings, Help, About, and Data & Privacy.",
+  "faqGettingStarted3A": "The bottom navigation bar has tabs for Stats, Sessions, Hands and Reads (plus Study when available). Tap the menu icon (☰) in the top-left of any screen to open the side drawer: it holds your Profile, Tools (Equity, ICM and Variance calculators), Tournament Calendar, Settings, Send Feedback, Help, About, and the legal pages.",
   "@faqGettingStarted3A": {
     "description": "Help & FAQ answer to \"How do I navigate the app?\" (Getting Started section). Keep app feature names consistent with the rest of the UI."
   },
@@ -5948,11 +5948,11 @@
   "@helpSectionAnalytics": {
     "description": "Help & FAQ section heading (shown uppercased): Analytics."
   },
-  "faqAnalytics1Q": "Where do I find Analytics?",
+  "faqAnalytics1Q": "Where do I find my stats breakdowns?",
   "@faqAnalytics1Q": {
     "description": "Help & FAQ question (Analytics section)."
   },
-  "faqAnalytics1A": "Go to the Stats tab and tap the \"Analytics\" chip at the top. The Analytics view lives alongside the Overview tab on the same screen.",
+  "faqAnalytics1A": "Open the Stats tab. The Summary tab shows your headline numbers; the tabs next to it break your results down by stakes, buy-in, day, time, session length, location and more; the Tips tab turns the strongest patterns into recommendations. Use the filter icon to narrow by game type, date, currency or venue.",
   "@faqAnalytics1A": {
     "description": "Help & FAQ answer to \"Where do I find Analytics?\" (Analytics section). Keep app feature names consistent with the rest of the UI."
   },
@@ -6172,7 +6172,7 @@
   "@faqTools1Q": {
     "description": "Help & FAQ question (Tools section)."
   },
-  "faqTools1A": "The Equity Calculator (under Tools in the drawer) lets you calculate hand vs. range equity. Enter a specific hand and one or more opponent ranges, and it computes each side's equity across all possible run-outs — useful for understanding how ahead or behind you are in a given spot.",
+  "faqTools1A": "The Equity Calculator (drawer → Tools → Equity) lets you calculate hand vs. range equity. Enter a specific hand and one or more opponent ranges, and it computes each side's equity across all possible run-outs — useful for understanding how ahead or behind you are in a given spot.",
   "@faqTools1A": {
     "description": "Help & FAQ answer to \"What is the Equity Calculator?\" (Tools section). Keep app feature names consistent with the rest of the UI."
   },
@@ -6180,7 +6180,7 @@
   "@faqTools2Q": {
     "description": "Help & FAQ question (Tools section)."
   },
-  "faqTools2A": "The ICM Deal Calculator (under Tools in the drawer) helps final table players agree on a fair chip-chop deal. Enter each player's chip count and the remaining prize spots, and it computes two values: the ICM deal (which accounts for payout structure and risk of elimination) and a straight chip-chop (chips ÷ total chips × prize pool). The Diff column shows who gains or loses under each method.",
+  "faqTools2A": "The ICM Deal Calculator (drawer → Tools → ICM) helps final table players agree on a fair chip-chop deal. Enter each player's chip count and the remaining prize spots, and it computes two values: the ICM deal (which accounts for payout structure and risk of elimination) and a straight chip-chop (chips ÷ total chips × prize pool). The Diff column shows who gains or loses under each method.",
   "@faqTools2A": {
     "description": "Help & FAQ answer to \"What is the ICM Deal Calculator?\" (Tools section). Keep app feature names consistent with the rest of the UI."
   },
@@ -6216,7 +6216,7 @@
   "@faqImportExport2Q": {
     "description": "Help & FAQ question (Import & Export section)."
   },
-  "faqImportExport2A": "Tap Import on the Import/Export screen and pick a CSV or Excel file from your device. TableLab will show a column mapping UI — drag or assign your spreadsheet's columns to the correct session fields. Confirm the mapping and the sessions will be imported.",
+  "faqImportExport2A": "Tap Import on the Import/Export screen and pick a CSV or Excel file from your device. TableLab shows a column-mapping screen — pick which of your spreadsheet's columns fills each session field (Date and Buy-in are required). Check the preview, then confirm and the sessions are imported.",
   "@faqImportExport2A": {
     "description": "Help & FAQ answer to \"How do I import sessions from a spreadsheet?\" (Import & Export section). Keep app feature names consistent with the rest of the UI."
   },
@@ -6260,7 +6260,7 @@
   "@faqAccount4Q": {
     "description": "Help & FAQ question (Account & Data section)."
   },
-  "faqAccount4A": "In-app account deletion is not yet supported. To request full deletion of your data, contact support.",
+  "faqAccount4A": "Yes. Go to Settings → Danger Zone → Delete Account. After two confirmations your account and all your data (sessions, hands, reads, AI analyses and profile) are permanently deleted. This cannot be undone.",
   "@faqAccount4A": {
     "description": "Help & FAQ answer to \"Can I delete my account?\" (Account & Data section). Keep app feature names consistent with the rest of the UI."
   },
@@ -6492,7 +6492,7 @@
   "@importOverwriteBody": {
     "description": "Import option switch subtitle (destructive)."
   },
-  "importOverwriteRows": "{count, plural, one{Import & overwrite (1 row)} other{Import & overwrite ({count} rows)}}",
+  "importOverwriteRows": "{count, plural, one{Import & overwrite ({count} row)} other{Import & overwrite ({count} rows)}}",
   "@importOverwriteRows": {
     "description": "Import button when the overwrite option is on.",
     "placeholders": {
@@ -6501,7 +6501,7 @@
       }
     }
   },
-  "importRows": "{count, plural, one{Import 1 row} other{Import {count} rows}}",
+  "importRows": "{count, plural, one{Import {count} row} other{Import {count} rows}}",
   "@importRows": {
     "description": "Import button.",
     "placeholders": {
@@ -6510,7 +6510,7 @@
       }
     }
   },
-  "importRowsReady": "{valid} of {total} rows ready to import",
+  "importRowsReady": "{total, plural, one{{valid} of {total} row ready to import} other{{valid} of {total} rows ready to import}}",
   "@importRowsReady": {
     "description": "Import preview headline.",
     "placeholders": {

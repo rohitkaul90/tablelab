@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../data/poker_rooms.dart';
 import '../l10n/l10n.dart';
-import '../l10n/labels.dart' show safeDateFormat;
+import '../l10n/labels.dart' show uiDate;
 import '../services/analytics_service.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
@@ -744,7 +744,6 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       valid++;
     }
 
-
     return _ImportPreview(
       valid: valid,
       total: widget.rows.length,
@@ -1028,7 +1027,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       }
 
       if (sessions.isEmpty) {
-        throw FormatException(l10n.importNoValidRows);
+        throw _NoValidRows(l10n.importNoValidRows);
       }
 
       if (_overwrite) await service.clearAllSessions();
@@ -1048,8 +1047,9 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error =
-          e is FormatException ? e.message : l10n.importFailed('$e'));
+          e is _NoValidRows ? e.message : l10n.importFailed('$e'));
     } finally {
       if (mounted) setState(() => _importing = false);
     }
@@ -1245,9 +1245,9 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                                             : null,
                                       ),
                             ),
-                            if (_fieldHint(l10n, field.key) != null)
+                            if (_fieldHint(l10n, field.key) case final hint?)
                               Text(
-                                _fieldHint(l10n, field.key)!,
+                                hint,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -1399,8 +1399,8 @@ class _PreviewCard extends StatelessWidget {
 
     String dateRange = '';
     if (preview.dateMin != null && preview.dateMax != null) {
-      String fmt(String iso) => safeDateFormat(
-          (loc) => DateFormat.yMMMd(loc), l10n.localeName, DateTime.parse(iso));
+      String fmt(String iso) =>
+          uiDate((l) => DateFormat.yMMMd(l), DateTime.parse(iso));
       final min = fmt(preview.dateMin!);
       final max = fmt(preview.dateMax!);
       dateRange = preview.dateMin == preview.dateMax ? min : '$min – $max';
@@ -1558,4 +1558,12 @@ String normalizeImportTime(String raw) {
   } catch (_) {
     return '00:00';
   }
+}
+
+/// The "no rows passed validation" outcome — a private type so unrelated
+/// FormatExceptions (duration overflow, a JSON decode error) still get the
+/// localized "Import failed:" wrapper instead of a bare English message.
+class _NoValidRows implements Exception {
+  _NoValidRows(this.message);
+  final String message;
 }
