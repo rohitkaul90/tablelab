@@ -20,7 +20,7 @@ List<ReadInsight> getInsights(List<String> tags, AppLocalizations l10n) {
     insights.add(ReadInsight(l10n.insightValueBetWideThin, basisTags: basisTags));
     insights.add(ReadInsight(l10n.insightNeverBluffWonT));
     if (s.contains('limps')) {
-      insights.add(ReadInsight(l10n.insightIsolateLimpsWideRaising, basisTags: ['fish', 'limps']));
+      insights.add(ReadInsight(l10n.insightIsolateLimpsWideRaising, basisTags: [...basisTags, 'limps']));
     }
   }
 

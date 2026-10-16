@@ -32,6 +32,9 @@ void main() {
           equals(['calling_station']));
       expect(insights(['fish', 'limps']).map((i) => i.basisTags),
           contains(equals(['fish', 'limps'])));
+      // A calling station who limps is credited to calling_station, not fish.
+      expect(insights(['calling_station', 'limps']).map((i) => i.basisTags),
+          contains(equals(['calling_station', 'limps'])));
     });
 
     test('every basis tag is a known tag id', () {

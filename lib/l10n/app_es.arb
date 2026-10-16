@@ -771,5 +771,6 @@
   "quickAddNoteHint": "p. ej. abrió 4x UTG con 45o, triple-barrel de farol",
   "quickAddHandDetails": "Detalles de la mano",
   "glossaryTitle": "Tipos de jugador",
-  "glossarySubtitle": "Qué significa cada etiqueta: elige la que mejor encaje con su juego."
+  "glossarySubtitle": "Qué significa cada etiqueta: elige la que mejor encaje con su juego.",
+  "handAnalysisReadsApplied": "Lecturas: {tags}"
 }

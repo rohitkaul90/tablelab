@@ -161,7 +161,9 @@ Color tagColor(String tag) {
   }
 }
 
-bool isArchetype(String tag) => kArchetypeTags.contains(tag);
+final Set<String> _kArchetypeSet = kArchetypeTags.toSet();
+
+bool isArchetype(String tag) => _kArchetypeSet.contains(tag);
 
 /// A version of [tag] with enough contrast to read on its own faint tint in
 /// both light and dark themes — keeps the hue but shifts the lightness toward

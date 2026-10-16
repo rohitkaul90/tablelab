@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -214,7 +215,17 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      await ref.read(readsServiceProvider).deleteRead(_read.id);
+      try {
+        await ref.read(readsServiceProvider).deleteRead(_read.id);
+      } catch (e) {
+        // Offline / request failure must not crash the handler.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.readDetailDeleteFailed('$e'))),
+          );
+        }
+        return;
+      }
       if (!mounted) return;
       ref.invalidate(readsProvider);
       Navigator.pop(context);
@@ -519,7 +530,7 @@ class _NoteTile extends StatelessWidget {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 60) return l10n.timeAgoMinutes(diff.inMinutes);
     if (diff.inHours < 24) return l10n.timeAgoHours(diff.inHours);
-    return '${dt.day}/${dt.month}/${dt.year}';
+    return DateFormat.yMd(l10n.localeName).format(dt);
   }
 }
 

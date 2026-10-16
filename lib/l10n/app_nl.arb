@@ -771,5 +771,6 @@
   "quickAddNoteHint": "bijv. 4x open UTG met 45o, triple-barrel bluf",
   "quickAddHandDetails": "Handdetails",
   "glossaryTitle": "Spelerstypes",
-  "glossarySubtitle": "Wat elke tag betekent — kies de tag die het best bij hun spel past."
+  "glossarySubtitle": "Wat elke tag betekent — kies de tag die het best bij hun spel past.",
+  "handAnalysisReadsApplied": "Reads: {tags}"
 }

@@ -969,7 +969,8 @@ void _showEquityAssumptions(BuildContext context, HandEquityCheck check) {
                 Text(
                   // Text stays English until the AI cluster PR; only the tag
                   // names follow the UI language.
-                  'Reads: ${v.appliedTags.map((t) => tagDisplayName(ctx.l10n, t)).join(', ')}',
+                  ctx.l10n.handAnalysisReadsApplied(
+                      v.appliedTags.map((t) => tagDisplayName(ctx.l10n, t)).join(', ')),
                   style: theme.textTheme.bodySmall,
                 ),
               ],

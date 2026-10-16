@@ -771,5 +771,6 @@
   "quickAddNoteHint": "ex. open 4x UTG avec 45o, bluff en triple-barrel",
   "quickAddHandDetails": "Détails de la main",
   "glossaryTitle": "Types de joueurs",
-  "glossarySubtitle": "Ce que veut dire chaque tag — choisis celui qui colle le mieux à son jeu."
+  "glossarySubtitle": "Ce que veut dire chaque tag — choisis celui qui colle le mieux à son jeu.",
+  "handAnalysisReadsApplied": "Lectures : {tags}"
 }

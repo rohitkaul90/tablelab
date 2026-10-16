@@ -3527,5 +3527,14 @@
   "glossarySubtitle": "What each tag means — pick the one that best fits how they play.",
   "@glossarySubtitle": {
     "description": "Subtitle of the player-type glossary sheet."
+  },
+  "handAnalysisReadsApplied": "Reads: {tags}",
+  "@handAnalysisReadsApplied": {
+    "description": "Equity assumptions sheet: the player-read tags applied to an opponent's range; {tags} is a comma-separated list of tag names.",
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
   }
 }
