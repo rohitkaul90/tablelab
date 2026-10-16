@@ -40,8 +40,8 @@ const _hudSoftware = <_AppSource>[
 ];
 
 const _tournamentDbs = <_AppSource>[
-  _AppSource('sharkscope',         'Sharkscope',         'Web — Gold subscription required'),
-  _AppSource('pokerstars_history', 'PokerStars History', 'Tournament history export'),
+  _AppSource('sharkscope',         'Sharkscope',         'Web — Gold'),
+  _AppSource('pokerstars_history', 'PokerStars History', 'PokerStars'),
 ];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -88,7 +88,10 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.importSourceReadFailed('$e'))),
+          SnackBar(content: Text(l10n.importSourceReadFailed(
+              // FormatException carries our localized text; show it without
+              // the English 'FormatException:' prefix toString() would add.
+              e is FormatException ? e.message : '$e'))),
         );
       }
     } finally {
@@ -121,7 +124,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
         fieldDelimiter: delimiter,
         eol: '\n',
       ).convert(content);
-      if (all.isEmpty) throw Exception(l10n.importSourceFileEmpty);
+      if (all.isEmpty) throw FormatException(l10n.importSourceFileEmpty);
       // Poker Bankroll Tracker prefixes with "—PBT Bankroll Export—"
       final skipMeta = all.length > 1 &&
           all[0].length == 1 &&
@@ -143,7 +146,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
         }
       }
       final sheetNames = excel.tables.keys.toList();
-      if (sheetNames.isEmpty) throw Exception(l10n.importSourceNoSheets);
+      if (sheetNames.isEmpty) throw FormatException(l10n.importSourceNoSheets);
 
       String sheetName;
       if (sheetNames.length == 1) {
@@ -156,7 +159,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
       }
       final sheet = excel.tables[sheetName]!;
       final allRows = sheet.rows;
-      if (allRows.isEmpty) throw Exception(l10n.importSourceSheetEmpty);
+      if (allRows.isEmpty) throw FormatException(l10n.importSourceSheetEmpty);
       headers = allRows.first
           .map((c) => _cellStr(c?.value).trim())
           .toList();
@@ -166,7 +169,7 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
           .where((r) => r.any((c) => c.isNotEmpty))
           .toList();
     } else {
-      throw Exception(l10n.importSourceUnsupportedType(ext));
+      throw FormatException(l10n.importSourceUnsupportedType(ext));
     }
 
     // Drop fully empty header columns (keep row data in sync)
@@ -180,8 +183,8 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
         .where((r) => r.any((c) => c.isNotEmpty))
         .toList();
 
-    if (headers.isEmpty) throw Exception(l10n.importSourceNoHeaders);
-    if (rows.isEmpty) throw Exception(l10n.importSourceNoRows);
+    if (headers.isEmpty) throw FormatException(l10n.importSourceNoHeaders);
+    if (rows.isEmpty) throw FormatException(l10n.importSourceNoRows);
     return (headers, rows);
   }
 
@@ -376,7 +379,7 @@ class _AppGroup extends StatelessWidget {
               ),
               title: Text(sources[i].name),
               subtitle: Text(
-                sources[i].platform,
+                _platformLabel(context.l10n, sources[i]),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.outline,
                     ),
@@ -392,3 +395,11 @@ class _AppGroup extends StatelessWidget {
     );
   }
 }
+
+/// Platform subtitle for a source card. Plain platform/brand strings pass
+/// through; the two descriptive ones are localized.
+String _platformLabel(AppLocalizations l10n, _AppSource src) => switch (src.presetId) {
+      'sharkscope' => l10n.importSourceSharkscopeNote,
+      'pokerstars_history' => l10n.importSourcePokerStarsNote,
+      _ => src.platform,
+    };

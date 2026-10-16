@@ -1441,9 +1441,14 @@
   "@profilePlayingSinceHint": {
     "description": "Profile field hint: a year."
   },
-  "profileHourlyRateGoal": "Hourly Rate Goal ($/hr)",
+  "profileHourlyRateGoal": "Hourly Rate Goal ({sym}/hr)",
   "@profileHourlyRateGoal": {
-    "description": "Profile field label; $/hr means money per hour."
+    "description": "Profile field label for the hourly win-rate goal; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
   },
   "profileHourlyRateGoalHint": "e.g. 25",
   "@profileHourlyRateGoalHint": {
@@ -1885,5 +1890,13 @@
   "aboutOperatedBy": "Operated by MagpiQ",
   "@aboutOperatedBy": {
     "description": "Footer line; MagpiQ is the company name — keep it."
+  },
+  "importSourceSharkscopeNote": "Web — Gold subscription required",
+  "@importSourceSharkscopeNote": {
+    "description": "Import source card subtitle for Sharkscope: a web service whose export needs the paid Gold plan."
+  },
+  "importSourcePokerStarsNote": "Tournament history export",
+  "@importSourcePokerStarsNote": {
+    "description": "Import source card subtitle for PokerStars History: the tournament-history export file."
   }
 }

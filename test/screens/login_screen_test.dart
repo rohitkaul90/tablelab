@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/l10n/generated/app_localizations.dart';
 import 'package:tablelab/screens/auth/login_screen.dart';
 
 import '../helpers/pump_app.dart';
@@ -162,9 +163,10 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull);
-      // A translated label is on screen and the English one is gone.
+      // The Dutch label is on screen and the English one is gone.
+      final nl = lookupAppLocalizations(const Locale('nl'));
       expect(find.text('Sign In'), findsNothing);
-      expect(find.byType(FilledButton), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, nl.loginSignIn), findsOneWidget);
     });
   });
 }

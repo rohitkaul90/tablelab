@@ -325,7 +325,7 @@
   "profileSectionGoals": "Doelen & achtergrond",
   "profilePlayingSince": "Speelt sinds (jaar)",
   "profilePlayingSinceHint": "bijv. 2018",
-  "profileHourlyRateGoal": "Doel uurloon ($/u)",
+  "profileHourlyRateGoal": "Doel uurloon ({sym}/u)",
   "profileHourlyRateGoalHint": "bijv. 25",
   "profileSectionBankroll": "Bankroll",
   "profileStartingBankroll": "Startbankroll",
@@ -429,5 +429,7 @@
   "aboutFeatureCurrencyBody": "CAD, USD, GBP, EUR — speel waar ook ter wereld en je bankroll klopt in elke valuta.",
   "aboutVisionTitle": "De visie",
   "aboutVisionBody": "Een compleet poker-intelligenceplatform — tracking, analyse, studietools, realtime coaching en uiteindelijk een community — voor elke speler die het spel serieus genoeg neemt om ook buiten de tafel het werk te doen. Gebouwd door een speler, voor spelers.",
-  "aboutOperatedBy": "Beheerd door MagpiQ"
+  "aboutOperatedBy": "Beheerd door MagpiQ",
+  "importSourceSharkscopeNote": "Web — Gold-abonnement vereist",
+  "importSourcePokerStarsNote": "Export toernooigeschiedenis"
 }

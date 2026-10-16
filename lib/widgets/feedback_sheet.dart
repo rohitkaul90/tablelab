@@ -113,8 +113,11 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
       if (e.status == 429) {
         return l10n.feedbackLimitReached;
       }
-      // 4xx validation errors carry a useful server message; show it verbatim.
-      if (e.status < 500 && (e.message?.isNotEmpty ?? false)) {
+      // The server's 4xx text is English-only, so show it verbatim only in
+      // English; other locales get the localized generic failure.
+      if (e.status < 500 &&
+          (e.message?.isNotEmpty ?? false) &&
+          l10n.localeName.startsWith('en')) {
         return e.message!;
       }
       return l10n.feedbackSendFailed;

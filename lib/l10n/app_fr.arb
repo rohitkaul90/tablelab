@@ -325,7 +325,7 @@
   "profileSectionGoals": "Objectifs et parcours",
   "profilePlayingSince": "Joue depuis (année)",
   "profilePlayingSinceHint": "ex. 2018",
-  "profileHourlyRateGoal": "Objectif horaire ($/h)",
+  "profileHourlyRateGoal": "Objectif horaire ({sym}/h)",
   "profileHourlyRateGoalHint": "ex. 25",
   "profileSectionBankroll": "Bankroll",
   "profileStartingBankroll": "Bankroll de départ",
@@ -429,5 +429,7 @@
   "aboutFeatureCurrencyBody": "CAD, USD, GBP, EUR — joue partout dans le monde, ta bankroll reste juste dans toutes les devises.",
   "aboutVisionTitle": "La vision",
   "aboutVisionBody": "Une plateforme complète d'intelligence poker — suivi, analyse, outils d'étude, coaching en temps réel et, à terme, communauté — pour chaque joueur qui prend le jeu assez au sérieux pour bosser loin des tables. Créée par un joueur, pour les joueurs.",
-  "aboutOperatedBy": "Exploité par MagpiQ"
+  "aboutOperatedBy": "Exploité par MagpiQ",
+  "importSourceSharkscopeNote": "Web — abonnement Gold requis",
+  "importSourcePokerStarsNote": "Export d'historique de tournois"
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/l10n.dart';
+import '../utils/helpers.dart' show currencySymbol;
 import '../models/profile_model.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/profile_avatar.dart';
@@ -291,7 +292,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             const SizedBox(height: 14),
                             _field(
                               controller: _rateCtrl,
-                              label: l10n.profileHourlyRateGoal,
+                              label: l10n.profileHourlyRateGoal(currencySymbol(_bankrollCurrency)),
                               hint: l10n.profileHourlyRateGoalHint,
                               icon: Icons.trending_up_outlined,
                               keyboardType: const TextInputType.numberWithOptions(
