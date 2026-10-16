@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../models/session_model.dart';
 import '../utils/helpers.dart';
 
@@ -30,9 +31,13 @@ class GameTypeFilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Row(
       children: [
-        for (final entry in const [('cash', 'Cash'), ('tournament', 'Tournament')])
+        for (final entry in [
+          ('cash', l10n.statsCash),
+          ('tournament', l10n.statsTournament),
+        ])
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(right: entry.$1 == 'cash' ? 8 : 0),
@@ -79,7 +84,7 @@ List<SessionModel> filterByGameTypes(
 
 /// The active game-type filter as a chip label ('Cash' | 'Tournament'), or null
 /// when no single type is selected (= all).
-String? gameTypeChipLabel(Set<String> types) {
+String? gameTypeChipLabel(AppLocalizations l10n, Set<String> types) {
   if (types.isEmpty) return null;
-  return types.contains('tournament') ? 'Tournament' : 'Cash';
+  return types.contains('tournament') ? l10n.statsTournament : l10n.statsCash;
 }

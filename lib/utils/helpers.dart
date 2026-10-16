@@ -108,9 +108,15 @@ String formatROI(double roiPercent) {
 // by the Stats factor tabs and the recommendations engine. Display text lives
 // in lib/l10n/labels.dart (localized) — never use display text as a key.
 
-/// Tournament buy-in bands.
+/// Tournament buy-in bands. The edges (50/100/200/500) are USD amounts —
+/// classify a USD-converted buy-in ([buyInBucketOfSession]) so a ₹ or ¥
+/// display currency doesn't push every tournament into the top band.
 enum BuyInBucket { under50, from50to100, from100to200, from200to500, over500 }
 
+/// USD band edges, in [BuyInBucket] order (under50's upper edge first).
+const List<double> kBuyInBucketEdgesUsd = [50, 100, 200, 500];
+
+/// Band of [buyIn], an amount already converted to USD.
 BuyInBucket buyInBucketOf(double buyIn) {
   if (buyIn < 50) return BuyInBucket.under50;
   if (buyIn < 100) return BuyInBucket.from50to100;
@@ -118,6 +124,10 @@ BuyInBucket buyInBucketOf(double buyIn) {
   if (buyIn < 500) return BuyInBucket.from200to500;
   return BuyInBucket.over500;
 }
+
+/// Band of a session's buy-in, classified in USD whatever its currency.
+BuyInBucket buyInBucketOfSession(SessionModel s) =>
+    buyInBucketOf(convertCurrency(s.buyIn, s.currency, 'USD'));
 
 /// Tournament field-size bands; null when the entrant count is unknown.
 enum FieldSizeBucket { small, medium, large, massive }
@@ -133,8 +143,11 @@ FieldSizeBucket? fieldSizeBucketOf(int? totalEntrants) {
 /// Cash-session start-time bands.
 enum TimeOfDayBucket { morning, afternoon, evening, lateNight }
 
-TimeOfDayBucket timeOfDayBucketOf(String startTime) {
-  final hour = int.tryParse(startTime.split(':')[0]) ?? 0;
+/// Band of an `HH:mm` start time, or null when the time is blank or
+/// unparseable (the row is then skipped rather than counted as late night).
+TimeOfDayBucket? timeOfDayBucketOf(String startTime) {
+  final hour = int.tryParse(startTime.split(':')[0].trim());
+  if (hour == null || hour < 0 || hour > 23) return null;
   if (hour >= 6 && hour < 12) return TimeOfDayBucket.morning;
   if (hour >= 12 && hour < 18) return TimeOfDayBucket.afternoon;
   if (hour >= 18 && hour < 23) return TimeOfDayBucket.evening;

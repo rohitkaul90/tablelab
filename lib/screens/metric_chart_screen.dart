@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../l10n/l10n.dart';
 import '../models/session_model.dart';
 import '../utils/helpers.dart';
 
@@ -34,27 +36,27 @@ enum _Period { weekly, monthly, yearly }
 /// a Weekly/Monthly/Yearly period and an All/1Y/6M/3M/1M lookback.
 ///
 /// [sessions] must already be game-type filtered by the caller.
-const _periodLabels = {
-  _Period.weekly: 'Weekly',
-  _Period.monthly: 'Monthly',
-  _Period.yearly: 'Yearly',
-};
+Map<_Period, String> _periodLabels(AppLocalizations l10n) => {
+      _Period.weekly: l10n.chartWeekly,
+      _Period.monthly: l10n.chartMonthly,
+      _Period.yearly: l10n.chartYearly,
+    };
 
-const _lookbackLabels = {
-  _Lookback.all: 'All',
-  _Lookback.oneYear: '1Y',
-  _Lookback.sixMonths: '6M',
-  _Lookback.threeMonths: '3M',
-  _Lookback.oneMonth: '1M',
-};
+Map<_Lookback, String> _lookbackLabels(AppLocalizations l10n) => {
+      _Lookback.all: l10n.chartLookbackAll,
+      _Lookback.oneYear: l10n.chartLookback1Y,
+      _Lookback.sixMonths: l10n.chartLookback6M,
+      _Lookback.threeMonths: l10n.chartLookback3M,
+      _Lookback.oneMonth: l10n.chartLookback1M,
+    };
 
 // Per-period vs Cumulative now lives in the top filter row as a dropdown
 // (alongside period + lookback), so it shares the menu format and frees the
 // bottom row for the Graph/Table toggle alone.
-const _aggLabels = {
-  false: 'Per-period',
-  true: 'Cumulative',
-};
+Map<bool, String> _aggLabels(AppLocalizations l10n) => {
+      false: l10n.chartPerPeriod,
+      true: l10n.chartCumulative,
+    };
 
 class MetricChartScreen extends StatefulWidget {
   final StatMetric metric;
@@ -104,7 +106,8 @@ class _MetricChartScreenState extends State<MetricChartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final spec = _specFor(widget.metric, widget.displayCurrency);
+    final l10n = context.l10n;
+    final spec = _specFor(widget.metric, widget.displayCurrency, l10n);
     return Scaffold(
       appBar: AppBar(
         title: Text(spec.title),
@@ -120,16 +123,16 @@ class _MetricChartScreenState extends State<MetricChartScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _menu<_Period>(_period, _periodLabels,
+                  _menu<_Period>(_period, _periodLabels(l10n),
                       (v) => setState(() => _period = v)),
                   const SizedBox(width: 8),
-                  _menu<_Lookback>(_lookback, _lookbackLabels,
+                  _menu<_Lookback>(_lookback, _lookbackLabels(l10n),
                       (v) => setState(() => _lookback = v)),
                   // Rate metrics (win rate, ROI, …) hide the toggle — a running
                   // total of a ratio is meaningless.
                   if (spec.cumulativeSupported) ...[
                     const SizedBox(width: 8),
-                    _menu<bool>(_cumulative, _aggLabels,
+                    _menu<bool>(_cumulative, _aggLabels(l10n),
                         (v) => setState(() => _cumulative = v)),
                   ],
                 ],
@@ -265,8 +268,8 @@ class _MetricSpec {
     this.cumulativeSupported = true,
   }) : isWinLoss = false;
 
-  const _MetricSpec.winLoss()
-      : title = 'Wins vs Losses',
+  const _MetricSpec.winLoss(this.title)
+      : 
         isWinLoss = true,
         aggregate = _zeroAgg,
         headline = _emptyFmt,
@@ -282,7 +285,7 @@ class _MetricSpec {
   String cellFor(double v) => (cellText ?? headline)(v);
 }
 
-_MetricSpec _specFor(StatMetric m, String cur) {
+_MetricSpec _specFor(StatMetric m, String cur, AppLocalizations l10n) {
   final sym = currencySymbol(cur);
   double pl(SessionModel s) => convertCurrency(s.profitLoss, s.currency, cur);
   double exp(SessionModel s) => convertCurrency(s.totalExpenses, s.currency, cur);
@@ -297,59 +300,59 @@ _MetricSpec _specFor(StatMetric m, String cur) {
   switch (m) {
     case StatMetric.profit:
       return _MetricSpec(
-        title: 'Profit',
+        title: l10n.statsProfit,
         aggregate: (l) => l.fold(0.0, (a, s) => a + pl(s)),
         headline: money,
         axisLabel: moneyAxis,
-        valueLabel: 'Profit',
+        valueLabel: l10n.statsProfit,
         signed: true,
         rich: true,
       );
     case StatMetric.netAfterExpenses:
       return _MetricSpec(
-        title: 'Net Profit',
+        title: l10n.statsNetProfit,
         aggregate: (l) => l.fold(0.0, (a, s) => a + pl(s) - exp(s)),
         headline: money,
         axisLabel: moneyAxis,
-        valueLabel: 'Net',
+        valueLabel: l10n.chartNet,
         signed: true,
         rich: true,
       );
     case StatMetric.winRate:
       return _MetricSpec(
-        title: 'Win Rate',
+        title: l10n.statsWinRate,
         aggregate: (l) {
           final h = hours(l);
           final total = l.fold(0.0, (a, s) => a + pl(s));
           return h > 0 ? total / h : 0.0;
         },
-        headline: (v) => '${money(v)}/hr',
+        headline: (v) => l10n.statsPerHour(money(v)),
         axisLabel: moneyAxis,
         cellText: (v) => formatPL(v, ''),
-        valueLabel: '$sym/hr',
+        valueLabel: l10n.chartPerHourSym(sym),
         signed: true,
         cumulativeSupported: false,
       );
     case StatMetric.hours:
       return _MetricSpec(
-        title: 'Hours Played',
+        title: l10n.statsHoursPlayed,
         aggregate: hours,
         headline: (v) => formatHours(v),
         axisLabel: (v) => '${v.round()}',
         cellText: formatWholeNum,
-        valueLabel: 'Hours',
+        valueLabel: l10n.statsHours,
       );
     case StatMetric.sessions:
       return _MetricSpec(
-        title: 'Sessions',
+        title: l10n.statsSessions,
         aggregate: (l) => l.length.toDouble(),
         headline: (v) => '${v.round()}',
         axisLabel: plainAxis,
-        valueLabel: 'Sessions',
+        valueLabel: l10n.statsSessions,
       );
     case StatMetric.buyIn:
       return _MetricSpec(
-        title: 'Avg Buy-In',
+        title: l10n.statsAvgBuyIn,
         // Per-session AVERAGE (matches the Analytics summary row) — a total
         // pooled buy-in mostly tracked volume, not how much the user actually
         // puts on the table per session. ROI denominators elsewhere stay
@@ -359,19 +362,19 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         headline: (v) => formatAmount(v, cur),
         axisLabel: moneyAxis,
         cellText: formatWholeNum,
-        valueLabel: 'Buy-In ($sym)',
+        valueLabel: l10n.chartBuyInWithSym(sym),
         // A "cumulative" average is a converging lifetime mean — nonsense as
         // a running-total toggle, same rationale as the rate metrics.
         cumulativeSupported: false,
       );
     case StatMetric.expenses:
       return _MetricSpec(
-        title: 'Expenses',
+        title: l10n.statsExpenses,
         aggregate: (l) => l.fold(0.0, (a, s) => a + exp(s)),
         headline: (v) => formatAmount(v, cur),
         axisLabel: moneyAxis,
         cellText: formatWholeNum,
-        valueLabel: 'Expenses ($sym)',
+        valueLabel: l10n.chartExpensesWithSym(sym),
       );
     case StatMetric.bb100:
       return _MetricSpec(
@@ -389,7 +392,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
       );
     case StatMetric.roi:
       return _MetricSpec(
-        title: 'Tournament ROI',
+        title: l10n.chartTournamentRoi,
         // Tournament-only, pooled (total profit / total buy-in) — matches the
         // Overview ROI tile and the Analytics summary row; cash sessions must
         // not pollute the buy-in denominator.
@@ -402,7 +405,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         headline: formatROI,
         axisLabel: (v) => '${v.round()}%',
         cellText: (v) => '${v >= 0 ? '+' : ''}${v.round()}',
-        valueLabel: 'ROI %',
+        valueLabel: l10n.chartRoiPct,
         signed: true,
         cumulativeSupported: false,
       );
@@ -410,7 +413,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
       return _MetricSpec(
         // Tournament-only: a winning cash session is not "in the money".
         sessionFilter: (s) => isTournamentType(s.gameType),
-        title: 'In the Money',
+        title: l10n.chartInTheMoney,
         aggregate: (l) => l
             .where((s) => isSessionItm(s.prizeWon, s.profitLoss))
             .length
@@ -421,7 +424,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
       );
     case StatMetric.itmPct:
       return _MetricSpec(
-        title: 'ITM %',
+        title: l10n.statsItmPct,
         // Tournament-only denominator — cash sessions would dilute the rate.
         sessionFilter: (s) => isTournamentType(s.gameType),
         aggregate: (l) {
@@ -437,7 +440,7 @@ _MetricSpec _specFor(StatMetric m, String cur) {
         cumulativeSupported: false,
       );
     case StatMetric.winLoss:
-      return const _MetricSpec.winLoss();
+      return _MetricSpec.winLoss(l10n.chartWinsVsLosses);
   }
 }
 
@@ -459,11 +462,6 @@ List<SessionModel> _applyLookback(List<SessionModel> sessions, _Lookback lb) {
   }).toList();
 }
 
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
 String _weekKey(String dateStr) {
   final date = DateTime.tryParse(dateStr) ?? DateTime.now();
   final monday = date.subtract(Duration(days: date.weekday - 1));
@@ -477,18 +475,22 @@ String _periodKey(String dateStr, _Period period) => switch (period) {
       _Period.yearly => dateStr.length >= 4 ? dateStr.substring(0, 4) : dateStr,
     };
 
+/// Compact period label in the UI language ("Jan 5 '26" / "5 janv. '26",
+/// "Jan '26"). Month names come from intl under Intl.defaultLocale, which
+/// applyIntlLocale keeps in step with the app language.
 String _periodLabel(String key, _Period period) {
   if (period == _Period.weekly) {
     final date = DateTime.tryParse(key) ?? DateTime.now();
     final yy = (date.year % 100).toString().padLeft(2, '0');
-    return "${_months[date.month - 1]} ${date.day} '$yy";
+    return "${DateFormat.MMMd().format(date)} '$yy";
   }
   if (period == _Period.monthly) {
     final parts = key.split('-');
+    final year = int.tryParse(parts[0]) ?? DateTime.now().year;
     final month =
         (int.tryParse(parts.length > 1 ? parts[1] : '') ?? 1).clamp(1, 12);
-    final yearSuffix = parts[0].length >= 4 ? parts[0].substring(2) : parts[0];
-    return "${_months[month - 1]} '$yearSuffix";
+    final yy = (year % 100).toString().padLeft(2, '0');
+    return "${DateFormat.MMM().format(DateTime(year, month))} '$yy";
   }
   return key; // yearly
 }
@@ -520,7 +522,7 @@ Widget _emptyChart(BuildContext context, String message) => Center(
 /// The Graph/Table view toggle that stays below the chart, on one
 /// horizontally-scrollable row (period + lookback + Per-period/Cumulative live
 /// in the AppBar filter row).
-Widget _viewRow(bool table, ValueChanged<bool> onView) {
+Widget _viewRow(AppLocalizations l10n, bool table, ValueChanged<bool> onView) {
   Widget chip(String label, bool selected, VoidCallback onTap) => Padding(
         padding: const EdgeInsets.only(right: 6),
         child: ChoiceChip(
@@ -534,8 +536,8 @@ Widget _viewRow(bool table, ValueChanged<bool> onView) {
     scrollDirection: Axis.horizontal,
     child: Row(
       children: [
-        chip('Graph', !table, () => onView(false)),
-        chip('Table', table, () => onView(true)),
+        chip(l10n.chartGraph, !table, () => onView(false)),
+        chip(l10n.chartTable, table, () => onView(true)),
       ],
     ),
   );
@@ -588,7 +590,7 @@ Widget _periodTable({
   required List<Widget> Function(List<SessionModel> window) cells,
 }) {
   final theme = Theme.of(context);
-  if (keys.isEmpty) return _emptyChart(context, 'No data for this view');
+  if (keys.isEmpty) return _emptyChart(context, context.l10n.chartNoData);
 
   Widget divider() => Divider(
       height: 1, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5));
@@ -794,13 +796,13 @@ class _MetricChartState extends State<_MetricChart> {
                     cells: (w) => _valueCells(theme, w),
                   ))
               : (keys.length < (_cumEffective ? 2 : 1)
-                  ? _emptyChart(context, 'Need at least 2 periods of data')
+                  ? _emptyChart(context, context.l10n.chartNeedTwoPeriods)
                   : LayoutBuilder(
                       builder: (_, c) =>
                           _graph(context, groups, cum, keys, c.maxWidth))),
         ),
         const SizedBox(height: 12),
-        _viewRow(_table, (v) => setState(() => _table = v)),
+        _viewRow(context.l10n, _table, (v) => setState(() => _table = v)),
       ],
     );
   }
@@ -972,6 +974,7 @@ class _MetricChartState extends State<_MetricChart> {
       });
 
   Widget _tableHeader(ThemeData theme) {
+    final l10n = context.l10n;
     final sym = currencySymbol(widget.displayCurrency);
     final hs = theme.textTheme.titleSmall
         ?.copyWith(color: theme.colorScheme.outline, fontWeight: FontWeight.bold);
@@ -988,14 +991,14 @@ class _MetricChartState extends State<_MetricChart> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: _spec.rich
             ? [
-                h('Period', 3, right: false),
-                h('${_spec.valueLabel} ($sym)', 3),
+                h(l10n.chartPeriod, 3, right: false),
+                h(l10n.chartValueWithSym(_spec.valueLabel, sym), 3),
                 h('#', 1),
-                h('$sym/hr', 2),
-                h('Hrs', 2),
+                h(l10n.chartPerHourSym(sym), 2),
+                h(l10n.chartHrs, 2),
               ]
             : [
-                h('Period', 3, right: false),
+                h(l10n.chartPeriod, 3, right: false),
                 h(_spec.valueLabel, 3),
                 h('#', 1),
               ],
@@ -1100,12 +1103,12 @@ class _WinLossChartState extends State<_WinLossChart> {
             child: Row(
               children: [
                 _legendDot(Colors.green),
-                Text('  ${total.wins} W',
+                Text('  ${total.wins} ${context.l10n.chartWinsShort}',
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(width: 16),
                 _legendDot(Colors.red),
-                Text('  ${total.losses} L',
+                Text('  ${total.losses} ${context.l10n.chartLossesShort}',
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold)),
               ],
@@ -1127,13 +1130,13 @@ class _WinLossChartState extends State<_WinLossChart> {
                     cells: (w) => _wlCells(theme, w),
                   ))
               : (keys.length < (_cumulative ? 2 : 1)
-                  ? _emptyChart(context, 'Need at least 2 periods of data')
+                  ? _emptyChart(context, context.l10n.chartNeedTwoPeriods)
                   : LayoutBuilder(
                       builder: (_, c) =>
                           _graph(context, groups, cum, keys, c.maxWidth))),
         ),
         const SizedBox(height: 12),
-        _viewRow(_table, (v) => setState(() => _table = v)),
+        _viewRow(context.l10n, _table, (v) => setState(() => _table = v)),
       ],
     );
   }
@@ -1175,7 +1178,7 @@ class _WinLossChartState extends State<_WinLossChart> {
           getTooltipColor: (_) => theme.colorScheme.inverseSurface,
           getTooltipItem: (group, _, rod, rodIndex) => BarTooltipItem(
             '${_periodLabel(keys[group.x], _period)}\n'
-            '${rod.toY.round()} ${rodIndex == 0 ? 'wins' : 'losses'}',
+            '${rodIndex == 0 ? context.l10n.chartWinsCount(rod.toY.round()) : context.l10n.chartLossesCount(rod.toY.round())}',
             TextStyle(
                 color: theme.colorScheme.onInverseSurface,
                 fontSize: 11,
@@ -1263,7 +1266,7 @@ class _WinLossChartState extends State<_WinLossChart> {
             final isWin = spot.barIndex == 0;
             return LineTooltipItem(
               '${_periodLabel(keys[idx], _period)}\n'
-              '${spot.y.round()} ${isWin ? 'wins' : 'losses'}',
+              '${isWin ? context.l10n.chartWinsCount(spot.y.round()) : context.l10n.chartLossesCount(spot.y.round())}',
               TextStyle(
                   color: theme.colorScheme.onInverseSurface,
                   fontSize: 11,
@@ -1315,13 +1318,15 @@ class _WinLossChartState extends State<_WinLossChart> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text('Period', style: hs)),
+          Expanded(flex: 3, child: Text(context.l10n.chartPeriod, style: hs)),
           Expanded(
               flex: 2,
-              child: Text('W', style: hs, textAlign: TextAlign.right)),
+              child: Text(context.l10n.chartWinsShort,
+                  style: hs, textAlign: TextAlign.right)),
           Expanded(
               flex: 2,
-              child: Text('L', style: hs, textAlign: TextAlign.right)),
+              child: Text(context.l10n.chartLossesShort,
+                  style: hs, textAlign: TextAlign.right)),
         ],
       ),
     );

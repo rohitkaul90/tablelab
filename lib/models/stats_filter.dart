@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart' show DateTimeRange;
+import 'package:intl/intl.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/labels.dart' show venueLabel;
 import 'session_model.dart';
 import '../data/poker_rooms.dart' show isOnlineSession;
 import '../utils/helpers.dart' show mostRecentSession;
 import '../widgets/game_type_filter.dart'
     show filterByGameTypes, gameTypeChipLabel;
-
-const _monthAbbr = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
 
 /// The shared Stats-screen "Display Options" filter — ONE instance covers
 /// every Stats tab. Covers the AppBar filter sheet: game type, currency, date
@@ -125,47 +123,57 @@ class StatsFilter {
     return r;
   }
 
-  static String _fmtDate(DateTime d) =>
-      '${_monthAbbr[d.month - 1]} ${d.day}';
+  // Month + day in the UI language (intl symbols are loaded by
+  // applyIntlLocale before any frame renders): "Jan 5" / "5 janv.".
+  static String _fmtDate(AppLocalizations l10n, DateTime d) =>
+      DateFormat.MMMd(l10n.localeName).format(d);
+
+  static String _fmtDateYear(AppLocalizations l10n, DateTime d) =>
+      DateFormat.yMMMd(l10n.localeName).format(d);
 
   /// Short label for the active date filter, or null when "all time".
-  String? get dateLabel {
+  String? dateLabel(AppLocalizations l10n) {
     if (dateRange != null) {
-      return '${_fmtDate(dateRange!.start)} – ${_fmtDate(dateRange!.end)}';
+      return '${_fmtDate(l10n, dateRange!.start)} – '
+          '${_fmtDate(l10n, dateRange!.end)}';
     }
-    if (datePreset != null) return 'Last $datePreset';
+    if (datePreset != null) return l10n.statsLastPreset(datePreset!);
     return null;
   }
 
   /// Longer summary for the filter-sheet subtitle.
-  String get dateSummary {
+  String dateSummary(AppLocalizations l10n) {
     if (dateRange != null) {
-      final s = dateRange!.start, e = dateRange!.end;
-      return '${_fmtDate(s)}, ${s.year} – ${_fmtDate(e)}, ${e.year}';
+      return '${_fmtDateYear(l10n, dateRange!.start)} – '
+          '${_fmtDateYear(l10n, dateRange!.end)}';
     }
     return switch (datePreset) {
-      '1Y' => '1 year',
-      '6M' => '6 months',
-      '3M' => '3 months',
-      '1M' => '1 month',
-      _ => 'All time',
+      '1Y' => l10n.statsDate1Year,
+      '6M' => l10n.statsDate6Months,
+      '3M' => l10n.statsDate3Months,
+      '1M' => l10n.statsDate1Month,
+      _ => l10n.statsDateAllTime,
     };
   }
 
   /// Read-only chips for the metric chart screen (sheet filters only — the
   /// caller appends the currency, and a per-type card cell its own type
   /// label, as needed).
-  List<String> labels() => [
-        if (gameTypeChipLabel(gameTypes) != null) gameTypeChipLabel(gameTypes)!,
-        if (dateLabel != null) dateLabel!,
-        if (country.length == 1)
-          country.first
-        else if (country.length > 1)
-          '${country.length} countries',
-        if (venue != null) (venue == 'online' ? 'Online' : 'Live'),
-        if (location.length == 1)
-          location.first
-        else if (location.length > 1)
-          '${location.length} locations',
-      ];
+  List<String> labels(AppLocalizations l10n) {
+    final type = gameTypeChipLabel(l10n, gameTypes);
+    final date = dateLabel(l10n);
+    return [
+      if (type != null) type,
+      if (date != null) date,
+      if (country.length == 1)
+        country.first
+      else if (country.length > 1)
+        l10n.statsNCountries(country.length),
+      if (venue != null) venueLabel(l10n, venue!),
+      if (location.length == 1)
+        location.first
+      else if (location.length > 1)
+        l10n.statsNLocations(location.length),
+    ];
+  }
 }

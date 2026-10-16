@@ -905,26 +905,74 @@ void main() {
 // consistent with them.
 void analyticsKeyTests() {
   group('bucket keys', () {
-    test('buyInBucketOf thresholds match tournamentBuyInBucket', () {
-      expect(buyInBucketOf(49), BuyInBucket.under50);
+    test('buyInBucketOf band edges (USD)', () {
+      expect(buyInBucketOf(49.99), BuyInBucket.under50);
       expect(buyInBucketOf(50), BuyInBucket.from50to100);
-      expect(buyInBucketOf(199), BuyInBucket.from100to200);
+      expect(buyInBucketOf(99.99), BuyInBucket.from50to100);
+      expect(buyInBucketOf(100), BuyInBucket.from100to200);
+      expect(buyInBucketOf(199.99), BuyInBucket.from100to200);
       expect(buyInBucketOf(200), BuyInBucket.from200to500);
+      expect(buyInBucketOf(499.99), BuyInBucket.from200to500);
       expect(buyInBucketOf(500), BuyInBucket.over500);
     });
-    test('fieldSizeBucketOf is null when entrants are unknown', () {
+
+    test('buyInBucketOfSession classifies in USD whatever the currency', () {
+      SessionModel t(double buyIn, String currency) => SessionModel(
+            id: 't',
+            date: '2026-01-01',
+            stakes: 'N/A',
+            gameType: 'tournament',
+            buyIn: buyIn,
+            cashOut: 0,
+            profitLoss: -buyIn,
+            startTime: '18:00',
+            endTime: '22:00',
+            durationMinutes: 240,
+            createdAt: '2026-01-01T18:00:00Z',
+            currency: currency,
+          );
+      // A ₹5,000 buy-in is ~US$60 — a $50–$100 tournament, not "> 500".
+      final inr = convertCurrency(60, 'USD', 'INR');
+      expect(buyInBucketOfSession(t(inr, 'INR')), BuyInBucket.from50to100);
+      expect(buyInBucketOfSession(t(40, 'USD')), BuyInBucket.under50);
+      expect(buyInBucketOfSession(t(convertCurrency(600, 'USD', 'EUR'), 'EUR')),
+          BuyInBucket.over500);
+    });
+
+    test('fieldSizeBucketOf band edges; null when entrants are unknown', () {
       expect(fieldSizeBucketOf(null), isNull);
       expect(fieldSizeBucketOf(0), isNull);
       expect(fieldSizeBucketOf(49), FieldSizeBucket.small);
+      expect(fieldSizeBucketOf(50), FieldSizeBucket.medium);
+      expect(fieldSizeBucketOf(199), FieldSizeBucket.medium);
+      expect(fieldSizeBucketOf(200), FieldSizeBucket.large);
+      expect(fieldSizeBucketOf(499), FieldSizeBucket.large);
       expect(fieldSizeBucketOf(500), FieldSizeBucket.massive);
     });
-    test('timeOfDayBucketOf and sessionLengthBucketOf', () {
+
+    test('timeOfDayBucketOf band edges; null when the time is unusable', () {
+      expect(timeOfDayBucketOf('05:59'), TimeOfDayBucket.lateNight);
       expect(timeOfDayBucketOf('06:00'), TimeOfDayBucket.morning);
+      expect(timeOfDayBucketOf('11:59'), TimeOfDayBucket.morning);
+      expect(timeOfDayBucketOf('12:00'), TimeOfDayBucket.afternoon);
+      expect(timeOfDayBucketOf('17:59'), TimeOfDayBucket.afternoon);
+      expect(timeOfDayBucketOf('18:00'), TimeOfDayBucket.evening);
+      expect(timeOfDayBucketOf('22:59'), TimeOfDayBucket.evening);
       expect(timeOfDayBucketOf('23:00'), TimeOfDayBucket.lateNight);
-      expect(timeOfDayBucketOf('garbage'), TimeOfDayBucket.lateNight);
+      expect(timeOfDayBucketOf(''), isNull);
+      expect(timeOfDayBucketOf('garbage'), isNull);
+      expect(timeOfDayBucketOf('25:00'), isNull);
+    });
+
+    test('sessionLengthBucketOf band edges', () {
       expect(sessionLengthBucketOf(119), SessionLengthBucket.under2h);
+      expect(sessionLengthBucketOf(120), SessionLengthBucket.from2to4h);
+      expect(sessionLengthBucketOf(239), SessionLengthBucket.from2to4h);
+      expect(sessionLengthBucketOf(240), SessionLengthBucket.from4to6h);
+      expect(sessionLengthBucketOf(359), SessionLengthBucket.from4to6h);
       expect(sessionLengthBucketOf(360), SessionLengthBucket.over6h);
     });
+
     test('weekdayOf is ISO (Monday = 1) and null when unparseable', () {
       expect(weekdayOf('2024-01-01'), 1); // a Monday
       expect(weekdayOf('2024-01-07'), 7);

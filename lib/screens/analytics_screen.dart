@@ -14,24 +14,6 @@ import 'import_source_screen.dart';
 import 'live_session_screen.dart';
 import 'metric_chart_screen.dart';
 
-/// Std-dev explainer texts — ONE copy each, shown by both the single-type
-/// summary list and the combined comparison card's info dialogs.
-const kCashSdInfo =
-    'How swingy your cash game is, in big blinds per 100 hands. '
-    'Estimated from your per-session results and durations (hands '
-    'assumed at 25 per hour unless a session records its own pace). '
-    'Typical live no-limit hold\'em runs roughly 70–100.\n\n'
-    'Shown once you have at least 10 qualifying cash sessions '
-    '(cash game with parseable blinds and a duration).';
-
-const kTournSdInfo =
-    'How swingy your tournament results are, measured in buy-ins per '
-    'tournament (each result divided by its buy-in, so mixed buy-in '
-    'levels stay comparable).\n\nTournament results are heavily '
-    'skewed by rare big scores — with few tournaments logged this '
-    'UNDERSTATES the real swings. Shown once you have at least 10 '
-    'tournaments with a buy-in.';
-
 /// Tab-body padding shared by every Stats tab: 16px on phones, centered at a
 /// 960px max content width on wide screens (web/desktop) — the old
 /// _AnalyticsBody invariant, restored after the restructure dropped it.
@@ -94,6 +76,7 @@ class AnalyticsData {
     List<SessionModel> sessions,
     StatsFilter filter,
     String? homeCurrency,
+    AppLocalizations l10n,
   ) {
     final filtered = filter.apply(sessions);
     final displayCurrency =
@@ -150,16 +133,18 @@ class AnalyticsData {
     final tournStdDev = calcTournamentStdDevBuyIns(tSessions);
 
     final summaryItems = <SummaryItem>[
-      SummaryItem('Sessions', '${filtered.length}', null, StatMetric.sessions),
-      SummaryItem('Hours', formatHours(totalHours), null, StatMetric.hours),
+      SummaryItem(l10n.statsSessions, '${filtered.length}', null,
+          StatMetric.sessions),
       SummaryItem(
-        'Win Rate',
-        '${formatPLWithCurrency(hourlyRate, displayCurrency)}/hr',
+          l10n.statsHours, formatHours(totalHours), null, StatMetric.hours),
+      SummaryItem(
+        l10n.statsWinRate,
+        perHour(l10n, formatPLWithCurrency(hourlyRate, displayCurrency)),
         rateColor,
         StatMetric.winRate,
       ),
       SummaryItem(
-        'Total Profit',
+        l10n.statsTotalProfit,
         formatPLWithCurrency(totalPL, displayCurrency),
         plColor,
         StatMetric.profit,
@@ -168,16 +153,16 @@ class AnalyticsData {
       // table, not a volume total. ROI denominators stay pooled totals.
       if (filtered.isNotEmpty)
         SummaryItem(
-            'Avg Buy-In',
+            l10n.statsAvgBuyIn,
             formatAmount(totalBuyIn / filtered.length, displayCurrency),
             null,
             StatMetric.buyIn),
       if (hasExpenses)
-        SummaryItem('Expenses', '-$sym${totalExpenses.toStringAsFixed(0)}',
+        SummaryItem(l10n.statsExpenses, '-$sym${totalExpenses.toStringAsFixed(0)}',
             null, StatMetric.expenses),
       if (hasExpenses)
         SummaryItem(
-          'Net Profit',
+          l10n.statsNetProfit,
           formatPLWithCurrency(netAfterExpenses, displayCurrency),
           netAfterExpenses >= 0 ? Colors.green : Colors.red,
           StatMetric.netAfterExpenses,
@@ -193,28 +178,25 @@ class AnalyticsData {
       // instead of a trend chart (an SD time series isn't meaningful).
       if (showingCash && cashSessions.isNotEmpty)
         SummaryItem(
-          'Std Dev (BB/100)',
+          l10n.statsStdDevBb100,
           bb100StdDev == null ? '—' : formatWholeNum(bb100StdDev),
           null,
           null,
-          kCashSdInfo,
+          l10n.statsCashSdInfo,
         ),
       if (showingCash && cashSessions.isNotEmpty)
         SummaryItem(
-          'Std Dev ($sym/hr)',
+          l10n.statsStdDevPerHour(sym),
           hourlyStdDev == null
               ? '—'
               : formatAmount(hourlyStdDev, displayCurrency),
           null,
           null,
-          'How much a typical hour deviates from your average hourly rate, '
-          'in $displayCurrency. Estimated from per-session results and '
-          'durations.\n\nShown once you have at least 10 cash sessions with '
-          'a recorded duration.',
+          l10n.statsHourlySdInfo(displayCurrency),
         ),
       if (tournamentROI != null)
         SummaryItem(
-          'Tourn. ROI',
+          l10n.statsTournRoi,
           formatROI(tournamentROI),
           tournamentROI >= 0 ? Colors.green : Colors.red,
           StatMetric.roi,
@@ -223,11 +205,11 @@ class AnalyticsData {
         SummaryItem('ITM', '$itmPct%', null, StatMetric.itmPct),
       if (showingTournaments && hasTournaments)
         SummaryItem(
-          'Std Dev (buy-ins)',
+          l10n.statsStdDevBuyIns,
           tournStdDev == null ? '—' : tournStdDev.toStringAsFixed(1),
           null,
           null,
-          kTournSdInfo,
+          l10n.statsTournSdInfo,
         ),
     ];
 
@@ -243,7 +225,7 @@ class AnalyticsData {
       cashSessions: cashSessions,
       tSessions: tSessions,
       summaryItems: summaryItems,
-      activeFilters: [...filter.labels(), displayCurrency],
+      activeFilters: [...filter.labels(l10n), displayCurrency],
       cashBB100: bb100,
       cashBB100StdDev: bb100StdDev,
       cashHourlyStdDev: hourlyStdDev,
@@ -260,6 +242,10 @@ class AnalyticsData {
 /// builds a TAB per factor from this list, so adding a factor here adds its
 /// tab automatically.
 class AnalyticsFactor {
+  /// Stable, language-independent id — the Stats screen keys its tab
+  /// controller on these, so a language switch can't look like a tab-set
+  /// change (or vice versa).
+  final String id;
   final String tabLabel; // short — the Tab text
   final String title; // the card title
   final List<SessionModel> sessions;
@@ -276,6 +262,7 @@ class AnalyticsFactor {
   final String Function(AppLocalizations l10n, String key)? labelFn;
 
   const AnalyticsFactor({
+    required this.id,
     required this.tabLabel,
     required this.title,
     required this.sessions,
@@ -287,17 +274,47 @@ class AnalyticsFactor {
   });
 }
 
+// ─── Shared grouping keys ───────────────────────────────────────────────────
+// ONE definition per dimension, used by both the factor tabs and the Tips
+// engine (_RecommendationsCard) so the two can never bucket a session
+// differently. Keys are stable ids; display text comes from labels.dart.
+
+/// Buy-in band, classified in USD (the band edges are USD amounts).
+String buyInKey(SessionModel s) => buyInBucketOfSession(s).name;
+
+/// Field-size band, or null when the entrant count is unknown.
+String? fieldSizeKey(SessionModel s) => fieldSizeBucketOf(s.totalEntrants)?.name;
+
+/// ISO weekday 1–7 as a string, or null for an unparseable date.
+String? weekdayKey(SessionModel s) => weekdayOf(s.date)?.toString();
+
+/// Start-time band, or null for a blank/unparseable start time.
+String? timeOfDayKey(SessionModel s) => timeOfDayBucketOf(s.startTime)?.name;
+
+String sessionLengthKey(SessionModel s) =>
+    sessionLengthBucketOf(s.durationMinutes).name;
+
+/// 'live' | 'online'.
+String venueKey(SessionModel s) =>
+    isOnlineSession(s.location) ? 'online' : 'live';
+
+/// The location, or null when the session has none.
+String? locationKey(SessionModel s) =>
+    s.location?.isNotEmpty == true ? s.location : null;
+
 /// The available factors for the current data — each entry mirrors the old
 /// single-scroll card's gate condition exactly.
-List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
+List<AnalyticsFactor> analyticsFactors(
+    AnalyticsData d, AppLocalizations l10n) {
   final filtered = d.filtered;
   if (filtered.isEmpty) return const [];
   final mixedTournament = d.showingTournaments && !d.showingCash;
   return [
     if (d.showingCash)
       AnalyticsFactor(
-        tabLabel: 'Stakes',
-        title: 'By Stakes',
+        id: 'stakes',
+        tabLabel: l10n.statsFactorStakes,
+        title: l10n.statsFactorStakesTitle,
         sessions: d.cashSessions,
         keyFn: (s) => s.stakes,
         // Natural order for stakes = by blind size, small→big; unparseable
@@ -316,28 +333,28 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
       ),
     if (d.showingTournaments)
       AnalyticsFactor(
-        tabLabel: 'Buy-ins',
-        title: 'By Buy-in Level',
+        id: 'buyIns',
+        tabLabel: l10n.statsFactorBuyIns,
+        title: l10n.statsFactorBuyInsTitle,
         sessions: d.tSessions,
-        // Bucket on the DISPLAY-currency amount so the band label's symbol
-        // (and the converted ROI beside it) describe the same number.
-        keyFn: (s) => buyInBucketOf(
-                convertCurrency(s.buyIn, s.currency, d.displayCurrency))
-            .name,
+        // Bucketed in USD (the edges are USD amounts); the label converts the
+        // edges into the display currency so it matches the converted ROI.
+        keyFn: buyInKey,
         orderedKeys: [for (final b in BuyInBucket.values) b.name],
         labelFn: (l10n, k) => buyInBucketLabel(
-            l10n, BuyInBucket.values.byName(k), currencySymbol(d.displayCurrency)),
+            l10n, BuyInBucket.values.byName(k), d.displayCurrency),
         isTournament: true,
       ),
     // Field size — only when enough sessions have entrant counts.
     if (d.showingTournaments &&
         d.tSessions.where((s) => (s.totalEntrants ?? 0) > 0).length >= 2)
       AnalyticsFactor(
-        tabLabel: 'Field Size',
-        title: 'By Field Size',
+        id: 'fieldSize',
+        tabLabel: l10n.statsFactorFieldSize,
+        title: l10n.statsFactorFieldSizeTitle,
         sessions:
             d.tSessions.where((s) => (s.totalEntrants ?? 0) > 0).toList(),
-        keyFn: (s) => fieldSizeBucketOf(s.totalEntrants)?.name ?? '',
+        keyFn: (s) => fieldSizeKey(s) ?? '',
         orderedKeys: [for (final b in FieldSizeBucket.values) b.name],
         labelFn: (l10n, k) =>
             fieldSizeBucketLabel(l10n, FieldSizeBucket.values.byName(k)),
@@ -345,8 +362,9 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
       ),
     if (d.showingCash && d.showingTournaments)
       AnalyticsFactor(
-        tabLabel: 'Game Type',
-        title: 'By Game Type',
+        id: 'gameType',
+        tabLabel: l10n.statsFactorGameType,
+        title: l10n.statsFactorGameTypeTitle,
         sessions: filtered,
         // Tournament variants fold together; any other raw game_type value
         // (legacy / import-edited) stays its own row, as before.
@@ -354,11 +372,12 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
         labelFn: gameTypeKeyLabel,
       ),
     AnalyticsFactor(
-      tabLabel: 'Day',
-      title: 'By Day of Week',
+      id: 'day',
+      tabLabel: l10n.statsFactorDay,
+      title: l10n.statsFactorDayTitle,
       sessions: filtered,
       // '' = unparseable date → the row is skipped by _InsightCard.
-      keyFn: (s) => weekdayOf(s.date)?.toString() ?? '',
+      keyFn: (s) => weekdayKey(s) ?? '',
       orderedKeys: const ['1', '2', '3', '4', '5', '6', '7'],
       labelFn: (l10n, k) => weekdayShortLabel(l10n, int.parse(k)),
       isTournament: mixedTournament,
@@ -366,10 +385,12 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
     // Time of Day — cash only; less actionable for tournaments.
     if (d.showingCash)
       AnalyticsFactor(
-        tabLabel: 'Time',
-        title: 'By Time of Day',
+        id: 'time',
+        tabLabel: l10n.statsFactorTime,
+        title: l10n.statsFactorTimeTitle,
         sessions: d.cashSessions,
-        keyFn: (s) => timeOfDayBucketOf(s.startTime).name,
+        // '' = no usable start time → skipped (not counted as late night).
+        keyFn: (s) => timeOfDayKey(s) ?? '',
         orderedKeys: [for (final b in TimeOfDayBucket.values) b.name],
         labelFn: (l10n, k) =>
             timeOfDayBucketLabel(l10n, TimeOfDayBucket.values.byName(k)),
@@ -377,10 +398,11 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
     // Session Length — cash only (tournament duration = finish depth).
     if (d.showingCash)
       AnalyticsFactor(
-        tabLabel: 'Length',
-        title: 'By Session Length',
+        id: 'length',
+        tabLabel: l10n.statsFactorLength,
+        title: l10n.statsFactorLengthTitle,
         sessions: d.cashSessions,
-        keyFn: (s) => sessionLengthBucketOf(s.durationMinutes).name,
+        keyFn: sessionLengthKey,
         orderedKeys: [for (final b in SessionLengthBucket.values) b.name],
         labelFn: (l10n, k) =>
             sessionLengthBucketLabel(l10n, SessionLengthBucket.values.byName(k)),
@@ -388,8 +410,9 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
     // Table Quality — cash only, when any session is rated.
     if (d.showingCash && d.cashSessions.any((s) => s.tableQuality != null))
       AnalyticsFactor(
-        tabLabel: 'Table',
-        title: 'By Table Quality',
+        id: 'table',
+        tabLabel: l10n.statsFactorTable,
+        title: l10n.statsFactorTableTitle,
         sessions:
             d.cashSessions.where((s) => s.tableQuality != null).toList(),
         keyFn: (s) => '${s.tableQuality}',
@@ -399,19 +422,21 @@ List<AnalyticsFactor> analyticsFactors(AnalyticsData d) {
       ),
     if (_hasMultipleLocations(filtered))
       AnalyticsFactor(
-        tabLabel: 'Location',
-        title: 'By Location',
+        id: 'location',
+        tabLabel: l10n.statsFactorLocation,
+        title: l10n.statsFactorLocationTitle,
         sessions:
             filtered.where((s) => s.location?.isNotEmpty == true).toList(),
-        keyFn: (s) => s.location!,
+        keyFn: (s) => locationKey(s)!,
         isTournament: mixedTournament,
       ),
     if (d.hasLiveInView && d.hasOnlineInView)
       AnalyticsFactor(
-        tabLabel: 'Live/Online',
-        title: 'Live vs Online',
+        id: 'venue',
+        tabLabel: l10n.statsFactorVenue,
+        title: l10n.statsFactorVenueTitle,
         sessions: filtered,
-        keyFn: (s) => isOnlineSession(s.location) ? 'online' : 'live',
+        keyFn: venueKey,
         orderedKeys: const ['live', 'online'],
         labelFn: venueLabel,
         isTournament: mixedTournament,
@@ -443,8 +468,9 @@ class AnalyticsSummaryTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final d = data;
+    final l10n = context.l10n;
     final filtered = d.filtered;
-    final typeLabel = gameTypeChipLabel(gameTypes);
+    final typeLabel = gameTypeChipLabel(l10n, gameTypes);
     return ListView(
       padding: statsTabPadding(context),
       children: [
@@ -458,8 +484,8 @@ class AnalyticsSummaryTab extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 8),
               child: InputChip(
                 avatar: const Icon(Icons.filter_alt_outlined, size: 18),
-                label: Text('$typeLabel only'),
-                deleteButtonTooltipMessage: 'Show all game types',
+                label: Text(l10n.statsTypeOnly(typeLabel)),
+                deleteButtonTooltipMessage: l10n.statsShowAllGameTypes,
                 onDeleted: () => onGameTypesChanged(const {}),
               ),
             ),
@@ -491,7 +517,7 @@ class AnalyticsSummaryTab extends ConsumerWidget {
           AiCoachingCard(session: mostRecentSession(d.sessions)!)
         else ...[
           Text(
-            'No sessions yet — log your first to fill these in.',
+            l10n.statsNoSessionsYet,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context)
@@ -507,7 +533,7 @@ class AnalyticsSummaryTab extends ConsumerWidget {
               FilledButton.icon(
                 onPressed: () => showLogSessionChooser(context, ref),
                 icon: const Icon(Icons.add),
-                label: const Text('Log Session'),
+                label: Text(l10n.commonLogSession),
               ),
               const SizedBox(width: 8),
               TextButton.icon(
@@ -517,7 +543,7 @@ class AnalyticsSummaryTab extends ConsumerWidget {
                       builder: (_) => const ImportSourceScreen()),
                 ),
                 icon: const Icon(Icons.upload_file_outlined),
-                label: const Text('Import'),
+                label: Text(l10n.commonImport),
               ),
             ],
           ),
@@ -528,7 +554,7 @@ class AnalyticsSummaryTab extends ConsumerWidget {
             padding: const EdgeInsets.only(top: 24),
             child: Center(
               child: Text(
-                'No sessions match these filters.',
+                l10n.statsNoMatch,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.outline,
@@ -561,6 +587,7 @@ class AnalyticsFactorTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final t = factor.isTournament;
     return ListView(
       padding: statsTabPadding(context, top: 8),
@@ -570,36 +597,36 @@ class AnalyticsFactorTab extends StatelessWidget {
             Expanded(
               child: Text(
                 // Legend for the card rows: count/hours · rate · profit.
-                t ? '#  ·  ROI  ·  Profit' : 'hrs  ·  ${data.sym}/hr  ·  Profit',
+                t ? l10n.statsLegendTournament : l10n.statsLegendCash(data.sym),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.outline),
               ),
             ),
             PopupMenuButton<InsightSort>(
               icon: Icon(Icons.sort, color: theme.colorScheme.onSurfaceVariant),
-              tooltip: 'Sort',
+              tooltip: l10n.statsSort,
               initialValue: sort,
               onSelected: onSortChanged,
               itemBuilder: (_) => [
                 CheckedPopupMenuItem(
                   value: InsightSort.rate,
                   checked: sort == InsightSort.rate,
-                  child: Text(t ? 'ROI' : 'Win rate'),
+                  child: Text(t ? 'ROI' : l10n.statsSortWinRate),
                 ),
                 CheckedPopupMenuItem(
                   value: InsightSort.profit,
                   checked: sort == InsightSort.profit,
-                  child: const Text('Profit'),
+                  child: Text(l10n.statsProfit),
                 ),
                 CheckedPopupMenuItem(
                   value: InsightSort.volume,
                   checked: sort == InsightSort.volume,
-                  child: Text(t ? 'Volume' : 'Hours'),
+                  child: Text(t ? l10n.statsSortVolume : l10n.statsHours),
                 ),
                 CheckedPopupMenuItem(
                   value: InsightSort.natural,
                   checked: sort == InsightSort.natural,
-                  child: const Text('Natural order'),
+                  child: Text(l10n.statsSortNatural),
                 ),
               ],
             ),
@@ -665,8 +692,8 @@ class AnalyticsTipsTab extends StatelessWidget {
             child: Center(
               child: Text(
                 filtered.isEmpty && d.sessions.isEmpty
-                    ? 'Log a few sessions to unlock recommendations.'
-                    : 'No sessions match these filters.',
+                    ? context.l10n.statsTipsEmpty
+                    : context.l10n.statsNoMatch,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.outline,
@@ -791,7 +818,7 @@ class _MetricSummaryList extends StatelessWidget {
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Got it')),
+                  child: Text(context.l10n.commonGotIt)),
             ],
           ),
         ),
@@ -853,8 +880,12 @@ class _TypeComparisonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final cash = data.cashSessions;
     final tournaments = data.tSessions;
+    // Chart filter-chip labels for the per-type cells.
+    final cashChip = l10n.statsCash;
+    final tChip = l10n.statsTournaments;
     final displayCurrency = data.displayCurrency;
     double toD(double amount, String from) =>
         convertCurrency(amount, from, displayCurrency);
@@ -891,10 +922,9 @@ class _TypeComparisonCard extends StatelessWidget {
     // The $/hr SD has no cell of its own here — fold it into the cash SD
     // dialog so the combined view loses no information vs the type lists.
     final cashSdInfo = hourlyStdDev == null
-        ? kCashSdInfo
-        : 'In money terms: about '
-            '${formatAmount(hourlyStdDev, displayCurrency)} per hour.'
-            '\n\n$kCashSdInfo';
+        ? l10n.statsCashSdInfo
+        : '${l10n.statsSdMoneyTerms(formatAmount(hourlyStdDev, displayCurrency))}'
+            '\n\n${l10n.statsCashSdInfo}';
 
     Color? signColor(double v) => v >= 0 ? Colors.green : Colors.red;
 
@@ -961,7 +991,7 @@ class _TypeComparisonCard extends StatelessWidget {
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Got it')),
+                    child: Text(context.l10n.commonGotIt)),
               ],
             ),
           ),
@@ -991,101 +1021,101 @@ class _TypeComparisonCard extends StatelessWidget {
           children: [
             Row(children: [
               const Expanded(flex: 2, child: SizedBox()),
-              header('Cash', const {'cash'}),
-              header('Tournament', const {'tournament'}),
+              header(l10n.statsCash, const {'cash'}),
+              header(l10n.statsTournament, const {'tournament'}),
             ]),
             const SizedBox(height: 4),
             row(
-              'Profit',
-              cell(formatPL(cashPL, ''), StatMetric.profit, cash, 'Cash',
+              l10n.statsProfit,
+              cell(formatPL(cashPL, ''), StatMetric.profit, cash, cashChip,
                   color: signColor(cashPL)),
               cell(formatPL(tPL, ''), StatMetric.profit, tournaments,
-                  'Tournaments',
+                  tChip,
                   color: signColor(tPL)),
             ),
             row(
-              'Rate',
+              l10n.statsRate,
               cell(
-                  '${formatPLWithCurrency(cashRate, displayCurrency)}/hr',
+                  perHour(l10n, formatPLWithCurrency(cashRate, displayCurrency)),
                   StatMetric.winRate,
                   cash,
-                  'Cash',
+                  cashChip,
                   color: signColor(cashRate)),
               cell('${formatROI(tROI)} ROI', StatMetric.roi, tournaments,
-                  'Tournaments',
+                  tChip,
                   color: signColor(tROI)),
             ),
             // Session COUNT for both types (the hours-only Volume row hid
             // the cash count in combined view). Tournaments deliberately
             // repeat the number in Volume below.
             row(
-              'Sessions',
-              cell('${cash.length}', StatMetric.sessions, cash, 'Cash'),
+              l10n.statsSessions,
+              cell('${cash.length}', StatMetric.sessions, cash, cashChip),
               cell('${tournaments.length}', StatMetric.sessions, tournaments,
-                  'Tournaments'),
+                  tChip),
             ),
             row(
-              'Volume',
-              cell(formatHours(cashHours), StatMetric.hours, cash, 'Cash'),
+              l10n.statsSortVolume,
+              cell(formatHours(cashHours), StatMetric.hours, cash, cashChip),
               // Hours for BOTH types — the Sessions row above already
               // carries the tournament count (device-review call).
               cell(formatHours(hrs(tournaments)), StatMetric.hours,
-                  tournaments, 'Tournaments'),
+                  tournaments, tChip),
             ),
             row(
-              'Avg Buy-In',
+              l10n.statsAvgBuyIn,
               cell(formatAmount(avgBuyIn(cash), displayCurrency),
-                  StatMetric.buyIn, cash, 'Cash'),
+                  StatMetric.buyIn, cash, cashChip),
               cell(formatAmount(avgBuyIn(tournaments), displayCurrency),
-                  StatMetric.buyIn, tournaments, 'Tournaments'),
+                  StatMetric.buyIn, tournaments, tChip),
             ),
             row(
-              'Edge',
+              l10n.statsEdge,
               bb100 == null
-                  ? cell('—', StatMetric.bb100, const [], 'Cash')
+                  ? cell('—', StatMetric.bb100, const [], cashChip)
                   : cell('${formatBB100(bb100)} BB/100', StatMetric.bb100,
-                      cash, 'Cash',
+                      cash, cashChip,
                       color: signColor(bb100)),
-              cell('$itm% ITM', StatMetric.itmPct, tournaments, 'Tournaments'),
+              cell('$itm% ITM', StatMetric.itmPct, tournaments, tChip),
             ),
             if (hasExpenses) ...[
               row(
-                'Expenses',
+                l10n.statsExpenses,
                 cashExp > 0
                     ? cell('-$sym${cashExp.toStringAsFixed(0)}',
-                        StatMetric.expenses, cash, 'Cash')
-                    : cell('—', StatMetric.expenses, const [], 'Cash'),
+                        StatMetric.expenses, cash, cashChip)
+                    : cell('—', StatMetric.expenses, const [], cashChip),
                 tExp > 0
                     ? cell('-$sym${tExp.toStringAsFixed(0)}',
-                        StatMetric.expenses, tournaments, 'Tournaments')
-                    : cell('—', StatMetric.expenses, const [], 'Tournaments'),
+                        StatMetric.expenses, tournaments, tChip)
+                    : cell('—', StatMetric.expenses, const [], tChip),
               ),
               row(
-                'Net Profit',
+                l10n.statsNetProfit,
                 cell(formatPL(cashPL - cashExp, ''),
-                    StatMetric.netAfterExpenses, cash, 'Cash',
+                    StatMetric.netAfterExpenses, cash, cashChip,
                     color: signColor(cashPL - cashExp)),
                 cell(formatPL(tPL - tExp, ''), StatMetric.netAfterExpenses,
-                    tournaments, 'Tournaments',
+                    tournaments, tChip,
                     color: signColor(tPL - tExp)),
               ),
             ],
             // Std dev per type (info dialogs, no trend chart). '—' until the
             // 10-qualifying-session threshold — the dialog explains it.
             row(
-              'Std Dev',
+              l10n.statsStdDev,
               infoCell(
                   bb100StdDev == null
                       ? '—'
                       : '${formatWholeNum(bb100StdDev)} BB/100',
-                  'Cash Std Dev (BB/100)',
+                  l10n.statsCashStdDevTitle,
                   cashSdInfo),
               infoCell(
                   tournStdDev == null
                       ? '—'
-                      : '${tournStdDev.toStringAsFixed(1)} buy-ins',
-                  'Tournament Std Dev (buy-ins)',
-                  kTournSdInfo),
+                      : l10n.statsBuyInsValue(tournStdDev.toStringAsFixed(1)),
+                  l10n.statsTournStdDevTitle,
+                  l10n.statsTournSdInfo),
             ),
           ],
         ),
@@ -1289,7 +1319,8 @@ class _InsightRow extends StatelessWidget {
             Text(
               isTournament
                   ? formatROI(stats.roi)
-                  : '${formatPLWithCurrency(stats.hourlyRate, displayCurrency)}/hr',
+                  : perHour(context.l10n,
+                      formatPLWithCurrency(stats.hourlyRate, displayCurrency)),
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: barColor, fontWeight: FontWeight.bold),
             ),
@@ -1391,7 +1422,7 @@ class _RecommendationsCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Log at least 5 $typeLabel sessions to get personalised recommendations.',
+            context.l10n.statsRecsNeedMore(typeLabel),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.outline,
                 ),
@@ -1405,8 +1436,7 @@ class _RecommendationsCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'No strong patterns detected yet in your $typeLabel sessions. '
-            'Results become more reliable as you log more sessions across different days, locations, and stakes.',
+            context.l10n.statsRecsNone(typeLabel),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.outline,
                 ),
@@ -1421,7 +1451,7 @@ class _RecommendationsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Based on your session history',
+              context.l10n.statsRecsBasedOn,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
                   ),
@@ -1475,67 +1505,63 @@ class _RecommendationsCard extends StatelessWidget {
     return (meanA - meanB) / se;
   }
 
-  String _actionTitle(
-      String dimension, String bestKey, String worstKey, double bestScore) {
+  String _actionTitle(AppLocalizations l10n, String dimension, String best,
+      String worst, double bestScore) {
     if (_isTournament) {
       switch (dimension) {
         case 'buy-in level':
-          return 'Target $bestKey tournaments';
+          return l10n.statsRecTargetTournaments(best);
         case 'field size':
-          return 'Focus on $bestKey fields';
+          return l10n.statsRecFocusFields(best);
         case 'day':
-          return 'Prioritise $bestKey tournaments';
+          return l10n.statsRecPrioritiseTournaments(best);
         case 'location':
-          return '$bestKey is your strongest venue';
+          return l10n.statsRecStrongestVenue(best);
         case 'live/online':
-          return bestScore > 0
-              ? '$bestKey poker is your stronger format'
-              : 'Shift focus to ${worstKey == bestKey ? 'the other format' : worstKey}';
+          if (bestScore > 0) return l10n.statsRecStrongerFormat(best);
+          return worst == best
+              ? l10n.statsRecShiftFocusOther
+              : l10n.statsRecShiftFocusTo(worst);
         default:
-          return 'Favour $bestKey over $worstKey';
+          return l10n.statsRecFavour(best, worst);
       }
     }
     switch (dimension) {
       case 'time slot':
         return bestScore > 0
-            ? 'Schedule more sessions in the $bestKey'
-            : 'Shift sessions away from $worstKey';
+            ? l10n.statsRecScheduleIn(best)
+            : l10n.statsRecShiftAway(worst);
       case 'day':
-        return 'Prioritise $bestKey sessions';
+        return l10n.statsRecPrioritiseSessions(best);
       case 'session length':
-        return 'Target $bestKey sessions';
+        return l10n.statsRecTargetSessions(best);
       case 'table quality':
-        return 'Seek out $bestKey tables';
+        return l10n.statsRecSeekTables(best);
       case 'location':
-        return '$bestKey is your strongest venue';
+        return l10n.statsRecStrongestVenue(best);
       case 'game type':
-        return 'Focus more on ${bestKey.toLowerCase()}';
+        return l10n.statsRecFocusMore(best.toLowerCase());
       default:
-        return 'Favour $bestKey over $worstKey';
+        return l10n.statsRecFavour(best, worst);
     }
   }
 
-  String _explanation(
-      String dimension, String bestKey, String worstKey, double bestScore,
-      double worstScore, double overallScore) {
-    if (_isTournament) {
-      final bestFmt = formatROI(bestScore);
-      final worstFmt = formatROI(worstScore);
-      final overallFmt = formatROI(overallScore);
-      final diff = bestScore - worstScore;
-      final diffFmt = formatROI(diff);
-      return '$bestFmt ROI in $bestKey'
-          '${diff > 0 ? ' — $diffFmt better than $worstKey ($worstFmt)' : ''}.'
-          ' Your overall ROI is $overallFmt.';
-    }
-    final bestFmt = formatPLWithCurrency(bestScore, displayCurrency);
-    final worstFmt = formatPLWithCurrency(worstScore, displayCurrency);
-    final overallFmt = formatPLWithCurrency(overallScore, displayCurrency);
+  String _explanation(AppLocalizations l10n, String bestKey, String worstKey,
+      double bestScore, double worstScore, double overallScore) {
     final diff = bestScore - worstScore;
-    final diffFmt = formatPLWithCurrency(diff, displayCurrency);
-    return '$bestFmt/hr in $bestKey sessions'
-        '${diff > 0 ? ' — $diffFmt/hr more than $worstKey ($worstFmt/hr)' : ''}.'
-        ' Your overall rate is $overallFmt/hr.';
+    if (_isTournament) {
+      final best = formatROI(bestScore);
+      final overall = formatROI(overallScore);
+      return diff > 0
+          ? l10n.statsRecExplainTournBetter(best, bestKey, formatROI(diff),
+              worstKey, formatROI(worstScore), overall)
+          : l10n.statsRecExplainTourn(best, bestKey, overall);
+    }
+    String money(double v) => formatPLWithCurrency(v, displayCurrency);
+    return diff > 0
+        ? l10n.statsRecExplainCashBetter(money(bestScore), bestKey, money(diff),
+            worstKey, money(worstScore), money(overallScore))
+        : l10n.statsRecExplainCash(money(bestScore), bestKey, money(overallScore));
   }
 
   List<_Rec> _buildRecommendations(AppLocalizations l10n) {
@@ -1593,45 +1619,42 @@ class _RecommendationsCard extends StatelessWidget {
       final worstLabel = labelFn?.call(worst.key) ?? worst.key;
       recs.add(_Rec(
         icon: icon,
-        title: _actionTitle(dimension, bestLabel, worstLabel, best.mean),
-        explanation: _explanation(dimension, bestLabel, worstLabel, best.mean,
-            worst.mean, overallScore),
+        title: _actionTitle(l10n, dimension, bestLabel, worstLabel, best.mean),
+        explanation: _explanation(
+            l10n, bestLabel, worstLabel, best.mean, worst.mean, overallScore),
         tStat: tStat,
       ));
     }
 
-    final sym = currencySymbol(displayCurrency);
     if (_isTournament) {
       // Tournament factors — scored by ROI
       checkFactor(
-        keyFn: (s) => buyInBucketOf(
-                convertCurrency(s.buyIn, s.currency, displayCurrency))
-            .name,
-        labelFn: (k) =>
-            buyInBucketLabel(l10n, BuyInBucket.values.byName(k), sym),
+        keyFn: buyInKey,
+        labelFn: (k) => buyInBucketLabel(
+            l10n, BuyInBucket.values.byName(k), displayCurrency),
         icon: Icons.attach_money,
         dimension: 'buy-in level',
       );
       checkFactor(
-        keyFn: (s) => fieldSizeBucketOf(s.totalEntrants)?.name,
+        keyFn: fieldSizeKey,
         labelFn: (k) =>
             fieldSizeBucketLabel(l10n, FieldSizeBucket.values.byName(k)),
         icon: Icons.people_outline,
         dimension: 'field size',
       );
       checkFactor(
-        keyFn: (s) => weekdayOf(s.date)?.toString(),
+        keyFn: weekdayKey,
         labelFn: (k) => weekdayShortLabel(l10n, int.parse(k)),
         icon: Icons.calendar_today,
         dimension: 'day',
       );
       checkFactor(
-        keyFn: (s) => s.location?.isNotEmpty == true ? s.location : null,
+        keyFn: locationKey,
         icon: Icons.location_on_outlined,
         dimension: 'location',
       );
       checkFactor(
-        keyFn: (s) => isOnlineSession(s.location) ? 'online' : 'live',
+        keyFn: venueKey,
         labelFn: (k) => venueLabel(l10n, k),
         icon: Icons.wifi_outlined,
         dimension: 'live/online',
@@ -1639,7 +1662,7 @@ class _RecommendationsCard extends StatelessWidget {
     } else {
       // Cash factors — scored by hourly rate
       checkFactor(
-        keyFn: (s) => timeOfDayBucketOf(s.startTime).name,
+        keyFn: timeOfDayKey,
         labelFn: (k) => timeOfDayBucketLabel(
             l10n, TimeOfDayBucket.values.byName(k),
             short: true),
@@ -1647,13 +1670,13 @@ class _RecommendationsCard extends StatelessWidget {
         dimension: 'time slot',
       );
       checkFactor(
-        keyFn: (s) => weekdayOf(s.date)?.toString(),
+        keyFn: weekdayKey,
         labelFn: (k) => weekdayShortLabel(l10n, int.parse(k)),
         icon: Icons.calendar_today,
         dimension: 'day',
       );
       checkFactor(
-        keyFn: (s) => sessionLengthBucketOf(s.durationMinutes).name,
+        keyFn: sessionLengthKey,
         labelFn: (k) =>
             sessionLengthBucketLabel(l10n, SessionLengthBucket.values.byName(k)),
         icon: Icons.timer_outlined,
@@ -1666,7 +1689,7 @@ class _RecommendationsCard extends StatelessWidget {
         dimension: 'table quality',
       );
       checkFactor(
-        keyFn: (s) => s.location?.isNotEmpty == true ? s.location : null,
+        keyFn: locationKey,
         icon: Icons.location_on_outlined,
         dimension: 'location',
       );
@@ -1678,9 +1701,10 @@ class _RecommendationsCard extends StatelessWidget {
     if (sessions.length < 20) {
       top.add(_Rec(
         icon: Icons.trending_up,
-        title: 'Keep building your sample size',
-        explanation:
-            'You have ${sessions.length} $typeLabel sessions. Patterns become more reliable and actionable at 20+ sessions.',
+        title: l10n.statsRecSampleTitle,
+        explanation: _isTournament
+            ? l10n.statsRecSampleTourn(sessions.length)
+            : l10n.statsRecSampleCash(sessions.length),
         tStat: 0,
       ));
     }
@@ -1759,10 +1783,11 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
     });
   }
 
-  String _summary(Set<String> sel, String allLabel, String noun) =>
-      sel.isEmpty
-          ? allLabel
-          : (sel.length == 1 ? sel.first : '${sel.length} $noun');
+  String _summary(Set<String> sel, String allLabel) => sel.isEmpty
+      ? allLabel
+      : (sel.length == 1
+          ? sel.first
+          : context.l10n.statsNSelected(sel.length));
 
   /// A collapsed filter section: only the parent (title + current-selection
   /// summary) shows until tapped — keeps the sheet compact even with 100+
@@ -1794,6 +1819,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -1815,7 +1841,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
                 ),
               ),
             ),
-            Text('Display Options', style: theme.textTheme.titleLarge),
+            Text(l10n.statsDisplayOptionsTitle, style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
 
             // ── Game Type — both types exist, OR a game-type filter is
@@ -1824,16 +1850,17 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
             if ((widget.hasCash && widget.hasTournaments) ||
                 _gameTypes.isNotEmpty)
               _section(
-                title: 'Game Type',
-                summary: gameTypeChipLabel(_gameTypes) ?? 'All game types',
+                title: l10n.statsFilterGameType,
+                summary:
+                    gameTypeChipLabel(l10n, _gameTypes) ?? l10n.statsAllGameTypes,
                 children: [
                   Wrap(
                     spacing: 8,
                     children: [
                       for (final entry in [
-                        (const <String>{}, 'All Games'),
-                        (const {'cash'}, 'Cash'),
-                        (const {'tournament'}, 'Tournament'),
+                        (const <String>{}, l10n.statsAllGames),
+                        (const {'cash'}, l10n.statsCash),
+                        (const {'tournament'}, l10n.statsTournament),
                       ])
                         ChoiceChip(
                           label: Text(entry.$2),
@@ -1848,22 +1875,22 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
 
             // ── Date Range (presets + custom range) ─────────────────────────
             _section(
-              title: 'Date Range',
+              title: l10n.statsDateRange,
               summary: StatsFilter(
                       datePreset: _dateRange == null ? _datePreset : null,
                       dateRange: _dateRange)
-                  .dateSummary,
+                  .dateSummary(l10n),
               children: [
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     for (final entry in [
-                      (null, 'All Time'),
-                      ('1Y', '1 Year'),
-                      ('6M', '6 Months'),
-                      ('3M', '3 Months'),
-                      ('1M', '1 Month'),
+                      (null, l10n.statsAllTime),
+                      ('1Y', l10n.stats1Year),
+                      ('6M', l10n.stats6Months),
+                      ('3M', l10n.stats3Months),
+                      ('1M', l10n.stats1Month),
                     ])
                       ChoiceChip(
                         label: Text(entry.$2),
@@ -1876,8 +1903,8 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
                     ChoiceChip(
                       avatar: const Icon(Icons.event, size: 18),
                       label: Text(_dateRange == null
-                          ? 'Custom…'
-                          : StatsFilter(dateRange: _dateRange).dateLabel!),
+                          ? l10n.statsCustomRange
+                          : StatsFilter(dateRange: _dateRange).dateLabel(l10n)!),
                       selected: _dateRange != null,
                       onSelected: (_) => _pickRange(),
                     ),
@@ -1888,7 +1915,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
 
             // ── Currency ────────────────────────────────────────────────────
             _section(
-              title: 'Currency',
+              title: l10n.statsCurrency,
               summary: '$_currency ${currencySymbol(_currency)}',
               children: [
                 Wrap(
@@ -1908,15 +1935,15 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
             // ── Country (only if multiple) ──────────────────────────────────
             if (widget.hasMultipleCountries)
               _section(
-                title: 'Country',
-                summary: _summary(_country, 'All countries', 'selected'),
+                title: l10n.statsCountry,
+                summary: _summary(_country, l10n.statsAllCountriesSummary),
                 children: [
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       FilterChip(
-                        label: const Text('All Countries'),
+                        label: Text(l10n.statsAllCountries),
                         selected: _country.isEmpty,
                         onSelected: (_) => setState(() => _country = {}),
                       ),
@@ -1941,18 +1968,18 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
             // ── Venue (only if both live and online exist) ──────────────────
             if (widget.hasLive && widget.hasOnline)
               _section(
-                title: 'Venue',
+                title: l10n.statsVenue,
                 summary: _venue == null
-                    ? 'All venues'
-                    : (_venue == 'online' ? 'Online' : 'Live'),
+                    ? l10n.statsAllVenuesSummary
+                    : venueLabel(l10n, _venue!),
                 children: [
                   Wrap(
                     spacing: 8,
                     children: [
                       for (final entry in [
-                        (null, 'All Venues'),
-                        ('live', 'Live'),
-                        ('online', 'Online'),
+                        (null, l10n.statsAllVenues),
+                        ('live', l10n.venueLive),
+                        ('online', l10n.venueOnline),
                       ])
                         ChoiceChip(
                           label: Text(entry.$2),
@@ -1967,15 +1994,15 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
             // ── Location (only if multiple) ─────────────────────────────────
             if (widget.allLocations.length > 1)
               _section(
-                title: 'Location',
-                summary: _summary(_location, 'All locations', 'selected'),
+                title: l10n.statsLocation,
+                summary: _summary(_location, l10n.statsAllLocationsSummary),
                 children: [
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       FilterChip(
-                        label: const Text('All Locations'),
+                        label: Text(l10n.statsAllLocations),
                         selected: _location.isEmpty,
                         onSelected: (_) => setState(() => _location = {}),
                       ),
@@ -2006,7 +2033,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
                       widget.onReset();
                       Navigator.pop(context);
                     },
-                    child: const Text('Reset'),
+                    child: Text(l10n.commonReset),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -2024,7 +2051,7 @@ class _StatsFilterSheetState extends State<StatsFilterSheet> {
                       ));
                       Navigator.pop(context);
                     },
-                    child: const Text('Apply'),
+                    child: Text(l10n.filterApply),
                   ),
                 ),
               ],

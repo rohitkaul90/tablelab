@@ -13,9 +13,13 @@ void main() {
   final nl = lookupAppLocalizations(const Locale('nl'));
 
   test('bucket labels reproduce the legacy English text', () {
-    expect(buyInBucketLabel(en, BuyInBucket.under50, r'$'), r'< $50');
-    expect(buyInBucketLabel(en, BuyInBucket.from200to500, r'$'), r'$200–$500');
-    expect(buyInBucketLabel(en, BuyInBucket.over500, '€'), '> €500');
+    expect(buyInBucketLabel(en, BuyInBucket.under50, 'USD'), r'< $50');
+    expect(buyInBucketLabel(en, BuyInBucket.from200to500, 'USD'), r'$200–$500');
+    // Band edges are USD amounts converted into the display currency.
+    expect(buyInBucketLabel(en, BuyInBucket.over500, 'EUR'),
+        '> ${formatAmount(convertCurrency(500, 'USD', 'EUR'), 'EUR')}');
+    expect(buyInBucketLabel(en, BuyInBucket.under50, 'INR'),
+        '< ${formatAmount(convertCurrency(50, 'USD', 'INR'), 'INR')}');
     expect(fieldSizeBucketLabel(en, FieldSizeBucket.medium), 'Medium (50–200)');
     expect(timeOfDayBucketLabel(en, TimeOfDayBucket.evening), 'Evening (6pm–11pm)');
     expect(timeOfDayBucketLabel(en, TimeOfDayBucket.lateNight, short: true),
@@ -34,7 +38,7 @@ void main() {
     for (final locale in AppLocalizations.supportedLocales) {
       final l10n = lookupAppLocalizations(locale);
       for (final b in BuyInBucket.values) {
-        expect(buyInBucketLabel(l10n, b, r'$'), isNotEmpty, reason: '$locale $b');
+        expect(buyInBucketLabel(l10n, b, 'USD'), isNotEmpty, reason: '$locale $b');
       }
       for (final b in FieldSizeBucket.values) {
         expect(fieldSizeBucketLabel(l10n, b), isNotEmpty, reason: '$locale $b');
