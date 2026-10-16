@@ -91,6 +91,7 @@ class HandReplayerScreen extends ConsumerStatefulWidget {
 
 class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
   List<_Frame> _frames = const [];
+  Locale? _framesLocale;
   int _currentIndex = 0;
   bool _isPlaying = false;
   double _speed = 1.0;
@@ -109,6 +110,11 @@ class _HandReplayerScreenState extends ConsumerState<HandReplayerScreen> {
     super.didChangeDependencies();
     // Frame messages are localized, so they're built here (not initState) and
     // rebuilt when the ambient locale changes; the cursor is preserved.
+    // didChangeDependencies also fires for unrelated inherited changes
+    // (theme, media query); only re-simulate the hand when the locale moved.
+    final locale = Localizations.localeOf(context);
+    if (locale == _framesLocale) return;
+    _framesLocale = locale;
     _frames = _buildFrames(context.l10n);
     _currentIndex = _currentIndex.clamp(0, _frames.length - 1);
   }

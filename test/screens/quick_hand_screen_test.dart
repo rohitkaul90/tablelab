@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/l10n/generated/app_localizations.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/providers/providers.dart';
 import 'package:tablelab/screens/hand_input/quick_hand_screen.dart';
@@ -341,6 +342,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text('Save Hand'), findsNothing); // really localized
+    // Assert on the AppBar title (always built — the lazy ListView never
+    // builds the lower fields at 360x800, so asserting on those proves nothing).
+    final nl = lookupAppLocalizations(const Locale('nl'));
+    expect(find.text(nl.quickHandTitle), findsOneWidget);
+    expect(find.text('Quick Hand'), findsNothing);
   });
 }

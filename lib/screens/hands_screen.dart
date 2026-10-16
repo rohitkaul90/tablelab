@@ -12,7 +12,6 @@ import 'hand_input/record_hand_sheet.dart';
 import 'hand_replayer/hand_replayer_screen.dart';
 import 'ai_analysis/hand_analysis_screen.dart';
 
-final _potFmt = NumberFormat('#,###');
 
 class HandsScreen extends ConsumerStatefulWidget {
   const HandsScreen({super.key});
@@ -191,7 +190,9 @@ class _HandTile extends StatelessWidget {
     final setup = hand.tableSetup;
     final stakes = '\$${setup.smallBlind}/\$${setup.bigBlind}'
         '${setup.straddle != null ? '/\$${setup.straddle}' : ''}';
-    final potStr = _potFmt.format(hand.finalPot);
+    // Built per call: a top-level NumberFormat freezes the locale that was
+    // active on first use and would ignore a later language switch.
+    final potStr = NumberFormat('#,###').format(hand.finalPot);
 
     return Dismissible(
       key: ValueKey(hand.id),
