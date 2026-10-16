@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/l10n.dart';
+import '../widgets/english_only_notice.dart';
+
 class DataPrivacyScreen extends StatelessWidget {
   const DataPrivacyScreen({super.key});
 
@@ -8,11 +11,13 @@ class DataPrivacyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Data & Privacy')),
+      // Body stays English by owner decision; only the title localizes.
+      appBar: AppBar(title: Text(context.l10n.drawerPrivacy)),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
             20, 24, 20, 48 + MediaQuery.paddingOf(context).bottom),
         children: [
+          const EnglishOnlyNotice(),
           _Section(
             icon: Icons.storage_outlined,
             title: 'What we collect',

@@ -30,3 +30,9 @@ const Map<String, String> kLocaleEndonyms = {
 /// for a locale newer than this build knows).
 String localeEndonym(Locale locale) =>
     kLocaleEndonyms[locale.languageCode] ?? locale.toLanguageTag();
+
+/// Whether the UI is English. The single test for "show English-only content
+/// as-is" (AI disclaimer note, raw server errors, legal-document notice) so
+/// those surfaces can't disagree.
+bool isEnglishUi(AppLocalizations l10n) =>
+    l10n.localeName.split(RegExp('[_-]')).first == 'en';
