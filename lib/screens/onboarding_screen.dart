@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import '../providers/profile_provider.dart';
 import '../services/analytics_service.dart';
 
@@ -23,6 +24,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _complete({bool skipped = false}) async {
     if (_completing) return;
+    final l10n = context.l10n;
     setState(() => _completing = true);
     if (skipped) {
       AnalyticsService.onboardingSkipped();
@@ -47,11 +49,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ref.invalidate(profileProvider);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Couldn't finish setup. Check your connection and try again.",
-          ),
-        ),
+        SnackBar(content: Text(l10n.onboardingSetupFailed)),
       );
     }
   }
@@ -120,13 +118,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(_page < 2 ? 'Next' : 'Get Started'),
+                          : Text(_page < 2
+                              ? context.l10n.onboardingNext
+                              : context.l10n.onboardingGetStarted),
                     ),
                     if (_page == 2) ...[
                       const SizedBox(height: 8),
                       TextButton(
                         onPressed: _completing ? null : () => _complete(skipped: true),
-                        child: const Text('Skip'),
+                        child: Text(context.l10n.onboardingSkip),
                       ),
                     ],
                   ],
@@ -154,14 +154,14 @@ class _Page1 extends StatelessWidget {
           Image.asset('assets/icon/app_icon.png', width: 96, height: 96),
           const SizedBox(height: 32),
           Text(
-            'Track Every Session',
+            context.l10n.onboardingPage1Title,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Text(
-            'Log your cash games and tournaments. See exactly where you\'re winning — and where you\'re losing.',
+            context.l10n.onboardingPage1Body,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurface.withAlpha(180),
@@ -187,30 +187,27 @@ class _Page2 extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Everything You Need',
+            context.l10n.onboardingPage2Title,
             style: theme.textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 32),
           _FeatureRow(
             icon: Icons.bar_chart_rounded,
-            title: 'Deep Analytics',
-            body:
-                'Win rates by stakes, location, game type, and time of day.',
+            title: context.l10n.onboardingFeatureAnalyticsTitle,
+            body: context.l10n.onboardingFeatureAnalyticsBody,
           ),
           const SizedBox(height: 20),
           _FeatureRow(
             icon: Icons.auto_awesome_outlined,
-            title: 'AI Coaching',
-            body:
-                'Get feedback on any session or hand from a built-in AI coach.',
+            title: context.l10n.onboardingFeatureAiTitle,
+            body: context.l10n.onboardingFeatureAiBody,
           ),
           const SizedBox(height: 20),
           _FeatureRow(
             icon: Icons.calculate_outlined,
-            title: 'Equity & ICM Tools',
-            body:
-                'Hand-vs-range equity and ICM deal calculator, available offline.',
+            title: context.l10n.onboardingFeatureToolsTitle,
+            body: context.l10n.onboardingFeatureToolsBody,
           ),
         ],
       ),
@@ -291,14 +288,14 @@ class _Page3 extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           Text(
-            'Ready to Go',
+            context.l10n.onboardingPage3Title,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Text(
-            'Log your first session after your next game. Your stats build automatically from there.',
+            context.l10n.onboardingPage3Body,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurface.withAlpha(180),

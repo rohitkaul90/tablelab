@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../l10n/l10n.dart';
 import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
 import '../providers/reads_provider.dart';
@@ -24,6 +25,7 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final svc = ref.watch(profileServiceProvider);
     final profileAsync = ref.watch(profileProvider);
 
@@ -110,9 +112,9 @@ class AppDrawer extends ConsumerWidget {
                     // ── Home ─────────────────────────────────────────────
                     ListTile(
                       leading: const Icon(Icons.home_outlined),
-                      title: const Text('Home'),
-                      subtitle: const Text('Stats, sessions, hands & more',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerHome),
+                      subtitle: Text(l10n.drawerHomeSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.of(context)
                             .popUntil((route) => route.isFirst);
@@ -125,9 +127,9 @@ class AppDrawer extends ConsumerWidget {
                     // ── Profile nav item ─────────────────────────────────
                     ListTile(
                       leading: const Icon(Icons.person_outline),
-                      title: const Text('Profile'),
-                      subtitle: const Text('Name, phone, preferences',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerProfile),
+                      subtitle: Text(l10n.drawerProfileSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -141,12 +143,12 @@ class AppDrawer extends ConsumerWidget {
                     const Divider(height: 1),
 
                     // ── App section ──────────────────────────────────────
-                    _SectionLabel('APP', theme),
+                    _SectionLabel(l10n.drawerSectionApp, theme),
                     ListTile(
                       leading: const Icon(Icons.construction_outlined),
-                      title: const Text('Tools'),
-                      subtitle: const Text('Equity, ICM & variance calculators',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerTools),
+                      subtitle: Text(l10n.drawerToolsSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -158,9 +160,9 @@ class AppDrawer extends ConsumerWidget {
                     ),
                     ListTile(
                       leading: const Icon(Icons.event_outlined),
-                      title: const Text('Tournament Calendar'),
-                      subtitle: const Text('Upcoming live tournaments',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerTournamentCalendar),
+                      subtitle: Text(l10n.drawerTournamentCalendarSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -172,9 +174,9 @@ class AppDrawer extends ConsumerWidget {
                     ),
                     ListTile(
                       leading: const Icon(Icons.settings_outlined),
-                      title: const Text('Settings'),
-                      subtitle: const Text('Account management, delete account',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerSettings),
+                      subtitle: Text(l10n.drawerSettingsSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -186,9 +188,9 @@ class AppDrawer extends ConsumerWidget {
                     ),
                     ListTile(
                       leading: const Icon(Icons.feedback_outlined),
-                      title: const Text('Send Feedback'),
-                      subtitle: const Text('Bugs, ideas, suggestions',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerSendFeedback),
+                      subtitle: Text(l10n.drawerSendFeedbackSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         showFeedbackSheet(context);
@@ -196,9 +198,9 @@ class AppDrawer extends ConsumerWidget {
                     ),
                     ListTile(
                       leading: const Icon(Icons.help_outline_rounded),
-                      title: const Text('Help & FAQ'),
-                      subtitle: const Text('Features, tips, common questions',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerHelp),
+                      subtitle: Text(l10n.drawerHelpSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -210,9 +212,9 @@ class AppDrawer extends ConsumerWidget {
                     ),
                     ListTile(
                       leading: const Icon(Icons.info_outline),
-                      title: const Text('About TableLab'),
-                      subtitle: const Text('What we\'re building and why',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerAbout),
+                      subtitle: Text(l10n.drawerAboutSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -222,12 +224,12 @@ class AppDrawer extends ConsumerWidget {
                         );
                       },
                     ),
-                    _SectionLabel('LEGAL', theme),
+                    _SectionLabel(l10n.drawerSectionLegal, theme),
                     ListTile(
                       leading: const Icon(Icons.gavel_outlined),
-                      title: const Text('Terms of Service'),
-                      subtitle: const Text('Usage terms and conditions',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerTerms),
+                      subtitle: Text(l10n.drawerTermsSubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -239,9 +241,9 @@ class AppDrawer extends ConsumerWidget {
                     ),
                     ListTile(
                       leading: const Icon(Icons.privacy_tip_outlined),
-                      title: const Text('Data & Privacy'),
-                      subtitle: const Text('What we store and how we use it',
-                          style: TextStyle(fontSize: 11)),
+                      title: Text(l10n.drawerPrivacy),
+                      subtitle: Text(l10n.drawerPrivacySubtitle,
+                          style: const TextStyle(fontSize: 11)),
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -261,7 +263,7 @@ class AppDrawer extends ConsumerWidget {
             ListTile(
               leading: Icon(Icons.logout, color: theme.colorScheme.error),
               title: Text(
-                'Sign Out',
+                l10n.drawerSignOut,
                 style: TextStyle(color: theme.colorScheme.error),
               ),
               onTap: () => _confirmSignOut(context, ref),
@@ -274,20 +276,21 @@ class AppDrawer extends ConsumerWidget {
   }
 
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     Navigator.pop(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sign Out?'),
-        content: const Text('You will be returned to the login screen.'),
+        title: Text(l10n.drawerSignOutTitle),
+        content: Text(l10n.drawerSignOutBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Sign Out'),
+            child: Text(l10n.drawerSignOut),
           ),
         ],
       ),

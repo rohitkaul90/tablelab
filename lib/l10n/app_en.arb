@@ -1013,5 +1013,890 @@
   "liveEndSession": "End Session",
   "@liveEndSession": {
     "description": "Primary button that finalizes the live session."
+  },
+  "authAtLeast6Chars": "At least 6 characters",
+  "@authAtLeast6Chars": {
+    "description": "Password validation message."
+  },
+  "drawerHome": "Home",
+  "@drawerHome": {
+    "description": "Navigation drawer item: back to the main tabs."
+  },
+  "drawerHomeSubtitle": "Stats, sessions, hands & more",
+  "@drawerHomeSubtitle": {
+    "description": "Drawer item subtitle under Home."
+  },
+  "drawerProfile": "Profile",
+  "@drawerProfile": {
+    "description": "Drawer item: the user profile screen."
+  },
+  "drawerProfileSubtitle": "Name, phone, preferences",
+  "@drawerProfileSubtitle": {
+    "description": "Drawer item subtitle under Profile."
+  },
+  "drawerSectionApp": "APP",
+  "@drawerSectionApp": {
+    "description": "Drawer section header (uppercase) grouping app screens."
+  },
+  "drawerTools": "Tools",
+  "@drawerTools": {
+    "description": "Drawer item: the calculators screen."
+  },
+  "drawerToolsSubtitle": "Equity, ICM & variance calculators",
+  "@drawerToolsSubtitle": {
+    "description": "Drawer item subtitle under Tools."
+  },
+  "drawerTournamentCalendar": "Tournament Calendar",
+  "@drawerTournamentCalendar": {
+    "description": "Drawer item: upcoming live tournaments list."
+  },
+  "drawerTournamentCalendarSubtitle": "Upcoming live tournaments",
+  "@drawerTournamentCalendarSubtitle": {
+    "description": "Drawer item subtitle under Tournament Calendar."
+  },
+  "drawerSettings": "Settings",
+  "@drawerSettings": {
+    "description": "Drawer item: the settings screen."
+  },
+  "drawerSettingsSubtitle": "Account management, delete account",
+  "@drawerSettingsSubtitle": {
+    "description": "Drawer item subtitle under Settings."
+  },
+  "drawerSendFeedback": "Send Feedback",
+  "@drawerSendFeedback": {
+    "description": "Drawer item: opens the feedback form."
+  },
+  "drawerSendFeedbackSubtitle": "Bugs, ideas, suggestions",
+  "@drawerSendFeedbackSubtitle": {
+    "description": "Drawer item subtitle under Send Feedback."
+  },
+  "drawerHelp": "Help & FAQ",
+  "@drawerHelp": {
+    "description": "Drawer item: help and frequently asked questions."
+  },
+  "drawerHelpSubtitle": "Features, tips, common questions",
+  "@drawerHelpSubtitle": {
+    "description": "Drawer item subtitle under Help & FAQ."
+  },
+  "drawerAbout": "About TableLab",
+  "@drawerAbout": {
+    "description": "Drawer item: the about screen. TableLab is the app name — keep it."
+  },
+  "drawerAboutSubtitle": "What we're building and why",
+  "@drawerAboutSubtitle": {
+    "description": "Drawer item subtitle under About."
+  },
+  "drawerSectionLegal": "LEGAL",
+  "@drawerSectionLegal": {
+    "description": "Drawer section header (uppercase) grouping legal documents."
+  },
+  "drawerTerms": "Terms of Service",
+  "@drawerTerms": {
+    "description": "Drawer item: the terms of service document."
+  },
+  "drawerTermsSubtitle": "Usage terms and conditions",
+  "@drawerTermsSubtitle": {
+    "description": "Drawer item subtitle under Terms of Service."
+  },
+  "drawerPrivacy": "Data & Privacy",
+  "@drawerPrivacy": {
+    "description": "Drawer item: the data and privacy document."
+  },
+  "drawerPrivacySubtitle": "What we store and how we use it",
+  "@drawerPrivacySubtitle": {
+    "description": "Drawer item subtitle under Data & Privacy."
+  },
+  "drawerSignOut": "Sign Out",
+  "@drawerSignOut": {
+    "description": "Drawer item and confirm button: sign out of the account."
+  },
+  "drawerSignOutTitle": "Sign Out?",
+  "@drawerSignOutTitle": {
+    "description": "Confirmation dialog title before signing out."
+  },
+  "drawerSignOutBody": "You will be returned to the login screen.",
+  "@drawerSignOutBody": {
+    "description": "Confirmation dialog body before signing out."
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Settings screen AppBar title."
+  },
+  "settingsVersion": "Version",
+  "@settingsVersion": {
+    "description": "Settings row label showing the installed app version."
+  },
+  "settingsDeletingAccount": "Deleting account…",
+  "@settingsDeletingAccount": {
+    "description": "Progress text while the account is being deleted."
+  },
+  "settingsUsageUnlimited": "Unlimited",
+  "@settingsUsageUnlimited": {
+    "description": "AI usage value for an account exempt from daily limits."
+  },
+  "settingsDeleteTitle": "Delete Account?",
+  "@settingsDeleteTitle": {
+    "description": "First delete-account confirmation dialog title."
+  },
+  "settingsDeleteBody": "This permanently deletes your account and ALL data — sessions, hands, player reads, and AI analyses. This cannot be undone.",
+  "@settingsDeleteBody": {
+    "description": "First delete-account confirmation dialog body."
+  },
+  "settingsDeleteConfirm": "Delete Everything",
+  "@settingsDeleteConfirm": {
+    "description": "First delete-account confirmation: destructive button."
+  },
+  "settingsDeleteTitle2": "Are you absolutely sure?",
+  "@settingsDeleteTitle2": {
+    "description": "Second delete-account confirmation dialog title."
+  },
+  "settingsDeleteBody2": "Your account and all poker data will be permanently erased. There is no recovery option.",
+  "@settingsDeleteBody2": {
+    "description": "Second delete-account confirmation dialog body."
+  },
+  "settingsDeleteConfirm2": "Yes, Delete My Account",
+  "@settingsDeleteConfirm2": {
+    "description": "Second delete-account confirmation: destructive button."
+  },
+  "settingsDeleteFailed": "Failed to delete account: {error}",
+  "@settingsDeleteFailed": {
+    "description": "Snackbar when account deletion fails; {error} is the raw error text.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsSectionStats": "STATS",
+  "@settingsSectionStats": {
+    "description": "Settings section header (uppercase) for statistics options."
+  },
+  "settingsDisplayCurrency": "Display currency",
+  "@settingsDisplayCurrency": {
+    "description": "Settings row label and picker title: the currency stats are shown in."
+  },
+  "settingsDisplayCurrencySubtitle": "Currency stats totals are shown in. \"Auto\" follows your most recent session.",
+  "@settingsDisplayCurrencySubtitle": {
+    "description": "Settings row subtitle explaining the display currency option."
+  },
+  "settingsCurrencyAuto": "Auto",
+  "@settingsCurrencyAuto": {
+    "description": "Display-currency value when following the most recent session (short, trailing label)."
+  },
+  "settingsCurrencyAutoOption": "Auto (most recent session)",
+  "@settingsCurrencyAutoOption": {
+    "description": "Display-currency picker option: follow the most recent session."
+  },
+  "settingsSectionAiUsage": "AI USAGE",
+  "@settingsSectionAiUsage": {
+    "description": "Settings section header (uppercase) for AI quota rows."
+  },
+  "settingsSessionAnalyses": "Session analyses",
+  "@settingsSessionAnalyses": {
+    "description": "AI usage row: number of session analyses used today."
+  },
+  "settingsHandAnalyses": "Hand analyses",
+  "@settingsHandAnalyses": {
+    "description": "AI usage row: number of hand analyses used today."
+  },
+  "settingsAiUsageNote": "Free daily limits, on a rolling 24-hour window.",
+  "@settingsAiUsageNote": {
+    "description": "Note under the AI usage rows."
+  },
+  "settingsSectionData": "DATA",
+  "@settingsSectionData": {
+    "description": "Settings section header (uppercase) for data import/export."
+  },
+  "settingsImportExport": "Import / Export Sessions",
+  "@settingsImportExport": {
+    "description": "Settings row: opens the import/export screen."
+  },
+  "settingsImportExportSubtitle": "Migrate from another app, or back up your data",
+  "@settingsImportExportSubtitle": {
+    "description": "Settings row subtitle under Import / Export Sessions."
+  },
+  "settingsSectionDanger": "DANGER ZONE",
+  "@settingsSectionDanger": {
+    "description": "Settings section header (uppercase) for destructive actions."
+  },
+  "settingsDeleteAccount": "Delete Account",
+  "@settingsDeleteAccount": {
+    "description": "Settings row: starts account deletion."
+  },
+  "settingsDeleteAccountSubtitle": "Permanently delete your account and all data",
+  "@settingsDeleteAccountSubtitle": {
+    "description": "Settings row subtitle under Delete Account."
+  },
+  "settingsDeleteAccountNote": "Deleting your account is permanent. All sessions, hands, player reads, and AI analyses will be erased immediately and cannot be recovered. Export your data first if needed.",
+  "@settingsDeleteAccountNote": {
+    "description": "Warning paragraph at the bottom of Settings."
+  },
+  "loginConfirmationSent": "Check your inbox — confirmation link sent.",
+  "@loginConfirmationSent": {
+    "description": "Snackbar after sign-up: a confirmation email was sent."
+  },
+  "loginResetPasswordTitle": "Reset Password",
+  "@loginResetPasswordTitle": {
+    "description": "Dialog title asking for the email to send a password reset link to."
+  },
+  "loginEmailAddress": "Email address",
+  "@loginEmailAddress": {
+    "description": "Text field label in the reset-password dialog."
+  },
+  "loginSendLink": "Send Link",
+  "@loginSendLink": {
+    "description": "Button: send the password reset link."
+  },
+  "loginResetLinkSent": "Reset link sent to {email}",
+  "@loginResetLinkSent": {
+    "description": "Snackbar after a password reset email was sent; {email} is the address.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "loginCreateYourAccount": "Create your account",
+  "@loginCreateYourAccount": {
+    "description": "Subtitle on the login screen in sign-up mode."
+  },
+  "loginSignInToContinue": "Sign in to continue",
+  "@loginSignInToContinue": {
+    "description": "Subtitle on the login screen in sign-in mode."
+  },
+  "loginTagline": "Bankroll tracking, hand replays, and AI coaching for cash & tournament poker.",
+  "@loginTagline": {
+    "description": "One-line app description on the login screen."
+  },
+  "loginConnecting": "Connecting…",
+  "@loginConnecting": {
+    "description": "Google sign-in button label while the OAuth flow is starting."
+  },
+  "loginContinueWithGoogle": "Continue with Google",
+  "@loginContinueWithGoogle": {
+    "description": "Google sign-in button label."
+  },
+  "loginOr": "or",
+  "@loginOr": {
+    "description": "Divider word between Google sign-in and the email form."
+  },
+  "loginEmail": "Email",
+  "@loginEmail": {
+    "description": "Email text field label."
+  },
+  "loginPassword": "Password",
+  "@loginPassword": {
+    "description": "Password text field label."
+  },
+  "loginEnterValidEmail": "Enter a valid email",
+  "@loginEnterValidEmail": {
+    "description": "Email validation message."
+  },
+  "loginForgotPassword": "Forgot password?",
+  "@loginForgotPassword": {
+    "description": "Link to start the password reset flow."
+  },
+  "loginLearnMore": "Learn more about TableLab",
+  "@loginLearnMore": {
+    "description": "Link to the marketing site; TableLab is the app name — keep it."
+  },
+  "loginPrivacyPolicy": "Privacy Policy",
+  "@loginPrivacyPolicy": {
+    "description": "Legal link label."
+  },
+  "loginTerms": "Terms",
+  "@loginTerms": {
+    "description": "Legal link label (terms of service)."
+  },
+  "loginCreateAccount": "Create Account",
+  "@loginCreateAccount": {
+    "description": "Primary button in sign-up mode."
+  },
+  "loginSignIn": "Sign In",
+  "@loginSignIn": {
+    "description": "Primary button in sign-in mode."
+  },
+  "loginHaveAccount": "Already have an account? Sign in",
+  "@loginHaveAccount": {
+    "description": "Toggle link shown in sign-up mode."
+  },
+  "loginNoAccount": "Don't have an account? Create one",
+  "@loginNoAccount": {
+    "description": "Toggle link shown in sign-in mode."
+  },
+  "resetPasswordUpdated": "Password updated — please sign in.",
+  "@resetPasswordUpdated": {
+    "description": "Snackbar after a successful password change."
+  },
+  "resetGenericError": "Something went wrong. Please try again.",
+  "@resetGenericError": {
+    "description": "Generic error on the reset-password screen."
+  },
+  "resetSetNewPassword": "Set new password",
+  "@resetSetNewPassword": {
+    "description": "Reset-password screen heading."
+  },
+  "resetChooseNewPassword": "Choose a new password for your account.",
+  "@resetChooseNewPassword": {
+    "description": "Reset-password screen subheading."
+  },
+  "resetNewPassword": "New password",
+  "@resetNewPassword": {
+    "description": "Text field label for the new password."
+  },
+  "resetEnterPassword": "Enter a password",
+  "@resetEnterPassword": {
+    "description": "Validation: the new password field is empty."
+  },
+  "resetConfirmPassword": "Confirm password",
+  "@resetConfirmPassword": {
+    "description": "Text field label to repeat the new password."
+  },
+  "resetPasswordsDoNotMatch": "Passwords do not match",
+  "@resetPasswordsDoNotMatch": {
+    "description": "Validation: the two password fields differ."
+  },
+  "resetUpdatePassword": "Update Password",
+  "@resetUpdatePassword": {
+    "description": "Button: submit the new password."
+  },
+  "profileSaved": "Profile saved",
+  "@profileSaved": {
+    "description": "Snackbar after the profile was saved."
+  },
+  "profileSaveError": "Error: {error}",
+  "@profileSaveError": {
+    "description": "Snackbar when saving the profile fails; {error} is the raw error text.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileTitle": "Profile",
+  "@profileTitle": {
+    "description": "Profile screen AppBar title."
+  },
+  "profileSectionBasicInfo": "Basic Info",
+  "@profileSectionBasicInfo": {
+    "description": "Profile section header (rendered uppercase)."
+  },
+  "profileDisplayName": "Display Name",
+  "@profileDisplayName": {
+    "description": "Profile field label."
+  },
+  "profileDisplayNameHint": "How you want to be known",
+  "@profileDisplayNameHint": {
+    "description": "Profile field hint for the display name."
+  },
+  "profilePhoneNumber": "Phone Number",
+  "@profilePhoneNumber": {
+    "description": "Profile field label."
+  },
+  "profileHomeCity": "Home City",
+  "@profileHomeCity": {
+    "description": "Profile field label."
+  },
+  "profileHomeCityHint": "e.g. Las Vegas, Toronto",
+  "@profileHomeCityHint": {
+    "description": "Profile field hint for the home city."
+  },
+  "profileSectionGamePreferences": "Game Preferences",
+  "@profileSectionGamePreferences": {
+    "description": "Profile section header (rendered uppercase)."
+  },
+  "profilePreferredGame": "Preferred Game",
+  "@profilePreferredGame": {
+    "description": "Label above the Cash / Tournament / Both choice chips."
+  },
+  "profileGameCash": "Cash",
+  "@profileGameCash": {
+    "description": "Preferred game chip: cash games."
+  },
+  "profileGameTournament": "Tournament",
+  "@profileGameTournament": {
+    "description": "Preferred game chip: tournaments."
+  },
+  "profileGameBoth": "Both",
+  "@profileGameBoth": {
+    "description": "Preferred game chip: both cash and tournaments."
+  },
+  "profilePreferredStakes": "Preferred Stakes",
+  "@profilePreferredStakes": {
+    "description": "Profile field label."
+  },
+  "profilePreferredStakesHint": "e.g. 1/2 NL, 2/5 PLO",
+  "@profilePreferredStakesHint": {
+    "description": "Profile field hint for preferred stakes."
+  },
+  "profileSectionGoals": "Goals & Background",
+  "@profileSectionGoals": {
+    "description": "Profile section header (rendered uppercase)."
+  },
+  "profilePlayingSince": "Playing Since (year)",
+  "@profilePlayingSince": {
+    "description": "Profile field label."
+  },
+  "profilePlayingSinceHint": "e.g. 2018",
+  "@profilePlayingSinceHint": {
+    "description": "Profile field hint: a year."
+  },
+  "profileHourlyRateGoal": "Hourly Rate Goal ({sym}/hr)",
+  "@profileHourlyRateGoal": {
+    "description": "Profile field label for the hourly win-rate goal; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "profileHourlyRateGoalHint": "e.g. 25",
+  "@profileHourlyRateGoalHint": {
+    "description": "Profile field hint: an amount per hour."
+  },
+  "profileSectionBankroll": "Bankroll",
+  "@profileSectionBankroll": {
+    "description": "Profile section header (rendered uppercase)."
+  },
+  "profileStartingBankroll": "Starting bankroll",
+  "@profileStartingBankroll": {
+    "description": "Label above the starting bankroll amount + currency."
+  },
+  "profileAmount": "Amount",
+  "@profileAmount": {
+    "description": "Starting bankroll amount field label."
+  },
+  "profileAmountHint": "e.g. 5000",
+  "@profileAmountHint": {
+    "description": "Starting bankroll amount hint."
+  },
+  "profileBankrollNote": "Used to calculate your Current Bankroll on the dashboard.",
+  "@profileBankrollNote": {
+    "description": "Note under the starting bankroll field."
+  },
+  "profileSaving": "Saving…",
+  "@profileSaving": {
+    "description": "Save button label while saving."
+  },
+  "profileSaveProfile": "Save Profile",
+  "@profileSaveProfile": {
+    "description": "Save button label."
+  },
+  "onboardingSetupFailed": "Couldn't finish setup. Check your connection and try again.",
+  "@onboardingSetupFailed": {
+    "description": "Snackbar when completing onboarding fails."
+  },
+  "onboardingNext": "Next",
+  "@onboardingNext": {
+    "description": "Onboarding button: go to the next page."
+  },
+  "onboardingGetStarted": "Get Started",
+  "@onboardingGetStarted": {
+    "description": "Onboarding button on the last page: finish onboarding."
+  },
+  "onboardingSkip": "Skip",
+  "@onboardingSkip": {
+    "description": "Onboarding link: skip the remaining setup."
+  },
+  "onboardingPage1Title": "Track Every Session",
+  "@onboardingPage1Title": {
+    "description": "Onboarding page 1 title."
+  },
+  "onboardingPage1Body": "Log your cash games and tournaments. See exactly where you're winning — and where you're losing.",
+  "@onboardingPage1Body": {
+    "description": "Onboarding page 1 body."
+  },
+  "onboardingPage2Title": "Everything You Need",
+  "@onboardingPage2Title": {
+    "description": "Onboarding page 2 title."
+  },
+  "onboardingFeatureAnalyticsTitle": "Deep Analytics",
+  "@onboardingFeatureAnalyticsTitle": {
+    "description": "Onboarding feature row title."
+  },
+  "onboardingFeatureAnalyticsBody": "Win rates by stakes, location, game type, and time of day.",
+  "@onboardingFeatureAnalyticsBody": {
+    "description": "Onboarding feature row body."
+  },
+  "onboardingFeatureAiTitle": "AI Coaching",
+  "@onboardingFeatureAiTitle": {
+    "description": "Onboarding feature row title."
+  },
+  "onboardingFeatureAiBody": "Get feedback on any session or hand from a built-in AI coach.",
+  "@onboardingFeatureAiBody": {
+    "description": "Onboarding feature row body."
+  },
+  "onboardingFeatureToolsTitle": "Equity & ICM Tools",
+  "@onboardingFeatureToolsTitle": {
+    "description": "Onboarding feature row title."
+  },
+  "onboardingFeatureToolsBody": "Hand-vs-range equity and ICM deal calculator, available offline.",
+  "@onboardingFeatureToolsBody": {
+    "description": "Onboarding feature row body."
+  },
+  "onboardingPage3Title": "Ready to Go",
+  "@onboardingPage3Title": {
+    "description": "Onboarding page 3 title."
+  },
+  "onboardingPage3Body": "Log your first session after your next game. Your stats build automatically from there.",
+  "@onboardingPage3Body": {
+    "description": "Onboarding page 3 body."
+  },
+  "feedbackCategoryBug": "Bug",
+  "@feedbackCategoryBug": {
+    "description": "Feedback category chip."
+  },
+  "feedbackCategoryIdea": "Idea",
+  "@feedbackCategoryIdea": {
+    "description": "Feedback category chip."
+  },
+  "feedbackCategoryPraise": "Praise",
+  "@feedbackCategoryPraise": {
+    "description": "Feedback category chip."
+  },
+  "feedbackCategoryOther": "Other",
+  "@feedbackCategoryOther": {
+    "description": "Feedback category chip."
+  },
+  "feedbackWriteSomething": "Please write a little something first.",
+  "@feedbackWriteSomething": {
+    "description": "Snackbar when submitting feedback with an empty message."
+  },
+  "feedbackThanks": "Thanks for the feedback! 🙏",
+  "@feedbackThanks": {
+    "description": "Snackbar after feedback was sent."
+  },
+  "feedbackLimitReached": "Daily feedback limit reached — try again tomorrow.",
+  "@feedbackLimitReached": {
+    "description": "Error when the per-day feedback cap is hit."
+  },
+  "feedbackSendFailed": "Couldn't send feedback. Please try again.",
+  "@feedbackSendFailed": {
+    "description": "Generic feedback submit error."
+  },
+  "feedbackSendFailedNetwork": "Couldn't send feedback. Check your connection and try again.",
+  "@feedbackSendFailedNetwork": {
+    "description": "Feedback submit error when the server could not be reached."
+  },
+  "feedbackTitle": "Send feedback",
+  "@feedbackTitle": {
+    "description": "Feedback sheet title."
+  },
+  "feedbackSubtitle": "Bugs, ideas, suggestions — it all helps shape TableLab.",
+  "@feedbackSubtitle": {
+    "description": "Feedback sheet subtitle; TableLab is the app name — keep it."
+  },
+  "feedbackHint": "What happened, or what would make TableLab better?",
+  "@feedbackHint": {
+    "description": "Feedback text field hint; TableLab is the app name — keep it."
+  },
+  "feedbackRate": "Rate your experience (optional)",
+  "@feedbackRate": {
+    "description": "Label above the 1–5 star rating."
+  },
+  "feedbackOkToEmail": "It's OK to email me about this",
+  "@feedbackOkToEmail": {
+    "description": "Checkbox: the user agrees to be contacted by email."
+  },
+  "feedbackSend": "Send",
+  "@feedbackSend": {
+    "description": "Feedback submit button."
+  },
+  "feedbackEmailInstead": "Email support instead",
+  "@feedbackEmailInstead": {
+    "description": "Link to send feedback by email instead of the form."
+  },
+  "toolsTitle": "Tools",
+  "@toolsTitle": {
+    "description": "Tools screen AppBar title (calculators)."
+  },
+  "toolsEquity": "Equity",
+  "@toolsEquity": {
+    "description": "Tools segment: the equity calculator (poker term — keep)."
+  },
+  "toolsIcm": "ICM",
+  "@toolsIcm": {
+    "description": "Tools segment: the ICM deal calculator (poker term — keep)."
+  },
+  "toolsVariance": "Variance",
+  "@toolsVariance": {
+    "description": "Tools segment: the variance calculator."
+  },
+  "importSourceReadFailed": "Could not read file: {error}",
+  "@importSourceReadFailed": {
+    "description": "Snackbar when the chosen file could not be parsed; {error} is the reason.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importSourceFileEmpty": "File is empty.",
+  "@importSourceFileEmpty": {
+    "description": "Import error reason."
+  },
+  "importSourceNoSheets": "No sheets found.",
+  "@importSourceNoSheets": {
+    "description": "Import error reason (Excel workbook without sheets)."
+  },
+  "importSourceSheetEmpty": "Sheet is empty.",
+  "@importSourceSheetEmpty": {
+    "description": "Import error reason (Excel sheet without rows)."
+  },
+  "importSourceUnsupportedType": "Unsupported file type: {ext}",
+  "@importSourceUnsupportedType": {
+    "description": "Import error reason; {ext} is the file extension.",
+    "placeholders": {
+      "ext": {
+        "type": "String"
+      }
+    }
+  },
+  "importSourceNoHeaders": "No headers found.",
+  "@importSourceNoHeaders": {
+    "description": "Import error reason (no header row)."
+  },
+  "importSourceNoRows": "No data rows found.",
+  "@importSourceNoRows": {
+    "description": "Import error reason (header only)."
+  },
+  "importSourceSelectSheet": "Select sheet",
+  "@importSourceSelectSheet": {
+    "description": "Dialog title: choose which Excel sheet to import."
+  },
+  "importSourceTitle": "Import Sessions",
+  "@importSourceTitle": {
+    "description": "Import source screen AppBar title."
+  },
+  "importSourceWhereFrom": "Where are you importing from?",
+  "@importSourceWhereFrom": {
+    "description": "Import source screen heading."
+  },
+  "importSourceSelectApp": "Select your app and we'll pick the right column mapping automatically.",
+  "@importSourceSelectApp": {
+    "description": "Import source screen subheading."
+  },
+  "importSourceMobileApps": "Mobile & Web Apps",
+  "@importSourceMobileApps": {
+    "description": "Import source section header."
+  },
+  "importSourceDesktopHud": "Desktop HUD Software",
+  "@importSourceDesktopHud": {
+    "description": "Import source section header; HUD = heads-up display poker software."
+  },
+  "importSourceHudNote": "These apps export profit (not cash-out). Cash-out is derived automatically.",
+  "@importSourceHudNote": {
+    "description": "Note under the desktop HUD section."
+  },
+  "importSourceTournamentDbs": "Tournament Databases",
+  "@importSourceTournamentDbs": {
+    "description": "Import source section header."
+  },
+  "importSourceOther": "Other",
+  "@importSourceOther": {
+    "description": "Import source section header for the generic option."
+  },
+  "importSourceGeneric": "Generic CSV / Excel",
+  "@importSourceGeneric": {
+    "description": "Import source option: any spreadsheet file."
+  },
+  "importSourceGenericSubtitle": "Any spreadsheet — you'll map columns manually",
+  "@importSourceGenericSubtitle": {
+    "description": "Subtitle of the generic import option."
+  },
+  "exportNoSessions": "No sessions to export.",
+  "@exportNoSessions": {
+    "description": "Snackbar when there is nothing to export."
+  },
+  "exportCsvDialogTitle": "Export sessions as CSV",
+  "@exportCsvDialogTitle": {
+    "description": "OS save-file dialog title for CSV export."
+  },
+  "exportExcelDialogTitle": "Export sessions as Excel",
+  "@exportExcelDialogTitle": {
+    "description": "OS save-file dialog title for Excel export."
+  },
+  "exportedCsv": "{count, plural, one{Exported {count} session to CSV.} other{Exported {count} sessions to CSV.}}",
+  "@exportedCsv": {
+    "description": "Snackbar after a CSV export; {count} = number of sessions.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportedExcel": "{count, plural, one{Exported {count} session to Excel.} other{Exported {count} sessions to Excel.}}",
+  "@exportedExcel": {
+    "description": "Snackbar after an Excel export; {count} = number of sessions.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "description": "Snackbar when an export fails; {error} is the raw error text.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "exportEncodeFailed": "Export failed: could not encode Excel file.",
+  "@exportEncodeFailed": {
+    "description": "Snackbar when the Excel file could not be built."
+  },
+  "importExportTitle": "Import / Export",
+  "@importExportTitle": {
+    "description": "Import/export screen AppBar title."
+  },
+  "importExportSectionExport": "Export",
+  "@importExportSectionExport": {
+    "description": "Section header."
+  },
+  "exportToCsv": "Export to CSV",
+  "@exportToCsv": {
+    "description": "Action card title."
+  },
+  "exportToCsvSubtitle": "Save all sessions as a .csv file. Can be opened in Excel, Google Sheets, etc.",
+  "@exportToCsvSubtitle": {
+    "description": "Action card subtitle."
+  },
+  "exportToExcel": "Export to Excel",
+  "@exportToExcel": {
+    "description": "Action card title."
+  },
+  "exportToExcelSubtitle": "Save all sessions as a .xlsx file.",
+  "@exportToExcelSubtitle": {
+    "description": "Action card subtitle."
+  },
+  "importExportSectionImport": "Import",
+  "@importExportSectionImport": {
+    "description": "Section header."
+  },
+  "importSessions": "Import Sessions",
+  "@importSessions": {
+    "description": "Action card title: opens the import flow."
+  },
+  "importSessionsSubtitle": "Import from Poker Income, BankrollMob, PokerTracker 4, and 15 more apps — or any custom CSV / Excel file.",
+  "@importSessionsSubtitle": {
+    "description": "Action card subtitle; the app names are products — keep them."
+  },
+  "importTipsTitle": "Import Tips",
+  "@importTipsTitle": {
+    "description": "Heading of the tips box."
+  },
+  "importTipsBody": "• Select your source app for automatic column mapping\n• Only Date and Buy-in are required — everything else is optional\n• If your file has only a Profit column (no Cash-out), cash-out is derived automatically\n• Duration accepts minutes, decimal hours, \"1h 30m\", \"1:30\", and more\n• Duplicate sessions (same date + buy-in + cash-out) are skipped by default",
+  "@importTipsBody": {
+    "description": "Bulleted tips; keep the • bullets and the line breaks."
+  },
+  "aboutTitle": "About TableLab",
+  "@aboutTitle": {
+    "description": "About screen AppBar title; TableLab is the app name — keep it."
+  },
+  "aboutTagline": "Your edge, quantified.",
+  "@aboutTagline": {
+    "description": "App tagline under the logo."
+  },
+  "aboutQuote": "Most players keep results in their head.\nThe best players keep them in a database.",
+  "@aboutQuote": {
+    "description": "Two-line opening statement; keep the line break."
+  },
+  "aboutIntro": "Poker rewards pattern recognition — and TableLab is built to surface yours. Maybe your best game is live $2/$5 on Saturday nights. Maybe you leak chips in every online session past midnight. Maybe you haven't noticed yet. TableLab notices.",
+  "@aboutIntro": {
+    "description": "Intro paragraph; $2/$5 is a stakes level — keep it."
+  },
+  "aboutFeatureSessionTrackerTitle": "Session Tracker",
+  "@aboutFeatureSessionTrackerTitle": {
+    "description": "About feature title."
+  },
+  "aboutFeatureSessionTrackerBody": "Log every cash game and tournament — buy-ins, rake, duration, location, table quality, and more. Your history, always at hand, never in a spreadsheet named \"poker stuff v3 FINAL.xlsx\".",
+  "@aboutFeatureSessionTrackerBody": {
+    "description": "About feature body."
+  },
+  "aboutFeatureAnalyticsTitle": "Deep Analytics",
+  "@aboutFeatureAnalyticsTitle": {
+    "description": "About feature title."
+  },
+  "aboutFeatureAnalyticsBody": "Profit over time, win rates by stakes, location, game type, day of week, and time of day. Statistical recommendations that flag where you're actually making money — not where you think you are.",
+  "@aboutFeatureAnalyticsBody": {
+    "description": "About feature body."
+  },
+  "aboutFeatureReplayerTitle": "Hand Replayer",
+  "@aboutFeatureReplayerTitle": {
+    "description": "About feature title."
+  },
+  "aboutFeatureReplayerBody": "Record hands from memory and replay them frame-by-frame on a full table view. Cash and tournament hands both supported — enter any blind level, from 100/200 to 5M/10M. Study, share, and plug the leaks.",
+  "@aboutFeatureReplayerBody": {
+    "description": "About feature body."
+  },
+  "aboutFeatureAiTitle": "AI Coaching",
+  "@aboutFeatureAiTitle": {
+    "description": "About feature title."
+  },
+  "aboutFeatureAiBody": "Get a coaching breakdown of any recorded hand or session. The AI reviews your lines, flags sizing mistakes, and gives you something to think about before your next session. Like a coach, but available at 2am.",
+  "@aboutFeatureAiBody": {
+    "description": "About feature body."
+  },
+  "aboutFeatureReadsTitle": "Player Reads",
+  "@aboutFeatureReadsTitle": {
+    "description": "About feature title (reads = notes on opponents)."
+  },
+  "aboutFeatureReadsBody": "Your private database of tells, tendencies, and opponent notes. The felt has a memory — now so do you. Names autocomplete in the hand recorder so your reads stay connected to the hands they came from.",
+  "@aboutFeatureReadsBody": {
+    "description": "About feature body."
+  },
+  "aboutFeatureCalendarTitle": "Tournament Calendar",
+  "@aboutFeatureCalendarTitle": {
+    "description": "About feature title."
+  },
+  "aboutFeatureCalendarBody": "Upcoming live tournaments worldwide, updated weekly from PokerNews. WSOP, WPT, EPT, and regional series — filter by country and never miss an event worth playing.",
+  "@aboutFeatureCalendarBody": {
+    "description": "About feature body; PokerNews, WSOP, WPT, EPT are names — keep them."
+  },
+  "aboutFeatureIcmTitle": "ICM Deal Calculator",
+  "@aboutFeatureIcmTitle": {
+    "description": "About feature title."
+  },
+  "aboutFeatureIcmBody": "When the final table bubbles down to a deal, know your number. The ICM calculator uses the Malmuth-Harville model to compute fair deals based on chip counts and remaining prizes — up to 9 players, instantly.",
+  "@aboutFeatureIcmBody": {
+    "description": "About feature body."
+  },
+  "aboutFeatureEquityTitle": "Equity Calculator",
+  "@aboutFeatureEquityTitle": {
+    "description": "About feature title."
+  },
+  "aboutFeatureEquityBody": "Hand vs range equity, calculated across all run-outs. Know whether you're 60/40 or 40/60 before you make the call.",
+  "@aboutFeatureEquityBody": {
+    "description": "About feature body."
+  },
+  "aboutFeatureCurrencyTitle": "Multi-Currency Bankroll",
+  "@aboutFeatureCurrencyTitle": {
+    "description": "About feature title."
+  },
+  "aboutFeatureCurrencyBody": "CAD, USD, GBP, EUR — play anywhere in the world and your bankroll stays accurate across every currency.",
+  "@aboutFeatureCurrencyBody": {
+    "description": "About feature body."
+  },
+  "aboutVisionTitle": "The Vision",
+  "@aboutVisionTitle": {
+    "description": "Heading of the vision box."
+  },
+  "aboutVisionBody": "A full-stack poker intelligence platform — tracking, analysis, study tools, real-time coaching, and eventually, community — for every player who takes the game seriously enough to put in the work away from the table. Built by a player, for players.",
+  "@aboutVisionBody": {
+    "description": "Vision paragraph."
+  },
+  "aboutOperatedBy": "Operated by MagpiQ",
+  "@aboutOperatedBy": {
+    "description": "Footer line; MagpiQ is the company name — keep it."
+  },
+  "importSourceSharkscopeNote": "Web — Gold subscription required",
+  "@importSourceSharkscopeNote": {
+    "description": "Import source card subtitle for Sharkscope: a web service whose export needs the paid Gold plan."
+  },
+  "importSourcePokerStarsNote": "Tournament history export",
+  "@importSourcePokerStarsNote": {
+    "description": "Import source card subtitle for PokerStars History: the tournament-history export file."
   }
 }

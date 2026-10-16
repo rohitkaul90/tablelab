@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/l10n/generated/app_localizations.dart';
 import 'package:tablelab/screens/auth/login_screen.dart';
 
 import '../helpers/pump_app.dart';
@@ -151,6 +152,21 @@ void main() {
 
       // No length error — validation passes; only Supabase call would follow
       expect(find.text('At least 6 characters'), findsNothing);
+    });
+  });
+
+  group('LoginScreen — localized', () {
+    testWidgets('renders in Dutch on a narrow phone without overflow',
+        (tester) async {
+      await pumpApp(tester, const LoginScreen(),
+          locale: const Locale('nl'), size: const Size(360, 800));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // The Dutch label is on screen and the English one is gone.
+      final nl = lookupAppLocalizations(const Locale('nl'));
+      expect(find.text('Sign In'), findsNothing);
+      expect(find.widgetWithText(FilledButton, nl.loginSignIn), findsOneWidget);
     });
   });
 }

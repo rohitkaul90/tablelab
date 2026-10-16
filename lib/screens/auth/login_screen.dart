@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../l10n/l10n.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final l10n = context.l10n;
     setState(() {
       _loading = true;
       _error = null;
@@ -47,9 +49,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         if (res.session == null && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Check your inbox — confirmation link sent.'),
-              duration: Duration(seconds: 6),
+            SnackBar(
+              content: Text(l10n.loginConfirmationSent),
+              duration: const Duration(seconds: 6),
             ),
           );
         }
@@ -69,6 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _forgotPassword() async {
+    final l10n = context.l10n;
     final email = _emailCtrl.text.trim();
     String? target = email.contains('@') ? email : null;
 
@@ -78,24 +81,24 @@ class _LoginScreenState extends State<LoginScreen> {
       target = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Reset Password'),
+          title: Text(l10n.loginResetPasswordTitle),
           content: TextField(
             controller: ctrl,
             autofocus: true,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email address',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.loginEmailAddress,
+              border: const OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
+              child: Text(l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: const Text('Send Link'),
+              child: Text(l10n.loginSendLink),
             ),
           ],
         ),
@@ -111,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Reset link sent to $target')),
+          SnackBar(content: Text(l10n.loginResetLinkSent(target))),
         );
       }
     } on AuthException catch (e) {
@@ -149,6 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -180,8 +184,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _isRegister
-                          ? 'Create your account'
-                          : 'Sign in to continue',
+                          ? l10n.loginCreateYourAccount
+                          : l10n.loginSignInToContinue,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.outline,
@@ -189,8 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Bankroll tracking, hand replays, and AI coaching '
-                      'for cash & tournament poker.',
+                      l10n.loginTagline,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant
@@ -211,8 +214,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2))
                           : const _GoogleLogo(),
                       label: Text(_googleLoading
-                          ? 'Connecting…'
-                          : 'Continue with Google'),
+                          ? l10n.loginConnecting
+                          : l10n.loginContinueWithGoogle),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(48),
                         side: BorderSide(
@@ -227,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Expanded(child: Divider()),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('or',
+                          child: Text(l10n.loginOr,
                               style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.outline)),
                         ),
@@ -239,32 +242,34 @@ class _LoginScreenState extends State<LoginScreen> {
                     // ── Email / password ───────────────────────────────────
                     TextFormField(
                       controller: _emailCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.email_outlined),
+                      decoration: InputDecoration(
+                        labelText: l10n.loginEmail,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.email_outlined),
                       ),
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Required';
-                        if (!v.contains('@')) return 'Enter a valid email';
+                        if (v == null || v.trim().isEmpty) {
+                          return l10n.commonRequired;
+                        }
+                        if (!v.contains('@')) return l10n.loginEnterValidEmail;
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock_outline),
+                      decoration: InputDecoration(
+                        labelText: l10n.loginPassword,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_outline),
                       ),
                       obscureText: true,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Required';
+                        if (v == null || v.isEmpty) return l10n.commonRequired;
                         if (_isRegister && v.length < 6) {
-                          return 'At least 6 characters';
+                          return l10n.authAtLeast6Chars;
                         }
                         return null;
                       },
@@ -288,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : Text(
-                                  'Forgot password?',
+                                  l10n.loginForgotPassword,
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: theme.colorScheme.primary,
@@ -304,18 +309,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         mode: LaunchMode.externalApplication,
                       ),
                       icon: const Icon(Icons.open_in_new, size: 14),
-                      label: const Text('Learn more about TableLab'),
+                      label: Text(l10n.loginLearnMore),
                       style: TextButton.styleFrom(
                         foregroundColor: theme.colorScheme.primary,
                         textStyle: const TextStyle(fontSize: 13),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Wrap, not Row: translated labels ("Privacybeleid",
+                    // "Politique de confidentialité") overflow a 360dp
+                    // phone in a Row; a Wrap drops to a second line instead.
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         _LegalLink(
-                          label: 'Privacy Policy',
+                          label: l10n.loginPrivacyPolicy,
                           url: 'https://tablelab.app/privacy',
                         ),
                         Text(
@@ -326,7 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         _LegalLink(
-                          label: 'Terms',
+                          label: l10n.loginTerms,
                           url: 'https://tablelab.app/terms',
                         ),
                       ],
@@ -368,8 +377,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                       strokeWidth: 2),
                                 )
                               : Text(_isRegister
-                                  ? 'Create Account'
-                                  : 'Sign In'),
+                                  ? l10n.loginCreateAccount
+                                  : l10n.loginSignIn),
                         ),
                         TextButton(
                           onPressed: () => setState(() {
@@ -378,8 +387,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           }),
                           child: Text(
                             _isRegister
-                                ? 'Already have an account? Sign in'
-                                : "Don't have an account? Create one",
+                                ? l10n.loginHaveAccount
+                                : l10n.loginNoAccount,
                           ),
                         ),
                       ],
