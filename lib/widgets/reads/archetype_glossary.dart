@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 import '../../reads/tag_definitions.dart';
 
 /// Bottom sheet that explains each player-type archetype in plain language.
@@ -10,6 +11,7 @@ void showArchetypeGlossary(BuildContext context) {
     showDragHandle: true,
     builder: (ctx) {
       final theme = Theme.of(ctx);
+      final l10n = ctx.l10n;
       return DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.62,
@@ -19,27 +21,27 @@ void showArchetypeGlossary(BuildContext context) {
           padding: EdgeInsets.fromLTRB(
               20, 0, 20, 24 + MediaQuery.paddingOf(ctx).bottom),
           children: [
-            Text('Player Types', style: theme.textTheme.titleLarge),
+            Text(l10n.glossaryTitle, style: theme.textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-              'What each tag means — pick the one that best fits how they play.',
+              l10n.glossarySubtitle,
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
-            for (final e in kArchetypeTags.entries) ...[
+            for (final id in kArchetypeTags) ...[
               Row(
                 children: [
                   Container(
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: readableTagColor(ctx, tagColor(e.key)),
+                      color: readableTagColor(ctx, tagColor(id)),
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(e.value,
+                  Text(tagDisplayName(l10n, id),
                       style: const TextStyle(
                           fontSize: 15, fontWeight: FontWeight.bold)),
                 ],
@@ -48,7 +50,7 @@ void showArchetypeGlossary(BuildContext context) {
               Padding(
                 padding: const EdgeInsets.only(left: 18, bottom: 16),
                 child: Text(
-                  kArchetypeDefinitions[e.key] ?? '',
+                  archetypeDefinition(l10n, id),
                   style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant, height: 1.4),
                 ),

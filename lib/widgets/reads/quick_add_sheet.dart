@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 import '../../models/player_read.dart';
 import '../../reads/tag_definitions.dart';
 import 'archetype_glossary.dart';
@@ -118,6 +119,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
           )
         : null;
 
+    final l10n = context.l10n;
     try {
       await widget.onSaved(_labelCtrl.text.trim(), _tags.toList(), note);
       if (mounted) Navigator.pop(context);
@@ -125,7 +127,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(content: Text(l10n.readsSaveFailedShort('$e'))),
         );
       }
     }
@@ -134,6 +136,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final isExisting = widget.existingPlayer != null;
 
     return Padding(
@@ -159,7 +162,9 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                     Row(
                       children: [
                         Text(
-                          isExisting ? 'Add Observation' : 'New Player Read',
+                          isExisting
+                              ? l10n.readDetailAddObservation
+                              : l10n.quickAddTitleNew,
                           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                         ),
                         const Spacer(),
@@ -169,7 +174,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                               ? const SizedBox(
                                   width: 16, height: 16,
                                   child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('Save'),
+                              : Text(l10n.commonSave),
                         ),
                       ],
                     ),
@@ -182,8 +187,8 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                         autofocus: true,
                         onChanged: _onLabelChanged,
                         decoration: InputDecoration(
-                          labelText: 'Player name / label',
-                          hintText: 'e.g. Seat 3, John, Red hat',
+                          labelText: l10n.quickAddPlayerLabel,
+                          hintText: l10n.quickAddPlayerHint,
                           filled: true,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -210,7 +215,11 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                                 leading: const Icon(Icons.history, size: 16),
                                 title: Text(p.playerLabel),
                                 subtitle: p.tags.isNotEmpty
-                                    ? Text(p.tags.map(tagDisplayName).take(3).join(' · '),
+                                    ? Text(
+                                        p.tags
+                                            .map((t) => tagDisplayName(l10n, t))
+                                            .take(3)
+                                            .join(' · '),
                                         style: const TextStyle(fontSize: 11))
                                     : null,
                                 onTap: () => _pickSuggestion(p),
@@ -238,7 +247,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                     // ── Archetype tags ─────────────────────────────────────
                     Row(
                       children: [
-                        _SectionLabel('Player Type'),
+                        _SectionLabel(l10n.quickAddPlayerType),
                         const SizedBox(width: 6),
                         GestureDetector(
                           onTap: () => showArchetypeGlossary(context),
@@ -252,16 +261,16 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: kArchetypeTags.entries.map((e) {
-                        final selected = _tags.contains(e.key);
+                      children: kArchetypeTags.map((id) {
+                        final selected = _tags.contains(id);
                         // Single-select: once one player type is picked, the
                         // others grey out (tap the selected one to switch).
-                        final disabled = tagDisabled(e.key, _tags);
-                        final color = tagColor(e.key);
+                        final disabled = tagDisabled(id, _tags);
+                        final color = tagColor(id);
                         return Opacity(
                           opacity: disabled ? 0.4 : 1.0,
                           child: GestureDetector(
-                            onTap: disabled ? null : () => _toggleTag(e.key),
+                            onTap: disabled ? null : () => _toggleTag(id),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -276,7 +285,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                                 ),
                               ),
                               child: Text(
-                                e.value,
+                                tagDisplayName(l10n, id),
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: selected ? FontWeight.bold : FontWeight.normal,
@@ -294,22 +303,23 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                     const SizedBox(height: 16),
 
                     // ── Tendency tags ──────────────────────────────────────
-                    for (final group in kTendencyGroups.entries) ...[
-                      _SectionLabel(group.key),
+                    for (final group in kTendencyGroups) ...[
+                      _SectionLabel(tendencyGroupLabel(l10n, group.id)),
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 6,
                         runSpacing: 6,
-                        children: group.value.entries.map((e) {
-                          final selected = _tags.contains(e.key);
+                        children: group.tagIds.map((id) {
+                          final selected = _tags.contains(id);
                           // null onSelected greys + disables the chip when a
                           // contradictory tendency is already selected.
-                          final disabled = tagDisabled(e.key, _tags);
+                          final disabled = tagDisabled(id, _tags);
                           return FilterChip(
-                            label: Text(e.value, style: const TextStyle(fontSize: 11)),
+                            label: Text(tagDisplayName(l10n, id),
+                                style: const TextStyle(fontSize: 11)),
                             selected: selected,
                             onSelected:
-                                disabled ? null : (_) => _toggleTag(e.key),
+                                disabled ? null : (_) => _toggleTag(id),
                             selectedColor: Colors.teal.withAlpha(60),
                             checkmarkColor: Colors.tealAccent,
                             side: BorderSide(
@@ -325,13 +335,13 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                     ],
 
                     // ── Quick note ─────────────────────────────────────────
-                    _SectionLabel('Quick Note'),
+                    _SectionLabel(l10n.quickAddQuickNote),
                     const SizedBox(height: 6),
                     TextField(
                       controller: _noteCtrl,
                       maxLines: 2,
                       decoration: InputDecoration(
-                        hintText: 'e.g. opened 4x UTG with 45o, triple-barrel bluffed',
+                        hintText: l10n.quickAddNoteHint,
                         filled: true,
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -356,7 +366,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                                   .withValues(alpha: 0.75),
                             ),
                             const SizedBox(width: 4),
-                            Text('Hand Details',
+                            Text(l10n.quickAddHandDetails,
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurfaceVariant
@@ -372,7 +382,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                         children: [
                           Expanded(
                             child: _DropField(
-                              label: 'Position',
+                              label: l10n.readFieldPosition,
                               value: _position,
                               items: _kPositions,
                               onChanged: (v) => setState(() => _position = v),
@@ -381,7 +391,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: _DropField(
-                              label: 'Street',
+                              label: l10n.readFieldStreet,
                               value: _street,
                               items: _kStreets,
                               onChanged: (v) => setState(() => _street = v),
@@ -395,7 +405,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                         children: [
                           Expanded(
                             child: _DropField(
-                              label: 'Action',
+                              label: l10n.readFieldAction,
                               value: _action,
                               items: _kActions,
                               onChanged: (v) => setState(() => _action = v),
@@ -406,8 +416,8 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                             child: TextField(
                               controller: _sizingCtrl,
                               decoration: InputDecoration(
-                                labelText: 'Sizing',
-                                hintText: '4x / 75%',
+                                labelText: l10n.readFieldSizing,
+                                hintText: l10n.readFieldSizingHint,
                                 filled: true,
                                 isDense: true,
                                 border: OutlineInputBorder(
@@ -422,8 +432,8 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                       TextField(
                         controller: _cardsCtrl,
                         decoration: InputDecoration(
-                          labelText: 'Cards shown',
-                          hintText: 'AKo, JJ, 45s...',
+                          labelText: l10n.readFieldCards,
+                          hintText: l10n.readFieldCardsHint,
                           filled: true,
                           isDense: true,
                           border: OutlineInputBorder(
@@ -446,7 +456,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
                                     strokeWidth: 2,
                                     color: theme.colorScheme.onPrimary))
                             : const Icon(Icons.save_outlined),
-                        label: Text(_saving ? 'Saving…' : 'Save'),
+                        label: Text(_saving ? l10n.readSaving : l10n.commonSave),
                         style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14)),
                       ),

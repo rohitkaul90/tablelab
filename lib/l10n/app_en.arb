@@ -2826,5 +2826,715 @@
   "replayerLinkNone": "None (remove link)",
   "@replayerLinkNone": {
     "description": "First entry of the session-link sheet."
+  },
+  "tagFish": "Fish",
+  "@tagFish": {
+    "description": "Player-type (archetype) tag on an opponent read. Poker jargon: keep Fish/Nit/TAG/LAG/Maniac/Calling Station/GTO in English."
+  },
+  "tagNit": "Nit",
+  "@tagNit": {
+    "description": "Player-type (archetype) tag on an opponent read. Poker jargon: keep Fish/Nit/TAG/LAG/Maniac/Calling Station/GTO in English."
+  },
+  "tagTagPlayer": "TAG",
+  "@tagTagPlayer": {
+    "description": "Player-type (archetype) tag on an opponent read. Poker jargon: keep Fish/Nit/TAG/LAG/Maniac/Calling Station/GTO in English."
+  },
+  "tagLagPlayer": "LAG",
+  "@tagLagPlayer": {
+    "description": "Player-type (archetype) tag on an opponent read. Poker jargon: keep Fish/Nit/TAG/LAG/Maniac/Calling Station/GTO in English."
+  },
+  "tagCallingStation": "Calling Station",
+  "@tagCallingStation": {
+    "description": "Player-type (archetype) tag on an opponent read. Poker jargon: keep Fish/Nit/TAG/LAG/Maniac/Calling Station/GTO in English."
+  },
+  "tagManiac": "Maniac",
+  "@tagManiac": {
+    "description": "Player-type (archetype) tag on an opponent read. Poker jargon: keep Fish/Nit/TAG/LAG/Maniac/Calling Station/GTO in English."
+  },
+  "tagTricky": "Tricky/GTO",
+  "@tagTricky": {
+    "description": "Player-type (archetype) tag on an opponent read. Poker jargon: keep Fish/Nit/TAG/LAG/Maniac/Calling Station/GTO in English."
+  },
+  "archetypeDefFish": "Weak, inexperienced player — plays too many hands and makes big fundamental mistakes.",
+  "@archetypeDefFish": {
+    "description": "Plain-language glossary definition of the 'Fish' player type."
+  },
+  "archetypeDefNit": "Extremely tight and risk-averse — only plays premium hands and folds to most aggression.",
+  "@archetypeDefNit": {
+    "description": "Plain-language glossary definition of the 'Nit' player type."
+  },
+  "archetypeDefTagPlayer": "Tight-Aggressive: a solid winning style — plays few hands, but bets and raises them hard.",
+  "@archetypeDefTagPlayer": {
+    "description": "Plain-language glossary definition of the 'TAG' player type."
+  },
+  "archetypeDefLagPlayer": "Loose-Aggressive: plays many hands with constant pressure; applies heat but can over-bluff.",
+  "@archetypeDefLagPlayer": {
+    "description": "Plain-language glossary definition of the 'LAG' player type."
+  },
+  "archetypeDefCallingStation": "Calls far too often and rarely folds or raises — pays you off, but won't fold to bluffs.",
+  "@archetypeDefCallingStation": {
+    "description": "Plain-language glossary definition of the 'Calling Station' player type."
+  },
+  "archetypeDefManiac": "Hyper-aggressive — raises and bluffs relentlessly with a very wide range.",
+  "@archetypeDefManiac": {
+    "description": "Plain-language glossary definition of the 'Maniac' player type."
+  },
+  "archetypeDefTricky": "Strong and balanced — mixes their lines and is hard to read or exploit.",
+  "@archetypeDefTricky": {
+    "description": "Plain-language glossary definition of the 'Tricky/GTO' player type."
+  },
+  "tagGroupPreflop": "Preflop",
+  "@tagGroupPreflop": {
+    "description": "Section header grouping opponent tendency tags (Preflop / Postflop / Tournament & ICM)."
+  },
+  "tagLimps": "Limps",
+  "@tagLimps": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagOpensWide": "Opens Wide",
+  "@tagOpensWide": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagOpensTight": "Opens Tight",
+  "@tagOpensTight": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagThreeBetsLight": "3-Bets Light",
+  "@tagThreeBetsLight": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagFourBetsLight": "4-Bets Light",
+  "@tagFourBetsLight": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagFolds3bet": "Folds to 3-Bet",
+  "@tagFolds3bet": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagCalls3betWide": "Calls 3-Bets Wide",
+  "@tagCalls3betWide": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagColdCalls": "Cold Calls",
+  "@tagColdCalls": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagSqueezes": "Squeezes",
+  "@tagSqueezes": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagOverfoldsBlinds": "Overfolds Blinds",
+  "@tagOverfoldsBlinds": {
+    "description": "Opponent tendency tag chip (Preflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagGroupPostflop": "Postflop",
+  "@tagGroupPostflop": {
+    "description": "Section header grouping opponent tendency tags (Preflop / Postflop / Tournament & ICM)."
+  },
+  "tagCBetsAlways": "C-Bets Always",
+  "@tagCBetsAlways": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagCheckFolds": "Check-Folds",
+  "@tagCheckFolds": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagFoldsToCbet": "Folds to C-Bet",
+  "@tagFoldsToCbet": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagBarrelsRelentless": "Barrels Turns",
+  "@tagBarrelsRelentless": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagGivesUpTurn": "Gives Up Turn",
+  "@tagGivesUpTurn": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagFloatsWide": "Floats Wide",
+  "@tagFloatsWide": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagDonkLeads": "Donk-Leads",
+  "@tagDonkLeads": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagOverBluffs": "Over-Bluffs",
+  "@tagOverBluffs": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagValueHeavy": "Value-Heavy",
+  "@tagValueHeavy": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagOverfoldsRiver": "Overfolds River",
+  "@tagOverfoldsRiver": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagSlowPlays": "Slow-Plays",
+  "@tagSlowPlays": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagCheckRaises": "Check-Raises",
+  "@tagCheckRaises": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagReadableSizing": "Readable Sizing",
+  "@tagReadableSizing": {
+    "description": "Opponent tendency tag chip (Postflop). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagGroupTournamentIcm": "Tournament / ICM",
+  "@tagGroupTournamentIcm": {
+    "description": "Section header grouping opponent tendency tags (Preflop / Postflop / Tournament & ICM)."
+  },
+  "tagTightensBubble": "Tightens at Bubble",
+  "@tagTightensBubble": {
+    "description": "Opponent tendency tag chip (Tournament / ICM). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagShovesWideShort": "Shoves Wide (Short)",
+  "@tagShovesWideShort": {
+    "description": "Opponent tendency tag chip (Tournament / ICM). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "tagCallsShovesLight": "Calls Shoves Light",
+  "@tagCallsShovesLight": {
+    "description": "Opponent tendency tag chip (Tournament / ICM). Keep poker terms c-bet/3-bet/4-bet/donk/float/barrel/squeeze/limp/check-raise in English."
+  },
+  "insightValueBetWideThin": "Value bet wide and thin to the river — they call too much.",
+  "@insightValueBetWideThin": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightNeverBluffWonT": "Never bluff — they won't fold.",
+  "@insightNeverBluffWonT": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightIsolateLimpsWideRaising": "Isolate their limps with a wide raising range.",
+  "@insightIsolateLimpsWideRaising": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightGiveFullCreditLarge": "Give full credit to large bets — their range is extremely strong.",
+  "@insightGiveFullCreditLarge": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightAttackLight3Bets": "Attack with light 3-bets and steal attempts; they fold the bottom of their range.",
+  "@insightAttackLight3Bets": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightFoldContinuationBetsWet": "Fold to their continuation bets on wet boards unless you have a strong hand or draw.",
+  "@insightFoldContinuationBetsWet": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightCallDownLighterThan": "Call down lighter than normal — they over-bluff.",
+  "@insightCallDownLighterThan": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightCheckRaiseAsTrap": "Check-raise as a trap; they c-bet too frequently.",
+  "@insightCheckRaiseAsTrap": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightWiden3BetCalling": "Widen your 3-bet calling range vs. their opens.",
+  "@insightWiden3BetCalling": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightDonTBloatPots": "Don't bloat pots out of position with marginal hands — keep the pot small or play back in position.",
+  "@insightDonTBloatPots": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightRespectBetsHaveRange": "Respect their bets — they have range discipline.",
+  "@insightRespectBetsHaveRange": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insight3BetAsSteal": "3-bet as a steal from late position; they fold the bottom of their range.",
+  "@insight3BetAsSteal": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightDonTPayOff": "Don't pay off their river bets — bluff-catch tighter; when they fire, they have it.",
+  "@insightDonTPayOff": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightApplyPositionalPressureFloat": "Apply positional pressure — float and barrel when they c-bet and then give up.",
+  "@insightApplyPositionalPressureFloat": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightTrapStrongHandsLet": "Trap with strong hands — let them build the pot.",
+  "@insightTrapStrongHandsLet": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightDonTSemiBluff": "Don't semi-bluff; let them hang themselves with their aggression.",
+  "@insightDonTSemiBluff": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightCallDownAnyPair": "Call down with any pair or decent draw — they over-represent constantly.",
+  "@insightCallDownAnyPair": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightDonTBetFold": "Don't bet-fold marginal hands — they exploit overfolding.",
+  "@insightDonTBetFold": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightMixUpOwnLines": "Mix up your own lines; they will find and exploit any pattern.",
+  "@insightMixUpOwnLines": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insight3BetSqueezeOpens": "3-bet and squeeze vs. their opens — their range is weak.",
+  "@insight3BetSqueezeOpens": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightFoldRaisesUnlessYou": "Fold to their raises unless you have a premium hand.",
+  "@insightFoldRaisesUnlessYou": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightIsolateLimps34": "Isolate their limps with a 3–4× raise.",
+  "@insightIsolateLimps34": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insight4BetLightFor": "4-bet light for value; widen your flatting range vs. their 3-bets.",
+  "@insight4BetLightFor": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightFlatStrong3Bets": "Flat your strong 3-bets in position and let them barrel; 5-bet only premiums. Call their 4-bet a touch wider with hands that flop well.",
+  "@insightFlatStrong3Bets": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insight3BetThemLiberally": "3-bet them liberally as a steal from BTN and CO.",
+  "@insight3BetThemLiberally": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insight3BetForValue": "3-bet for value only (and size up) — don't 3-bet bluff. Then barrel postflop; they peel too wide.",
+  "@insight3BetForValue": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightSqueezeWhenColdCall": "Squeeze when they cold-call behind — they will often fold.",
+  "@insightSqueezeWhenColdCall": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightTightenColdCallsFront": "Tighten your cold-calls in front of them, and flat your premiums to trap the squeeze.",
+  "@insightTightenColdCallsFront": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightStealRelentlesslyFromCo": "Steal relentlessly from the CO/BTN/SB — they surrender their blinds too cheaply.",
+  "@insightStealRelentlesslyFromCo": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightCheckRaiseCBets": "Check-raise their c-bets more freely — they bet too mechanically.",
+  "@insightCheckRaiseCBets": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightFloatPositionTakePot": "Float in position and take the pot away on the turn.",
+  "@insightFloatPositionTakePot": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightBetWhenCheckGive": "Bet when they check — they give up with little fight.",
+  "@insightBetWhenCheckGive": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightCBetRelentlesslySmall": "C-bet relentlessly with a small size — they fold far too often to the first barrel.",
+  "@insightCBetRelentlesslySmall": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightBluffCatchLighterDon": "Bluff-catch lighter, and don't fold the flop planning to fold the turn — they keep firing without the goods.",
+  "@insightBluffCatchLighterDon": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightFloatFlopPositionTake": "Float the flop in position and take it away on the turn when they check — they're one-and-done.",
+  "@insightFloatFlopPositionTake": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightBarrelTurnRiverFor": "Barrel turn and river for value and as a bluff, and size up — make their wide floats pay.",
+  "@insightBarrelTurnRiverFor": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightLeadsAreUsuallyWeak": "Their leads are usually a weak made hand or a draw — raise your value to deny equity; respect only a big lead into multiway.",
+  "@insightLeadsAreUsuallyWeak": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightCallRiversLighterOver": "Call rivers lighter — they over-bluff missed draws.",
+  "@insightCallRiversLighterOver": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightFoldLargeBetsUnless": "Fold to large bets unless you have the nuts or near-nuts.",
+  "@insightFoldLargeBetsUnless": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightBluffThemBoardsWhere": "Bluff them on boards where their value range is capped.",
+  "@insightBluffThemBoardsWhere": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightTripleBarrelBluffRivers": "Triple-barrel bluff rivers more, especially on scare cards — they hero-fold too often.",
+  "@insightTripleBarrelBluffRivers": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightBeCautiousWhenCheck": "Be cautious when they check-call passively — they may be trapping.",
+  "@insightBeCautiousWhenCheck": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightBetSmallerBoardsWhere": "Bet smaller on boards where they check-raise — or check behind for pot control.",
+  "@insightBetSmallerBoardsWhere": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightUseBetSizingAs": "Use their bet sizing as a tell: fold marginal hands to the big bets, attack the small ones.",
+  "@insightUseBetSizingAs": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightPilePressureNearBubble": "Pile on the pressure near the bubble — open and re-shove on their stack; they fold to survive.",
+  "@insightPilePressureNearBubble": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightCallShortStackShoves": "Call their short-stack shoves wider — they jam far too light to fold equity.",
+  "@insightCallShortStackShoves": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "insightShoveTightForValue": "Shove tight for value and stop bluff-shoving — they call off too light.",
+  "@insightShoveTightForValue": {
+    "description": "Strategy tip shown on an opponent read, derived from the tags on that player. Poker coaching voice; keep poker terms in English per the glossary."
+  },
+  "readsTitle": "Player Reads",
+  "@readsTitle": {
+    "description": "AppBar title of the Reads tab: the list of opponents the user keeps notes on."
+  },
+  "readsSearchHint": "Search players…",
+  "@readsSearchHint": {
+    "description": "Hint text of the search box filtering opponents by name."
+  },
+  "readsEmpty": "No reads yet.\nTap + to log your first opponent.",
+  "@readsEmpty": {
+    "description": "Empty state when the user has no opponent reads; keep the line break."
+  },
+  "readsNoMatch": "No players match \"{query}\".",
+  "@readsNoMatch": {
+    "description": "Empty state when the search matches no opponent.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "readsAddTooltip": "Add read",
+  "@readsAddTooltip": {
+    "description": "Tooltip of the + button that adds a new opponent read."
+  },
+  "readsSaveFailed": "Failed to save read: {error}",
+  "@readsSaveFailed": {
+    "description": "Snackbar when saving an opponent read fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "readsSaveFailedShort": "Failed to save: {error}",
+  "@readsSaveFailedShort": {
+    "description": "Snackbar when saving an observation fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "timeAgoMinutes": "{n}m ago",
+  "@timeAgoMinutes": {
+    "description": "Compact relative time: n minutes ago (e.g. 5m ago).",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "timeAgoHours": "{n}h ago",
+  "@timeAgoHours": {
+    "description": "Compact relative time: n hours ago.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "timeAgoDays": "{n}d ago",
+  "@timeAgoDays": {
+    "description": "Compact relative time: n days ago.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "timeAgoWeeks": "{n}w ago",
+  "@timeAgoWeeks": {
+    "description": "Compact relative time: n weeks ago.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "timeAgoMonths": "{n}mo ago",
+  "@timeAgoMonths": {
+    "description": "Compact relative time: n months ago.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "readDetailLoadNotesFailed": "Failed to load notes: {error}",
+  "@readDetailLoadNotesFailed": {
+    "description": "Snackbar when loading the observations of a read fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "readDetailUpdateNoteFailed": "Failed to update note: {error}",
+  "@readDetailUpdateNoteFailed": {
+    "description": "Snackbar when editing an observation fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "readDetailDeleteFailed": "Failed to delete: {error}",
+  "@readDetailDeleteFailed": {
+    "description": "Snackbar when deleting fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "readDetailDeleteNoteTitle": "Delete note?",
+  "@readDetailDeleteNoteTitle": {
+    "description": "Confirm dialog title before deleting one observation."
+  },
+  "readDetailDeleteNoteBody": "This observation will be permanently removed.",
+  "@readDetailDeleteNoteBody": {
+    "description": "Confirm dialog body before deleting one observation."
+  },
+  "readDetailDeletePlayerTitle": "Delete {name}?",
+  "@readDetailDeletePlayerTitle": {
+    "description": "Confirm dialog title before deleting an opponent read; {name} is the player label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "readDetailDeletePlayerBody": "All observations for this player will be removed.",
+  "@readDetailDeletePlayerBody": {
+    "description": "Confirm dialog body before deleting an opponent read."
+  },
+  "readDetailShareTooltip": "Share notes",
+  "@readDetailShareTooltip": {
+    "description": "Tooltip of the share button on an opponent read."
+  },
+  "readDetailDeleteTooltip": "Delete player",
+  "@readDetailDeleteTooltip": {
+    "description": "Tooltip of the delete button on an opponent read."
+  },
+  "readDetailTags": "Tags",
+  "@readDetailTags": {
+    "description": "Section label above the opponent tag chips."
+  },
+  "readDetailStrategyNotes": "Strategy Notes",
+  "@readDetailStrategyNotes": {
+    "description": "Section label above the strategy tips derived from the tags."
+  },
+  "readDetailObservations": "Observations",
+  "@readDetailObservations": {
+    "description": "Section label above the list of recorded observations about an opponent."
+  },
+  "readDetailNotesTotal": "{count} total",
+  "@readDetailNotesTotal": {
+    "description": "Count of observations next to the Observations header.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readDetailNoObservations": "No observations yet.\nTap + to add one.",
+  "@readDetailNoObservations": {
+    "description": "Empty state for the observations list; keep the line break."
+  },
+  "readDetailAddObservation": "Add Observation",
+  "@readDetailAddObservation": {
+    "description": "Button / sheet title for adding a new observation about an opponent."
+  },
+  "readDetailBasedOn": "Based on: {tags}",
+  "@readDetailBasedOn": {
+    "description": "Caption under a strategy tip naming the tags it comes from; {tags} is a list like \"Fish + Limps\".",
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
+  "readDetailTapToEdit": "tap to edit",
+  "@readDetailTapToEdit": {
+    "description": "Small lowercase hint on an observation card."
+  },
+  "readShareSubject": "Player Read",
+  "@readShareSubject": {
+    "description": "Subject line of the shared plain-text opponent notes."
+  },
+  "readShareTitle": "Player Read: {name}",
+  "@readShareTitle": {
+    "description": "First line of the shared plain-text opponent notes.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "readShareTags": "Tags: {tags}",
+  "@readShareTags": {
+    "description": "Line listing the opponent tags in the shared notes.",
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
+  "readShareObservations": "Observations:",
+  "@readShareObservations": {
+    "description": "Header before the observation lines in the shared notes."
+  },
+  "readSharePos": "Pos: {value}",
+  "@readSharePos": {
+    "description": "Shared-notes field: table position of the observation.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readShareStreet": "Street: {value}",
+  "@readShareStreet": {
+    "description": "Shared-notes field: betting street of the observation.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readShareAction": "Action: {value}",
+  "@readShareAction": {
+    "description": "Shared-notes field: the action observed.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readShareSizing": "Sizing: {value}",
+  "@readShareSizing": {
+    "description": "Shared-notes field: the bet sizing observed.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readShareCards": "Cards: {value}",
+  "@readShareCards": {
+    "description": "Shared-notes field: the cards the opponent showed.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "readEditTitle": "Edit Observation",
+  "@readEditTitle": {
+    "description": "Title of the sheet that edits an existing observation."
+  },
+  "readFieldPosition": "Position",
+  "@readFieldPosition": {
+    "description": "Dropdown label: table position (UTG, BTN…) of the observation."
+  },
+  "readFieldStreet": "Street",
+  "@readFieldStreet": {
+    "description": "Dropdown label: betting street of the observation."
+  },
+  "readFieldAction": "Action",
+  "@readFieldAction": {
+    "description": "Dropdown label: the action the opponent took."
+  },
+  "readFieldSizing": "Sizing",
+  "@readFieldSizing": {
+    "description": "Text field label: the bet size used (e.g. 4x / 75%)."
+  },
+  "readFieldSizingHint": "4x / 75%",
+  "@readFieldSizingHint": {
+    "description": "Example hint for the sizing field; keep the numbers."
+  },
+  "readFieldCards": "Cards shown",
+  "@readFieldCards": {
+    "description": "Text field label: the cards the opponent showed down."
+  },
+  "readFieldCardsHint": "AKo, JJ, 45s…",
+  "@readFieldCardsHint": {
+    "description": "Example hint for the cards-shown field; keep the poker hand notation unchanged."
+  },
+  "readFieldNote": "Note",
+  "@readFieldNote": {
+    "description": "Text field label: free-form note about the observation."
+  },
+  "readFieldNoteHint": "Any other observations…",
+  "@readFieldNoteHint": {
+    "description": "Hint for the free-form note field."
+  },
+  "readSaving": "Saving…",
+  "@readSaving": {
+    "description": "Button label while an observation is being saved."
+  },
+  "readSaveChanges": "Save Changes",
+  "@readSaveChanges": {
+    "description": "Button that saves an edited observation."
+  },
+  "quickAddTitleNew": "New Player Read",
+  "@quickAddTitleNew": {
+    "description": "Title of the sheet that creates a new opponent read."
+  },
+  "quickAddPlayerLabel": "Player name / label",
+  "@quickAddPlayerLabel": {
+    "description": "Text field label for the opponent name or nickname."
+  },
+  "quickAddPlayerHint": "e.g. Seat 3, John, Red hat",
+  "@quickAddPlayerHint": {
+    "description": "Example hint for the opponent label field."
+  },
+  "quickAddPlayerType": "Player Type",
+  "@quickAddPlayerType": {
+    "description": "Section label above the archetype (player type) tags."
+  },
+  "quickAddQuickNote": "Quick Note",
+  "@quickAddQuickNote": {
+    "description": "Section label above the quick free-form note field."
+  },
+  "quickAddNoteHint": "e.g. opened 4x UTG with 45o, triple-barrel bluffed",
+  "@quickAddNoteHint": {
+    "description": "Example hint for the quick note; keep poker notation (4x, UTG, 45o, triple-barrel)."
+  },
+  "quickAddHandDetails": "Hand Details",
+  "@quickAddHandDetails": {
+    "description": "Header of the optional hand-details section (position, street, action…)."
+  },
+  "glossaryTitle": "Player Types",
+  "@glossaryTitle": {
+    "description": "Title of the glossary sheet explaining each player-type tag."
+  },
+  "glossarySubtitle": "What each tag means — pick the one that best fits how they play.",
+  "@glossarySubtitle": {
+    "description": "Subtitle of the player-type glossary sheet."
+  },
+  "handAnalysisReadsApplied": "Reads: {tags}",
+  "@handAnalysisReadsApplied": {
+    "description": "Equity assumptions sheet: the player-read tags applied to an opponent's range; {tags} is a comma-separated list of tag names.",
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
   }
 }

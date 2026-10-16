@@ -1,34 +1,19 @@
 import 'package:flutter/material.dart';
 
-// ── Archetype tags (large toggle buttons) ──────────────────────────────────
-const Map<String, String> kArchetypeTags = {
-  'fish': 'Fish',
-  'nit': 'Nit',
-  'tag_player': 'TAG',
-  'lag_player': 'LAG',
-  'calling_station': 'Calling Station',
-  'maniac': 'Maniac',
-  'tricky': 'Tricky/GTO',
-};
+import '../l10n/generated/app_localizations.dart';
 
-/// Plain-language definition of each archetype — shown in the glossary so
-/// players unfamiliar with the jargon understand what each tag means.
-const Map<String, String> kArchetypeDefinitions = {
-  'fish':
-      'Weak, inexperienced player — plays too many hands and makes big fundamental mistakes.',
-  'nit':
-      'Extremely tight and risk-averse — only plays premium hands and folds to most aggression.',
-  'tag_player':
-      'Tight-Aggressive: a solid winning style — plays few hands, but bets and raises them hard.',
-  'lag_player':
-      'Loose-Aggressive: plays many hands with constant pressure; applies heat but can over-bluff.',
-  'calling_station':
-      'Calls far too often and rarely folds or raises — pays you off, but won\'t fold to bluffs.',
-  'maniac':
-      'Hyper-aggressive — raises and bluffs relentlessly with a very wide range.',
-  'tricky':
-      'Strong and balanced — mixes their lines and is hard to read or exploit.',
-};
+// ── Archetype tags (large toggle buttons) ──────────────────────────────────
+// Ids are persisted in `player_reads.tags` and sent to the AI as-is — never
+// rename. Display text lives in the ARB files (`tagDisplayName`).
+const List<String> kArchetypeTags = [
+  'fish',
+  'nit',
+  'tag_player',
+  'lag_player',
+  'calling_station',
+  'maniac',
+  'tricky',
+];
 
 /// Archetypes that share a play-style and can be tagged together (e.g. a player
 /// can be both a Fish and a Calling Station). Two archetypes in *different*
@@ -49,40 +34,19 @@ Set<String> _styleOf(String archetype) {
 }
 
 // ── Tendency tags (smaller chips, grouped) ─────────────────────────────────
-const Map<String, Map<String, String>> kTendencyGroups = {
-  'Preflop': {
-    'limps': 'Limps',
-    'opens_wide': 'Opens Wide',
-    'opens_tight': 'Opens Tight',
-    'three_bets_light': '3-Bets Light',
-    'four_bets_light': '4-Bets Light',
-    'folds_3bet': 'Folds to 3-Bet',
-    'calls_3bet_wide': 'Calls 3-Bets Wide',
-    'cold_calls': 'Cold Calls',
-    'squeezes': 'Squeezes',
-    'overfolds_blinds': 'Overfolds Blinds',
-  },
-  'Postflop': {
-    'c_bets_always': 'C-Bets Always',
-    'check_folds': 'Check-Folds',
-    'folds_to_cbet': 'Folds to C-Bet',
-    'barrels_relentless': 'Barrels Turns',
-    'gives_up_turn': 'Gives Up Turn',
-    'floats_wide': 'Floats Wide',
-    'donk_leads': 'Donk-Leads',
-    'over_bluffs': 'Over-Bluffs',
-    'value_heavy': 'Value-Heavy',
-    'overfolds_river': 'Overfolds River',
-    'slow_plays': 'Slow-Plays',
-    'check_raises': 'Check-Raises',
-    'readable_sizing': 'Readable Sizing',
-  },
-  'Tournament / ICM': {
-    'tightens_bubble': 'Tightens at Bubble',
-    'shoves_wide_short': 'Shoves Wide (Short)',
-    'calls_shoves_light': 'Calls Shoves Light',
-  },
-};
+/// A labelled group of tendency tag ids. [id] is stable; the header text comes
+/// from `tendencyGroupLabel`.
+class TendencyGroup {
+  final String id;
+  final List<String> tagIds;
+  const TendencyGroup(this.id, this.tagIds);
+}
+
+const List<TendencyGroup> kTendencyGroups = [
+  TendencyGroup('preflop', ['limps', 'opens_wide', 'opens_tight', 'three_bets_light', 'four_bets_light', 'folds_3bet', 'calls_3bet_wide', 'cold_calls', 'squeezes', 'overfolds_blinds']),
+  TendencyGroup('postflop', ['c_bets_always', 'check_folds', 'folds_to_cbet', 'barrels_relentless', 'gives_up_turn', 'floats_wide', 'donk_leads', 'over_bluffs', 'value_heavy', 'overfolds_river', 'slow_plays', 'check_raises', 'readable_sizing']),
+  TendencyGroup('tournament_icm', ['tightens_bubble', 'shoves_wide_short', 'calls_shoves_light']),
+];
 
 /// Tendency tags that are mutually exclusive — selecting one greys out the
 /// other (they describe opposite tendencies on the same spot). Archetypes are
@@ -118,13 +82,63 @@ bool tagDisabled(String tag, Set<String> selected) {
   return false;
 }
 
-String tagDisplayName(String tag) {
-  if (kArchetypeTags.containsKey(tag)) { return kArchetypeTags[tag]!; }
-  for (final group in kTendencyGroups.values) {
-    if (group.containsKey(tag)) { return group[tag]!; }
-  }
-  return tag;
-}
+/// Localized label for a tag id; unknown (legacy / future) ids show raw.
+String tagDisplayName(AppLocalizations l10n, String tag) => switch (tag) {
+      'fish' => l10n.tagFish,
+      'nit' => l10n.tagNit,
+      'tag_player' => l10n.tagTagPlayer,
+      'lag_player' => l10n.tagLagPlayer,
+      'calling_station' => l10n.tagCallingStation,
+      'maniac' => l10n.tagManiac,
+      'tricky' => l10n.tagTricky,
+      'limps' => l10n.tagLimps,
+      'opens_wide' => l10n.tagOpensWide,
+      'opens_tight' => l10n.tagOpensTight,
+      'three_bets_light' => l10n.tagThreeBetsLight,
+      'four_bets_light' => l10n.tagFourBetsLight,
+      'folds_3bet' => l10n.tagFolds3bet,
+      'calls_3bet_wide' => l10n.tagCalls3betWide,
+      'cold_calls' => l10n.tagColdCalls,
+      'squeezes' => l10n.tagSqueezes,
+      'overfolds_blinds' => l10n.tagOverfoldsBlinds,
+      'c_bets_always' => l10n.tagCBetsAlways,
+      'check_folds' => l10n.tagCheckFolds,
+      'folds_to_cbet' => l10n.tagFoldsToCbet,
+      'barrels_relentless' => l10n.tagBarrelsRelentless,
+      'gives_up_turn' => l10n.tagGivesUpTurn,
+      'floats_wide' => l10n.tagFloatsWide,
+      'donk_leads' => l10n.tagDonkLeads,
+      'over_bluffs' => l10n.tagOverBluffs,
+      'value_heavy' => l10n.tagValueHeavy,
+      'overfolds_river' => l10n.tagOverfoldsRiver,
+      'slow_plays' => l10n.tagSlowPlays,
+      'check_raises' => l10n.tagCheckRaises,
+      'readable_sizing' => l10n.tagReadableSizing,
+      'tightens_bubble' => l10n.tagTightensBubble,
+      'shoves_wide_short' => l10n.tagShovesWideShort,
+      'calls_shoves_light' => l10n.tagCallsShovesLight,
+      _ => tag,
+    };
+
+/// Plain-language definition of an archetype id (glossary); '' if unknown.
+String archetypeDefinition(AppLocalizations l10n, String id) => switch (id) {
+      'fish' => l10n.archetypeDefFish,
+      'nit' => l10n.archetypeDefNit,
+      'tag_player' => l10n.archetypeDefTagPlayer,
+      'lag_player' => l10n.archetypeDefLagPlayer,
+      'calling_station' => l10n.archetypeDefCallingStation,
+      'maniac' => l10n.archetypeDefManiac,
+      'tricky' => l10n.archetypeDefTricky,
+      _ => '',
+    };
+
+/// Section header for a [TendencyGroup.id].
+String tendencyGroupLabel(AppLocalizations l10n, String id) => switch (id) {
+      'preflop' => l10n.tagGroupPreflop,
+      'postflop' => l10n.tagGroupPostflop,
+      'tournament_icm' => l10n.tagGroupTournamentIcm,
+      _ => id,
+    };
 
 Color tagColor(String tag) {
   switch (tag) {
@@ -147,7 +161,9 @@ Color tagColor(String tag) {
   }
 }
 
-bool isArchetype(String tag) => kArchetypeTags.containsKey(tag);
+final Set<String> _kArchetypeSet = kArchetypeTags.toSet();
+
+bool isArchetype(String tag) => _kArchetypeSet.contains(tag);
 
 /// A version of [tag] with enough contrast to read on its own faint tint in
 /// both light and dark themes — keeps the hue but shifts the lightness toward

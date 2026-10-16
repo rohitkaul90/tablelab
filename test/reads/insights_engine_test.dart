@@ -1,38 +1,62 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/l10n/generated/app_localizations.dart';
 import 'package:tablelab/reads/insights_engine.dart';
 import 'package:tablelab/reads/tag_definitions.dart';
 
 void main() {
+  final en = lookupAppLocalizations(const Locale('en'));
+  List<ReadInsight> insights(List<String> tags) => getInsights(tags, en);
+
   group('getInsights — coverage', () {
     test('every archetype tag yields at least one insight', () {
-      for (final tag in kArchetypeTags.keys) {
-        expect(getInsights([tag]), isNotEmpty, reason: 'archetype $tag');
+      for (final tag in kArchetypeTags) {
+        expect(insights([tag]), isNotEmpty, reason: 'archetype $tag');
       }
     });
 
     test('every tendency tag yields at least one insight', () {
-      for (final group in kTendencyGroups.values) {
-        for (final tag in group.keys) {
-          expect(getInsights([tag]), isNotEmpty, reason: 'tendency $tag');
+      for (final group in kTendencyGroups) {
+        for (final tag in group.tagIds) {
+          expect(insights([tag]), isNotEmpty, reason: 'tendency $tag');
         }
       }
     });
 
-    test('the first insight for a tag carries a basis', () {
-      expect(getInsights(['nit']).first.basis, equals('Nit'));
-      expect(getInsights(['folds_to_cbet']).first.basis, equals('Folds to C-Bet'));
-      expect(getInsights(['tightens_bubble']).first.basis,
-          equals('Tightens at Bubble'));
+    test('the first insight for a tag carries its basis tag ids', () {
+      expect(insights(['nit']).first.basisTags, equals(['nit']));
+      expect(insights(['folds_to_cbet']).first.basisTags, equals(['folds_to_cbet']));
+      expect(insights(['tightens_bubble']).first.basisTags,
+          equals(['tightens_bubble']));
+      expect(insights(['calling_station']).first.basisTags,
+          equals(['calling_station']));
+      expect(insights(['fish', 'limps']).map((i) => i.basisTags),
+          contains(equals(['fish', 'limps'])));
+      // A calling station who limps is credited to calling_station, not fish.
+      expect(insights(['calling_station', 'limps']).map((i) => i.basisTags),
+          contains(equals(['calling_station', 'limps'])));
+    });
+
+    test('every basis tag is a known tag id', () {
+      final known = {
+        ...kArchetypeTags,
+        for (final g in kTendencyGroups) ...g.tagIds,
+      };
+      for (final tag in known) {
+        for (final i in insights([tag])) {
+          expect(known.containsAll(i.basisTags), isTrue, reason: '$tag → ${i.basisTags}');
+        }
+      }
     });
 
     test('no tags → no insights', () {
-      expect(getInsights([]), isEmpty);
+      expect(insights([]), isEmpty);
     });
   });
 
   group('getInsights — sound counter-strategy', () {
     bool hasTip(List<String> tags, String needle) =>
-        getInsights(tags).any((i) => i.tip.toLowerCase().contains(needle));
+        insights(tags).any((i) => i.tip.toLowerCase().contains(needle));
 
     test('a station/fish is never to be bluffed', () {
       expect(hasTip(['calling_station'], "won't fold"), isTrue);
@@ -51,7 +75,7 @@ void main() {
       expect(hasTip(['calls_shoves_light'], 'shove tight'), isTrue);
     });
     test('beefed-up TAG has more than two tips', () {
-      expect(getInsights(['tag_player']).length, greaterThan(2));
+      expect(insights(['tag_player']).length, greaterThan(2));
     });
   });
 
@@ -88,9 +112,24 @@ void main() {
 
   group('tag_definitions helpers', () {
     test('tagDisplayName resolves new tags', () {
-      expect(tagDisplayName('barrels_relentless'), equals('Barrels Turns'));
-      expect(tagDisplayName('shoves_wide_short'), equals('Shoves Wide (Short)'));
-      expect(tagDisplayName('unknown_tag'), equals('unknown_tag'));
+      expect(tagDisplayName(en, 'barrels_relentless'), equals('Barrels Turns'));
+      expect(tagDisplayName(en, 'shoves_wide_short'), equals('Shoves Wide (Short)'));
+      expect(tagDisplayName(en, 'unknown_tag'), equals('unknown_tag'));
+    });
+    test('every tag, group and archetype has a label in every locale', () {
+      for (final locale in AppLocalizations.supportedLocales) {
+        final l10n = lookupAppLocalizations(locale);
+        for (final id in kArchetypeTags) {
+          expect(tagDisplayName(l10n, id), isNot(id), reason: '$locale $id');
+          expect(archetypeDefinition(l10n, id), isNotEmpty, reason: '$locale $id');
+        }
+        for (final g in kTendencyGroups) {
+          expect(tendencyGroupLabel(l10n, g.id), isNot(g.id), reason: '$locale ${g.id}');
+          for (final id in g.tagIds) {
+            expect(tagDisplayName(l10n, id), isNot(id), reason: '$locale $id');
+          }
+        }
+      }
     });
     test('isArchetype distinguishes archetypes from tendencies', () {
       expect(isArchetype('nit'), isTrue);
