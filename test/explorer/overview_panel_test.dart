@@ -4,6 +4,8 @@ import 'package:tablelab/explorer/grid_aggregation.dart';
 import 'package:tablelab/explorer/pack_codec.dart';
 import 'package:tablelab/widgets/explorer/overview_panel.dart';
 
+import '../helpers/pump_app.dart';
+
 /// The Overview lays out the horizontal actions row + the Hands box grid
 /// without overflow; on the Equity-chart tab a [headerChart] replaces the stat
 /// box above the actions.
@@ -51,8 +53,7 @@ void main() {
   );
 
   Future<void> pump(WidgetTester tester, {Widget? headerChart}) =>
-      tester.pumpWidget(MaterialApp(
-        home: Scaffold(
+      tester.pumpWidget(wrapApp(Scaffold(
           body: SizedBox(
             width: 380,
             child: OverviewPanel(
@@ -93,8 +94,7 @@ void main() {
       (tester) async {
     // The narrow layout wraps the embedded panel in ONE outer ListView; the
     // panel must NOT add a second (that nesting stuck the user at the bottom).
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
+    await tester.pumpWidget(wrapApp(Scaffold(
         body: SizedBox(
           width: 380,
           child: ListView(children: [

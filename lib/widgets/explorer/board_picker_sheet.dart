@@ -15,6 +15,7 @@ import '../../equity/texture_cell.dart';
 import '../../explorer/board_filter.dart';
 import '../../explorer/board_iso.dart';
 import '../../explorer/pack_source.dart';
+import '../../l10n/l10n.dart';
 import 'board_cards.dart';
 
 class BoardPickerSheet extends StatefulWidget {
@@ -165,9 +166,9 @@ class _BoardPickerSheetState extends State<BoardPickerSheet> {
           children: [
             Icon(Icons.cloud_off, color: scheme.onSurfaceVariant),
             const SizedBox(height: 8),
-            const Text("Couldn't load the board list"),
+            Text(context.l10n.studyBoardListFailedTitle),
             const SizedBox(height: 4),
-            TextButton(onPressed: _load, child: const Text('Retry')),
+            TextButton(onPressed: _load, child: Text(context.l10n.commonRetry)),
           ],
         ),
       );
@@ -185,7 +186,7 @@ class _BoardPickerSheetState extends State<BoardPickerSheet> {
             decoration: InputDecoration(
               isDense: true,
               prefixIcon: const Icon(Icons.search, size: 20),
-              hintText: 'Search boards (e.g. Ks 9)',
+              hintText: context.l10n.studySearchBoards,
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               suffixIcon: _query.text.isEmpty
@@ -232,7 +233,7 @@ class _BoardPickerSheetState extends State<BoardPickerSheet> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
           child: Text(
-            '${filtered.length} of ${_infos.length} boards',
+            context.l10n.studyBoardsCount(filtered.length, _infos.length),
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -242,7 +243,7 @@ class _BoardPickerSheetState extends State<BoardPickerSheet> {
         Expanded(
           child: filtered.isEmpty
               ? Center(
-                  child: Text('No boards match',
+                  child: Text(context.l10n.studyNoBoardsMatch,
                       style: TextStyle(color: scheme.onSurfaceVariant)))
               : ListView.builder(
                   itemExtent: _rowExtent,
@@ -264,9 +265,8 @@ class _BoardPickerSheetState extends State<BoardPickerSheet> {
     final canonical = canonicalFlop(typed);
     if (typed.map(cardName).join(' ') == canonical) return null; // as stored
     if (!filtered.any((i) => i.flop == canonical)) return null;
-    return 'Showing ${_symbols(canonical)} — same board as '
-        '${_symbols(typed.map(cardName).join(' '))} '
-        '(suits are interchangeable)';
+    return context.l10n.studySameBoard(
+        _symbols(canonical), _symbols(typed.map(cardName).join(' ')));
   }
 
   /// 'Ac 7c 6c' → 'A♣7♣6♣'.

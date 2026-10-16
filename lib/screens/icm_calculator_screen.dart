@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import '../l10n/l10n.dart';
 import '../widgets/app_drawer.dart';
 import '../services/analytics_service.dart';
 
@@ -122,6 +123,7 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
   }
 
   void _calculate() {
+    final l10n = context.l10n;
     setState(() => _error = null);
 
     // Parse chips
@@ -131,12 +133,12 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
       final raw = _players[i].chips.text.trim().replaceAll(',', '');
       final v = double.tryParse(raw);
       if (v == null || v <= 0) {
-        setState(() => _error = 'Player ${i + 1}: enter a valid chip count.');
+        setState(() => _error = l10n.icmErrorChips(i + 1));
         return;
       }
       chips.add(v);
       final n = _players[i].name.text.trim();
-      names.add(n.isEmpty ? 'Player ${i + 1}' : n);
+      names.add(n.isEmpty ? l10n.icmPlayerN(i + 1) : n);
     }
 
     // Parse payouts
@@ -145,20 +147,20 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
       final raw = _payouts[i].text.trim().replaceAll(',', '').replaceAll('\$', '');
       final v = double.tryParse(raw);
       if (v == null || v < 0) {
-        setState(() => _error = '${_placeLabel(i + 1)}: enter a valid prize amount.');
+        setState(() => _error = l10n.icmErrorPrize(_placeLabel(l10n, i + 1)));
         return;
       }
       payouts.add(v);
     }
 
     if (payouts.isEmpty || payouts.every((p) => p == 0)) {
-      setState(() => _error = 'Enter at least one prize amount.');
+      setState(() => _error = l10n.icmErrorNoPrize);
       return;
     }
 
     if (payouts.length != _players.length) {
       setState(() => _error =
-          'Number of prize places (${payouts.length}) must equal number of players (${_players.length}).');
+          l10n.icmErrorCountMismatch(payouts.length, _players.length));
       return;
     }
 
@@ -235,11 +237,14 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  static String _placeLabel(int n) {
-    const suffixes = ['st', 'nd', 'rd'];
-    final suffix = n <= 3 ? suffixes[n - 1] : 'th';
-    return '$n$suffix';
-  }
+  /// Ordinal place label (1st, 2nd, 3rd, 4th…), localized. Explicit keys
+  /// for 1–3 because gen-l10n plurals only allow =0/=1/=2 exact cases.
+  static String _placeLabel(AppLocalizations l10n, int n) => switch (n) {
+        1 => l10n.icmPlace1,
+        2 => l10n.icmPlace2,
+        3 => l10n.icmPlace3,
+        _ => l10n.icmPlaceN(n),
+      };
 
   String _fmtMoney(double v) => '\$${_currFmt.format(v.round())}';
   String _fmtChips(double v) => _chipFmt.format(v.round());
@@ -247,14 +252,16 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
   void _shareResults() {
     final results = _results;
     if (results == null) return;
+    final l10n = context.l10n;
     final totalPrize = results.fold(0.0, (s, r) => s + r.icm);
     final lines = [
-      'ICM Deal (${results.length} players):',
+      l10n.icmShareHeader(results.length),
       for (final r in results)
-        '${r.name} — ${_fmtChips(r.chips)} chips (${r.chipPct.toStringAsFixed(1)}%) → ${_fmtMoney(r.icm)}',
+        l10n.icmShareLine(r.name, _fmtChips(r.chips),
+            r.chipPct.toStringAsFixed(1), _fmtMoney(r.icm)),
       '',
-      'Total prize pool: ${_fmtMoney(totalPrize)}',
-      'Calculated with TableLab',
+      l10n.icmTotalPrizePool(_fmtMoney(totalPrize)),
+      l10n.icmShareFooter,
     ];
     SharePlus.instance.share(ShareParams(text: lines.join('\n')));
   }
@@ -264,16 +271,17 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final body = SafeArea(
       top: false,
         child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           // ── Players ───────────────────────────────────────────────────────
-          _sectionHeader(context, 'Players', '${_players.length}/9'),
+          _sectionHeader(context, l10n.icmPlayers, '${_players.length}/9'),
           const SizedBox(height: 4),
           Text(
-            'Enter each remaining player\'s chip count.',
+            l10n.icmPlayersHint,
             style: TextStyle(
                 fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
           ),
@@ -282,17 +290,18 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
           if (_players.length < 9)
             TextButton.icon(
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Player'),
+              label: Text(l10n.icmAddPlayer),
               onPressed: _addPlayer,
             ),
 
           const SizedBox(height: 24),
 
           // ── Payouts ───────────────────────────────────────────────────────
-          _sectionHeader(context, 'Prize Pool', '${_payouts.length} places'),
+          _sectionHeader(
+              context, l10n.icmPrizePool, l10n.icmPlacesBadge(_payouts.length)),
           const SizedBox(height: 4),
           Text(
-            'Enter the prize for each remaining place.',
+            l10n.icmPrizeHint,
             style: TextStyle(
                 fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
           ),
@@ -301,7 +310,7 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
           if (_payouts.length < 9)
             TextButton.icon(
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Place'),
+              label: Text(l10n.icmAddPlace),
               onPressed: _addPayout,
             ),
 
@@ -321,17 +330,18 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
             onPressed: _calculate,
             style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52)),
-            child: const Text('Calculate Deal',
-                style: TextStyle(fontSize: 16)),
+            child: Text(l10n.icmCalculateDeal,
+                style: const TextStyle(fontSize: 16)),
           ),
 
           // ── Results ───────────────────────────────────────────────────────
           if (_results != null) ...[
             const SizedBox(height: 28),
-            _sectionHeader(context, 'Deal Results', null),
+            _sectionHeader(context, l10n.icmDealResults, null),
             const SizedBox(height: 4),
             Text(
-              'Total prize pool: ${_fmtMoney(_results!.fold(0.0, (s, r) => s + r.icm))}',
+              l10n.icmTotalPrizePool(
+                  _fmtMoney(_results!.fold(0.0, (s, r) => s + r.icm))),
               style: TextStyle(
                   fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
             ),
@@ -344,9 +354,9 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
               child: Row(
                 children: [
                   const Expanded(flex: 3, child: SizedBox()),
-                  _colHeader(context, 'ICM Deal'),
-                  _colHeader(context, 'Chip-Chop'),
-                  _colHeader(context, 'Diff'),
+                  _colHeader(context, l10n.icmColIcm),
+                  _colHeader(context, l10n.icmColChipChop),
+                  _colHeader(context, l10n.icmColDiff),
                 ],
               ),
             ),
@@ -363,12 +373,12 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text('ICM Deal Calculator'),
+        title: Text(l10n.icmTitle),
         actions: [
           if (_results != null)
             IconButton(
               icon: const Icon(Icons.share_outlined),
-              tooltip: 'Share deal',
+              tooltip: l10n.icmShareDeal,
               onPressed: _shareResults,
             ),
         ],
@@ -399,7 +409,7 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
             controller: _players[i].name,
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Player ${i + 1}',
+              hintText: context.l10n.icmPlayerN(i + 1),
               border: const OutlineInputBorder(),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -414,12 +424,12 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
             controller: _players[i].chips,
             keyboardType: TextInputType.number,
             inputFormatters: [_ThousandsFormatter()],
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               isDense: true,
-              labelText: 'Chips',
-              border: OutlineInputBorder(),
+              labelText: context.l10n.icmChips,
+              border: const OutlineInputBorder(),
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             ),
             onChanged: (_) => setState(() => _results = null),
           ),
@@ -444,7 +454,7 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
         SizedBox(
           width: 36,
           child: Text(
-            _placeLabel(i + 1),
+            _placeLabel(context.l10n, i + 1),
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -507,7 +517,8 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
                       fontSize: 13, fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis),
               Text(
-                '${_fmtChips(r.chips)} chips · ${r.chipPct.toStringAsFixed(1)}%',
+                context.l10n.icmChipsLine(
+                    _fmtChips(r.chips), r.chipPct.toStringAsFixed(1)),
                 style: TextStyle(
                     fontSize: 10,
                     color: Theme.of(context)
@@ -601,17 +612,12 @@ class _IcmCalculatorScreenState extends State<IcmCalculatorScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('About ICM vs Chip-Chop',
+            Text(context.l10n.icmAboutTitle,
                 style: theme.textTheme.labelMedium
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Text(
-              'ICM (Independent Chip Model) accounts for the payout structure — '
-              'short stacks receive more than their chip % suggests because their '
-              'elimination risk is higher. Chip-chop ignores payout jumps and '
-              'splits the prize pool in direct proportion to chip counts. '
-              'The "Diff" column shows how much each player gains or loses '
-              'under ICM vs a pure chip-chop.',
+              context.l10n.icmAboutBody,
               style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant, height: 1.55),
             ),

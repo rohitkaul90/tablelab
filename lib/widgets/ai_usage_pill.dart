@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import '../providers/providers.dart';
 import '../services/ai_service.dart';
 import '../screens/settings_screen.dart';
@@ -26,10 +27,11 @@ class AiUsagePill extends ConsumerWidget {
     final usage = ref.watch(aiUsageProvider).valueOrNull;
     if (usage == null) return const SizedBox.shrink();
 
-    final kindLabel = kind == AiAnalysisKind.session ? 'session' : 'hand';
+    final l10n = context.l10n;
+    final isSession = kind == AiAnalysisKind.session;
     final String text;
     if (usage.exempt) {
-      text = 'AI coaching · unlimited';
+      text = l10n.aiUsageUnlimited;
     } else {
       final used = kind == AiAnalysisKind.session ? usage.session : usage.hand;
       final limit = kind == AiAnalysisKind.session
@@ -37,9 +39,12 @@ class AiUsagePill extends ConsumerWidget {
           : AiService.handDailyLimit;
       final remaining = (limit - used).clamp(0, limit);
       text = remaining > 0
-          ? '$remaining free AI $kindLabel '
-              '${remaining == 1 ? 'analysis' : 'analyses'} left today'
-          : 'Daily AI $kindLabel limit reached — resets within 24h';
+          ? (isSession
+              ? l10n.aiUsageSessionLeft(remaining)
+              : l10n.aiUsageHandLeft(remaining))
+          : (isSession
+              ? l10n.aiUsageSessionLimitReached
+              : l10n.aiUsageHandLimitReached);
     }
 
     return InkWell(

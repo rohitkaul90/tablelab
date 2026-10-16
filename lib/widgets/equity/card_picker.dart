@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 import '../../equity/card.dart';
 
 /// Single-card picker for Turn/River.
@@ -31,7 +32,8 @@ class CardPickerSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  const Text('Select Card', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(context.l10n.cardPickerSelectCard,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   if (currentCard != null)
                     TextButton(
@@ -39,7 +41,7 @@ class CardPickerSheet extends StatelessWidget {
                         onSelected(null);
                         Navigator.pop(context);
                       },
-                      child: const Text('Clear'),
+                      child: Text(context.l10n.commonClear),
                     ),
                 ],
               ),
@@ -137,14 +139,15 @@ class _FlopCardPickerSheetState extends State<FlopCardPickerSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  const Text('Select Flop', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(context.l10n.cardPickerSelectFlop,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 8),
                   Text(
                     '($filledCount / 3)',
                     style: TextStyle(fontSize: 13, color: theme.colorScheme.primary),
                   ),
                   const Spacer(),
-                  TextButton(onPressed: _clearAll, child: const Text('Clear')),
+                  TextButton(onPressed: _clearAll, child: Text(context.l10n.commonClear)),
                 ],
               ),
             ),
@@ -252,14 +255,15 @@ class _HoleCardsPickerSheetState extends State<HoleCardsPickerSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  const Text('Select Hand', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(context.l10n.cardPickerSelectHand,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 8),
                   Text(
                     '($filledCount / 2)',
                     style: TextStyle(fontSize: 13, color: theme.colorScheme.primary),
                   ),
                   const Spacer(),
-                  TextButton(onPressed: _clearAll, child: const Text('Clear')),
+                  TextButton(onPressed: _clearAll, child: Text(context.l10n.commonClear)),
                 ],
               ),
             ),

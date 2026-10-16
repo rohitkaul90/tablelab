@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../equity/card.dart';
 import '../services/analytics_service.dart';
 import '../equity/simulator.dart';
@@ -187,6 +188,7 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
 
   Future<void> _calculate() async {
     if (!_canCalculate) return;
+    final l10n = context.l10n; // before the await below
     setState(() { _running = true; _errorMsg = null; });
     try {
       final boardCards = _board.whereType<int>().toList();
@@ -196,7 +198,7 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
         final combos = _players[i].expandCombos(boardSet);
         if (combos.isEmpty) {
           setState(() {
-            _errorMsg = '${_players[i].position} has no valid combos given the board.';
+            _errorMsg = l10n.equityNoCombos(_players[i].position);
             _running = false;
           });
           return;
@@ -205,9 +207,11 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
       }
       final result = await runSimulation(ranges: ranges, boardCards: boardCards);
       AnalyticsService.equityCalculatorUsed();
+      if (!mounted) return;
       setState(() { _result = result; _resultBoard = List<int?>.from(_board); _running = false; });
     } catch (e) {
-      setState(() { _errorMsg = 'Simulation error: $e'; _running = false; });
+      if (!mounted) return;
+      setState(() { _errorMsg = l10n.equitySimulationError('$e'); _running = false; });
     }
   }
 
@@ -251,13 +255,13 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
             // ── Players ─────────────────────────────────────────────────
             Row(
               children: [
-                Text('PLAYERS', style: sectionLabel),
+                Text(context.l10n.equityPlayersHeader, style: sectionLabel),
                 const Spacer(),
                 if (_isModified)
                   TextButton.icon(
                     onPressed: _reset,
                     icon: const Icon(Icons.refresh, size: 14),
-                    label: const Text('Reset'),
+                    label: Text(context.l10n.commonReset),
                     style: TextButton.styleFrom(
                       foregroundColor: theme.colorScheme.onSurfaceVariant
                           .withValues(alpha: 0.75),
@@ -269,7 +273,7 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                   TextButton.icon(
                     onPressed: _addPlayer,
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Player'),
+                    label: Text(context.l10n.equityAddPlayer),
                   ),
               ],
             ),
@@ -283,7 +287,7 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                       Icon(Icons.people_outline,
                           size: 48, color: Theme.of(context).colorScheme.outline),
                       const SizedBox(height: 8),
-                      Text('Add at least 2 players to begin',
+                      Text(context.l10n.equityAddTwoPlayers,
                           style: TextStyle(
                               color: Theme.of(context)
                                   .colorScheme
@@ -316,13 +320,13 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
             // ── Board ────────────────────────────────────────────────────
             Row(
               children: [
-                Text('BOARD', style: sectionLabel),
+                Text(context.l10n.equityBoardHeader, style: sectionLabel),
                 const Spacer(),
                 if (_board.any((c) => c != null))
                   TextButton.icon(
                     onPressed: _clearBoard,
                     icon: const Icon(Icons.clear, size: 14),
-                    label: const Text('Clear Board'),
+                    label: Text(context.l10n.equityClearBoard),
                     style: TextButton.styleFrom(
                       foregroundColor: Theme.of(context)
                           .colorScheme
@@ -410,7 +414,9 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
                             color: Theme.of(context).colorScheme.onPrimary),
                       )
                     : const Icon(Icons.calculate),
-                label: Text(_running ? 'Calculating…' : 'Calculate Equity'),
+                label: Text(_running
+                    ? context.l10n.equityCalculating
+                    : context.l10n.equityCalculate),
                 style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
               ),
             ),
@@ -425,9 +431,10 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  Text('EQUITY — ${_streetLabel(_resultBoard)}', style: sectionLabel),
+                  Text(context.l10n.equityResultHeader(_streetLabel(_resultBoard)),
+                      style: sectionLabel),
                   const Spacer(),
-                  Text('${_result!.iterations ~/ 1000}k iterations',
+                  Text(context.l10n.equityIterations(_result!.iterations ~/ 1000),
                       style: TextStyle(
                           fontSize: 11,
                           color: Theme.of(context)
@@ -455,9 +462,12 @@ class _EquityCalculatorScreenState extends State<EquityCalculatorScreen> {
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text('Equity Calculator'),
+        title: Text(context.l10n.equityTitle),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), tooltip: 'Reset', onPressed: _reset),
+          IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: context.l10n.commonReset,
+              onPressed: _reset),
         ],
       ),
       body: body,
@@ -591,7 +601,8 @@ class _PlayerCard extends StatelessWidget {
                 MiniRangeMatrix(selectedCells: player.selectedCells),
                 const SizedBox(height: 4),
                 Text(
-                  '${player.comboCount} combos  ${player.rangePercent.toStringAsFixed(1)}%',
+                  context.l10n.equityCombosPct(
+                      player.comboCount, player.rangePercent.toStringAsFixed(1)),
                   style: TextStyle(fontSize: 9, color: theme.colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
@@ -610,7 +621,9 @@ class _PlayerCard extends StatelessWidget {
             ] else ...[
               const Spacer(),
               Text(
-                player.isExactHand ? 'Tap to\nset hand' : 'Tap to\nset range',
+                player.isExactHand
+                    ? context.l10n.equityTapToSetHand
+                    : context.l10n.equityTapToSetRange,
                 style: TextStyle(
                     fontSize: 10,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.30)),
@@ -664,7 +677,7 @@ class _EquityRow extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface)),
               const Spacer(),
-              Text('$comboCount ${comboCount == 1 ? 'combo' : 'combos'}',
+              Text(context.l10n.equityCombos(comboCount),
                   style: TextStyle(
                       fontSize: 11,
                       color: theme.colorScheme.onSurfaceVariant

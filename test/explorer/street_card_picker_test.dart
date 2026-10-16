@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/widgets/explorer/board_cards.dart';
 import 'package:tablelab/widgets/explorer/street_card_picker.dart';
 
+import '../helpers/pump_app.dart';
+
 Finder _tile(String card) => find.ancestor(
       of: find.byWidgetPredicate((w) => w is CardGlyph && w.card == card),
       matching: find.byType(InkWell),
@@ -20,8 +22,7 @@ void main() {
     required Set<String> available,
     required void Function(String) onPick,
   }) =>
-      MaterialApp(
-        home: Scaffold(
+      wrapApp(Scaffold(
           body: StreetCardPicker(
             title: 'Pick the turn card',
             excluded: flop.toSet(),
@@ -89,8 +90,7 @@ void main() {
       required List<String> isoBoard,
       required void Function(String) onPick,
     }) =>
-        MaterialApp(
-          home: Scaffold(
+        wrapApp(Scaffold(
             body: StreetCardPicker(
               title: 'Pick the turn card',
               excluded: excluded,

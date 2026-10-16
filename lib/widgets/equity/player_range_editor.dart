@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 import '../../equity/card.dart';
 import '../../equity/gto_ranges.dart';
 import 'card_picker.dart';
@@ -120,7 +121,8 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
               child: Row(
                 children: [
-                  const Text('Edit Range', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(context.l10n.equityEditRange,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   if (widget.onDelete != null)
                     IconButton(
@@ -135,7 +137,7 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                       widget.onSave(_position, _cells, _isExactHand, _card1, _card2);
                       Navigator.pop(context);
                     },
-                    child: const Text('Done'),
+                    child: Text(context.l10n.commonDone),
                   ),
                 ],
               ),
@@ -152,7 +154,8 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                     // Position selector
                     Row(
                       children: [
-                        const Text('Position:', style: TextStyle(fontWeight: FontWeight.w600)),
+                        Text(context.l10n.equityPosition,
+                            style: const TextStyle(fontWeight: FontWeight.w600)),
                         const SizedBox(width: 12),
                         _DropdownContainer(
                           child: DropdownButtonHideUnderline(
@@ -173,9 +176,14 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                     const SizedBox(height: 12),
                     // Mode toggle
                     SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(value: false, label: Text('Range')),
-                        ButtonSegment(value: true, label: Text('Exact Hand')),
+                      // No selected checkmark: it widens the segment and wraps
+                      // the row on phones in longer languages (CLAUDE.md).
+                      showSelectedIcon: false,
+                      segments: [
+                        ButtonSegment(
+                            value: false, label: Text(context.l10n.equityModeRange)),
+                        ButtonSegment(
+                            value: true, label: Text(context.l10n.equityModeExact)),
                       ],
                       selected: {_isExactHand},
                       onSelectionChanged: (s) => setState(() => _isExactHand = s.first),
@@ -183,26 +191,27 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                     const SizedBox(height: 16),
                     if (_isExactHand) ...[
                       // Exact hand picker
-                      const Text('Select hole cards:', style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text(context.l10n.equitySelectHoleCards,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           _ExactCardSlot(
                             cardIdx: _card1,
-                            label: 'Card 1',
+                            label: context.l10n.equityCard1,
                             onTap: () => _pickHoleCards(context),
                           ),
                           const SizedBox(width: 16),
                           _ExactCardSlot(
                             cardIdx: _card2,
-                            label: 'Card 2',
+                            label: context.l10n.equityCard2,
                             onTap: () => _pickHoleCards(context),
                           ),
                           if (_card1 != null || _card2 != null) ...[
                             const Spacer(),
                             TextButton(
                               onPressed: () => setState(() { _card1 = null; _card2 = null; }),
-                              child: const Text('Clear'),
+                              child: Text(context.l10n.commonClear),
                             ),
                           ],
                         ],
@@ -223,14 +232,15 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                       const SizedBox(height: 24),
                     ] else ...[
                       // GTO preset selector
-                      const Text('Load GTO Preset:', style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text(context.l10n.equityLoadPreset,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
                       _DropdownContainer(
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: _selectedPreset,
                             isExpanded: true,
-                            hint: const Text('Select preset...'),
+                            hint: Text(context.l10n.equitySelectPreset),
                             items: [
                               for (final entry in _presetsByCategory.entries) ...[
                                 DropdownMenuItem<String>(
@@ -266,9 +276,13 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                       // Quick actions
                       Row(
                         children: [
-                          TextButton(onPressed: _clearAll, child: const Text('Clear All')),
+                          TextButton(
+                              onPressed: _clearAll,
+                              child: Text(context.l10n.equityClearAll)),
                           const SizedBox(width: 8),
-                          TextButton(onPressed: _selectAll, child: const Text('Select All')),
+                          TextButton(
+                              onPressed: _selectAll,
+                              child: Text(context.l10n.equitySelectAll)),
                           const Spacer(),
                           RangeStats(selectedCells: _cells),
                         ],
@@ -278,11 +292,11 @@ class _PlayerRangeEditorState extends State<PlayerRangeEditor> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _LegendDot(color: Colors.amber, label: 'Pairs'),
+                          _LegendDot(color: Colors.amber, label: context.l10n.equityLegendPairs),
                           const SizedBox(width: 12),
-                          _LegendDot(color: Colors.green.shade600, label: 'Suited'),
+                          _LegendDot(color: Colors.green.shade600, label: context.l10n.equityLegendSuited),
                           const SizedBox(width: 12),
-                          _LegendDot(color: Colors.blue.shade600, label: 'Offsuit'),
+                          _LegendDot(color: Colors.blue.shade600, label: context.l10n.equityLegendOffsuit),
                         ],
                       ),
                       const SizedBox(height: 8),

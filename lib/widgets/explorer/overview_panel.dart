@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../explorer/grid_aggregation.dart';
 import '../../explorer/pack_codec.dart';
+import '../../l10n/l10n.dart';
 import 'action_colors.dart';
 import 'combo_strategy_list.dart';
 import 'panel_layout.dart';
@@ -64,10 +65,11 @@ class OverviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final colors = actionColors(node.actions);
+    final l10n = context.l10n;
 
     final children = <Widget>[
         Text(
-          '$actorLabel to act · ${node.actorIsOop ? 'OOP' : 'IP'}',
+          l10n.studyToActLine(actorLabel, node.actorIsOop ? 'OOP' : 'IP'),
           style: Theme.of(context)
               .textTheme
               .titleMedium
@@ -88,28 +90,30 @@ class OverviewPanel extends StatelessWidget {
               if (node.potBefore > 0)
                 _stat(
                     context,
-                    'Pot',
+                    l10n.studyStatPot,
                     bbPerUnit != null
                         ? _fmtBB(node.potBefore * bbPerUnit!)
                         : node.potBefore.toStringAsFixed(1)),
               if (node.toCall > 0 && node.potBefore > 0)
                 _stat(
                     context,
-                    'To call',
+                    l10n.studyStatToCall,
                     bbPerUnit != null
                         ? _fmtBB(node.toCall * bbPerUnit!)
-                        : '${(node.toCall / node.potBefore * 100).round()}% pot'),
+                        : l10n.studyPctPot(
+                            (node.toCall / node.potBefore * 100).round())),
               if (node.potBefore > 0)
                 _stat(context, 'SPR',
                     (node.behind / node.potBefore).toStringAsFixed(1)),
-              _stat(context, 'Combos', summary.totalReach.toStringAsFixed(1)),
+              _stat(context, l10n.studyStatCombos,
+                  summary.totalReach.toStringAsFixed(1)),
               if (summary.equityMean != null)
-                _stat(context, 'Equity',
+                _stat(context, l10n.studyStatEquity,
                     '${(summary.equityMean! * 100).toStringAsFixed(1)}%'),
             ],
           ),
         const SizedBox(height: 16),
-        Text('ACTIONS · tap to filter the grid',
+        Text(l10n.studyActionsHeader,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
         const SizedBox(height: 6),
@@ -137,15 +141,15 @@ class OverviewPanel extends StatelessWidget {
         // HANDS — the selected cell's exact combos and their strategy.
         Row(
           children: [
-            Text('HANDS',
+            Text(l10n.studyHandsHeader,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
             if (selectedCell != null) ...[
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${selectedCell!.hand} · ${selectedCell!.comboCount} of '
-                  '${selectedCell!.maxCombos} combos',
+                  l10n.studyCellCombos(selectedCell!.hand,
+                      selectedCell!.comboCount, selectedCell!.maxCombos),
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: scheme.onSurfaceVariant),
@@ -156,14 +160,13 @@ class OverviewPanel extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         if (selectedCell == null)
-          Text('Hover a hand in the grid to see its combos and their '
-              'strategy (tap on touch).',
+          Text(l10n.studyHoverHint,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
                   ?.copyWith(color: scheme.onSurfaceVariant))
         else if (selectedCell!.combos.isEmpty)
-          Text('${selectedCell!.hand} has no live combos at this node.',
+          Text(l10n.studyNoLiveCombos(selectedCell!.hand),
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -245,7 +248,7 @@ class OverviewPanel extends StatelessWidget {
                         fontSize: 26, fontWeight: FontWeight.w800)),
               ),
               const SizedBox(height: 2),
-              Text('${agg.combos.toStringAsFixed(0)} combos',
+              Text(context.l10n.studyCombosCount(agg.combos.toStringAsFixed(0)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style:

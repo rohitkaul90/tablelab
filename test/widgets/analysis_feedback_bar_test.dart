@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/widgets/ai/analysis_feedback_bar.dart';
 
+import '../helpers/pump_app.dart';
+
 void main() {
   testWidgets('tapping thumbs-up rates once and updates the label',
       (tester) async {
     final ratings = <int>[];
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
+    await tester.pumpWidget(wrapApp(Scaffold(
         body: AnalysisFeedbackBar(onRate: (r) async => ratings.add(r)),
       ),
     ));
@@ -25,8 +26,7 @@ void main() {
   testWidgets('re-tapping the same rating does not rate again',
       (tester) async {
     final ratings = <int>[];
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
+    await tester.pumpWidget(wrapApp(Scaffold(
         body: AnalysisFeedbackBar(onRate: (r) async => ratings.add(r)),
       ),
     ));
@@ -42,8 +42,7 @@ void main() {
   testWidgets('rapid taps while saving are guarded', (tester) async {
     final ratings = <int>[];
     final gate = Completer<void>();
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
+    await tester.pumpWidget(wrapApp(Scaffold(
         body: AnalysisFeedbackBar(onRate: (r) async {
           ratings.add(r);
           await gate.future;
@@ -62,8 +61,7 @@ void main() {
   });
 
   testWidgets('a failed save reverts the selection', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
+    await tester.pumpWidget(wrapApp(Scaffold(
         body: AnalysisFeedbackBar(onRate: (r) async => throw Exception('rls')),
       ),
     ));

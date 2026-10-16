@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../explorer/grid_aggregation.dart';
+import '../../l10n/l10n.dart';
 import '../../explorer/pack_codec.dart';
 import '../../explorer/scenario_labels.dart';
 import '../../providers/explorer_provider.dart';
@@ -201,9 +202,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                     // Flexible + ellipsis: a bare Text in a Row loses the
                     // AppBar's built-in title truncation, overflowing on
                     // narrow phones / large font scales.
-                    const Flexible(
+                    Flexible(
                       child: Text(
-                        'GTO Study',
+                        context.l10n.studyTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -215,12 +216,12 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.fullscreen),
-                    tooltip: 'Focus mode',
+                    tooltip: context.l10n.studyFocusMode,
                     onPressed: () => setMax(true),
                   ),
                   IconButton(
                     icon: const Icon(Icons.tune),
-                    tooltip: 'Study settings',
+                    tooltip: context.l10n.studySettings,
                     onPressed: () => _openStudySettings(context),
                   ),
                 ],
@@ -268,9 +269,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     // ~48dp minimum; Tooltip + Semantics make the affordance discoverable.
     return Semantics(
       button: true,
-      label: 'Study beta information',
+      label: context.l10n.studyBetaSemantics,
       child: Tooltip(
-        message: 'Study is in beta — tap for details',
+        message: context.l10n.studyBetaTooltip,
         child: InkWell(
           onTap: () => _showBetaInfo(context),
           borderRadius: BorderRadius.circular(14),
@@ -309,19 +310,12 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       builder: (ctx) => Theme(
         data: AppTheme.dark,
         child: AlertDialog(
-          title: const Text('Study is in beta'),
-          content: const Text(
-            'The solved strategies behind Study are still being calibrated — '
-            'we are refining the preflop ranges the solutions are built on and '
-            're-solving spots as they improve.\n\n'
-            'Frequencies and strategies shown here can change between updates '
-            'and should be treated as a study aid, not a definitive answer. '
-            'The rest of the app (sessions, stats, hands) is unaffected.',
-          ),
+          title: Text(ctx.l10n.studyBetaTitle),
+          content: Text(ctx.l10n.studyBetaBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Got it'),
+              child: Text(ctx.l10n.commonGotIt),
             ),
           ],
         ),
@@ -343,7 +337,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           clipBehavior: Clip.antiAlias,
           child: IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: 'Study settings',
+            tooltip: context.l10n.studySettings,
             onPressed: () => _openStudySettings(context),
           ),
         ),
@@ -363,7 +357,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   Icon(Icons.fullscreen_exit,
                       size: 20, color: scheme.onPrimaryContainer),
                   const SizedBox(width: 6),
-                  Text('Exit',
+                  Text(context.l10n.studyExit,
                       style: TextStyle(
                           color: scheme.onPrimaryContainer,
                           fontWeight: FontWeight.w700)),
@@ -386,6 +380,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       showDragHandle: true,
       builder: (sheetContext) {
         final scheme = Theme.of(sheetContext).colorScheme;
+        final l10n = sheetContext.l10n;
         Widget label(String t) => Text(t,
             style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
                 color: scheme.onSurfaceVariant, letterSpacing: 1.2));
@@ -407,16 +402,18 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Study settings',
+                  Text(l10n.studySettings,
                       style: Theme.of(sheetContext).textTheme.titleMedium),
                   const SizedBox(height: 12),
-                  label('TABLE TYPE'),
+                  label(l10n.studyTableType),
                   const SizedBox(height: 8),
                   SegmentedButton<bool>(
                     showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('Cash')),
-                      ButtonSegment(value: true, label: Text('Tournament')),
+                    segments: [
+                      ButtonSegment(
+                          value: false, label: Text(l10n.varianceModeCash)),
+                      ButtonSegment(
+                          value: true, label: Text(l10n.varianceModeTournament)),
                     ],
                     selected: {_trail.trn},
                     onSelectionChanged: (s) {
@@ -426,7 +423,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   ),
                   if (depths != null) ...[
                     const SizedBox(height: 18),
-                    label('STACK DEPTH'),
+                    label(l10n.studyStackDepth),
                     const SizedBox(height: 8),
                     SegmentedButton<String>(
                       showSelectedIcon: false,
@@ -454,11 +451,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                   const SizedBox(height: 14),
                   Text(
                     depths != null
-                        ? 'Stack depth is approximate — packs are solved per '
-                            'SPR bucket. Tournament mode uses ICM-aware preflop '
-                            'ranges; solved postflop packs are cash-only.'
-                        : 'Tournament mode uses ICM-aware preflop ranges. '
-                            'Solved postflop packs are cash-only for now.',
+                        ? l10n.studyDepthNote
+                        : l10n.studyTournamentNote,
                     style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant),
                   ),
@@ -548,8 +542,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             color: scheme.surfaceContainerLow,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
-              'Beta · flop to river · solved to ≤0.5% exploitability on '
-              'representative boards',
+              context.l10n.studyFooter,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -562,9 +555,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
   }
 
   String _preflopSubtitle() => switch (_preflopInspect) {
-        0 => 'opening range',
-        1 => 'vs the ${_trail.opener} open',
-        _ => 'vs the ${_trail.responder} 3-bet',
+        0 => context.l10n.studyOpeningRange,
+        1 => context.l10n.studyVsOpen('${_trail.opener}'),
+        _ => context.l10n.studyVs3Bet('${_trail.responder}'),
       };
 
   /// Apply a trail change: inspect the decision it creates, and re-target the
@@ -619,7 +612,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetContext) => BoardPickerSheet(
-        title: 'Solved boards — ${scenarioDisplayName(sc)}',
+        title: context.l10n.studySolvedBoards(scenarioDisplayName(sc)),
         selectedFlop: state.spot?.flop,
         preferredSpr: regime,
         // Captures the app-scoped notifier, not this State's ref — the sheet
@@ -665,9 +658,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       return _message(
         context,
         icon: Icons.school_outlined,
-        title: 'No solved boards on this device yet',
-        body: 'Preflop ranges work above — tap any seat\'s action. Postflop '
-            'solution packs are being rolled out — check back soon.$devHint',
+        title: context.l10n.studyNoBoardsTitle,
+        body: '${context.l10n.studyNoBoardsBody}$devHint',
       );
     }
     // The catalog resolved but a scenario's board index failed to fetch
@@ -685,13 +677,12 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       return _message(
         context,
         icon: Icons.cloud_off,
-        title: 'Couldn\'t load the board list',
-        body: 'The solved boards for '
-            '${scenarioDisplayName(failedSc)} didn\'t load. '
-            'Check your connection and retry.',
+        title: context.l10n.studyBoardListFailedTitle,
+        body: context.l10n
+            .studyBoardListFailedBody(scenarioDisplayName(failedSc)),
         action: TextButton(
           onPressed: () => _retryScenario(failedSc),
-          child: const Text('Retry'),
+          child: Text(context.l10n.commonRetry),
         ),
       );
     }
@@ -702,15 +693,14 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       return _message(
         context,
         icon: Icons.error_outline,
-        title: 'Could not load this board',
-        body: '${state.error}\n\nPick another board via the Flop box, or '
-            'retry.',
+        title: context.l10n.studyBoardFailedTitle,
+        body: context.l10n.studyBoardFailedBody('${state.error}'),
         action: TextButton(
           onPressed: state.spot == null
               ? null
               : () =>
                   ref.read(explorerProvider.notifier).selectSpot(state.spot!),
-          child: const Text('Retry'),
+          child: Text(context.l10n.commonRetry),
         ),
       );
     }
@@ -726,16 +716,15 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         return _message(
           context,
           icon: Icons.sync_problem,
-          title: 'Preflop line changed',
-          body: 'The line above no longer matches the loaded board '
-              '(${scenarioDisplayName(spot.scenario)}). Restore it, or '
-              'complete the new line to a solved spot.',
+          title: context.l10n.studyLineChangedTitle,
+          body: context.l10n
+              .studyLineChangedBody(scenarioDisplayName(spot.scenario)),
           action: TextButton(
             onPressed: () => setState(() {
               _trail = trailForScenario(spot.scenario);
               _preflopInspect = -1;
             }),
-            child: const Text('Restore the line for this board'),
+            child: Text(context.l10n.studyRestoreLine),
           ),
         );
       }
@@ -743,9 +732,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     }
     return _message(context,
         icon: Icons.hourglass_empty,
-        title: 'Pick a board',
-        body: 'Complete the preflop action above, then tap the Flop box to '
-            'choose a solved board.');
+        title: context.l10n.studyPickBoardTitle,
+        body: context.l10n.studyPickBoardBody);
   }
 
   Widget _loaded(BuildContext context, ExplorerState state) {
@@ -904,7 +892,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           style: TextButton.styleFrom(
               visualDensity: VisualDensity.compact,
               textStyle: const TextStyle(fontSize: 10.5)),
-          child: const Text('Reset'),
+          child: Text(context.l10n.commonReset),
         ),
       ),
     ];
@@ -1092,7 +1080,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     if (t.responderAction == '3-bet' && t.opener != null) {
       out.add(_vBox(
         context,
-        header: '${t.opener} (vs 3-bet)',
+        header: context.l10n.studyOpenerVs3Bet('${t.opener}'),
         inspected: _preflopInspect == 2,
         effStackBB: startEffBB == null
             ? null
@@ -1141,9 +1129,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     if (!_trail.closed) {
       detail = '—';
     } else if (sc == null) {
-      detail = _trail.trn ? 'cash only' : 'not solved';
+      detail = _trail.trn ? context.l10n.studyCashOnly : context.l10n.studyNotSolved;
     } else if (!hasPacks) {
-      detail = 'no packs';
+      detail = context.l10n.studyNoPacks;
     } else if (matched) {
       // Depth moved to the settings gear — show just the board for mapped
       // scenarios; unmapped (forward-compat) packs keep the raw regime.
@@ -1151,7 +1139,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           ? spot.flop
           : '${spot.flop} · ${spot.spr}';
     } else {
-      detail = 'pick a board';
+      detail = context.l10n.studyPickABoard;
     }
     return _vBox(
       context,
@@ -1194,7 +1182,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     // surprise when the runout has no nodes.
     String rowLabel(PackNode n, String action) {
       if (action.toUpperCase().startsWith('CALL')) {
-        return n.toCall >= n.behind - 1e-6 ? 'Call · all-in' : 'Call';
+        return n.toCall >= n.behind - 1e-6 ? context.l10n.studyCallAllIn : 'Call';
       }
       return actionSizeLabel(action,
           potBefore: n.potBefore, toCall: n.toCall, behind: n.behind);
@@ -1312,8 +1300,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
         ]));
       }
     } else {
-      out.add(_vBox(context, header: 'END', dimmed: true, rows: [
-        _vRow(context, folded ? 'Hand over' : 'All-in', Colors.grey),
+      out.add(_vBox(context, header: context.l10n.studyEnd, dimmed: true, rows: [
+        _vRow(context, folded ? context.l10n.studyHandOver : 'All-in',
+            Colors.grey),
       ]));
     }
     return out;
@@ -1353,7 +1342,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       builder: (sheetContext) => Padding(
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 20),
         child: StreetCardPicker(
-          title: 'Pick the ${river ? 'river' : 'turn'} card',
+          title: river ? context.l10n.studyPickRiver : context.l10n.studyPickTurn,
           excluded: excluded,
           available: available,
           isoBoard: isoBoard,
@@ -1452,9 +1441,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           visualDensity: VisualDensity.compact,
           textStyle: const TextStyle(fontSize: 11.5),
         ),
-        segments: const [
-          ButtonSegment(value: 0, label: Text('Overview')),
-          ButtonSegment(value: 1, label: Text('Equity chart')),
+        segments: [
+          ButtonSegment(value: 0, label: Text(context.l10n.studyTabOverview)),
+          ButtonSegment(value: 1, label: Text(context.l10n.studyTabEquityChart)),
         ],
         selected: {_rightTab},
         onSelectionChanged: (s) => setState(() => _rightTab = s.first),
@@ -1530,7 +1519,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     final actorNames = manifest.combosFor(oop: node.actorIsOop);
     final oppNames = manifest.combosFor(oop: !node.actorIsOop);
     final actorSeries = EquityCurveSeries(
-      '$actorLabel (to act)',
+      context.l10n.studyToAct(actorLabel),
       const Color(0xFF66BB6A),
       equityCurve(node.combos),
       actorNames,
@@ -1540,7 +1529,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     // actions), not a full pane, so it can't use Expanded.
     Widget chart(List<EquityCurveSeries> series, {String? note}) {
       if (series.every((s) => s.points.isEmpty)) {
-        return Text('No per-combo equity at this node.',
+        return Text(context.l10n.studyNoComboEquity,
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -1597,7 +1586,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       // (their entering range narrowed by their last action) on this board.
       if (opp == null) {
         return chart([actorSeries],
-            note: '$oppLabel has not acted on this street yet.');
+            note: context.l10n.studyOppNotActed(oppLabel));
       }
       final board = [
         for (final c in [...manifest.flop.split(' '), ...state.dealtCards])
@@ -1634,16 +1623,15 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
               actorSeries,
               if (oppEq != null && oppEq.isNotEmpty)
                 EquityCurveSeries(
-                  '$oppLabel (est.)',
+                  context.l10n.studyEstimated(oppLabel),
                   const Color(0xFF64B5F6),
                   equityCurve(oppEq),
                   oppNames,
                 ),
             ],
             note: oppEq == null
-                ? 'computing $oppLabel equity…'
-                : '$oppLabel curve estimated on-device (reach-weighted range, '
-                    'this board)',
+                ? context.l10n.studyComputingEquity(oppLabel)
+                : context.l10n.studyOppCurveReach(oppLabel),
           );
         },
       );
@@ -1658,15 +1646,15 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             actorSeries,
             if (opp != null && opp.isNotEmpty)
               EquityCurveSeries(
-                '$oppLabel (est.)',
+                context.l10n.studyEstimated(oppLabel),
                 const Color(0xFF64B5F6),
                 equityCurve(opp),
                 oppNames,
               ),
           ],
           note: opp == null
-              ? 'computing $oppLabel equity…'
-              : '$oppLabel curve estimated on-device (full ranges, this board)',
+              ? context.l10n.studyComputingEquity(oppLabel)
+              : context.l10n.studyOppCurveFull(oppLabel),
         );
       },
     );
@@ -1745,31 +1733,30 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     // normalizes forward and was a no-op right after a dealt card.
     Widget back() => TextButton(
           onPressed: () => ref.read(explorerProvider.notifier).stepBack(),
-          child: const Text('Back one step'),
+          child: Text(context.l10n.studyBackOneStep),
         );
     if (state.line.isEmpty) {
       return _message(context,
           icon: Icons.error_outline,
-          title: 'Spot has no root decision',
-          body: 'This pack looks malformed — pick another spot above.');
+          title: context.l10n.studyNoRootTitle,
+          body: context.l10n.studyNoRootBody);
     }
     if (!state.atLineEnd) {
       // Inspecting mid-line but the street's chunk is missing (thin runout).
       return _message(context,
           icon: Icons.casino_outlined,
-          title: 'This street is unavailable',
-          body: 'The pack does not carry this runout. Change the '
-              '${state.dealtCards.length <= 1 ? 'turn' : 'river'} card via '
-              'its box above, or tap an earlier action.',
+          title: context.l10n.studyStreetUnavailableTitle,
+          body: state.dealtCards.length <= 1
+              ? context.l10n.studyStreetUnavailableTurn
+              : context.l10n.studyStreetUnavailableRiver,
           action: back());
     }
     final last = state.line.last.toUpperCase();
     if (last.startsWith('FOLD')) {
       return _message(context,
           icon: Icons.close,
-          title: 'Hand over — fold',
-          body: 'This line ends the hand. Tap any earlier box above to '
-              'review a decision — the line stays as played.',
+          title: context.l10n.studyFoldTitle,
+          body: context.l10n.studyFoldBody,
           action: back());
     }
     if (last.startsWith('@')) {
@@ -1779,17 +1766,14 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       if (_lineIsAllIn(state)) {
         return _message(context,
             icon: Icons.paid_outlined,
-            title: 'All-in — runout to showdown',
-            body: 'The stacks went in on an earlier street; there are no '
-                'further decisions on this line. Tap any earlier box above '
-                'to review a decision.',
+            title: context.l10n.studyAllInTitle,
+            body: context.l10n.studyAllInEarlierBody,
             action: back());
       }
       return _message(context,
           icon: Icons.casino_outlined,
-          title: 'No decisions on this runout',
-          body: 'The pack does not carry this runout — change the card via '
-              'its box above, or tap an earlier action.',
+          title: context.l10n.studyNoDecisionsTitle,
+          body: context.l10n.studyNoDecisionsBody,
           action: back());
     }
     // Street closed by matched action. All-in call → showdown, no more cards
@@ -1801,18 +1785,15 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     if (_lineIsAllIn(state)) {
       return _message(context,
           icon: Icons.paid_outlined,
-          title: 'All-in — runout to showdown',
-          body: 'The stacks are in; there are no further decisions. Tap any '
-              'earlier box above to review a decision.',
+          title: context.l10n.studyAllInTitle,
+          body: context.l10n.studyAllInBody,
           action: back());
     }
     if (dealt >= 2) {
       return _message(context,
           icon: Icons.flag_outlined,
           title: 'Showdown',
-          body: 'River action complete — the hand goes to showdown. Tap any '
-              'earlier box above to review a decision; the line stays as '
-              'played.',
+          body: context.l10n.studyShowdownBody,
           action: back());
     }
     // A pinned card for the next street AUTO-DEALS (the user never re-enters
@@ -1853,7 +1834,9 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             StreetCardPicker(
-              title: dealt == 0 ? 'Pick the turn card' : 'Pick the river card',
+              title: dealt == 0
+                  ? context.l10n.studyPickTurn
+                  : context.l10n.studyPickRiver,
               excluded: excluded,
               available: available,
               isoBoard: isoBoard,
@@ -1880,9 +1863,13 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
             visualDensity: VisualDensity.compact,
             textStyle: const TextStyle(fontSize: 11.5),
           ),
-          segments: const [
-            ButtonSegment(value: GridLens.strategy, label: Text('Strategy')),
-            ButtonSegment(value: GridLens.handClass, label: Text('Hand class')),
+          segments: [
+            ButtonSegment(
+                value: GridLens.strategy,
+                label: Text(context.l10n.studyLensStrategy)),
+            ButtonSegment(
+                value: GridLens.handClass,
+                label: Text(context.l10n.studyLensHandClass)),
           ],
           selected: {_lens},
           onSelectionChanged: (s) => setState(() => _lens = s.first),

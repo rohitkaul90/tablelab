@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import '../../equity/card.dart';
 import '../../explorer/grid_aggregation.dart';
+import '../../l10n/l10n.dart';
 
 class EquityCurveSeries {
   final String label; // 'BTN (to act)'
@@ -121,7 +122,7 @@ class _EquityChartState extends State<EquityChart> {
           }),
         ),
         const SizedBox(height: 2),
-        Text('range, worst → best hands',
+        Text(context.l10n.studyChartAxis,
             style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
       ],
     );

@@ -5,6 +5,8 @@ import '../../models/ai_analysis_model.dart';
 import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
 import '../../services/ai_service.dart';
+import '../../l10n/l10n.dart';
+import '../../widgets/ai/ai_disclaimer_footer.dart';
 import '../../widgets/ai/analysis_feedback_bar.dart';
 
 class SessionAnalysisScreen extends ConsumerStatefulWidget {
@@ -22,7 +24,7 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
   bool _loading = true;
   bool _running = false; // re-entry guard so a double-tap can't fire two paid calls
   String? _error;
-  String _errorTitle = 'Analysis failed';
+  String _errorTitle = '';
   bool _errorCanRetry = true;
 
   @override
@@ -36,6 +38,8 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
     // Re-analyze / Retry can't fire two live (paid) Claude calls and race.
     if (_running) return;
     _running = true;
+    // Captured before the first await (runs post-frame, so context is live).
+    final l10n = context.l10n;
     setState(() {
       _loading = true;
       _error = null;
@@ -63,20 +67,11 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        if (e is AiException) {
-          _error = e.message;
-          _errorTitle = e.isRateLimited
-              ? 'Daily limit reached'
-              : e.isAtCapacity
-                  ? 'Temporarily at capacity'
-                  : 'Analysis failed';
-          // Retrying a daily limit won't help until tomorrow.
-          _errorCanRetry = !e.isRateLimited;
-        } else {
-          _error = 'Something went wrong. Please try again.';
-          _errorTitle = 'Analysis failed';
-          _errorCanRetry = true;
-        }
+        final text = aiErrorText(l10n, e);
+        _error = text.body;
+        _errorTitle = text.title;
+        // Retrying a daily limit won't help until tomorrow.
+        _errorCanRetry = !(e is AiException && e.isRateLimited);
       });
     } finally {
       _running = false;
@@ -84,38 +79,39 @@ class _SessionAnalysisScreenState extends ConsumerState<SessionAnalysisScreen> {
   }
 
   Future<void> _confirmReanalyze() async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Re-analyze session?'),
-        content: const Text(
-          'This will use AI credits and overwrite the existing analysis.',
-        ),
+        title: Text(l10n.aiSessionReanalyzeTitle),
+        content: Text(l10n.aiReanalyzeBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Re-analyze'),
+            child: Text(l10n.aiReanalyze),
           ),
         ],
       ),
     );
-    if (confirmed == true) _runAnalysis(forceRefresh: true);
+    // The screen can be popped while the dialog is open; _runAnalysis reads
+    // context.l10n, which throws on an unmounted element.
+    if (confirmed == true && mounted) _runAnalysis(forceRefresh: true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Analysis'),
+        title: Text(context.l10n.aiSessionTitle),
         actions: [
           if (_analysis != null)
             IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: 'Re-analyze',
+              tooltip: context.l10n.aiReanalyze,
               onPressed: _loading ? null : _confirmReanalyze,
             ),
         ],
@@ -150,12 +146,12 @@ class _LoadingView extends StatelessWidget {
           const CircularProgressIndicator(),
           const SizedBox(height: 24),
           Text(
-            'Your coach is reviewing the session…',
+            context.l10n.aiSessionLoading,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 8),
           Text(
-            'This usually takes 10–20 seconds',
+            context.l10n.aiSessionLoadingHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.outline,
                 ),
@@ -194,7 +190,8 @@ class _ErrorView extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall),
             if (onRetry != null) ...[
               const SizedBox(height: 24),
-              FilledButton(onPressed: onRetry, child: const Text('Retry')),
+              FilledButton(
+                  onPressed: onRetry, child: Text(context.l10n.commonRetry)),
             ],
           ],
         ),
@@ -231,16 +228,7 @@ class _AnalysisView extends StatelessWidget {
           AnalysisFeedbackBar(onRate: onRate!),
         ],
         const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(
-            'AI coaching can be wrong — verify big decisions.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-          ),
-        ),
+        const AiDisclaimerFooter(),
         const SizedBox(height: 24),
       ],
     );
@@ -279,7 +267,7 @@ class _NarrativeCard extends StatelessWidget {
                     size: 18,
                     color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('Session Debrief',
+                Text(context.l10n.aiSessionDebrief,
                     style: Theme.of(context).textTheme.titleSmall),
               ],
             ),
@@ -325,7 +313,7 @@ class _LeaksSection extends StatelessWidget {
                     size: 18,
                     color: Theme.of(context).colorScheme.error),
                 const SizedBox(width: 8),
-                Text('Leaks Identified',
+                Text(context.l10n.aiSessionLeaks,
                     style: Theme.of(context).textTheme.titleSmall),
               ],
             ),
@@ -375,7 +363,7 @@ class _TipCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Focus for next session',
+                  Text(context.l10n.aiSessionFocusNext,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: Theme.of(context).colorScheme.primary,
                           )),

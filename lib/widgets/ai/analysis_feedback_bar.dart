@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 import '../feedback_sheet.dart';
 
 /// Thumbs up/down row shown under an AI analysis. Persists via [onRate]
@@ -45,12 +46,13 @@ class _AnalysisFeedbackBarState extends State<AnalysisFeedbackBar> {
   Widget build(BuildContext context) {
     final outline = Theme.of(context).colorScheme.outline;
     final primary = Theme.of(context).colorScheme.primary;
+    final l10n = context.l10n;
     return Wrap(
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
-          _rating == null ? 'Was this analysis helpful?' : 'Thanks for the feedback!',
+          _rating == null ? l10n.aiFeedbackPrompt : l10n.aiFeedbackThanks,
           style:
               Theme.of(context).textTheme.bodySmall?.copyWith(color: outline),
         ),
@@ -61,7 +63,7 @@ class _AnalysisFeedbackBarState extends State<AnalysisFeedbackBar> {
             size: 18,
             color: _rating == 1 ? primary : outline,
           ),
-          tooltip: 'Helpful',
+          tooltip: l10n.aiFeedbackHelpful,
           onPressed: () => _rate(1),
         ),
         IconButton(
@@ -70,16 +72,16 @@ class _AnalysisFeedbackBarState extends State<AnalysisFeedbackBar> {
             size: 18,
             color: _rating == -1 ? primary : outline,
           ),
-          tooltip: 'Not helpful',
+          tooltip: l10n.aiFeedbackNotHelpful,
           onPressed: () => _rate(-1),
         ),
         TextButton(
           onPressed: () => showFeedbackSheet(
             context,
             initialCategory: 'other',
-            prefillMessage: 'About the AI coaching: ',
+            prefillMessage: l10n.aiFeedbackPrefill,
           ),
-          child: const Text('Tell us more'),
+          child: Text(l10n.aiFeedbackTellUsMore),
         ),
       ],
     );

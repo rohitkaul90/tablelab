@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/explorer/pack_source.dart';
 import 'package:tablelab/widgets/explorer/board_picker_sheet.dart';
 
+import '../helpers/pump_app.dart';
+
 class _NullSource implements PackSource {
   @override
   Future<Uint8List> read(String relPath) async => Uint8List(0);
@@ -22,8 +24,7 @@ ExplorerSpotRef _spot(String flop, String spr) => ExplorerSpotRef(
 /// error state, filter chips + search over the loaded boards, and the
 /// regime-fallback pick.
 void main() {
-  Widget host(BoardPickerSheet sheet) => MaterialApp(
-        home: Scaffold(body: sheet),
+  Widget host(BoardPickerSheet sheet) => wrapApp(Scaffold(body: sheet),
       );
 
   testWidgets('spinner → data; search narrows; tap picks preferred spr',

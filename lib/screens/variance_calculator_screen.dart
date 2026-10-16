@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/l10n.dart';
 import '../providers/profile_provider.dart';
 import '../providers/providers.dart';
 import '../services/analytics_service.dart';
@@ -118,6 +119,7 @@ class _VarianceCalculatorScreenState
   /// Prefill from the user's own sessions (needs ≥10 qualifying sessions for
   /// the SD estimators — see helpers.dart).
   void _useMyStats() {
+    final l10n = context.l10n;
     final sessions =
         ref.read(completedSessionsProvider).valueOrNull ?? const [];
     String? missing;
@@ -128,16 +130,14 @@ class _VarianceCalculatorScreenState
       final hands = cash.where(countsForBB100).fold<double>(
           0, (a, s) => a + (s.handsPerHour ?? 25) * s.durationMinutes / 60.0);
       if (wr == null || hands <= 0) {
-        missing = 'Need cash sessions with parseable blinds and durations to '
-            'estimate a winrate.';
+        missing = l10n.varianceStatsNeedCash;
       } else {
         _cashWr.text = wr.toStringAsFixed(1);
         _cashHands.text = _ThousandsFormatter._fmt.format(hands.round());
         if (sd != null) {
           _cashSd.text = sd.toStringAsFixed(0);
         } else {
-          missing = 'Winrate and hands filled. Standard deviation needs at '
-              'least 10 qualifying cash sessions — kept the current value.';
+          missing = l10n.varianceStatsCashSdShort;
         }
       }
     } else {
@@ -155,15 +155,14 @@ class _VarianceCalculatorScreenState
           0.0, (a, s) => a + convertCurrency(s.profitLoss, s.currency, cur));
       final sd = calcTournamentStdDevBuyIns(t);
       if (t.isEmpty || buyIn <= 0) {
-        missing = 'Need logged tournaments with buy-ins to estimate an ROI.';
+        missing = l10n.varianceStatsNeedTourneys;
       } else {
         _tRoi.text = (pl / buyIn * 100).toStringAsFixed(1);
         _tCount.text = _ThousandsFormatter._fmt.format(t.length);
         if (sd != null) {
           _tSd.text = sd.toStringAsFixed(1);
         } else {
-          missing = 'ROI and entries filled. Standard deviation needs at '
-              'least 10 tournaments with buy-ins — kept the current value.';
+          missing = l10n.varianceStatsTourneySdShort;
         }
       }
     }
@@ -176,6 +175,7 @@ class _VarianceCalculatorScreenState
 
   Future<void> _calculate() async {
     if (_running) return;
+    final l10n = context.l10n; // before the await below
 
     final int mode = _mode;
     final double? mean, sd, count, bankroll;
@@ -205,19 +205,18 @@ class _VarianceCalculatorScreenState
         });
 
     if (mean == null || sd == null || count == null) {
-      fail('Enter a winrate, standard deviation and sample size '
-          '(numbers only).');
+      fail(l10n.varianceErrorMissing);
       return;
     }
     if (sd <= 0 || count <= 0) {
       fail(mode == 0
-          ? 'Hands and standard deviation must both be above zero.'
-          : 'Tournaments and standard deviation must both be above zero.');
+          ? l10n.varianceErrorCashNonPositive
+          : l10n.varianceErrorTourneyNonPositive);
       return;
     }
     if (_mode == 0 ? _cashBankroll.text.isNotEmpty : _tBankroll.text.isNotEmpty) {
       if (bankroll == null || bankroll <= 0) {
-        fail('Bankroll must be a positive number (or leave it empty).');
+        fail(l10n.varianceErrorBankroll);
         return;
       }
     }
@@ -293,6 +292,7 @@ class _VarianceCalculatorScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final isCash = _mode == 0;
 
     final body = ListView(
@@ -301,9 +301,9 @@ class _VarianceCalculatorScreenState
         SegmentedButton<int>(
           showSelectedIcon: false,
           expandedInsets: EdgeInsets.zero,
-          segments: const [
-            ButtonSegment(value: 0, label: Text('Cash')),
-            ButtonSegment(value: 1, label: Text('Tournament')),
+          segments: [
+            ButtonSegment(value: 0, label: Text(l10n.varianceModeCash)),
+            ButtonSegment(value: 1, label: Text(l10n.varianceModeTournament)),
           ],
           selected: {_mode},
           // Clear any validation error on mode switch — a cash-specific
@@ -322,18 +322,21 @@ class _VarianceCalculatorScreenState
         const SizedBox(height: 16),
 
         if (isCash) ...[
-          _field(_cashWr, 'Winrate (bb/100)', 'e.g. 2.5', signed: true),
-          _field(_cashSd, 'Std deviation (bb/100)',
-              'typical live NLHE ≈ 70–100'),
-          _field(_cashHands, 'Hands', 'e.g. 50,000', thousands: true),
-          _field(_cashBankroll, 'Bankroll in bb (optional)',
-              'for risk of ruin', thousands: true),
+          _field(_cashWr, l10n.varianceCashWinrate, l10n.varianceCashWinrateHint,
+              signed: true),
+          _field(_cashSd, l10n.varianceCashSd, l10n.varianceCashSdHint),
+          _field(_cashHands, l10n.varianceCashHands, l10n.varianceCashHandsHint,
+              thousands: true),
+          _field(_cashBankroll, l10n.varianceCashBankroll,
+              l10n.varianceBankrollHint, thousands: true),
         ] else ...[
-          _field(_tRoi, 'ROI (%)', 'e.g. 20', signed: true),
-          _field(_tSd, 'Std deviation (buy-ins)', 'SNG ≈ 1.5–2 · MTT ≈ 3–6+'),
-          _field(_tCount, 'Tournaments', 'e.g. 200', thousands: true),
-          _field(_tBankroll, 'Bankroll in buy-ins (optional)',
-              'for risk of ruin', thousands: true),
+          _field(_tRoi, l10n.varianceTourneyRoi, l10n.varianceTourneyRoiHint,
+              signed: true),
+          _field(_tSd, l10n.varianceTourneySd, l10n.varianceTourneySdHint),
+          _field(_tCount, l10n.varianceTourneyCount,
+              l10n.varianceTourneyCountHint, thousands: true),
+          _field(_tBankroll, l10n.varianceTourneyBankroll,
+              l10n.varianceBankrollHint, thousands: true),
         ],
 
         Row(
@@ -342,14 +345,19 @@ class _VarianceCalculatorScreenState
               child: FilledButton.icon(
                 onPressed: _running ? null : () => _calculate(),
                 icon: const Icon(Icons.calculate_outlined),
-                label: const Text('Calculate'),
+                label: Text(l10n.varianceCalculate),
               ),
             ),
             const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: _running ? null : _useMyStats,
-              icon: const Icon(Icons.person_outline, size: 18),
-              label: const Text('Use my stats'),
+            // Flexible + ellipsis: longer languages (es/it) overflowed this
+            // row by ~30px on a 360-wide phone beside the Calculate button.
+            Flexible(
+              child: TextButton.icon(
+                onPressed: _running ? null : _useMyStats,
+                icon: const Icon(Icons.person_outline, size: 18),
+                label: Text(l10n.varianceUseMyStats,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
             ),
           ],
         ),
@@ -362,7 +370,7 @@ class _VarianceCalculatorScreenState
 
         if (_result != null) ...[
           const SizedBox(height: 20),
-          _resultsSection(theme),
+          _resultsSection(theme, l10n),
         ],
       ],
     );
@@ -370,7 +378,7 @@ class _VarianceCalculatorScreenState
     if (!widget.showScaffold) return body;
     return Scaffold(
       drawer: const AppDrawer(),
-      appBar: AppBar(title: const Text('Variance Calculator')),
+      appBar: AppBar(title: Text(l10n.varianceTitle)),
       body: body,
     );
   }
@@ -399,11 +407,11 @@ class _VarianceCalculatorScreenState
     );
   }
 
-  Widget _resultsSection(ThemeData theme) {
+  Widget _resultsSection(ThemeData theme, AppLocalizations l10n) {
     final r = _result!;
     final cash = _resultMode == 0;
-    final unit = cash ? 'bb' : 'buy-ins';
-    final xLabel = cash ? 'hands' : 'tournaments';
+    final unit = cash ? l10n.varianceUnitBb : l10n.varianceUnitBuyIns;
+    final xLabel = cash ? l10n.varianceXHands : l10n.varianceXTournaments;
     final xMax = cash ? (_units! * 100) : _units!;
 
     String fmt(double v, {int dp = 0}) {
@@ -416,6 +424,9 @@ class _VarianceCalculatorScreenState
     }
 
     final dp = cash ? 0 : 1;
+    // Unit once, after the range ("-1,200 to 3,400 bb"), as before l10n.
+    String range(double lo, double hi) =>
+        l10n.varianceRange(fmt(lo, dp: dp), fmt(hi, dp: dp), unit);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,7 +435,7 @@ class _VarianceCalculatorScreenState
           children: [
             Expanded(
               child: Text(
-                'Expected: ${fmt(r.ev, dp: dp)} $unit',
+                l10n.varianceExpectedHeadline('${fmt(r.ev, dp: dp)} $unit'),
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: r.ev >= 0 ? Colors.green : Colors.red,
@@ -432,7 +443,7 @@ class _VarianceCalculatorScreenState
               ),
             ),
             IconButton(
-              tooltip: 'Reroll sample runs',
+              tooltip: l10n.varianceReroll,
               icon: const Icon(Icons.casino_outlined),
               onPressed: _running ? null : _reroll,
             ),
@@ -485,6 +496,10 @@ class _VarianceCalculatorScreenState
                     fmtX: (v) =>
                         '${_ThousandsFormatter._fmt.format(v.round())} $xLabel',
                     xMax: xMax.toDouble(),
+                    labels: (
+                      expected: l10n.varianceTooltipExpected,
+                      band: l10n.varianceTooltipBand,
+                    ),
                   ),
                   child: const SizedBox.expand(),
                 )),
@@ -495,36 +510,33 @@ class _VarianceCalculatorScreenState
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
-            '0 → ${_ThousandsFormatter._fmt.format(xMax.round())} $xLabel · '
-            'shaded: 70% and 95% of outcomes · lines: 20 simulated runs · '
-            'tap or drag the chart to inspect a point (tap the line to hide)',
+            l10n.varianceChartCaption(
+                '0 → ${_ThousandsFormatter._fmt.format(xMax.round())} $xLabel'),
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.outline),
           ),
         ),
         const SizedBox(height: 16),
 
-        _row(theme, '70% of outcomes',
-            '${fmt(r.ci70Low, dp: dp)} to ${fmt(r.ci70High, dp: dp)} $unit'),
-        _row(theme, '95% of outcomes',
-            '${fmt(r.ci95Low, dp: dp)} to ${fmt(r.ci95High, dp: dp)} $unit'),
-        _row(theme, 'Chance of losing overall',
+        _row(theme, l10n.variance70, range(r.ci70Low, r.ci70High)),
+        _row(theme, l10n.variance95, range(r.ci95Low, r.ci95High)),
+        _row(theme, l10n.varianceChanceLosing,
             '${(r.pLoss * 100).toStringAsFixed(1)}%'),
         if (r.riskOfRuin != null)
-          _row(theme, 'Risk of ruin', _pct(r.riskOfRuin!)),
+          _row(theme, l10n.varianceRiskOfRuin, _pct(r.riskOfRuin!)),
         if (r.bankrollForRoR5 != null)
-          _row(theme, 'Bankroll for 5% risk of ruin',
+          _row(theme, l10n.varianceBankroll5,
               '${_ThousandsFormatter._fmt.format(r.bankrollForRoR5!.ceil())} $unit'),
         if (r.bankrollForRoR1 != null)
-          _row(theme, 'Bankroll for 1% risk of ruin',
+          _row(theme, l10n.varianceBankroll1,
               '${_ThousandsFormatter._fmt.format(r.bankrollForRoR1!.ceil())} $unit'),
         if (_downswings != null) ...[
-          _row(theme, 'Typical worst downswing',
+          _row(theme, l10n.varianceTypicalDownswing,
               '${_ThousandsFormatter._fmt.format(_downswings!.medianMaxDrawdown.round())} $unit'),
-          _row(theme, 'Bad-run downswing (95th pct)',
+          _row(theme, l10n.varianceBadDownswing,
               '${_ThousandsFormatter._fmt.format(_downswings!.p95MaxDrawdown.round())} $unit'),
           if (_downswings!.pBustDuringHorizon != null)
-            _row(theme, 'Chance of going broke during this sample',
+            _row(theme, l10n.varianceBustChance,
                 _pct(_downswings!.pBustDuringHorizon!)),
         ] else if (_running)
           const Padding(
@@ -538,12 +550,8 @@ class _VarianceCalculatorScreenState
         const SizedBox(height: 12),
         Text(
           _resultMode == 0
-              ? 'Estimates use a normal approximation of your winrate as a '
-                  'random walk. Real results vary; treat these as guides, '
-                  'not guarantees.'
-              : 'Estimates use a normal approximation. Tournament results '
-                  'are heavily skewed by rare big scores, so real tail risk '
-                  'is HIGHER than shown — especially over small samples.',
+              ? l10n.varianceDisclaimerCash
+              : l10n.varianceDisclaimerTourney,
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.outline),
         ),
@@ -597,6 +605,13 @@ class _VariancePathsPainter extends CustomPainter {
   final String Function(double) fmtX;
   final double xMax;
 
+  /// Localized tooltip line templates (built from AppLocalizations by the
+  /// screen; the painter has no BuildContext).
+  final ({
+    String Function(String value) expected,
+    String Function(String pct, String low, String high) band,
+  }) labels;
+
   _VariancePathsPainter({
     required this.paths,
     required this.ev,
@@ -610,6 +625,7 @@ class _VariancePathsPainter extends CustomPainter {
     required this.fmtValue,
     required this.fmtX,
     required this.xMax,
+    required this.labels,
   });
 
   @override
@@ -723,15 +739,14 @@ class _VariancePathsPainter extends CustomPainter {
         children: [
           TextSpan(text: '${fmtX(xMax * f)}\n', style: bold),
           TextSpan(
-              text: 'Expected ${fmtValue(mid)}\n',
+              text: '${labels.expected(fmtValue(mid))}\n',
               style: bold.copyWith(
                   color: mid >= 0 ? Colors.green : Colors.red)),
           TextSpan(
-              text: '70%: ${fmtValue(mid - z70 * sd)} to '
-                  '${fmtValue(mid + z70 * sd)}\n'),
+              text: '${labels.band('70%', fmtValue(mid - z70 * sd), fmtValue(mid + z70 * sd))}\n'),
           TextSpan(
-              text: '95%: ${fmtValue(mid - z95 * sd)} to '
-                  '${fmtValue(mid + z95 * sd)}'),
+              text: labels.band(
+                  '95%', fmtValue(mid - z95 * sd), fmtValue(mid + z95 * sd))),
         ],
       ),
     )..layout();
@@ -767,5 +782,7 @@ class _VariancePathsPainter extends CustomPainter {
       old.sdPerUnit != sdPerUnit ||
       old.units != units ||
       old.primary != primary ||
-      old.scrubFrac != scrubFrac;
+      old.scrubFrac != scrubFrac ||
+      // Tear-off identity changes when the locale's AppLocalizations does.
+      old.labels != labels;
 }
