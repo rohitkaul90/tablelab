@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../l10n/l10n.dart';
 import '../models/tournament_listing.dart';
 import '../services/analytics_service.dart';
 import '../providers/providers.dart';
@@ -46,7 +47,7 @@ class _TournamentCalendarScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tournaments'),
+        title: Text(context.l10n.calendarTitle),
         actions: [
           listAsync.maybeWhen(
             data: (all) {
@@ -57,7 +58,7 @@ class _TournamentCalendarScreenState
                   isLabelVisible: _hasFilter,
                   child: const Icon(Icons.filter_list),
                 ),
-                tooltip: 'Filter',
+                tooltip: context.l10n.commonFilter,
                 onPressed: () => _openFilterSheet(countries),
               );
             },
@@ -75,11 +76,11 @@ class _TournamentCalendarScreenState
               children: [
                 const Icon(Icons.wifi_off_outlined, size: 48),
                 const SizedBox(height: 12),
-                const Text('Could not load tournaments'),
+                Text(context.l10n.calendarLoadFailed),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => ref.invalidate(tournamentListingsProvider),
-                  child: const Text('Retry'),
+                  child: Text(context.l10n.commonRetry),
                 ),
               ],
             ),
@@ -139,7 +140,9 @@ class _TournamentCalendarScreenState
               ),
               const SizedBox(height: 16),
               Text(
-                _hasFilter ? 'No tournaments match your filters' : 'No upcoming tournaments',
+                _hasFilter
+                    ? context.l10n.calendarEmptyFiltered
+                    : context.l10n.calendarEmpty,
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -147,7 +150,7 @@ class _TournamentCalendarScreenState
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => setState(() => _country = null),
-                  child: const Text('Clear filters'),
+                  child: Text(context.l10n.calendarClearFilters),
                 ),
               ],
             ],
@@ -188,6 +191,7 @@ class _TournamentFilterSheetState extends State<_TournamentFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final filtered = _search.isEmpty
         ? widget.allCountries
         : widget.allCountries
@@ -217,20 +221,20 @@ class _TournamentFilterSheetState extends State<_TournamentFilterSheet> {
             padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
             child: Row(
               children: [
-                Text('Filter Tournaments',
+                Text(l10n.calendarFilterTitle,
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold)),
                 const Spacer(),
                 TextButton(
                   onPressed: () => setState(() { _country = null; _search = ''; }),
-                  child: const Text('Reset'),
+                  child: Text(l10n.commonReset),
                 ),
                 FilledButton(
                   onPressed: () {
                     widget.onApply(_country);
                     Navigator.pop(context);
                   },
-                  child: const Text('Apply'),
+                  child: Text(l10n.commonApply),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -244,7 +248,7 @@ class _TournamentFilterSheetState extends State<_TournamentFilterSheet> {
                   16, 12, 16, 24 + MediaQuery.paddingOf(context).bottom),
               children: [
                 // Country filter
-                Text('Country',
+                Text(l10n.calendarCountry,
                     style: theme.textTheme.labelMedium?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -255,7 +259,7 @@ class _TournamentFilterSheetState extends State<_TournamentFilterSheet> {
                 TextField(
                   onChanged: (v) => setState(() => _search = v),
                   decoration: InputDecoration(
-                    hintText: 'Search countries…',
+                    hintText: l10n.calendarSearchCountries,
                     prefixIcon: const Icon(Icons.search, size: 18),
                     isDense: true,
                     filled: true,
@@ -268,7 +272,7 @@ class _TournamentFilterSheetState extends State<_TournamentFilterSheet> {
 
                 // All option
                 _CountryTile(
-                  label: 'All countries',
+                  label: l10n.calendarAllCountries,
                   selected: _country == null,
                   onTap: () => setState(() => _country = null),
                 ),
@@ -377,7 +381,7 @@ class _TournamentCard extends StatelessWidget {
                             color: Colors.green.withAlpha(100), width: 0.5),
                       ),
                       child: Text(
-                        'LIVE NOW',
+                        context.l10n.calendarLiveNow,
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: Colors.green,
                           fontWeight: FontWeight.bold,

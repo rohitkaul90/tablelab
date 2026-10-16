@@ -3483,15 +3483,6 @@
   "@glossarySubtitle": {
     "description": "Subtitle of the player-type glossary sheet."
   },
-  "handAnalysisReadsApplied": "Reads: {tags}",
-  "@handAnalysisReadsApplied": {
-    "description": "Equity assumptions sheet: the player-read tags applied to an opponent's range; {tags} is a comma-separated list of tag names.",
-    "placeholders": {
-      "tags": {
-        "type": "String"
-      }
-    }
-  },
   "bucketBuyInUnder": "< {max}",
   "@bucketBuyInUnder": {
     "description": "Tournament buy-in band below an amount; {max} is a formatted amount with its currency symbol (e.g. \"$50\", \"₹4,150\").",
@@ -4423,5 +4414,1431 @@
   "aiCoachingCardBody": "Analyse your latest session for leaks & insights.",
   "@aiCoachingCardBody": {
     "description": "Call-to-action card subtitle for the AI session analysis."
+  },
+  "commonRetry": "Retry",
+  "@commonRetry": {
+    "description": "Button to retry a failed operation."
+  },
+  "aiDisclaimer": "AI coaching can be wrong — verify big decisions.",
+  "@aiDisclaimer": {
+    "description": "Footer under every AI coaching result."
+  },
+  "aiCoachingEnglishNote": "Coaching is currently in English.",
+  "@aiCoachingEnglishNote": {
+    "description": "Second footer line shown only in non-English languages: the AI-written coaching text is still produced in English."
+  },
+  "aiAnalysisFailed": "Analysis failed",
+  "@aiAnalysisFailed": {
+    "description": "Error title when an AI analysis could not be produced."
+  },
+  "aiDailyLimitTitle": "Daily limit reached",
+  "@aiDailyLimitTitle": {
+    "description": "Error title when the user has used up their daily AI analyses."
+  },
+  "aiAtCapacityTitle": "Temporarily at capacity",
+  "@aiAtCapacityTitle": {
+    "description": "Error title when the AI service is temporarily overloaded."
+  },
+  "aiErrorUnreadable": "The AI returned an unreadable response. Please re-analyze.",
+  "@aiErrorUnreadable": {
+    "description": "Error body when the AI response could not be parsed."
+  },
+  "aiErrorGeneric": "Something went wrong. Please try again.",
+  "@aiErrorGeneric": {
+    "description": "Generic error body for a failed AI analysis."
+  },
+  "aiErrorDailyLimitBody": "You've used today's free AI analyses. They reset on a rolling 24-hour window.",
+  "@aiErrorDailyLimitBody": {
+    "description": "Error body when the daily AI limit is reached (non-English UI; the English UI shows the server's own text)."
+  },
+  "aiErrorAtCapacityBody": "The AI coach is busy right now. Please try again in a few minutes.",
+  "@aiErrorAtCapacityBody": {
+    "description": "Error body when the AI service is at capacity (non-English UI)."
+  },
+  "aiReanalyze": "Re-analyze",
+  "@aiReanalyze": {
+    "description": "Button / tooltip that re-runs the AI analysis, overwriting the cached one."
+  },
+  "aiHandTitle": "Hand Coaching",
+  "@aiHandTitle": {
+    "description": "App bar title of the AI hand-coaching screen."
+  },
+  "aiHandReanalyzeTitle": "Re-analyze hand?",
+  "@aiHandReanalyzeTitle": {
+    "description": "Confirmation dialog title before re-running the hand analysis."
+  },
+  "aiReanalyzeBody": "This will use AI credits and overwrite the existing analysis.",
+  "@aiReanalyzeBody": {
+    "description": "Confirmation dialog body before re-running an AI analysis."
+  },
+  "aiHandLoading": "Your coach is analyzing this hand…",
+  "@aiHandLoading": {
+    "description": "Loading message while the AI analyzes a hand."
+  },
+  "aiHandLoadingHint": "This usually takes 5–10 seconds",
+  "@aiHandLoadingHint": {
+    "description": "Secondary loading hint for the hand analysis."
+  },
+  "aiHandStreetByStreet": "Street-by-Street Coaching",
+  "@aiHandStreetByStreet": {
+    "description": "Section header above the per-street coaching cards."
+  },
+  "aiVerdictWellPlayed": "Well played",
+  "@aiVerdictWellPlayed": {
+    "description": "Verdict badge: the hand was played well."
+  },
+  "aiVerdictLeak": "Leak detected",
+  "@aiVerdictLeak": {
+    "description": "Verdict badge: a mistake (leak) was found in the hand."
+  },
+  "aiVerdictNeutral": "Neutral",
+  "@aiVerdictNeutral": {
+    "description": "Verdict badge: neither clearly good nor a leak."
+  },
+  "aiRowYou": "You",
+  "@aiRowYou": {
+    "description": "Row label in a street card: what the player did."
+  },
+  "aiRowOptimal": "Optimal",
+  "@aiRowOptimal": {
+    "description": "Row label in a street card: the best play."
+  },
+  "aiRowWhy": "Why",
+  "@aiRowWhy": {
+    "description": "Row label in a street card: the reasoning."
+  },
+  "aiRowAlso": "Also",
+  "@aiRowAlso": {
+    "description": "Row label in a street card: an alternative play that is also defensible."
+  },
+  "aiGtoTooltip": "GTO: your play matches the game-theory-optimal baseline",
+  "@aiGtoTooltip": {
+    "description": "Tooltip on the GTO chip (keep 'GTO')."
+  },
+  "aiExploitTooltip": "Exploit: the better play here deviates from GTO to exploit this opponent",
+  "@aiExploitTooltip": {
+    "description": "Tooltip on the Exploit chip."
+  },
+  "aiExploitChip": "Exploit",
+  "@aiExploitChip": {
+    "description": "Short chip label: the recommended play is an exploitative deviation from GTO."
+  },
+  "aiConfidenceHigh": "High",
+  "@aiConfidenceHigh": {
+    "description": "AI confidence level label."
+  },
+  "aiConfidenceMedium": "Medium",
+  "@aiConfidenceMedium": {
+    "description": "AI confidence level label."
+  },
+  "aiConfidenceLow": "Low",
+  "@aiConfidenceLow": {
+    "description": "AI confidence level label."
+  },
+  "aiConfidenceBadge": "Confidence: {level}",
+  "@aiConfidenceBadge": {
+    "description": "Tappable badge showing the AI's confidence; {level} is High/Medium/Low.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConfidenceDialogTitle": "AI confidence",
+  "@aiConfidenceDialogTitle": {
+    "description": "Title of the dialog explaining confidence levels."
+  },
+  "aiConfidenceDialogIntro": "How sure the AI is about this street's recommendation:",
+  "@aiConfidenceDialogIntro": {
+    "description": "Intro line of the confidence explainer dialog."
+  },
+  "aiConfidenceHighMeaning": "Standard spot with a well-established answer.",
+  "@aiConfidenceHighMeaning": {
+    "description": "Meaning of High confidence."
+  },
+  "aiConfidenceMediumMeaning": "Depends on reads or assumptions about the opponent.",
+  "@aiConfidenceMediumMeaning": {
+    "description": "Meaning of Medium confidence."
+  },
+  "aiConfidenceLowMeaning": "A genuinely close spot, or key information is missing.",
+  "@aiConfidenceLowMeaning": {
+    "description": "Meaning of Low confidence."
+  },
+  "aiKeyMistake": "Key Mistake",
+  "@aiKeyMistake": {
+    "description": "Card title highlighting the hand's main mistake."
+  },
+  "aiFactsTitle": "What the AI was told",
+  "@aiFactsTitle": {
+    "description": "Expandable card title listing the pre-computed facts given to the AI."
+  },
+  "aiFactsSubtitle": "Pre-computed card facts injected as ground truth",
+  "@aiFactsSubtitle": {
+    "description": "Subtitle of the facts card."
+  },
+  "aiEquityTooltip": "Your equity vs the modeled opponent range — computed on-device, not by the AI. Tap for assumptions.",
+  "@aiEquityTooltip": {
+    "description": "Tooltip on the per-street equity chip."
+  },
+  "aiEquityChip": "EQ {percent}%",
+  "@aiEquityChip": {
+    "description": "Short chip with the player's equity on a street; {percent} is a whole number. EQ = equity; keep it short.",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "aiEquitySheetTitle": "Equity cross-check",
+  "@aiEquitySheetTitle": {
+    "description": "Title of the sheet explaining the equity calculation."
+  },
+  "aiEquitySheetBody": "Computed on-device by TableLab's Monte Carlo engine ({trials} trials per street) — independent of the AI. Each opponent gets a GTO preset range from their preflop action, adjusted for your reads, then narrowed street by street by what they did.",
+  "@aiEquitySheetBody": {
+    "description": "Explanation of how the equity chips are computed; {trials} is a formatted number.",
+    "placeholders": {
+      "trials": {
+        "type": "String"
+      }
+    }
+  },
+  "aiEquityQuickHandNote": "Quick Hand entry: action around the recorded decision is synthesized scaffolding, so these ranges are approximate.",
+  "@aiEquityQuickHandNote": {
+    "description": "Caveat shown for hands recorded in Quick Hand mode."
+  },
+  "aiEquityByStreetHeader": "HERO EQUITY BY STREET",
+  "@aiEquityByStreetHeader": {
+    "description": "Uppercase section header in the equity sheet ('hero' = the player)."
+  },
+  "aiEquityVsOpponents": "{count, plural, one{vs {count} opponent} other{vs {count} opponents}}",
+  "@aiEquityVsOpponents": {
+    "description": "Shown instead of board cards on preflop: how many opponents the equity is against.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiEquityAssumedRange": "ASSUMED RANGE — {name} ({position})",
+  "@aiEquityAssumedRange": {
+    "description": "Uppercase header for one opponent's modeled range; {name} is the opponent's name in uppercase, {position} a poker position like BTN.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "aiEquityReads": "Reads: {tags}",
+  "@aiEquityReads": {
+    "description": "Lists the player-read tags applied to an opponent's range; {tags} is a comma-separated list.",
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
+  "aiSessionTitle": "AI Analysis",
+  "@aiSessionTitle": {
+    "description": "App bar title of the AI session-analysis screen."
+  },
+  "aiSessionReanalyzeTitle": "Re-analyze session?",
+  "@aiSessionReanalyzeTitle": {
+    "description": "Confirmation dialog title before re-running the session analysis."
+  },
+  "aiSessionLoading": "Your coach is reviewing the session…",
+  "@aiSessionLoading": {
+    "description": "Loading message while the AI reviews a session."
+  },
+  "aiSessionLoadingHint": "This usually takes 10–20 seconds",
+  "@aiSessionLoadingHint": {
+    "description": "Secondary loading hint for the session analysis."
+  },
+  "aiSessionDebrief": "Session Debrief",
+  "@aiSessionDebrief": {
+    "description": "Card title above the AI's narrative review of the session."
+  },
+  "aiSessionLeaks": "Leaks Identified",
+  "@aiSessionLeaks": {
+    "description": "Card title above the list of leaks (recurring mistakes) the AI found."
+  },
+  "aiSessionFocusNext": "Focus for next session",
+  "@aiSessionFocusNext": {
+    "description": "Label above the AI's one actionable tip."
+  },
+  "aiFeedbackPrompt": "Was this analysis helpful?",
+  "@aiFeedbackPrompt": {
+    "description": "Prompt next to thumbs up/down under an AI analysis."
+  },
+  "aiFeedbackThanks": "Thanks for the feedback!",
+  "@aiFeedbackThanks": {
+    "description": "Shown after the user rates an AI analysis."
+  },
+  "aiFeedbackHelpful": "Helpful",
+  "@aiFeedbackHelpful": {
+    "description": "Tooltip on the thumbs-up rating button."
+  },
+  "aiFeedbackNotHelpful": "Not helpful",
+  "@aiFeedbackNotHelpful": {
+    "description": "Tooltip on the thumbs-down rating button."
+  },
+  "aiFeedbackTellUsMore": "Tell us more",
+  "@aiFeedbackTellUsMore": {
+    "description": "Link that opens the feedback form about the AI coaching."
+  },
+  "aiFeedbackPrefill": "About the AI coaching: ",
+  "@aiFeedbackPrefill": {
+    "description": "Text pre-filled in the feedback form when opened from an AI analysis; keep the trailing space."
+  },
+  "aiUsageUnlimited": "AI coaching · unlimited",
+  "@aiUsageUnlimited": {
+    "description": "Quota pill for accounts without an AI limit."
+  },
+  "aiUsageSessionLeft": "{count, plural, one{{count} free AI session analysis left today} other{{count} free AI session analyses left today}}",
+  "@aiUsageSessionLeft": {
+    "description": "Quota pill: remaining free AI session analyses today.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiUsageHandLeft": "{count, plural, one{{count} free AI hand analysis left today} other{{count} free AI hand analyses left today}}",
+  "@aiUsageHandLeft": {
+    "description": "Quota pill: remaining free AI hand analyses today.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiUsageSessionLimitReached": "Daily AI session limit reached — resets within 24h",
+  "@aiUsageSessionLimitReached": {
+    "description": "Quota pill when no AI session analyses are left today."
+  },
+  "aiUsageHandLimitReached": "Daily AI hand limit reached — resets within 24h",
+  "@aiUsageHandLimitReached": {
+    "description": "Quota pill when no AI hand analyses are left today."
+  },
+  "commonApply": "Apply",
+  "@commonApply": {
+    "description": "Button that applies the chosen filter settings."
+  },
+  "commonFilter": "Filter",
+  "@commonFilter": {
+    "description": "Tooltip on a filter icon button."
+  },
+  "calendarTitle": "Tournaments",
+  "@calendarTitle": {
+    "description": "App bar title of the live tournament calendar screen."
+  },
+  "calendarLoadFailed": "Could not load tournaments",
+  "@calendarLoadFailed": {
+    "description": "Error message when the tournament list fails to load."
+  },
+  "calendarEmptyFiltered": "No tournaments match your filters",
+  "@calendarEmptyFiltered": {
+    "description": "Empty state when filters exclude every tournament."
+  },
+  "calendarEmpty": "No upcoming tournaments",
+  "@calendarEmpty": {
+    "description": "Empty state when there are no upcoming tournaments."
+  },
+  "calendarClearFilters": "Clear filters",
+  "@calendarClearFilters": {
+    "description": "Button that removes all tournament filters."
+  },
+  "calendarFilterTitle": "Filter Tournaments",
+  "@calendarFilterTitle": {
+    "description": "Title of the tournament filter sheet."
+  },
+  "calendarCountry": "Country",
+  "@calendarCountry": {
+    "description": "Section label for the country filter."
+  },
+  "calendarSearchCountries": "Search countries…",
+  "@calendarSearchCountries": {
+    "description": "Search field hint in the country filter."
+  },
+  "calendarAllCountries": "All countries",
+  "@calendarAllCountries": {
+    "description": "Filter option that shows tournaments in every country."
+  },
+  "calendarLiveNow": "LIVE NOW",
+  "@calendarLiveNow": {
+    "description": "Uppercase badge on a tournament series that is currently running."
+  },
+  "varianceTitle": "Variance Calculator",
+  "@varianceTitle": {
+    "description": "App bar title of the poker variance calculator."
+  },
+  "varianceModeCash": "Cash",
+  "@varianceModeCash": {
+    "description": "Segmented-button label: cash-game mode. Keep very short."
+  },
+  "varianceModeTournament": "Tournament",
+  "@varianceModeTournament": {
+    "description": "Segmented-button label: tournament mode. Keep short."
+  },
+  "varianceCashWinrate": "Winrate (bb/100)",
+  "@varianceCashWinrate": {
+    "description": "Input label: cash win rate in big blinds per 100 hands (keep bb/100)."
+  },
+  "varianceCashWinrateHint": "e.g. 2.5",
+  "@varianceCashWinrateHint": {
+    "description": "Example value hint for the win-rate field; use the local decimal separator."
+  },
+  "varianceCashSd": "Std deviation (bb/100)",
+  "@varianceCashSd": {
+    "description": "Input label: standard deviation in bb per 100 hands."
+  },
+  "varianceCashSdHint": "typical live NLHE ≈ 70–100",
+  "@varianceCashSdHint": {
+    "description": "Hint: typical standard deviation for live no-limit hold'em (keep NLHE)."
+  },
+  "varianceCashHands": "Hands",
+  "@varianceCashHands": {
+    "description": "Input label: number of hands in the sample."
+  },
+  "varianceCashHandsHint": "e.g. 50,000",
+  "@varianceCashHandsHint": {
+    "description": "Example value hint for the hands field; use the local thousands separator."
+  },
+  "varianceCashBankroll": "Bankroll in bb (optional)",
+  "@varianceCashBankroll": {
+    "description": "Input label: bankroll measured in big blinds; optional."
+  },
+  "varianceBankrollHint": "for risk of ruin",
+  "@varianceBankrollHint": {
+    "description": "Hint explaining the optional bankroll is used for the risk-of-ruin figure."
+  },
+  "varianceTourneyRoi": "ROI (%)",
+  "@varianceTourneyRoi": {
+    "description": "Input label: tournament return on investment in percent (keep ROI)."
+  },
+  "varianceTourneyRoiHint": "e.g. 20",
+  "@varianceTourneyRoiHint": {
+    "description": "Example value hint for the ROI field."
+  },
+  "varianceTourneySd": "Std deviation (buy-ins)",
+  "@varianceTourneySd": {
+    "description": "Input label: standard deviation measured in buy-ins per tournament."
+  },
+  "varianceTourneySdHint": "SNG ≈ 1.5–2 · MTT ≈ 3–6+",
+  "@varianceTourneySdHint": {
+    "description": "Hint: typical standard deviations for sit-and-gos and multi-table tournaments (keep SNG/MTT)."
+  },
+  "varianceTourneyCount": "Tournaments",
+  "@varianceTourneyCount": {
+    "description": "Input label: number of tournaments in the sample."
+  },
+  "varianceTourneyCountHint": "e.g. 200",
+  "@varianceTourneyCountHint": {
+    "description": "Example value hint for the tournaments field."
+  },
+  "varianceTourneyBankroll": "Bankroll in buy-ins (optional)",
+  "@varianceTourneyBankroll": {
+    "description": "Input label: bankroll measured in buy-ins; optional."
+  },
+  "varianceCalculate": "Calculate",
+  "@varianceCalculate": {
+    "description": "Button that runs the variance calculation."
+  },
+  "varianceUseMyStats": "Use my stats",
+  "@varianceUseMyStats": {
+    "description": "Button that fills the inputs from the user's own logged sessions."
+  },
+  "varianceStatsNeedCash": "Need cash sessions with parseable blinds and durations to estimate a winrate.",
+  "@varianceStatsNeedCash": {
+    "description": "Snackbar when the user's cash sessions can't produce a win rate."
+  },
+  "varianceStatsCashSdShort": "Winrate and hands filled. Standard deviation needs at least 10 qualifying cash sessions — kept the current value.",
+  "@varianceStatsCashSdShort": {
+    "description": "Snackbar: partial prefill; not enough cash sessions for a standard deviation."
+  },
+  "varianceStatsNeedTourneys": "Need logged tournaments with buy-ins to estimate an ROI.",
+  "@varianceStatsNeedTourneys": {
+    "description": "Snackbar when there are no tournaments to estimate ROI from."
+  },
+  "varianceStatsTourneySdShort": "ROI and entries filled. Standard deviation needs at least 10 tournaments with buy-ins — kept the current value.",
+  "@varianceStatsTourneySdShort": {
+    "description": "Snackbar: partial prefill; not enough tournaments for a standard deviation."
+  },
+  "varianceErrorMissing": "Enter a winrate, standard deviation and sample size (numbers only).",
+  "@varianceErrorMissing": {
+    "description": "Validation error when required inputs are missing or not numbers."
+  },
+  "varianceErrorCashNonPositive": "Hands and standard deviation must both be above zero.",
+  "@varianceErrorCashNonPositive": {
+    "description": "Validation error in cash mode."
+  },
+  "varianceErrorTourneyNonPositive": "Tournaments and standard deviation must both be above zero.",
+  "@varianceErrorTourneyNonPositive": {
+    "description": "Validation error in tournament mode."
+  },
+  "varianceErrorBankroll": "Bankroll must be a positive number (or leave it empty).",
+  "@varianceErrorBankroll": {
+    "description": "Validation error for an invalid bankroll."
+  },
+  "varianceUnitBb": "bb",
+  "@varianceUnitBb": {
+    "description": "Unit after a number: big blinds (keep bb)."
+  },
+  "varianceUnitBuyIns": "buy-ins",
+  "@varianceUnitBuyIns": {
+    "description": "Unit after a number: tournament buy-ins."
+  },
+  "varianceXHands": "hands",
+  "@varianceXHands": {
+    "description": "Unit after a number on the chart axis: poker hands."
+  },
+  "varianceXTournaments": "tournaments",
+  "@varianceXTournaments": {
+    "description": "Unit after a number on the chart axis: tournaments."
+  },
+  "varianceExpectedHeadline": "Expected: {value}",
+  "@varianceExpectedHeadline": {
+    "description": "Headline with the expected result; {value} is a signed number with its unit, e.g. +1,250 bb.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "varianceReroll": "Reroll sample runs",
+  "@varianceReroll": {
+    "description": "Tooltip on the button that re-simulates the sample paths."
+  },
+  "varianceChartCaption": "{range} · shaded: 70% and 95% of outcomes · lines: 20 simulated runs · tap or drag the chart to inspect a point (tap the line to hide)",
+  "@varianceChartCaption": {
+    "description": "Caption under the variance chart; {range} is the x-axis span like '0 → 50,000 hands'.",
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "varianceRange": "{low} to {high}",
+  "@varianceRange": {
+    "description": "A value range; each side already includes its unit.",
+    "placeholders": {
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "varianceTooltipExpected": "Expected {value}",
+  "@varianceTooltipExpected": {
+    "description": "Chart tooltip line: expected value at the inspected point.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "varianceTooltipBand": "{pct}: {low} to {high}",
+  "@varianceTooltipBand": {
+    "description": "Chart tooltip line for a confidence band, e.g. '70%: −500 bb to +900 bb'.",
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      },
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "variance70": "70% of outcomes",
+  "@variance70": {
+    "description": "Result row: range containing 70% of outcomes."
+  },
+  "variance95": "95% of outcomes",
+  "@variance95": {
+    "description": "Result row: range containing 95% of outcomes."
+  },
+  "varianceChanceLosing": "Chance of losing overall",
+  "@varianceChanceLosing": {
+    "description": "Result row: probability of finishing the sample down."
+  },
+  "varianceRiskOfRuin": "Risk of ruin",
+  "@varianceRiskOfRuin": {
+    "description": "Result row: probability of losing the whole bankroll."
+  },
+  "varianceBankroll5": "Bankroll for 5% risk of ruin",
+  "@varianceBankroll5": {
+    "description": "Result row: bankroll needed for a 5% risk of ruin."
+  },
+  "varianceBankroll1": "Bankroll for 1% risk of ruin",
+  "@varianceBankroll1": {
+    "description": "Result row: bankroll needed for a 1% risk of ruin."
+  },
+  "varianceTypicalDownswing": "Typical worst downswing",
+  "@varianceTypicalDownswing": {
+    "description": "Result row: median largest losing stretch."
+  },
+  "varianceBadDownswing": "Bad-run downswing (95th pct)",
+  "@varianceBadDownswing": {
+    "description": "Result row: 95th-percentile largest losing stretch."
+  },
+  "varianceBustChance": "Chance of going broke during this sample",
+  "@varianceBustChance": {
+    "description": "Result row: probability the bankroll hits zero during the sample."
+  },
+  "varianceDisclaimerCash": "Estimates use a normal approximation of your winrate as a random walk. Real results vary; treat these as guides, not guarantees.",
+  "@varianceDisclaimerCash": {
+    "description": "Footnote under cash variance results."
+  },
+  "varianceDisclaimerTourney": "Estimates use a normal approximation. Tournament results are heavily skewed by rare big scores, so real tail risk is HIGHER than shown — especially over small samples.",
+  "@varianceDisclaimerTourney": {
+    "description": "Footnote under tournament variance results."
+  },
+  "icmTitle": "ICM Deal Calculator",
+  "@icmTitle": {
+    "description": "App bar title of the ICM tournament-deal calculator (keep ICM)."
+  },
+  "icmShareDeal": "Share deal",
+  "@icmShareDeal": {
+    "description": "Tooltip on the button that shares the computed deal."
+  },
+  "icmPlayerN": "Player {n}",
+  "@icmPlayerN": {
+    "description": "Default name / hint for the nth player row.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "icmErrorChips": "Player {n}: enter a valid chip count.",
+  "@icmErrorChips": {
+    "description": "Validation error for a player's chip count.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "icmErrorPrize": "{place}: enter a valid prize amount.",
+  "@icmErrorPrize": {
+    "description": "Validation error for a prize amount; {place} is an ordinal like 2nd.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "icmErrorNoPrize": "Enter at least one prize amount.",
+  "@icmErrorNoPrize": {
+    "description": "Validation error when every prize is zero."
+  },
+  "icmErrorCountMismatch": "Number of prize places ({places}) must equal number of players ({players}).",
+  "@icmErrorCountMismatch": {
+    "description": "Validation error when the place and player counts differ.",
+    "placeholders": {
+      "places": {
+        "type": "int"
+      },
+      "players": {
+        "type": "int"
+      }
+    }
+  },
+  "icmPlayers": "Players",
+  "@icmPlayers": {
+    "description": "Section header for the player list."
+  },
+  "icmPlayersHint": "Enter each remaining player's chip count.",
+  "@icmPlayersHint": {
+    "description": "Instruction under the player section header."
+  },
+  "icmAddPlayer": "Add Player",
+  "@icmAddPlayer": {
+    "description": "Button that adds a player row."
+  },
+  "icmPrizePool": "Prize Pool",
+  "@icmPrizePool": {
+    "description": "Section header for the prize list."
+  },
+  "icmPlacesBadge": "{count, plural, one{{count} place} other{{count} places}}",
+  "@icmPlacesBadge": {
+    "description": "Small badge with the number of paid places.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "icmPrizeHint": "Enter the prize for each remaining place.",
+  "@icmPrizeHint": {
+    "description": "Instruction under the prize section header."
+  },
+  "icmAddPlace": "Add Place",
+  "@icmAddPlace": {
+    "description": "Button that adds a paid-place row."
+  },
+  "icmCalculateDeal": "Calculate Deal",
+  "@icmCalculateDeal": {
+    "description": "Primary button that computes the ICM deal."
+  },
+  "icmDealResults": "Deal Results",
+  "@icmDealResults": {
+    "description": "Section header above the computed deal."
+  },
+  "icmTotalPrizePool": "Total prize pool: {amount}",
+  "@icmTotalPrizePool": {
+    "description": "Total of all prizes; {amount} is a formatted money value.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "icmColIcm": "ICM Deal",
+  "@icmColIcm": {
+    "description": "Column header: each player's ICM deal amount (keep ICM)."
+  },
+  "icmColChipChop": "Chip-Chop",
+  "@icmColChipChop": {
+    "description": "Column header: deal split purely by chip count (poker term; translate only if a standard local term exists)."
+  },
+  "icmColDiff": "Diff",
+  "@icmColDiff": {
+    "description": "Column header: difference between ICM and chip-chop. Keep very short."
+  },
+  "icmChips": "Chips",
+  "@icmChips": {
+    "description": "Input label for a player's chip count."
+  },
+  "icmChipsLine": "{chips} chips · {pct}%",
+  "@icmChipsLine": {
+    "description": "Sub-line under a player in the results: chip count and share of chips.",
+    "placeholders": {
+      "chips": {
+        "type": "String"
+      },
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "icmAboutTitle": "About ICM vs Chip-Chop",
+  "@icmAboutTitle": {
+    "description": "Title of the explainer box."
+  },
+  "icmAboutBody": "ICM (Independent Chip Model) accounts for the payout structure — short stacks receive more than their chip % suggests because their elimination risk is higher. Chip-chop ignores payout jumps and splits the prize pool in direct proportion to chip counts. The \"Diff\" column shows how much each player gains or loses under ICM vs a pure chip-chop.",
+  "@icmAboutBody": {
+    "description": "Explainer text; keep the quoted column name identical to the Diff column header translation."
+  },
+  "icmShareHeader": "{count, plural, one{ICM Deal ({count} player):} other{ICM Deal ({count} players):}}",
+  "@icmShareHeader": {
+    "description": "First line of the shared deal text.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "icmShareLine": "{name} — {chips} chips ({pct}%) → {amount}",
+  "@icmShareLine": {
+    "description": "One player line in the shared deal text.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "chips": {
+        "type": "String"
+      },
+      "pct": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "icmShareFooter": "Calculated with TableLab",
+  "@icmShareFooter": {
+    "description": "Last line of the shared deal text (keep TableLab)."
+  },
+  "icmPlace1": "1st",
+  "@icmPlace1": {
+    "description": "Finishing place label: first. Keep very short (ordinal abbreviation)."
+  },
+  "icmPlace2": "2nd",
+  "@icmPlace2": {
+    "description": "Finishing place label: second. Keep very short."
+  },
+  "icmPlace3": "3rd",
+  "@icmPlace3": {
+    "description": "Finishing place label: third. Keep very short."
+  },
+  "icmPlaceN": "{n}th",
+  "@icmPlaceN": {
+    "description": "Finishing place label for 4th and lower; {n} is the place number. Keep very short.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "commonDone": "Done",
+  "@commonDone": {
+    "description": "Button that closes an editor and keeps the changes."
+  },
+  "commonClear": "Clear",
+  "@commonClear": {
+    "description": "Button that clears the current selection."
+  },
+  "equityTitle": "Equity Calculator",
+  "@equityTitle": {
+    "description": "App bar title of the hand-vs-range equity calculator."
+  },
+  "equityPlayersHeader": "PLAYERS",
+  "@equityPlayersHeader": {
+    "description": "Uppercase section header above the player cards."
+  },
+  "equityAddPlayer": "Add Player",
+  "@equityAddPlayer": {
+    "description": "Button that adds another player to the equity calculation."
+  },
+  "equityAddTwoPlayers": "Add at least 2 players to begin",
+  "@equityAddTwoPlayers": {
+    "description": "Empty state when fewer than two players exist."
+  },
+  "equityBoardHeader": "BOARD",
+  "@equityBoardHeader": {
+    "description": "Uppercase section header above the community cards."
+  },
+  "equityClearBoard": "Clear Board",
+  "@equityClearBoard": {
+    "description": "Button that removes all community cards."
+  },
+  "equityCalculating": "Calculating…",
+  "@equityCalculating": {
+    "description": "Button label while the equity simulation runs."
+  },
+  "equityCalculate": "Calculate Equity",
+  "@equityCalculate": {
+    "description": "Primary button that runs the equity simulation."
+  },
+  "equityResultHeader": "EQUITY — {street}",
+  "@equityResultHeader": {
+    "description": "Uppercase results header; {street} is Pre-flop/Flop/Turn/River (kept in English).",
+    "placeholders": {
+      "street": {
+        "type": "String"
+      }
+    }
+  },
+  "equityIterations": "{count}k iterations",
+  "@equityIterations": {
+    "description": "Number of Monte Carlo iterations in thousands, e.g. '10k iterations'.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "equityNoCombos": "{position} has no valid combos given the board.",
+  "@equityNoCombos": {
+    "description": "Error when a player's range has no hands left after removing board cards; {position} is like BTN.",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "equitySimulationError": "Simulation error: {error}",
+  "@equitySimulationError": {
+    "description": "Error when the equity simulation throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "equityCombosPct": "{count} combos  {pct}%",
+  "@equityCombosPct": {
+    "description": "Compact line under a player's mini range grid: hand-combination count and share of all hands.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "equityTapToSetHand": "Tap to\nset hand",
+  "@equityTapToSetHand": {
+    "description": "Placeholder on an empty player card in exact-hand mode; keep the line break."
+  },
+  "equityTapToSetRange": "Tap to\nset range",
+  "@equityTapToSetRange": {
+    "description": "Placeholder on an empty player card in range mode; keep the line break."
+  },
+  "equityCombos": "{count, plural, one{{count} combo} other{{count} combos}}",
+  "@equityCombos": {
+    "description": "Number of hand combinations in a player's range ('combo' is poker jargon).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "equityCombosOfAll": "{count} combos ({pct}%)",
+  "@equityCombosOfAll": {
+    "description": "Range size: combinations and percentage of all 1,326 starting hands.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "equityEditRange": "Edit Range",
+  "@equityEditRange": {
+    "description": "Title of the range editor sheet."
+  },
+  "equityPosition": "Position:",
+  "@equityPosition": {
+    "description": "Label before the position dropdown."
+  },
+  "equityModeRange": "Range",
+  "@equityModeRange": {
+    "description": "Segmented-button label: define a range of hands. Keep short."
+  },
+  "equityModeExact": "Exact Hand",
+  "@equityModeExact": {
+    "description": "Segmented-button label: pick two specific cards. Keep short."
+  },
+  "equitySelectHoleCards": "Select hole cards:",
+  "@equitySelectHoleCards": {
+    "description": "Label above the two hole-card slots."
+  },
+  "equityCard1": "Card 1",
+  "@equityCard1": {
+    "description": "Label of the first hole-card slot."
+  },
+  "equityCard2": "Card 2",
+  "@equityCard2": {
+    "description": "Label of the second hole-card slot."
+  },
+  "equityLoadPreset": "Load GTO Preset:",
+  "@equityLoadPreset": {
+    "description": "Label above the GTO preset range dropdown (keep GTO)."
+  },
+  "equitySelectPreset": "Select preset...",
+  "@equitySelectPreset": {
+    "description": "Hint in the GTO preset dropdown."
+  },
+  "equityClearAll": "Clear All",
+  "@equityClearAll": {
+    "description": "Button that deselects every hand in the range grid."
+  },
+  "equitySelectAll": "Select All",
+  "@equitySelectAll": {
+    "description": "Button that selects every hand in the range grid."
+  },
+  "equityLegendPairs": "Pairs",
+  "@equityLegendPairs": {
+    "description": "Range grid legend: pocket pairs."
+  },
+  "equityLegendSuited": "Suited",
+  "@equityLegendSuited": {
+    "description": "Range grid legend: suited hands."
+  },
+  "equityLegendOffsuit": "Offsuit",
+  "@equityLegendOffsuit": {
+    "description": "Range grid legend: offsuit hands."
+  },
+  "cardPickerSelectCard": "Select Card",
+  "@cardPickerSelectCard": {
+    "description": "Title of the single-card picker sheet."
+  },
+  "cardPickerSelectFlop": "Select Flop",
+  "@cardPickerSelectFlop": {
+    "description": "Title of the three-card flop picker sheet."
+  },
+  "cardPickerSelectHand": "Select Hand",
+  "@cardPickerSelectHand": {
+    "description": "Title of the two-card hole-card picker sheet."
+  },
+  "studyTitle": "GTO Study",
+  "@studyTitle": {
+    "description": "App bar title of the GTO strategy explorer (keep GTO)."
+  },
+  "studyFocusMode": "Focus mode",
+  "@studyFocusMode": {
+    "description": "Tooltip on the button that hides the app bar for a full-screen view."
+  },
+  "studySettings": "Study settings",
+  "@studySettings": {
+    "description": "Tooltip / title of the Study settings sheet."
+  },
+  "studyBetaSemantics": "Study beta information",
+  "@studyBetaSemantics": {
+    "description": "Screen-reader label of the BETA chip."
+  },
+  "studyBetaTooltip": "Study is in beta — tap for details",
+  "@studyBetaTooltip": {
+    "description": "Tooltip on the BETA chip."
+  },
+  "studyBetaTitle": "Study is in beta",
+  "@studyBetaTitle": {
+    "description": "Title of the beta explainer dialog."
+  },
+  "studyBetaBody": "The solved strategies behind Study are still being calibrated — we are refining the preflop ranges the solutions are built on and re-solving spots as they improve.\n\nFrequencies and strategies shown here can change between updates and should be treated as a study aid, not a definitive answer. The rest of the app (sessions, stats, hands) is unaffected.",
+  "@studyBetaBody": {
+    "description": "Body of the beta explainer dialog; keep the paragraph break."
+  },
+  "studyExit": "Exit",
+  "@studyExit": {
+    "description": "Floating button that leaves focus mode."
+  },
+  "studyTableType": "TABLE TYPE",
+  "@studyTableType": {
+    "description": "Uppercase section label: cash or tournament."
+  },
+  "studyStackDepth": "STACK DEPTH",
+  "@studyStackDepth": {
+    "description": "Uppercase section label: effective stack size."
+  },
+  "studyDepthNote": "Stack depth is approximate — packs are solved per SPR bucket. Tournament mode uses ICM-aware preflop ranges; solved postflop packs are cash-only.",
+  "@studyDepthNote": {
+    "description": "Note under the stack-depth selector (keep SPR, ICM)."
+  },
+  "studyTournamentNote": "Tournament mode uses ICM-aware preflop ranges. Solved postflop packs are cash-only for now.",
+  "@studyTournamentNote": {
+    "description": "Note in Study settings when no depth selector is shown (keep ICM)."
+  },
+  "studyFooter": "Beta · flop to river · solved to ≤0.5% exploitability on representative boards",
+  "@studyFooter": {
+    "description": "Small footer describing the solved data."
+  },
+  "studyOpeningRange": "opening range",
+  "@studyOpeningRange": {
+    "description": "Subtitle for the first preflop decision (lowercase, follows a position like 'UTG —')."
+  },
+  "studyVsOpen": "vs the {position} open",
+  "@studyVsOpen": {
+    "description": "Subtitle for a decision facing an open raise; {position} like BTN.",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studyVs3Bet": "vs the {position} 3-bet",
+  "@studyVs3Bet": {
+    "description": "Subtitle for a decision facing a 3-bet; {position} like BB (keep 3-bet).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studyOpenerVs3Bet": "{position} (vs 3-bet)",
+  "@studyOpenerVs3Bet": {
+    "description": "Strip box header: the opener's decision facing a 3-bet (keep 3-bet).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studySolvedBoards": "Solved boards — {scenario}",
+  "@studySolvedBoards": {
+    "description": "Title of the solved-board picker; {scenario} is a spot name like 'BTN vs BB · single-raised'.",
+    "placeholders": {
+      "scenario": {
+        "type": "String"
+      }
+    }
+  },
+  "studyNoBoardsTitle": "No solved boards on this device yet",
+  "@studyNoBoardsTitle": {
+    "description": "Empty-state title when no solution packs are available."
+  },
+  "studyNoBoardsBody": "Preflop ranges work above — tap any seat's action. Postflop solution packs are being rolled out — check back soon.",
+  "@studyNoBoardsBody": {
+    "description": "Empty-state body when no solution packs are available."
+  },
+  "studyBoardListFailedTitle": "Couldn't load the board list",
+  "@studyBoardListFailedTitle": {
+    "description": "Error title when the list of solved boards fails to load."
+  },
+  "studyBoardListFailedBody": "The solved boards for {scenario} didn't load. Check your connection and retry.",
+  "@studyBoardListFailedBody": {
+    "description": "Error body; {scenario} is a spot name.",
+    "placeholders": {
+      "scenario": {
+        "type": "String"
+      }
+    }
+  },
+  "studyBoardFailedTitle": "Could not load this board",
+  "@studyBoardFailedTitle": {
+    "description": "Error title when one solved board fails to load."
+  },
+  "studyBoardFailedBody": "{error}\n\nPick another board via the Flop box, or retry.",
+  "@studyBoardFailedBody": {
+    "description": "Error body; {error} is a technical message (kept as is). Keep 'Flop'.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "studyLineChangedTitle": "Preflop line changed",
+  "@studyLineChangedTitle": {
+    "description": "Title when the edited preflop line no longer matches the loaded board."
+  },
+  "studyLineChangedBody": "The line above no longer matches the loaded board ({scenario}). Restore it, or complete the new line to a solved spot.",
+  "@studyLineChangedBody": {
+    "description": "Body for the line-mismatch state; {scenario} is a spot name.",
+    "placeholders": {
+      "scenario": {
+        "type": "String"
+      }
+    }
+  },
+  "studyRestoreLine": "Restore the line for this board",
+  "@studyRestoreLine": {
+    "description": "Button that restores the preflop line matching the loaded board."
+  },
+  "studyPickBoardTitle": "Pick a board",
+  "@studyPickBoardTitle": {
+    "description": "Title prompting the user to choose a solved flop."
+  },
+  "studyPickBoardBody": "Complete the preflop action above, then tap the Flop box to choose a solved board.",
+  "@studyPickBoardBody": {
+    "description": "Instruction for choosing a solved flop (keep 'Flop')."
+  },
+  "studyCashOnly": "cash only",
+  "@studyCashOnly": {
+    "description": "Short strip-box note: this spot is solved for cash games only. Lowercase, very short."
+  },
+  "studyNotSolved": "not solved",
+  "@studyNotSolved": {
+    "description": "Short strip-box note: this spot has no solution. Lowercase, very short."
+  },
+  "studyNoPacks": "no packs",
+  "@studyNoPacks": {
+    "description": "Short strip-box note: no solution packs available. Lowercase, very short."
+  },
+  "studyPickABoard": "pick a board",
+  "@studyPickABoard": {
+    "description": "Short strip-box prompt to choose a board. Lowercase, very short."
+  },
+  "studyCallAllIn": "Call · all-in",
+  "@studyCallAllIn": {
+    "description": "Strip action label: calling puts the player all-in (keep Call / all-in as poker terms)."
+  },
+  "studyEnd": "END",
+  "@studyEnd": {
+    "description": "Uppercase strip box header after the hand finished. Very short."
+  },
+  "studyHandOver": "Hand over",
+  "@studyHandOver": {
+    "description": "Strip row after a fold ends the hand. Short."
+  },
+  "studyPickTurn": "Pick the turn card",
+  "@studyPickTurn": {
+    "description": "Title of the turn-card picker (keep 'turn')."
+  },
+  "studyPickRiver": "Pick the river card",
+  "@studyPickRiver": {
+    "description": "Title of the river-card picker (keep 'river')."
+  },
+  "studyTabOverview": "Overview",
+  "@studyTabOverview": {
+    "description": "Segmented-button tab: the node summary. Keep short."
+  },
+  "studyTabEquityChart": "Equity chart",
+  "@studyTabEquityChart": {
+    "description": "Segmented-button tab: the equity distribution chart. Keep short."
+  },
+  "studyToAct": "{position} (to act)",
+  "@studyToAct": {
+    "description": "Equity chart series label for the player to act; {position} like BTN.",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studyEstimated": "{position} (est.)",
+  "@studyEstimated": {
+    "description": "Equity chart series label for the opponent's estimated curve; 'est.' = estimated.",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studyNoComboEquity": "No per-combo equity at this node.",
+  "@studyNoComboEquity": {
+    "description": "Shown when the chart has no data for this decision."
+  },
+  "studyOppNotActed": "{position} has not acted on this street yet.",
+  "@studyOppNotActed": {
+    "description": "Chart note when the opponent has no action on the current street.",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studyComputingEquity": "computing {position} equity…",
+  "@studyComputingEquity": {
+    "description": "Chart note while the opponent's equity is computed (lowercase).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studyOppCurveReach": "{position} curve estimated on-device (reach-weighted range, this board)",
+  "@studyOppCurveReach": {
+    "description": "Chart note explaining how the opponent curve was estimated.",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studyOppCurveFull": "{position} curve estimated on-device (full ranges, this board)",
+  "@studyOppCurveFull": {
+    "description": "Chart note explaining how the opponent curve was estimated at the flop root.",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "studyBackOneStep": "Back one step",
+  "@studyBackOneStep": {
+    "description": "Button that steps the line back one action."
+  },
+  "studyNoRootTitle": "Spot has no root decision",
+  "@studyNoRootTitle": {
+    "description": "Error title for a malformed solution pack."
+  },
+  "studyNoRootBody": "This pack looks malformed — pick another spot above.",
+  "@studyNoRootBody": {
+    "description": "Error body for a malformed solution pack."
+  },
+  "studyStreetUnavailableTitle": "This street is unavailable",
+  "@studyStreetUnavailableTitle": {
+    "description": "Title when the pack lacks data for the chosen runout."
+  },
+  "studyStreetUnavailableTurn": "The pack does not carry this runout. Change the turn card via its box above, or tap an earlier action.",
+  "@studyStreetUnavailableTurn": {
+    "description": "Body when a turn runout is missing (keep 'turn')."
+  },
+  "studyStreetUnavailableRiver": "The pack does not carry this runout. Change the river card via its box above, or tap an earlier action.",
+  "@studyStreetUnavailableRiver": {
+    "description": "Body when a river runout is missing (keep 'river')."
+  },
+  "studyFoldTitle": "Hand over — fold",
+  "@studyFoldTitle": {
+    "description": "Title when the line ended with a fold (keep 'fold')."
+  },
+  "studyFoldBody": "This line ends the hand. Tap any earlier box above to review a decision — the line stays as played.",
+  "@studyFoldBody": {
+    "description": "Body when the line ended with a fold."
+  },
+  "studyAllInTitle": "All-in — runout to showdown",
+  "@studyAllInTitle": {
+    "description": "Title when stacks are all in (keep All-in / showdown)."
+  },
+  "studyAllInEarlierBody": "The stacks went in on an earlier street; there are no further decisions on this line. Tap any earlier box above to review a decision.",
+  "@studyAllInEarlierBody": {
+    "description": "Body when stacks went all in on an earlier street."
+  },
+  "studyNoDecisionsTitle": "No decisions on this runout",
+  "@studyNoDecisionsTitle": {
+    "description": "Title when the pack has no data for this runout."
+  },
+  "studyNoDecisionsBody": "The pack does not carry this runout — change the card via its box above, or tap an earlier action.",
+  "@studyNoDecisionsBody": {
+    "description": "Body when the pack has no data for this runout."
+  },
+  "studyAllInBody": "The stacks are in; there are no further decisions. Tap any earlier box above to review a decision.",
+  "@studyAllInBody": {
+    "description": "Body when the line just went all in."
+  },
+  "studyShowdownBody": "River action complete — the hand goes to showdown. Tap any earlier box above to review a decision; the line stays as played.",
+  "@studyShowdownBody": {
+    "description": "Body after river action completes (keep River / showdown)."
+  },
+  "studyLensStrategy": "Strategy",
+  "@studyLensStrategy": {
+    "description": "Segmented-button lens: color the grid by action frequencies. Keep short."
+  },
+  "studyLensHandClass": "Hand class",
+  "@studyLensHandClass": {
+    "description": "Segmented-button lens: color the grid by hand strength class. Keep short."
+  },
+  "studySearchBoards": "Search boards (e.g. Ks 9)",
+  "@studySearchBoards": {
+    "description": "Search hint in the board picker; keep the card example."
+  },
+  "studyBoardsCount": "{shown} of {total} boards",
+  "@studyBoardsCount": {
+    "description": "Count of boards matching the search.",
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "studyNoBoardsMatch": "No boards match",
+  "@studyNoBoardsMatch": {
+    "description": "Empty state when no board matches the search."
+  },
+  "studySameBoard": "Showing {canonical} — same board as {typed} (suits are interchangeable)",
+  "@studySameBoard": {
+    "description": "Explains that a searched board maps to an equivalent solved board with relabeled suits.",
+    "placeholders": {
+      "canonical": {
+        "type": "String"
+      },
+      "typed": {
+        "type": "String"
+      }
+    }
+  },
+  "studyChartAxis": "range, worst → best hands",
+  "@studyChartAxis": {
+    "description": "X-axis caption of the equity chart."
+  },
+  "studyToActLine": "{position} to act · {side}",
+  "@studyToActLine": {
+    "description": "Overview header: who acts and whether in or out of position; {side} is IP/OOP (keep).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      },
+      "side": {
+        "type": "String"
+      }
+    }
+  },
+  "studyStatPot": "Pot",
+  "@studyStatPot": {
+    "description": "Stat label: pot size."
+  },
+  "studyStatToCall": "To call",
+  "@studyStatToCall": {
+    "description": "Stat label: amount needed to call."
+  },
+  "studyPctPot": "{pct}% pot",
+  "@studyPctPot": {
+    "description": "Bet size as a percentage of the pot.",
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
+  "studyStatCombos": "Combos",
+  "@studyStatCombos": {
+    "description": "Stat label: number of hand combinations in range."
+  },
+  "studyStatEquity": "Equity",
+  "@studyStatEquity": {
+    "description": "Stat label: average equity."
+  },
+  "studyActionsHeader": "ACTIONS · tap to filter the grid",
+  "@studyActionsHeader": {
+    "description": "Uppercase header above the action list."
+  },
+  "studyHandsHeader": "HANDS",
+  "@studyHandsHeader": {
+    "description": "Uppercase header above the hand drill-down."
+  },
+  "studyCellCombos": "{hand} · {count} of {max} combos",
+  "@studyCellCombos": {
+    "description": "Drill-down header: a hand and how many of its combinations are live.",
+    "placeholders": {
+      "hand": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "studyHoverHint": "Hover a hand in the grid to see its combos and their strategy (tap on touch).",
+  "@studyHoverHint": {
+    "description": "Hint shown before a hand is selected."
+  },
+  "studyNoLiveCombos": "{hand} has no live combos at this node.",
+  "@studyNoLiveCombos": {
+    "description": "Shown when the selected hand has no combinations left.",
+    "placeholders": {
+      "hand": {
+        "type": "String"
+      }
+    }
+  },
+  "studyCombosCount": "{count} combos",
+  "@studyCombosCount": {
+    "description": "Number of combinations for an action (a formatted number).",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "studyPreflopHeader": "{position} — {subtitle}",
+  "@studyPreflopHeader": {
+    "description": "Preflop decision header, e.g. 'BB — vs the BTN open'.",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      },
+      "subtitle": {
+        "type": "String"
+      }
+    }
+  },
+  "studyPreflopActionsHeader": "ACTIONS · % of hands · tap to filter the grid",
+  "@studyPreflopActionsHeader": {
+    "description": "Uppercase header above the preflop action list."
+  },
+  "studyPreflopNote": "Preset ranges — a hand is in or out; percentages are each action's share of hands, not mixed frequencies.",
+  "@studyPreflopNote": {
+    "description": "Note explaining preflop percentages."
+  },
+  "studySuitEquivalent": "{picked} ≡ {stored} here — suits are interchangeable",
+  "@studySuitEquivalent": {
+    "description": "Snackbar when a picked card is stored under an equivalent suit; {picked}/{stored} are cards like A♠.",
+    "placeholders": {
+      "picked": {
+        "type": "String"
+      },
+      "stored": {
+        "type": "String"
+      }
+    }
   }
 }

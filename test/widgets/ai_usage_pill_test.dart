@@ -7,10 +7,10 @@ import 'package:tablelab/providers/providers.dart';
 import 'package:tablelab/services/ai_service.dart';
 import 'package:tablelab/widgets/ai_usage_pill.dart';
 
-Widget _wrap(List<Override> overrides, Widget child) => ProviderScope(
-      overrides: overrides,
-      child: MaterialApp(home: Scaffold(body: child)),
-    );
+import '../helpers/pump_app.dart';
+
+Widget _wrap(List<Override> overrides, Widget child) =>
+    wrapApp(Scaffold(body: child), overrides: overrides);
 
 Override _usage(AiUsage value) =>
     aiUsageProvider.overrideWith((ref) async => value);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 import '../../equity/card.dart';
 
 class RangeMatrix extends StatefulWidget {
@@ -234,7 +235,7 @@ class RangeStats extends StatelessWidget {
     }
     final pct = (total / 1326 * 100).toStringAsFixed(1);
     return Text(
-      '$total combos ($pct%)',
+      context.l10n.equityCombosOfAll(total, pct),
       style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
     );
   }

@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 
 import '../../explorer/preflop_ranges.dart';
+import '../../l10n/l10n.dart';
 import 'panel_layout.dart';
 import 'strategy_grid.dart';
 
@@ -100,13 +101,13 @@ class _PreflopDecisionBodyState extends State<PreflopDecisionBody> {
     final shares = d.shares;
     final combos = d.comboCounts;
     final children = <Widget>[
-      Text('${d.actorLabel} — ${widget.subtitle}',
+      Text(context.l10n.studyPreflopHeader(d.actorLabel, widget.subtitle),
           style: Theme.of(context)
               .textTheme
               .titleMedium
               ?.copyWith(fontWeight: FontWeight.w700)),
       const SizedBox(height: 10),
-      Text('ACTIONS · % of hands · tap to filter the grid',
+      Text(context.l10n.studyPreflopActionsHeader,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: scheme.onSurfaceVariant, letterSpacing: 1.2)),
       const SizedBox(height: 6),
@@ -116,8 +117,7 @@ class _PreflopDecisionBodyState extends State<PreflopDecisionBody> {
             combos[a]),
       const SizedBox(height: 8),
       Text(
-        'Preset ranges — a hand is in or out; percentages are each '
-        'action\'s share of hands, not mixed frequencies.',
+        context.l10n.studyPreflopNote,
         style: Theme.of(context)
             .textTheme
             .bodySmall
@@ -163,7 +163,7 @@ class _PreflopDecisionBodyState extends State<PreflopDecisionBody> {
                       Text(label,
                           style: const TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w700)),
-                      Text('$comboCount combos',
+                      Text(context.l10n.studyCombosCount('$comboCount'),
                           style: TextStyle(
                               fontSize: 11.5,
                               color: scheme.onSurfaceVariant)),

@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../../equity/card.dart';
 import '../../explorer/board_iso.dart';
 import 'board_cards.dart';
@@ -137,8 +138,7 @@ class StreetCardPicker extends StatelessWidget {
       messenger?.hideCurrentSnackBar();
       messenger?.showSnackBar(SnackBar(
         content: Text(
-            '${_symbol(name)} ≡ ${_symbol(rep)} here — suits are '
-            'interchangeable'),
+            context.l10n.studySuitEquivalent(_symbol(name), _symbol(rep))),
         duration: const Duration(seconds: 2),
       ));
     }

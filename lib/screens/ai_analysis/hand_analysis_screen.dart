@@ -10,6 +10,8 @@ import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
 import '../../services/ai_service.dart';
 import '../../reads/tag_definitions.dart';
+import '../../l10n/l10n.dart';
+import '../../widgets/ai/ai_disclaimer_footer.dart';
 import '../../widgets/ai/analysis_feedback_bar.dart';
 import '../../widgets/playing_card_widget.dart';
 
@@ -28,7 +30,7 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   bool _loading = true;
   bool _running = false; // re-entry guard so a double-tap can't fire two paid calls
   String? _error;
-  String _errorTitle = 'Analysis failed';
+  String _errorTitle = '';
   bool _errorCanRetry = true;
   // When the error was a MALFORMED cached response, Retry must force a fresh
   // Claude call (forceRefresh:false would just re-serve the same garbage).
@@ -56,6 +58,8 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
     // Re-analyze / Retry can't fire two live (paid) Claude calls and race.
     if (_running) return;
     _running = true;
+    // Captured before the first await (runs post-frame, so context is live).
+    final l10n = context.l10n;
     setState(() {
       _loading = true;
       _error = null;
@@ -105,8 +109,8 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
           // a dropped street), so prompt re-analyze rather than render it.
           setState(() {
             _loading = false;
-            _error = 'The AI returned an unreadable response. Please re-analyze.';
-            _errorTitle = 'Analysis failed';
+            _error = l10n.aiErrorUnreadable;
+            _errorTitle = l10n.aiAnalysisFailed;
             _errorCanRetry = true;
             _errorForceRefresh = true;
           });
@@ -119,20 +123,11 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
       setState(() {
         _loading = false;
         _errorForceRefresh = false;
-        if (e is AiException) {
-          _error = e.message;
-          _errorTitle = e.isRateLimited
-              ? 'Daily limit reached'
-              : e.isAtCapacity
-                  ? 'Temporarily at capacity'
-                  : 'Analysis failed';
-          // Retrying a daily limit won't help until tomorrow.
-          _errorCanRetry = !e.isRateLimited;
-        } else {
-          _error = 'Something went wrong. Please try again.';
-          _errorTitle = 'Analysis failed';
-          _errorCanRetry = true;
-        }
+        final text = aiErrorText(l10n, e);
+        _error = text.body;
+        _errorTitle = text.title;
+        // Retrying a daily limit won't help until tomorrow.
+        _errorCanRetry = !(e is AiException && e.isRateLimited);
       });
     } finally {
       _running = false;
@@ -140,21 +135,20 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   }
 
   Future<void> _confirmReanalyze() async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Re-analyze hand?'),
-        content: const Text(
-          'This will use AI credits and overwrite the existing analysis.',
-        ),
+        title: Text(l10n.aiHandReanalyzeTitle),
+        content: Text(l10n.aiReanalyzeBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Re-analyze'),
+            child: Text(l10n.aiReanalyze),
           ),
         ],
       ),
@@ -166,12 +160,12 @@ class _HandAnalysisScreenState extends ConsumerState<HandAnalysisScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hand Coaching'),
+        title: Text(context.l10n.aiHandTitle),
         actions: [
           if (_analysis != null)
             IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: 'Re-analyze',
+              tooltip: context.l10n.aiReanalyze,
               // Disabled while a run is in flight (belt-and-suspenders with the
               // _running guard) so it can't kick off a second paid call.
               onPressed: _loading ? null : _confirmReanalyze,
@@ -212,12 +206,12 @@ class _LoadingView extends StatelessWidget {
           const CircularProgressIndicator(),
           const SizedBox(height: 24),
           Text(
-            'Your coach is analyzing this hand…',
+            context.l10n.aiHandLoading,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 8),
           Text(
-            'This usually takes 5–10 seconds',
+            context.l10n.aiHandLoadingHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.outline,
                 ),
@@ -256,7 +250,8 @@ class _ErrorView extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall),
             if (onRetry != null) ...[
               const SizedBox(height: 24),
-              FilledButton(onPressed: onRetry, child: const Text('Retry')),
+              FilledButton(
+                  onPressed: onRetry, child: Text(context.l10n.commonRetry)),
             ],
           ],
         ),
@@ -327,7 +322,7 @@ class _CoachingView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Text(
-              'Street-by-Street Coaching',
+              context.l10n.aiHandStreetByStreet,
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
@@ -355,16 +350,7 @@ class _CoachingView extends StatelessWidget {
           AnalysisFeedbackBar(onRate: onRate!),
         ],
         const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(
-            'AI coaching can be wrong — verify big decisions.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-          ),
-        ),
+        const AiDisclaimerFooter(),
         const SizedBox(height: 24),
       ],
     );
@@ -390,14 +376,14 @@ class _HandHeaderCard extends StatelessWidget {
     }
   }
 
-  String _verdictLabel() {
+  String _verdictLabel(AppLocalizations l10n) {
     switch (analysis.verdict) {
       case 'highEV':
-        return 'Well played';
+        return l10n.aiVerdictWellPlayed;
       case 'leakDetected':
-        return 'Leak detected';
+        return l10n.aiVerdictLeak;
       default:
-        return 'Neutral';
+        return l10n.aiVerdictNeutral;
     }
   }
 
@@ -462,7 +448,7 @@ class _HandHeaderCard extends StatelessWidget {
                 border: Border.all(color: vc.withValues(alpha: 0.4)),
               ),
               child: Text(
-                _verdictLabel(),
+                _verdictLabel(context.l10n),
                 style: TextStyle(
                   fontSize: 12,
                   color: vc,
@@ -552,23 +538,23 @@ class _StreetCoachingCard extends StatelessWidget {
                 const Divider(height: 1),
                 const SizedBox(height: 10),
                 _InfoRow(
-                    label: 'You',
+                    label: context.l10n.aiRowYou,
                     value: f.decision,
                     color: outline),
                 const SizedBox(height: 6),
                 _InfoRow(
-                    label: 'Optimal',
+                    label: context.l10n.aiRowOptimal,
                     value: f.optimal,
                     color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 6),
                 _InfoRow(
-                    label: 'Why',
+                    label: context.l10n.aiRowWhy,
                     value: f.rationale,
                     color: outline),
                 if (f.alternative != null && f.alternative!.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   _InfoRow(
-                      label: 'Also',
+                      label: context.l10n.aiRowAlso,
                       value: f.alternative!,
                       color: outline),
                 ],
@@ -591,8 +577,8 @@ class _GtoChip extends StatelessWidget {
     final color = wasGto ? Colors.blueGrey : Colors.orange;
     return Tooltip(
       message: wasGto
-          ? 'GTO: hero\'s play matches the game-theory-optimal baseline'
-          : 'Exploit: the better play here deviates from GTO to exploit this opponent',
+          ? context.l10n.aiGtoTooltip
+          : context.l10n.aiExploitTooltip,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
@@ -600,7 +586,7 @@ class _GtoChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
-          wasGto ? 'GTO' : 'Exploit',
+          wasGto ? 'GTO' : context.l10n.aiExploitChip,
           style: TextStyle(
             fontSize: 10,
             color: color,
@@ -624,9 +610,7 @@ class _ConfidenceBadge extends StatelessWidget {
       'low' => Colors.orange,
       _ => Theme.of(context).colorScheme.outline,
     };
-    final label = confidence.isEmpty
-        ? confidence
-        : confidence[0].toUpperCase() + confidence.substring(1);
+    final label = _confidenceLevelLabel(context.l10n, confidence);
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () => _showConfidenceInfo(context),
@@ -642,7 +626,7 @@ class _ConfidenceBadge extends StatelessWidget {
             Icon(Icons.info_outline, size: 11, color: color),
             const SizedBox(width: 3),
             Text(
-              'Confidence: $label',
+              context.l10n.aiConfidenceBadge(label),
               style: TextStyle(
                 fontSize: 10,
                 color: color,
@@ -656,40 +640,53 @@ class _ConfidenceBadge extends StatelessWidget {
   }
 }
 
+/// Display label for the model's confidence value ('high'|'medium'|'low').
+/// The value is model output and stays a data key; anything unexpected is
+/// shown capitalized, as before.
+String _confidenceLevelLabel(AppLocalizations l10n, String confidence) =>
+    switch (confidence) {
+      'high' => l10n.aiConfidenceHigh,
+      'medium' => l10n.aiConfidenceMedium,
+      'low' => l10n.aiConfidenceLow,
+      '' => confidence,
+      _ => confidence[0].toUpperCase() + confidence.substring(1),
+    };
+
 void _showConfidenceInfo(BuildContext context) {
+  final l10n = context.l10n;
   showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('AI confidence'),
+      title: Text(l10n.aiConfidenceDialogTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text("How sure the AI is about this street's recommendation:"),
-          SizedBox(height: 14),
+        children: [
+          Text(l10n.aiConfidenceDialogIntro),
+          const SizedBox(height: 14),
           _ConfidenceLegendRow(
-            level: 'High',
+            level: l10n.aiConfidenceHigh,
             color: Colors.green,
-            meaning: 'Standard spot with a well-established answer.',
+            meaning: l10n.aiConfidenceHighMeaning,
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _ConfidenceLegendRow(
-            level: 'Medium',
+            level: l10n.aiConfidenceMedium,
             color: Colors.grey,
-            meaning: 'Depends on reads or assumptions about the opponent.',
+            meaning: l10n.aiConfidenceMediumMeaning,
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _ConfidenceLegendRow(
-            level: 'Low',
+            level: l10n.aiConfidenceLow,
             color: Colors.orange,
-            meaning: 'A genuinely close spot, or key information is missing.',
+            meaning: l10n.aiConfidenceLowMeaning,
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('Got it'),
+          child: Text(l10n.commonGotIt),
         ),
       ],
     ),
@@ -763,7 +760,7 @@ class _KeyMistakeCard extends StatelessWidget {
                     size: 18,
                     color: Theme.of(context).colorScheme.error),
                 const SizedBox(width: 8),
-                Text('Key Mistake',
+                Text(context.l10n.aiKeyMistake,
                     style: Theme.of(context).textTheme.titleSmall),
               ],
             ),
@@ -804,13 +801,13 @@ class _FactsCard extends StatelessWidget {
         key: const PageStorageKey('ai_facts'),
         leading: Icon(Icons.fact_check_outlined,
             size: 20, color: Theme.of(context).colorScheme.primary),
-        title: Text('What the AI was told',
+        title: Text(context.l10n.aiFactsTitle,
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
                 ?.copyWith(fontWeight: FontWeight.w600)),
         subtitle: Text(
-          'Pre-computed card facts injected as ground truth',
+          context.l10n.aiFactsSubtitle,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: outline,
               ),
@@ -853,9 +850,7 @@ class _EquityChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     return Tooltip(
-      message:
-          'Hero equity vs the modeled villain range — computed on-device, '
-          'not by the AI. Tap for assumptions.',
+      message: context.l10n.aiEquityTooltip,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
@@ -871,7 +866,7 @@ class _EquityChip extends StatelessWidget {
               Icon(Icons.verified_outlined, size: 11, color: primary),
               const SizedBox(width: 2),
               Text(
-                'EQ ${(equity * 100).round()}%',
+                context.l10n.aiEquityChip('${(equity * 100).round()}'),
                 style: TextStyle(
                   fontSize: 10,
                   color: primary,
@@ -894,6 +889,7 @@ void _showEquityAssumptions(BuildContext context, HandEquityCheck check) {
     builder: (ctx) {
       final theme = Theme.of(ctx);
       final outline = theme.colorScheme.outline;
+      final l10n = ctx.l10n;
       return DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.6,
@@ -903,21 +899,17 @@ void _showEquityAssumptions(BuildContext context, HandEquityCheck check) {
           padding: EdgeInsets.fromLTRB(
               20, 0, 20, 20 + MediaQuery.paddingOf(ctx).bottom),
           children: [
-            Text('Equity cross-check', style: theme.textTheme.titleMedium),
+            Text(l10n.aiEquitySheetTitle, style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(
-              'Computed on-device by TableLab\'s Monte Carlo engine '
-              '(${check.streets.firstOrNull?.iterations ?? 10000} trials per '
-              'street) — independent of the AI. Each opponent gets a GTO '
-              'preset range from their preflop action, adjusted for your '
-              'reads, then narrowed street by street by what they did.',
+              l10n.aiEquitySheetBody(
+                  '${check.streets.firstOrNull?.iterations ?? 10000}'),
               style: theme.textTheme.bodySmall?.copyWith(color: outline),
             ),
             if (check.basedOnSynthesizedAction) ...[
               const SizedBox(height: 8),
               Text(
-                'Quick Hand entry: action around the recorded decision is '
-                'synthesized scaffolding, so these ranges are approximate.',
+                l10n.aiEquityQuickHandNote,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.tertiary,
                   fontStyle: FontStyle.italic,
@@ -925,7 +917,7 @@ void _showEquityAssumptions(BuildContext context, HandEquityCheck check) {
               ),
             ],
             const SizedBox(height: 16),
-            Text('HERO EQUITY BY STREET',
+            Text(l10n.aiEquityByStreetHeader,
                 style: theme.textTheme.labelSmall?.copyWith(color: outline)),
             const SizedBox(height: 6),
             for (final s in check.streets)
@@ -947,8 +939,7 @@ void _showEquityAssumptions(BuildContext context, HandEquityCheck check) {
                     Expanded(
                       child: Text(
                         s.boardSoFar.isEmpty
-                            ? 'vs ${s.villainCount} '
-                                'opponent${s.villainCount == 1 ? '' : 's'}'
+                            ? l10n.aiEquityVsOpponents(s.villainCount)
                             : s.boardSoFar.join(' '),
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: outline),
@@ -961,16 +952,15 @@ void _showEquityAssumptions(BuildContext context, HandEquityCheck check) {
             for (final v in check.villains) ...[
               const SizedBox(height: 16),
               Text(
-                'ASSUMED RANGE — ${v.name.toUpperCase()} (${v.position})',
+                l10n.aiEquityAssumedRange(v.name.toUpperCase(), v.position),
                 style: theme.textTheme.labelSmall?.copyWith(color: outline),
               ),
               if (v.appliedTags.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
-                  // Text stays English until the AI cluster PR; only the tag
-                  // names follow the UI language.
-                  ctx.l10n.handAnalysisReadsApplied(
-                      v.appliedTags.map((t) => tagDisplayName(ctx.l10n, t)).join(', ')),
+                  l10n.aiEquityReads(v.appliedTags
+                      .map((t) => tagDisplayName(l10n, t))
+                      .join(', ')),
                   style: theme.textTheme.bodySmall,
                 ),
               ],
