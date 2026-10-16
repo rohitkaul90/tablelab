@@ -108,16 +108,67 @@ String formatROI(double roiPercent) {
 // by the Stats factor tabs and the recommendations engine. Display text lives
 // in lib/l10n/labels.dart (localized) — never use display text as a key.
 
-/// Tournament buy-in bands.
+/// Tournament buy-in bands. The reference edges are USD 50/100/200/500;
+/// for another display currency they're converted and snapped to a round
+/// number ([buyInBandEdges]) so the bands stay meaningful (₹ / ¥ users don't
+/// land everything in the top band) AND readable (€50–€100, not €46–€92).
 enum BuyInBucket { under50, from50to100, from100to200, from200to500, over500 }
 
-BuyInBucket buyInBucketOf(double buyIn) {
-  if (buyIn < 50) return BuyInBucket.under50;
-  if (buyIn < 100) return BuyInBucket.from50to100;
-  if (buyIn < 200) return BuyInBucket.from100to200;
-  if (buyIn < 500) return BuyInBucket.from200to500;
+/// USD reference edges, in [BuyInBucket] order (under50's upper edge first).
+const List<double> kBuyInBucketEdgesUsd = [50, 100, 200, 500];
+
+/// Nearest "round" amount to [v] from {1, 2, 2.5, 5} × 10ⁿ (closest in ratio),
+/// e.g. 46 → 50, 92 → 100, 4150 → 5000.
+double roundBandEdge(double v) {
+  if (v <= 0) return v;
+  var best = v;
+  var bestRatio = double.infinity;
+  var p = 1.0;
+  while (p * 10 <= v) {
+    p *= 10;
+  }
+  for (final base in [p / 10, p, p * 10]) {
+    for (final m in const [1.0, 2.0, 2.5, 5.0]) {
+      final c = base * m;
+      final ratio = c > v ? c / v : v / c;
+      if (ratio < bestRatio) {
+        bestRatio = ratio;
+        best = c;
+      }
+    }
+  }
+  return best;
+}
+
+/// The four band edges expressed in [displayCurrency]: the USD reference
+/// edges converted and rounded, kept strictly increasing.
+List<double> buyInBandEdges(String displayCurrency) {
+  final edges = <double>[];
+  for (final usd in kBuyInBucketEdgesUsd) {
+    var e = displayCurrency == 'USD'
+        ? usd
+        : roundBandEdge(convertCurrency(usd, 'USD', displayCurrency));
+    if (edges.isNotEmpty && e <= edges.last) e = edges.last * 2;
+    edges.add(e);
+  }
+  return edges;
+}
+
+/// Band of [amount] against [edges] (defaults to the USD reference edges).
+BuyInBucket buyInBucketOf(double amount,
+    [List<double> edges = kBuyInBucketEdgesUsd]) {
+  if (amount < edges[0]) return BuyInBucket.under50;
+  if (amount < edges[1]) return BuyInBucket.from50to100;
+  if (amount < edges[2]) return BuyInBucket.from100to200;
+  if (amount < edges[3]) return BuyInBucket.from200to500;
   return BuyInBucket.over500;
 }
+
+/// Band of a session's buy-in, converted to [displayCurrency] and classified
+/// against that currency's rounded edges.
+BuyInBucket buyInBucketOfSession(SessionModel s, String displayCurrency) =>
+    buyInBucketOf(convertCurrency(s.buyIn, s.currency, displayCurrency),
+        buyInBandEdges(displayCurrency));
 
 /// Tournament field-size bands; null when the entrant count is unknown.
 enum FieldSizeBucket { small, medium, large, massive }
@@ -133,8 +184,11 @@ FieldSizeBucket? fieldSizeBucketOf(int? totalEntrants) {
 /// Cash-session start-time bands.
 enum TimeOfDayBucket { morning, afternoon, evening, lateNight }
 
-TimeOfDayBucket timeOfDayBucketOf(String startTime) {
-  final hour = int.tryParse(startTime.split(':')[0]) ?? 0;
+/// Band of an `HH:mm` start time, or null when the time is blank or
+/// unparseable (the row is then skipped rather than counted as late night).
+TimeOfDayBucket? timeOfDayBucketOf(String startTime) {
+  final hour = int.tryParse(startTime.split(':')[0].trim());
+  if (hour == null || hour < 0 || hour > 23) return null;
   if (hour >= 6 && hour < 12) return TimeOfDayBucket.morning;
   if (hour >= 12 && hour < 18) return TimeOfDayBucket.afternoon;
   if (hour >= 18 && hour < 23) return TimeOfDayBucket.evening;

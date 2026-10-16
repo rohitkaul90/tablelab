@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/poker_rooms.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart' show perHour;
 import '../models/session_model.dart';
 import '../models/profile_model.dart';
 import '../models/stats_filter.dart';
@@ -106,7 +108,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         icon: const Icon(Icons.menu),
         onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
       ),
-      title: const Text('Stats'),
+      title: Text(context.l10n.statsTitle),
       actions: actions,
       bottom: bottom,
     );
@@ -123,7 +125,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
       error: (e, _) => Scaffold(
         appBar: _statsAppBar(),
-        body: Center(child: Text('Error: $e')),
+        body: Center(child: Text(context.l10n.commonErrorWithDetail('$e'))),
       ),
       data: (sessions) => _buildTabs(context, sessions),
     );
@@ -134,14 +136,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // is data-gated, so the tab strip only shows breakdowns that exist.
     final homeCurrency =
         ref.watch(profileProvider).valueOrNull?.displayCurrency;
-    final data = AnalyticsData.compute(sessions, _filter, homeCurrency);
-    final factors = analyticsFactors(data);
+    final l10n = context.l10n;
+    final data = AnalyticsData.compute(sessions, _filter, homeCurrency, l10n);
+    final factors = analyticsFactors(data, l10n);
 
     final tabs = <Tab>[
-      if (kShowOverviewTab) const Tab(text: 'Overview'),
-      const Tab(text: 'Summary'),
+      if (kShowOverviewTab) Tab(text: l10n.statsTabOverview),
+      Tab(text: l10n.statsTabSummary),
       for (final f in factors) Tab(text: f.tabLabel),
-      const Tab(text: 'Tips'),
+      Tab(text: l10n.statsTabTips),
     ];
     final views = <Widget>[
       if (kShowOverviewTab)
@@ -174,7 +177,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // KEEPS an in-range numeric index — the user silently lands on (or has
     // their current tab's content swapped to) a DIFFERENT factor.
     return DefaultTabController(
-      key: ValueKey(tabs.map((t) => t.text).join('|')),
+      // Keyed on stable factor ids (not tab text) so a language switch
+      // isn't mistaken for a tab-set change.
+      key: ValueKey(factors.map((f) => f.id).join('|')),
       length: tabs.length,
       child: Scaffold(
         appBar: _statsAppBar(
@@ -205,7 +210,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 isLabelVisible: _filter.isActive,
                 child: const Icon(Icons.tune),
               ),
-              tooltip: 'Display options',
+              tooltip: l10n.statsDisplayOptions,
               onPressed: () => _openFilterSheet(
                 sessions,
                 _filter,
@@ -219,7 +224,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         floatingActionButton: FloatingActionButton(
           heroTag: 'fab_dashboard',
           onPressed: () => showLogSessionChooser(context, ref),
-          tooltip: 'Log session',
+          tooltip: l10n.statsLogSessionTooltip,
           child: const Icon(Icons.add),
         ),
         body: TabBarView(children: views),
@@ -246,7 +251,8 @@ class _OverviewTab extends ConsumerWidget {
     final sessionsAsync = ref.watch(completedSessionsProvider);
     return sessionsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) =>
+          Center(child: Text(context.l10n.commonErrorWithDetail('$e'))),
       data: (sessions) => _OverviewBody(
         sessions: sessions,
         gameTypes: gameTypes,
@@ -291,10 +297,11 @@ class _OverviewBody extends ConsumerWidget {
     final isAllTypes = types.isEmpty;
     final tournamentOnly = types.length == 1 && types.contains('tournament');
 
-    final gtLabel = gameTypeChipLabel(types);
+    final l10n = context.l10n;
+    final gtLabel = gameTypeChipLabel(l10n, types);
     final activeFilters = <String>[
       if (gtLabel != null) gtLabel,
-      ...filter.labels(),
+      ...filter.labels(l10n),
       currency,
     ];
 
@@ -335,8 +342,10 @@ class _OverviewBody extends ConsumerWidget {
                     children: [
                       Text(
                         isAllTypes
-                            ? 'Profit'
-                            : '${tournamentOnly ? 'Tournament' : 'Cash'} Profit',
+                            ? l10n.statsProfit
+                            : (tournamentOnly
+                                ? l10n.statsTournamentProfit
+                                : l10n.statsCashProfit),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(width: 4),
@@ -391,7 +400,7 @@ class _OverviewBody extends ConsumerWidget {
             children: tournamentOnly
                 ? [
                     StatCard(
-                      label: 'Sessions',
+                      label: l10n.statsSessions,
                       value: '${stats.sessionCount}',
                       onTap: () => openMetric(StatMetric.sessions),
                     ),
@@ -401,7 +410,7 @@ class _OverviewBody extends ConsumerWidget {
                       onTap: () => openMetric(StatMetric.itm),
                     ),
                     StatCard(
-                      label: 'ITM %',
+                      label: l10n.statsItmPct,
                       value: '${stats.itmPct.toStringAsFixed(0)}%',
                       onTap: () => openMetric(StatMetric.itmPct),
                     ),
@@ -414,26 +423,26 @@ class _OverviewBody extends ConsumerWidget {
                   ]
                 : [
                     StatCard(
-                      label: 'Hours Played',
+                      label: l10n.statsHoursPlayed,
                       value: formatHours(stats.totalHours),
                       onTap: () => openMetric(StatMetric.hours),
                     ),
                     StatCard(
-                      label: 'Win Rate',
-                      value:
-                          '${formatPLWithCurrency(stats.hourlyRate, currency)}/hr',
+                      label: l10n.statsWinRate,
+                      value: perHour(
+                          l10n, formatPLWithCurrency(stats.hourlyRate, currency)),
                       valueColor:
                           stats.hourlyRate >= 0 ? Colors.green : Colors.red,
                       onTap: () => openMetric(StatMetric.winRate),
                     ),
                     StatCard(
-                      label: 'Sessions',
+                      label: l10n.statsSessions,
                       value: '${stats.sessionCount}',
                       onTap: () => openMetric(StatMetric.sessions),
                     ),
                     StatCard(
-                      label: 'W / L',
-                      value: '${stats.wins}W  ${stats.losses}L',
+                      label: l10n.statsWinLoss,
+                      value: l10n.statsWinsLossesValue(stats.wins, stats.losses),
                       valueColor: stats.wins > stats.losses
                           ? Colors.green
                           : stats.losses > stats.wins
@@ -454,7 +463,7 @@ class _OverviewBody extends ConsumerWidget {
           )
         else ...[
           Text(
-            'No sessions yet — log your first to fill these in.',
+            l10n.statsNoSessionsYet,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context)
@@ -470,7 +479,7 @@ class _OverviewBody extends ConsumerWidget {
               FilledButton.icon(
                 onPressed: () => showLogSessionChooser(context, ref),
                 icon: const Icon(Icons.add),
-                label: const Text('Log Session'),
+                label: Text(l10n.commonLogSession),
               ),
               const SizedBox(width: 8),
               TextButton.icon(
@@ -480,7 +489,7 @@ class _OverviewBody extends ConsumerWidget {
                       builder: (_) => const ImportSourceScreen()),
                 ),
                 icon: const Icon(Icons.upload_file_outlined),
-                label: const Text('Import'),
+                label: Text(l10n.commonImport),
               ),
             ],
           ),
@@ -527,7 +536,7 @@ class _InlineBankroll extends StatelessWidget {
             foregroundColor: subtle,
             textStyle: const TextStyle(fontSize: 12),
           ),
-          child: const Text('Set starting bankroll'),
+          child: Text(context.l10n.statsSetStartingBankroll),
         ),
       );
     }
@@ -545,7 +554,7 @@ class _InlineBankroll extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Text(
-        'Bankroll ${formatAmount(current, currency)}$growthStr',
+        context.l10n.statsBankrollLine(formatAmount(current, currency), growthStr),
         style: theme.textTheme.bodySmall?.copyWith(color: subtle),
       ),
     );

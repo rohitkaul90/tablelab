@@ -48,51 +48,6 @@
   "@languageSystem": {
     "description": "Language option: follow the device language (falls back to English when unsupported)."
   },
-  "bucketBuyInUnder50": "< {sym}50",
-  "@bucketBuyInUnder50": {
-    "description": "Tournament buy-in band; {sym} is the currency symbol. Keep the sign and number.",
-    "placeholders": {
-      "sym": {
-        "type": "String"
-      }
-    }
-  },
-  "bucketBuyIn50to100": "{sym}50–{sym}100",
-  "@bucketBuyIn50to100": {
-    "description": "Tournament buy-in band; {sym} is the currency symbol.",
-    "placeholders": {
-      "sym": {
-        "type": "String"
-      }
-    }
-  },
-  "bucketBuyIn100to200": "{sym}100–{sym}200",
-  "@bucketBuyIn100to200": {
-    "description": "Tournament buy-in band; {sym} is the currency symbol.",
-    "placeholders": {
-      "sym": {
-        "type": "String"
-      }
-    }
-  },
-  "bucketBuyIn200to500": "{sym}200–{sym}500",
-  "@bucketBuyIn200to500": {
-    "description": "Tournament buy-in band; {sym} is the currency symbol.",
-    "placeholders": {
-      "sym": {
-        "type": "String"
-      }
-    }
-  },
-  "bucketBuyInOver500": "> {sym}500",
-  "@bucketBuyInOver500": {
-    "description": "Tournament buy-in band; {sym} is the currency symbol.",
-    "placeholders": {
-      "sym": {
-        "type": "String"
-      }
-    }
-  },
   "bucketFieldSmall": "Small (<50)",
   "@bucketFieldSmall": {
     "description": "Tournament field-size band: fewer than 50 entrants."
@@ -3536,5 +3491,937 @@
         "type": "String"
       }
     }
+  },
+  "bucketBuyInUnder": "< {max}",
+  "@bucketBuyInUnder": {
+    "description": "Tournament buy-in band below an amount; {max} is a formatted amount with its currency symbol (e.g. \"$50\", \"₹4,150\").",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "bucketBuyInRange": "{min}–{max}",
+  "@bucketBuyInRange": {
+    "description": "Tournament buy-in band between two formatted amounts with currency symbols.",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "bucketBuyInOver": "> {min}",
+  "@bucketBuyInOver": {
+    "description": "Tournament buy-in band above a formatted amount with its currency symbol.",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "commonGotIt": "Got it",
+  "@commonGotIt": {
+    "description": "Dismiss button on an explanatory dialog."
+  },
+  "commonReset": "Reset",
+  "@commonReset": {
+    "description": "Button that clears all filters back to their defaults."
+  },
+  "commonImport": "Import",
+  "@commonImport": {
+    "description": "Button that opens the import-sessions flow (bring sessions in from another app or a file)."
+  },
+  "commonLogSession": "Log Session",
+  "@commonLogSession": {
+    "description": "Button that starts logging a new poker session."
+  },
+  "statsTitle": "Stats",
+  "@statsTitle": {
+    "description": "AppBar title of the statistics screen (first bottom-nav tab)."
+  },
+  "statsTabOverview": "Overview",
+  "@statsTabOverview": {
+    "description": "Stats screen tab: the legacy overview page (usually hidden)."
+  },
+  "statsTabSummary": "Summary",
+  "@statsTabSummary": {
+    "description": "Stats screen tab: the metric summary page."
+  },
+  "statsTabTips": "Tips",
+  "@statsTabTips": {
+    "description": "Stats screen tab: personalised recommendations drawn from the breakdowns."
+  },
+  "statsDisplayOptions": "Display options",
+  "@statsDisplayOptions": {
+    "description": "Tooltip of the Stats AppBar filter button; also the filter sheet title."
+  },
+  "statsDisplayOptionsTitle": "Display Options",
+  "@statsDisplayOptionsTitle": {
+    "description": "Title at the top of the Stats filter bottom sheet."
+  },
+  "statsLogSessionTooltip": "Log session",
+  "@statsLogSessionTooltip": {
+    "description": "Tooltip of the add (+) floating button on the Stats screen."
+  },
+  "statsSessions": "Sessions",
+  "@statsSessions": {
+    "description": "Metric label: number of poker sessions played."
+  },
+  "statsHours": "Hours",
+  "@statsHours": {
+    "description": "Metric label: total hours played."
+  },
+  "statsHoursPlayed": "Hours Played",
+  "@statsHoursPlayed": {
+    "description": "Metric label / chart title: total hours played."
+  },
+  "statsWinRate": "Win Rate",
+  "@statsWinRate": {
+    "description": "Metric label: hourly win rate (profit per hour)."
+  },
+  "statsProfit": "Profit",
+  "@statsProfit": {
+    "description": "Metric label: total profit (winnings minus buy-ins)."
+  },
+  "statsTotalProfit": "Total Profit",
+  "@statsTotalProfit": {
+    "description": "Metric label: total profit across the sessions in view."
+  },
+  "statsAvgBuyIn": "Avg Buy-In",
+  "@statsAvgBuyIn": {
+    "description": "Metric label: average buy-in per session (keep \"Buy-In\" per the glossary)."
+  },
+  "statsExpenses": "Expenses",
+  "@statsExpenses": {
+    "description": "Metric label: tips, food, travel and other session costs."
+  },
+  "statsNetProfit": "Net Profit",
+  "@statsNetProfit": {
+    "description": "Metric label: profit minus expenses."
+  },
+  "statsTournRoi": "Tourn. ROI",
+  "@statsTournRoi": {
+    "description": "Metric label: tournament return on investment, abbreviated to fit a row. Keep ROI."
+  },
+  "statsStdDevBb100": "Std Dev (BB/100)",
+  "@statsStdDevBb100": {
+    "description": "Metric label: standard deviation measured in big blinds per 100 hands. Keep BB/100."
+  },
+  "statsStdDevPerHour": "Std Dev ({sym}/hr)",
+  "@statsStdDevPerHour": {
+    "description": "Metric label: standard deviation of the hourly result; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "statsStdDevBuyIns": "Std Dev (buy-ins)",
+  "@statsStdDevBuyIns": {
+    "description": "Metric label: standard deviation of tournament results measured in buy-ins."
+  },
+  "statsPerHour": "{amount}/hr",
+  "@statsPerHour": {
+    "description": "A money amount per hour, e.g. \"+$25/hr\"; {amount} is already formatted with its sign and symbol.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "statsCashSdInfo": "How swingy your cash game is, in big blinds per 100 hands. Estimated from your per-session results and durations (hands assumed at 25 per hour unless a session records its own pace). Typical live no-limit hold'em runs roughly 70–100.\n\nShown once you have at least 10 qualifying cash sessions (cash game with parseable blinds and a duration).",
+  "@statsCashSdInfo": {
+    "description": "Explainer dialog for the cash-game standard deviation (BB/100) metric. Keep the \\n\\n paragraph break."
+  },
+  "statsTournSdInfo": "How swingy your tournament results are, measured in buy-ins per tournament (each result divided by its buy-in, so mixed buy-in levels stay comparable).\n\nTournament results are heavily skewed by rare big scores — with few tournaments logged this UNDERSTATES the real swings. Shown once you have at least 10 tournaments with a buy-in.",
+  "@statsTournSdInfo": {
+    "description": "Explainer dialog for the tournament standard deviation (in buy-ins). Keep the \\n\\n paragraph break and the emphasis on UNDERSTATES."
+  },
+  "statsHourlySdInfo": "How much a typical hour deviates from your average hourly rate, in {currency}. Estimated from per-session results and durations.\n\nShown once you have at least 10 cash sessions with a recorded duration.",
+  "@statsHourlySdInfo": {
+    "description": "Explainer dialog for the hourly standard deviation; {currency} is a currency code like USD.",
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "statsSdMoneyTerms": "In money terms: about {amount} per hour.",
+  "@statsSdMoneyTerms": {
+    "description": "First line of the cash std-dev dialog; {amount} is a formatted amount with its symbol.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "statsFactorStakes": "Stakes",
+  "@statsFactorStakes": {
+    "description": "Stats tab label: results broken down by stakes (blind levels). Keep short."
+  },
+  "statsFactorStakesTitle": "By Stakes",
+  "@statsFactorStakesTitle": {
+    "description": "Card title: results broken down by stakes."
+  },
+  "statsFactorBuyIns": "Buy-ins",
+  "@statsFactorBuyIns": {
+    "description": "Stats tab label: tournament results by buy-in level. Keep short."
+  },
+  "statsFactorBuyInsTitle": "By Buy-in Level",
+  "@statsFactorBuyInsTitle": {
+    "description": "Card title: tournament results by buy-in level."
+  },
+  "statsFactorFieldSize": "Field Size",
+  "@statsFactorFieldSize": {
+    "description": "Stats tab label: tournament results by number of entrants. Keep short."
+  },
+  "statsFactorFieldSizeTitle": "By Field Size",
+  "@statsFactorFieldSizeTitle": {
+    "description": "Card title: tournament results by number of entrants."
+  },
+  "statsFactorGameType": "Game Type",
+  "@statsFactorGameType": {
+    "description": "Stats tab label: results by cash game vs tournament. Keep short."
+  },
+  "statsFactorGameTypeTitle": "By Game Type",
+  "@statsFactorGameTypeTitle": {
+    "description": "Card title: results by cash game vs tournament."
+  },
+  "statsFactorDay": "Day",
+  "@statsFactorDay": {
+    "description": "Stats tab label: results by day of the week. Keep short."
+  },
+  "statsFactorDayTitle": "By Day of Week",
+  "@statsFactorDayTitle": {
+    "description": "Card title: results by day of the week."
+  },
+  "statsFactorTime": "Time",
+  "@statsFactorTime": {
+    "description": "Stats tab label: cash results by time of day the session started. Keep short."
+  },
+  "statsFactorTimeTitle": "By Time of Day",
+  "@statsFactorTimeTitle": {
+    "description": "Card title: cash results by start time of day."
+  },
+  "statsFactorLength": "Length",
+  "@statsFactorLength": {
+    "description": "Stats tab label: cash results by session duration. Keep short."
+  },
+  "statsFactorLengthTitle": "By Session Length",
+  "@statsFactorLengthTitle": {
+    "description": "Card title: cash results by session duration."
+  },
+  "statsFactorTable": "Table",
+  "@statsFactorTable": {
+    "description": "Stats tab label: cash results by the rated toughness of the table. Keep short."
+  },
+  "statsFactorTableTitle": "By Table Quality",
+  "@statsFactorTableTitle": {
+    "description": "Card title: cash results by how tough or soft the table was rated."
+  },
+  "statsFactorLocation": "Location",
+  "@statsFactorLocation": {
+    "description": "Stats tab label: results by casino / card room / site. Keep short."
+  },
+  "statsFactorLocationTitle": "By Location",
+  "@statsFactorLocationTitle": {
+    "description": "Card title: results by casino, card room or site."
+  },
+  "statsFactorVenue": "Live/Online",
+  "@statsFactorVenue": {
+    "description": "Stats tab label: live vs online results. Keep short; keep the slash."
+  },
+  "statsFactorVenueTitle": "Live vs Online",
+  "@statsFactorVenueTitle": {
+    "description": "Card title: live (in person) vs online results."
+  },
+  "statsLegendTournament": "#  ·  ROI  ·  Profit",
+  "@statsLegendTournament": {
+    "description": "Legend above tournament breakdown rows: entries count, ROI, profit. Keep # and ROI and the spaced dots."
+  },
+  "statsLegendCash": "hrs  ·  {sym}/hr  ·  Profit",
+  "@statsLegendCash": {
+    "description": "Legend above cash breakdown rows: hours, hourly rate, profit; {sym} is the currency symbol. Keep the spaced dots.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "statsSort": "Sort",
+  "@statsSort": {
+    "description": "Tooltip of the sort menu button on a breakdown tab."
+  },
+  "statsSortWinRate": "Win rate",
+  "@statsSortWinRate": {
+    "description": "Sort option: by hourly win rate."
+  },
+  "statsSortVolume": "Volume",
+  "@statsSortVolume": {
+    "description": "Sort option / row label: by number of tournaments played (volume)."
+  },
+  "statsSortNatural": "Natural order",
+  "@statsSortNatural": {
+    "description": "Sort option: the category's own order (Monday to Sunday, small to big stakes)."
+  },
+  "statsTypeOnly": "{type} only",
+  "@statsTypeOnly": {
+    "description": "Dismissible chip shown when the Stats view is narrowed to one game type; {type} is \"Cash\" or \"Tournament\".",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "statsShowAllGameTypes": "Show all game types",
+  "@statsShowAllGameTypes": {
+    "description": "Tooltip of the remove button on the game-type chip."
+  },
+  "statsNoSessionsYet": "No sessions yet — log your first to fill these in.",
+  "@statsNoSessionsYet": {
+    "description": "Empty state on the Stats screen for a brand-new user."
+  },
+  "statsNoMatch": "No sessions match these filters.",
+  "@statsNoMatch": {
+    "description": "Empty state when the active filters exclude every session."
+  },
+  "statsCash": "Cash",
+  "@statsCash": {
+    "description": "Short game-type label for cash games (column header, filter chip)."
+  },
+  "statsTournament": "Tournament",
+  "@statsTournament": {
+    "description": "Short game-type label for tournaments (column header, filter chip)."
+  },
+  "statsTournaments": "Tournaments",
+  "@statsTournaments": {
+    "description": "Plural game-type label shown as a filter chip on a tournament chart."
+  },
+  "statsRate": "Rate",
+  "@statsRate": {
+    "description": "Comparison row label: hourly rate for cash, ROI for tournaments."
+  },
+  "statsEdge": "Edge",
+  "@statsEdge": {
+    "description": "Comparison row label: BB/100 for cash, in-the-money % for tournaments."
+  },
+  "statsStdDev": "Std Dev",
+  "@statsStdDev": {
+    "description": "Comparison row label: standard deviation (swings)."
+  },
+  "statsBuyInsValue": "{value} buy-ins",
+  "@statsBuyInsValue": {
+    "description": "A standard deviation measured in tournament buy-ins, e.g. \"4.2 buy-ins\".",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "statsCashStdDevTitle": "Cash Std Dev (BB/100)",
+  "@statsCashStdDevTitle": {
+    "description": "Dialog title: cash-game standard deviation in BB/100."
+  },
+  "statsTournStdDevTitle": "Tournament Std Dev (buy-ins)",
+  "@statsTournStdDevTitle": {
+    "description": "Dialog title: tournament standard deviation in buy-ins."
+  },
+  "statsTipsEmpty": "Log a few sessions to unlock recommendations.",
+  "@statsTipsEmpty": {
+    "description": "Tips tab empty state for a user with no sessions."
+  },
+  "statsRecsNeedMore": "{type, select, tournament{Log at least 5 tournament sessions to get personalised recommendations.} other{Log at least 5 cash sessions to get personalised recommendations.}}",
+  "@statsRecsNeedMore": {
+    "description": "Recommendations card when fewer than five sessions of that game type exist.",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecsNone": "{type, select, tournament{No strong patterns detected yet in your tournament sessions. Results become more reliable as you log more sessions across different days, locations, and stakes.} other{No strong patterns detected yet in your cash sessions. Results become more reliable as you log more sessions across different days, locations, and stakes.}}",
+  "@statsRecsNone": {
+    "description": "Recommendations card when no statistically strong pattern was found.",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecsBasedOn": "Based on your session history",
+  "@statsRecsBasedOn": {
+    "description": "Small caption above the list of recommendations."
+  },
+  "statsRecTargetTournaments": "Target {best} tournaments",
+  "@statsRecTargetTournaments": {
+    "description": "Recommendation title; {best} is a buy-in band such as \"$50–$100\".",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecFocusFields": "Focus on {best} fields",
+  "@statsRecFocusFields": {
+    "description": "Recommendation title; {best} is a field-size band such as \"Small (<50)\".",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecPrioritiseTournaments": "Prioritise {best} tournaments",
+  "@statsRecPrioritiseTournaments": {
+    "description": "Recommendation title; {best} is a weekday abbreviation such as \"Sat\".",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecStrongestVenue": "{best} is your strongest venue",
+  "@statsRecStrongestVenue": {
+    "description": "Recommendation title; {best} is a casino or site name.",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecStrongerFormat": "{best} poker is your stronger format",
+  "@statsRecStrongerFormat": {
+    "description": "Recommendation title; {best} is \"Live\" or \"Online\".",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecShiftFocusTo": "Shift focus to {worst}",
+  "@statsRecShiftFocusTo": {
+    "description": "Recommendation title when both formats lose; {worst} is \"Live\" or \"Online\".",
+    "placeholders": {
+      "worst": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecShiftFocusOther": "Shift focus to the other format",
+  "@statsRecShiftFocusOther": {
+    "description": "Recommendation title when only one format has data."
+  },
+  "statsRecFavour": "Favour {best} over {worst}",
+  "@statsRecFavour": {
+    "description": "Generic recommendation title comparing two categories.",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      },
+      "worst": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecScheduleIn": "Schedule more sessions in the {best}",
+  "@statsRecScheduleIn": {
+    "description": "Recommendation title; {best} is a time of day such as \"Morning\" or \"Evening\".",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecShiftAway": "Shift sessions away from {worst}",
+  "@statsRecShiftAway": {
+    "description": "Recommendation title; {worst} is a time of day.",
+    "placeholders": {
+      "worst": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecPrioritiseSessions": "Prioritise {best} sessions",
+  "@statsRecPrioritiseSessions": {
+    "description": "Recommendation title; {best} is a weekday abbreviation such as \"Sat\".",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecTargetSessions": "Target {best} sessions",
+  "@statsRecTargetSessions": {
+    "description": "Recommendation title; {best} is a session-length band such as \"2–4 hours\".",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecSeekTables": "Seek out {best} tables",
+  "@statsRecSeekTables": {
+    "description": "Recommendation title; {best} is a table-quality rating such as \"4★\".",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecFocusMore": "Focus more on {best}",
+  "@statsRecFocusMore": {
+    "description": "Recommendation title; {best} is a game type.",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecExplainTourn": "{best} ROI in {bestKey}. Your overall ROI is {overall}.",
+  "@statsRecExplainTourn": {
+    "description": "Recommendation explanation; {best} and {overall} are ROI percentages, {bestKey} is a category label.",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      },
+      "bestKey": {
+        "type": "String"
+      },
+      "overall": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecExplainTournBetter": "{best} ROI in {bestKey} — {diff} better than {worstKey} ({worst}). Your overall ROI is {overall}.",
+  "@statsRecExplainTournBetter": {
+    "description": "Recommendation explanation comparing the best and worst category by ROI; all values are pre-formatted.",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      },
+      "bestKey": {
+        "type": "String"
+      },
+      "diff": {
+        "type": "String"
+      },
+      "worstKey": {
+        "type": "String"
+      },
+      "worst": {
+        "type": "String"
+      },
+      "overall": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecExplainCash": "{best}/hr in {bestKey} sessions. Your overall rate is {overall}/hr.",
+  "@statsRecExplainCash": {
+    "description": "Recommendation explanation; {best} and {overall} are formatted money amounts, {bestKey} a category label.",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      },
+      "bestKey": {
+        "type": "String"
+      },
+      "overall": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecExplainCashBetter": "{best}/hr in {bestKey} sessions — {diff}/hr more than {worstKey} ({worst}/hr). Your overall rate is {overall}/hr.",
+  "@statsRecExplainCashBetter": {
+    "description": "Recommendation explanation comparing the best and worst category by hourly rate; all values pre-formatted.",
+    "placeholders": {
+      "best": {
+        "type": "String"
+      },
+      "bestKey": {
+        "type": "String"
+      },
+      "diff": {
+        "type": "String"
+      },
+      "worstKey": {
+        "type": "String"
+      },
+      "worst": {
+        "type": "String"
+      },
+      "overall": {
+        "type": "String"
+      }
+    }
+  },
+  "statsRecSampleTitle": "Keep building your sample size",
+  "@statsRecSampleTitle": {
+    "description": "Recommendation title shown when fewer than 20 sessions are logged."
+  },
+  "statsRecSampleCash": "{count, plural, one{You have {count} cash session. Patterns become more reliable and actionable at 20+ sessions.} other{You have {count} cash sessions. Patterns become more reliable and actionable at 20+ sessions.}}",
+  "@statsRecSampleCash": {
+    "description": "Sample-size recommendation body for cash games.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsRecSampleTourn": "{count, plural, one{You have {count} tournament session. Patterns become more reliable and actionable at 20+ sessions.} other{You have {count} tournament sessions. Patterns become more reliable and actionable at 20+ sessions.}}",
+  "@statsRecSampleTourn": {
+    "description": "Sample-size recommendation body for tournaments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsFilterGameType": "Game Type",
+  "@statsFilterGameType": {
+    "description": "Filter sheet section title: cash vs tournament."
+  },
+  "statsAllGameTypes": "All game types",
+  "@statsAllGameTypes": {
+    "description": "Filter section summary when no game type is selected."
+  },
+  "statsAllGames": "All Games",
+  "@statsAllGames": {
+    "description": "Filter chip: show every game type."
+  },
+  "statsDateRange": "Date Range",
+  "@statsDateRange": {
+    "description": "Filter sheet section title: date range."
+  },
+  "statsAllTime": "All Time",
+  "@statsAllTime": {
+    "description": "Date filter chip: no date limit."
+  },
+  "stats1Year": "1 Year",
+  "@stats1Year": {
+    "description": "Date filter chip: the last year."
+  },
+  "stats6Months": "6 Months",
+  "@stats6Months": {
+    "description": "Date filter chip: the last six months."
+  },
+  "stats3Months": "3 Months",
+  "@stats3Months": {
+    "description": "Date filter chip: the last three months."
+  },
+  "stats1Month": "1 Month",
+  "@stats1Month": {
+    "description": "Date filter chip: the last month."
+  },
+  "statsCustomRange": "Custom…",
+  "@statsCustomRange": {
+    "description": "Date filter chip that opens a date-range picker."
+  },
+  "statsCurrency": "Currency",
+  "@statsCurrency": {
+    "description": "Filter sheet section title: display currency."
+  },
+  "statsCountry": "Country",
+  "@statsCountry": {
+    "description": "Filter sheet section title: country."
+  },
+  "statsAllCountriesSummary": "All countries",
+  "@statsAllCountriesSummary": {
+    "description": "Country filter summary when none is selected."
+  },
+  "statsAllCountries": "All Countries",
+  "@statsAllCountries": {
+    "description": "Filter chip: every country."
+  },
+  "statsVenue": "Venue",
+  "@statsVenue": {
+    "description": "Filter sheet section title: live vs online."
+  },
+  "statsAllVenuesSummary": "All venues",
+  "@statsAllVenuesSummary": {
+    "description": "Venue filter summary when none is selected."
+  },
+  "statsAllVenues": "All Venues",
+  "@statsAllVenues": {
+    "description": "Filter chip: live and online."
+  },
+  "statsLocation": "Location",
+  "@statsLocation": {
+    "description": "Filter sheet section title: casino / site."
+  },
+  "statsAllLocationsSummary": "All locations",
+  "@statsAllLocationsSummary": {
+    "description": "Location filter summary when none is selected."
+  },
+  "statsAllLocations": "All Locations",
+  "@statsAllLocations": {
+    "description": "Filter chip: every location."
+  },
+  "statsNSelected": "{count} selected",
+  "@statsNSelected": {
+    "description": "Filter section summary when several options are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsDate1Year": "1 year",
+  "@statsDate1Year": {
+    "description": "Filter summary: the last year."
+  },
+  "statsDate6Months": "6 months",
+  "@statsDate6Months": {
+    "description": "Filter summary: the last six months."
+  },
+  "statsDate3Months": "3 months",
+  "@statsDate3Months": {
+    "description": "Filter summary: the last three months."
+  },
+  "statsDate1Month": "1 month",
+  "@statsDate1Month": {
+    "description": "Filter summary: the last month."
+  },
+  "statsDateAllTime": "All time",
+  "@statsDateAllTime": {
+    "description": "Filter summary: no date limit."
+  },
+  "statsNCountries": "{count} countries",
+  "@statsNCountries": {
+    "description": "Chart filter chip when several countries are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsNLocations": "{count} locations",
+  "@statsNLocations": {
+    "description": "Chart filter chip when several locations are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsCashProfit": "Cash Profit",
+  "@statsCashProfit": {
+    "description": "Overview hero label: profit from cash games."
+  },
+  "statsTournamentProfit": "Tournament Profit",
+  "@statsTournamentProfit": {
+    "description": "Overview hero label: profit from tournaments."
+  },
+  "statsItmPct": "ITM %",
+  "@statsItmPct": {
+    "description": "Stat label: percentage of tournaments finished in the money. Keep ITM."
+  },
+  "statsWinLoss": "W / L",
+  "@statsWinLoss": {
+    "description": "Stat label: count of winning vs losing sessions."
+  },
+  "statsWinsLossesValue": "{wins}W  {losses}L",
+  "@statsWinsLossesValue": {
+    "description": "Value of the W / L stat; W = wins, L = losses.",
+    "placeholders": {
+      "wins": {
+        "type": "int"
+      },
+      "losses": {
+        "type": "int"
+      }
+    }
+  },
+  "statsSetStartingBankroll": "Set starting bankroll",
+  "@statsSetStartingBankroll": {
+    "description": "Link that opens the profile to set a starting bankroll."
+  },
+  "statsBankrollLine": "Bankroll {amount}{growth}",
+  "@statsBankrollLine": {
+    "description": "Line under the profit hero; {amount} is formatted, {growth} is an optional \"  ·  +12%\" suffix.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "growth": {
+        "type": "String"
+      }
+    }
+  },
+  "chartWeekly": "Weekly",
+  "@chartWeekly": {
+    "description": "Chart period option: group by week."
+  },
+  "chartMonthly": "Monthly",
+  "@chartMonthly": {
+    "description": "Chart period option: group by month."
+  },
+  "chartYearly": "Yearly",
+  "@chartYearly": {
+    "description": "Chart period option: group by year."
+  },
+  "chartLookbackAll": "All",
+  "@chartLookbackAll": {
+    "description": "Chart time-frame option: all data."
+  },
+  "chartLookback1Y": "1Y",
+  "@chartLookback1Y": {
+    "description": "Chart time-frame option: last year, compact code."
+  },
+  "chartLookback6M": "6M",
+  "@chartLookback6M": {
+    "description": "Chart time-frame option: last six months, compact code."
+  },
+  "chartLookback3M": "3M",
+  "@chartLookback3M": {
+    "description": "Chart time-frame option: last three months, compact code."
+  },
+  "chartLookback1M": "1M",
+  "@chartLookback1M": {
+    "description": "Chart time-frame option: last month, compact code."
+  },
+  "chartPerPeriod": "Per-period",
+  "@chartPerPeriod": {
+    "description": "Chart mode: value for each period separately."
+  },
+  "chartCumulative": "Cumulative",
+  "@chartCumulative": {
+    "description": "Chart mode: running total across periods."
+  },
+  "chartWinsVsLosses": "Wins vs Losses",
+  "@chartWinsVsLosses": {
+    "description": "Chart title: counts of winning vs losing sessions per period."
+  },
+  "chartNet": "Net",
+  "@chartNet": {
+    "description": "Table column header: net profit after expenses."
+  },
+  "chartBuyInWithSym": "Buy-In ({sym})",
+  "@chartBuyInWithSym": {
+    "description": "Table column header: average buy-in; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "chartExpensesWithSym": "Expenses ({sym})",
+  "@chartExpensesWithSym": {
+    "description": "Table column header: expenses; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "chartPerHourSym": "{sym}/hr",
+  "@chartPerHourSym": {
+    "description": "Table column header: hourly rate; {sym} is the currency symbol.",
+    "placeholders": {
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "chartValueWithSym": "{label} ({sym})",
+  "@chartValueWithSym": {
+    "description": "Table column header combining a metric name and currency symbol.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "sym": {
+        "type": "String"
+      }
+    }
+  },
+  "chartTournamentRoi": "Tournament ROI",
+  "@chartTournamentRoi": {
+    "description": "Chart title: tournament return on investment. Keep ROI."
+  },
+  "chartInTheMoney": "In the Money",
+  "@chartInTheMoney": {
+    "description": "Chart title: number of tournaments finished in the money."
+  },
+  "chartRoiPct": "ROI %",
+  "@chartRoiPct": {
+    "description": "Table column header: ROI percentage. Keep ROI."
+  },
+  "chartGraph": "Graph",
+  "@chartGraph": {
+    "description": "Toggle chip: show the chart."
+  },
+  "chartTable": "Table",
+  "@chartTable": {
+    "description": "Toggle chip: show the data as a table."
+  },
+  "chartNoData": "No data for this view",
+  "@chartNoData": {
+    "description": "Empty state when the selected time frame has no sessions."
+  },
+  "chartNeedTwoPeriods": "Need at least 2 periods of data",
+  "@chartNeedTwoPeriods": {
+    "description": "Empty state when a chart needs two or more periods to draw."
+  },
+  "chartPeriod": "Period",
+  "@chartPeriod": {
+    "description": "Table column header: the week, month or year."
+  },
+  "chartHrs": "Hrs",
+  "@chartHrs": {
+    "description": "Table column header: hours, abbreviated."
+  },
+  "chartWinsShort": "W",
+  "@chartWinsShort": {
+    "description": "Table column header: wins, one letter."
+  },
+  "chartLossesShort": "L",
+  "@chartLossesShort": {
+    "description": "Table column header: losses, one letter."
+  },
+  "chartWinsCount": "{count, plural, one{{count} win} other{{count} wins}}",
+  "@chartWinsCount": {
+    "description": "Chart tooltip: number of winning sessions in a period.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chartLossesCount": "{count, plural, one{{count} loss} other{{count} losses}}",
+  "@chartLossesCount": {
+    "description": "Chart tooltip: number of losing sessions in a period.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approxConverted": "≈ converted",
+  "@approxConverted": {
+    "description": "Small chip meaning these totals were converted between currencies."
+  },
+  "approxTitle": "Approximate totals",
+  "@approxTitle": {
+    "description": "Dialog title explaining converted multi-currency totals."
+  },
+  "approxBody": "Your sessions span multiple currencies, so totals here are converted to {currency} at approximate exchange rates. Each session still shows its original currency.\n\nPick a fixed display currency in Settings → Stats.",
+  "@approxBody": {
+    "description": "Dialog body; {currency} is a currency code. \"Settings → Stats\" names the Settings section — translate both words as the app does.",
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "aiCoachingCardTitle": "Get AI coaching",
+  "@aiCoachingCardTitle": {
+    "description": "Call-to-action card title that opens the AI analysis of the latest session."
+  },
+  "aiCoachingCardBody": "Analyse your latest session for leaks & insights.",
+  "@aiCoachingCardBody": {
+    "description": "Call-to-action card subtitle for the AI session analysis."
   }
 }

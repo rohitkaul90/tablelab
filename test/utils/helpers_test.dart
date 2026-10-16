@@ -905,26 +905,97 @@ void main() {
 // consistent with them.
 void analyticsKeyTests() {
   group('bucket keys', () {
-    test('buyInBucketOf thresholds match tournamentBuyInBucket', () {
-      expect(buyInBucketOf(49), BuyInBucket.under50);
+    test('buyInBucketOf band edges (USD)', () {
+      expect(buyInBucketOf(49.99), BuyInBucket.under50);
       expect(buyInBucketOf(50), BuyInBucket.from50to100);
-      expect(buyInBucketOf(199), BuyInBucket.from100to200);
+      expect(buyInBucketOf(99.99), BuyInBucket.from50to100);
+      expect(buyInBucketOf(100), BuyInBucket.from100to200);
+      expect(buyInBucketOf(199.99), BuyInBucket.from100to200);
       expect(buyInBucketOf(200), BuyInBucket.from200to500);
+      expect(buyInBucketOf(499.99), BuyInBucket.from200to500);
       expect(buyInBucketOf(500), BuyInBucket.over500);
     });
-    test('fieldSizeBucketOf is null when entrants are unknown', () {
+
+    test('band edges are round numbers in the display currency', () {
+      expect(buyInBandEdges('USD'), [50, 100, 200, 500]);
+      for (final c in ['EUR', 'GBP', 'CAD', 'INR', 'AUD']) {
+        final e = buyInBandEdges(c);
+        for (var i = 1; i < e.length; i++) {
+          expect(e[i], greaterThan(e[i - 1]), reason: c);
+        }
+        for (final x in e) {
+          expect(roundBandEdge(x), x, reason: '$c edge $x is round');
+        }
+      }
+      expect(roundBandEdge(46), 50);
+      expect(roundBandEdge(92), 100);
+      expect(roundBandEdge(185), 200);
+      expect(roundBandEdge(4150), 5000);
+    });
+
+    test('buyInBucketOfSession classifies against display-currency edges', () {
+      SessionModel t(double buyIn, String currency) => SessionModel(
+            id: 't',
+            date: '2026-01-01',
+            stakes: 'N/A',
+            gameType: 'tournament',
+            buyIn: buyIn,
+            cashOut: 0,
+            profitLoss: -buyIn,
+            startTime: '18:00',
+            endTime: '22:00',
+            durationMinutes: 240,
+            createdAt: '2026-01-01T18:00:00Z',
+            currency: currency,
+          );
+      // A round €100 tournament sits in the €100+ band for a EUR viewer.
+      expect(buyInBucketOfSession(t(100, 'EUR'), 'EUR'),
+          BuyInBucket.from100to200);
+      // ₹-scale buy-ins spread across bands instead of all landing on top.
+      final inrEdges = buyInBandEdges('INR');
+      expect(buyInBucketOfSession(t(inrEdges[0] - 1, 'INR'), 'INR'),
+          BuyInBucket.under50);
+      expect(buyInBucketOfSession(t(inrEdges[3], 'INR'), 'INR'),
+          BuyInBucket.over500);
+      expect(buyInBucketOfSession(t(40, 'USD'), 'USD'), BuyInBucket.under50);
+      // A USD session viewed in EUR is converted before classifying.
+      expect(buyInBucketOfSession(t(600, 'USD'), 'EUR'), BuyInBucket.over500);
+    });
+
+    test('fieldSizeBucketOf band edges; null when entrants are unknown', () {
       expect(fieldSizeBucketOf(null), isNull);
       expect(fieldSizeBucketOf(0), isNull);
       expect(fieldSizeBucketOf(49), FieldSizeBucket.small);
+      expect(fieldSizeBucketOf(50), FieldSizeBucket.medium);
+      expect(fieldSizeBucketOf(199), FieldSizeBucket.medium);
+      expect(fieldSizeBucketOf(200), FieldSizeBucket.large);
+      expect(fieldSizeBucketOf(499), FieldSizeBucket.large);
       expect(fieldSizeBucketOf(500), FieldSizeBucket.massive);
     });
-    test('timeOfDayBucketOf and sessionLengthBucketOf', () {
+
+    test('timeOfDayBucketOf band edges; null when the time is unusable', () {
+      expect(timeOfDayBucketOf('05:59'), TimeOfDayBucket.lateNight);
       expect(timeOfDayBucketOf('06:00'), TimeOfDayBucket.morning);
+      expect(timeOfDayBucketOf('11:59'), TimeOfDayBucket.morning);
+      expect(timeOfDayBucketOf('12:00'), TimeOfDayBucket.afternoon);
+      expect(timeOfDayBucketOf('17:59'), TimeOfDayBucket.afternoon);
+      expect(timeOfDayBucketOf('18:00'), TimeOfDayBucket.evening);
+      expect(timeOfDayBucketOf('22:59'), TimeOfDayBucket.evening);
       expect(timeOfDayBucketOf('23:00'), TimeOfDayBucket.lateNight);
-      expect(timeOfDayBucketOf('garbage'), TimeOfDayBucket.lateNight);
+      expect(timeOfDayBucketOf(''), isNull);
+      expect(timeOfDayBucketOf('garbage'), isNull);
+      expect(timeOfDayBucketOf('25:00'), isNull);
+    });
+
+    test('sessionLengthBucketOf band edges', () {
       expect(sessionLengthBucketOf(119), SessionLengthBucket.under2h);
+      expect(sessionLengthBucketOf(120), SessionLengthBucket.from2to4h);
+      expect(sessionLengthBucketOf(239), SessionLengthBucket.from2to4h);
+      expect(sessionLengthBucketOf(240), SessionLengthBucket.from4to6h);
+      expect(sessionLengthBucketOf(359), SessionLengthBucket.from4to6h);
       expect(sessionLengthBucketOf(360), SessionLengthBucket.over6h);
     });
+
     test('weekdayOf is ISO (Monday = 1) and null when unparseable', () {
       expect(weekdayOf('2024-01-01'), 1); // a Monday
       expect(weekdayOf('2024-01-07'), 7);

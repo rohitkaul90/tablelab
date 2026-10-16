@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+
 /// Small, tappable indicator shown once per card/section (NOT per number) when
 /// the on-screen totals span multiple currencies and are therefore FX-converted
 /// to [currency] at approximate static rates. Tapping explains it and points at
@@ -20,7 +22,7 @@ class ApproxCurrencyChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('≈ converted',
+            Text(context.l10n.approxConverted,
                 style: theme.textTheme.labelSmall
                     ?.copyWith(color: c, fontWeight: FontWeight.w600)),
             const SizedBox(width: 3),
@@ -33,20 +35,16 @@ class ApproxCurrencyChip extends StatelessWidget {
 }
 
 Future<void> showApproxCurrencyInfo(BuildContext context, String currency) {
+  final l10n = context.l10n;
   return showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Approximate totals'),
-      content: Text(
-        'Your sessions span multiple currencies, so totals here are converted '
-        'to $currency at approximate exchange rates. Each session still shows '
-        'its original currency.\n\n'
-        'Pick a fixed display currency in Settings → Stats.',
-      ),
+      title: Text(l10n.approxTitle),
+      content: Text(l10n.approxBody(currency)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('Got it'),
+          child: Text(l10n.commonGotIt),
         ),
       ],
     ),

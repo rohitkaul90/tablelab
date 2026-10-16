@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/session_model.dart';
 import '../screens/ai_analysis/session_analysis_screen.dart';
 import 'ai_usage_pill.dart';
@@ -43,13 +44,13 @@ class AiCoachingCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Get AI coaching',
+                    Text(context.l10n.aiCoachingCardTitle,
                         style: Theme.of(context)
                             .textTheme
                             .titleSmall
                             ?.copyWith(color: scheme.primary)),
                     const SizedBox(height: 2),
-                    Text('Analyse your latest session for leaks & insights.',
+                    Text(context.l10n.aiCoachingCardBody,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.7),
                             )),

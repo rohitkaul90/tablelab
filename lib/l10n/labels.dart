@@ -8,14 +8,21 @@ import 'package:intl/intl.dart';
 import '../utils/helpers.dart';
 import 'generated/app_localizations.dart';
 
-String buyInBucketLabel(AppLocalizations l10n, BuyInBucket b, String sym) =>
-    switch (b) {
-      BuyInBucket.under50 => l10n.bucketBuyInUnder50(sym),
-      BuyInBucket.from50to100 => l10n.bucketBuyIn50to100(sym),
-      BuyInBucket.from100to200 => l10n.bucketBuyIn100to200(sym),
-      BuyInBucket.from200to500 => l10n.bucketBuyIn200to500(sym),
-      BuyInBucket.over500 => l10n.bucketBuyInOver500(sym),
-    };
+/// Label for a buy-in band, with the rounded [displayCurrency] edges from
+/// `buyInBandEdges` ("€50–€100", "< ₹5,000") — the same edges the sessions
+/// are classified against.
+String buyInBucketLabel(
+    AppLocalizations l10n, BuyInBucket b, String displayCurrency) {
+  final edges = buyInBandEdges(displayCurrency);
+  String edge(int i) => formatAmount(edges[i], displayCurrency);
+  return switch (b) {
+    BuyInBucket.under50 => l10n.bucketBuyInUnder(edge(0)),
+    BuyInBucket.from50to100 => l10n.bucketBuyInRange(edge(0), edge(1)),
+    BuyInBucket.from100to200 => l10n.bucketBuyInRange(edge(1), edge(2)),
+    BuyInBucket.from200to500 => l10n.bucketBuyInRange(edge(2), edge(3)),
+    BuyInBucket.over500 => l10n.bucketBuyInOver(edge(3)),
+  };
+}
 
 String fieldSizeBucketLabel(AppLocalizations l10n, FieldSizeBucket b) =>
     switch (b) {
@@ -57,13 +64,20 @@ String sessionLengthBucketLabel(AppLocalizations l10n, SessionLengthBucket b) =>
 /// loads them via applyIntlLocale before any frame renders).
 String weekdayShortLabel(AppLocalizations l10n, int weekday) {
   // 2024-01-01 is a Monday; offsetting from it yields any weekday.
-  final date = DateTime(2024, 1, weekday);
+  return safeDateFormat(
+      (loc) => DateFormat.E(loc), l10n.localeName, DateTime(2024, 1, weekday));
+}
+
+/// Formats [d] with [build] in [locale], falling back to en_US when the
+/// locale's date symbols were never loaded (ArgumentError, or intl's
+/// unexported LocaleDataException). Other Errors still propagate.
+String safeDateFormat(
+    DateFormat Function(String locale) build, String locale, DateTime d) {
   try {
-    return DateFormat.E(l10n.localeName).format(date);
-  } on Object {
-    // intl throws if the locale's symbols were never loaded
-    // (initializeDateFormatting) — fall back to English rather than crash.
-    return DateFormat.E('en_US').format(date);
+    return build(locale).format(d);
+  } catch (e) {
+    if (e is Error && e is! ArgumentError) rethrow;
+    return build('en_US').format(d);
   }
 }
 
@@ -99,3 +113,6 @@ String expenseCategoryLabel(AppLocalizations l10n, String id) => switch (id) {
       'travel' => l10n.expenseCategoryTravel,
       _ => l10n.expenseCategoryOther,
     };
+
+/// "+$25/hr" — a pre-formatted money amount per hour.
+String perHour(AppLocalizations l10n, String amount) => l10n.statsPerHour(amount);
