@@ -33,7 +33,7 @@ class SessionTile extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final plColor = session.profitLoss >= 0 ? Colors.green : Colors.red;
-    final date = DateFormat('MMM d').format(DateTime.parse(session.date));
+    final date = DateFormat.MMMd().format(DateTime.parse(session.date));
     final dur = formatDuration(session.durationMinutes);
     final isTournament = isTournamentType(session.gameType);
     final location = session.location ?? gameTypeLabel(session.gameType);

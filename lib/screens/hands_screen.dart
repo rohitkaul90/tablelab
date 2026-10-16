@@ -186,7 +186,7 @@ class _HandTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final hero = hand.hero;
-    final fmt = DateFormat('MMM d · h:mm a');
+    final fmt = DateFormat.MMMd().addPattern('·').add_jm();
     final setup = hand.tableSetup;
     final stakes = '\$${setup.smallBlind}/\$${setup.bigBlind}'
         '${setup.straddle != null ? '/\$${setup.straddle}' : ''}';

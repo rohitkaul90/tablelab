@@ -362,7 +362,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
     // to the window so it can never exceed the session length.
     final breakMin = _breakInput; // already clamped to [0, grossDur]
     final dur = playedMinutes(grossDur, breakMin);
-    final dateStr = DateFormat('yyyy-MM-dd').format(_date);
+    final dateStr = DateFormat('yyyy-MM-dd', 'en_US').format(_date);
     final now = DateTime.now().toIso8601String();
 
     double cashOut;
@@ -464,7 +464,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today),
               title: Text(l10n.logSessionDate),
-              subtitle: Text(DateFormat('EEEE, MMM d, yyyy').format(_date)),
+              subtitle: Text(DateFormat.yMMMEd().format(_date)),
               onTap: _pickDate,
             ),
             const Divider(),

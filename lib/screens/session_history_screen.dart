@@ -333,7 +333,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       );
                       if (picked != null) {
                         setState(() => _draft = _draft.copyWith(
-                            dateFrom: DateFormat('yyyy-MM-dd').format(picked)));
+                            dateFrom: DateFormat('yyyy-MM-dd', 'en_US').format(picked)));
                       }
                     },
                     onClear: () => setState(
@@ -356,7 +356,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       );
                       if (picked != null) {
                         setState(() => _draft = _draft.copyWith(
-                            dateTo: DateFormat('yyyy-MM-dd').format(picked)));
+                            dateTo: DateFormat('yyyy-MM-dd', 'en_US').format(picked)));
                       }
                     },
                     onClear: () =>
@@ -415,7 +415,7 @@ class _DateButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final display = value != null
-        ? DateFormat('MMM d, yyyy').format(DateTime.parse(value!))
+        ? DateFormat.yMMMd().format(DateTime.parse(value!))
         : context.l10n.filterAny;
     return OutlinedButton.icon(
       onPressed: onTap,
@@ -448,7 +448,9 @@ class _SessionList extends StatelessWidget {
   Map<String, List<SessionModel>> _groupByMonth() {
     final map = <String, List<SessionModel>>{};
     for (final s in sessions) {
-      final key = DateFormat('MMMM yyyy').format(DateTime.parse(s.date));
+      // Group label in the UI language; grouping is per render so a localized
+      // header is still a consistent key.
+      final key = DateFormat.yMMMM().format(DateTime.parse(s.date));
       map.putIfAbsent(key, () => []).add(s);
     }
     return map;

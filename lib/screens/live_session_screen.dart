@@ -265,7 +265,7 @@ class _LiveSessionStartScreenState
     final nowIso = now.toIso8601String();
 
     final data = {
-      'date': DateFormat('yyyy-MM-dd').format(now),
+      'date': DateFormat('yyyy-MM-dd', 'en_US').format(now),
       'stakes': stakesVal,
       'game_type': _gameType,
       'buy_in': buyIn,

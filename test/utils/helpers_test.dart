@@ -1,9 +1,11 @@
+import 'package:intl/intl.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/utils/helpers.dart';
 import 'package:tablelab/models/session_model.dart';
 
 void main() {
   analyticsKeyTests();
+  localeFormattingTests();
 
   // ── sessionDefaultsFor ───────────────────────────────────────────────────────
 
@@ -1000,6 +1002,24 @@ void analyticsKeyTests() {
       expect(weekdayOf('2024-01-01'), 1); // a Monday
       expect(weekdayOf('2024-01-07'), 7);
       expect(weekdayOf('03/14/2024'), isNull);
+    });
+  });
+}
+
+// ── Locale-aware display formatting (i18n PR 9) ─────────────────────────────
+// Registered via main() below.
+void localeFormattingTests() {
+  group('display formatting follows Intl.defaultLocale', () {
+    test('thousands separator switches with the UI language', () {
+      Intl.withLocale('nl', () {
+        expect(formatPL(1234, '€'), '+€1.234');
+        expect(formatWholeNum(12345), '12.345');
+      });
+      Intl.withLocale('fr', () {
+        // French groups with a (narrow) no-break space.
+        expect(formatWholeNum(12345).replaceAll(RegExp(r'\s'), ' '), '12 345');
+      });
+      expect(formatPL(1234, r'$'), r'+$1,234'); // default stays en_US
     });
   });
 }

@@ -61,10 +61,10 @@ class TournamentListing {
     return startDate.isBefore(now) && !isPast;
   }
 
-  String get monthKey => DateFormat('MMMM yyyy').format(startDate);
+  String get monthKey => DateFormat.yMMMM().format(startDate);
 
   String get formattedDates {
-    final mFmt = DateFormat('MMM d');
+    final mFmt = DateFormat.MMMd();
     if (endDate == null) return mFmt.format(startDate);
     if (endDate!.month == startDate.month && endDate!.year == startDate.year) {
       return '${mFmt.format(startDate)}–${endDate!.day}';

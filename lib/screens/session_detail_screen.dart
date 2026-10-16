@@ -25,7 +25,7 @@ class SessionDetailScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final plColor = session.profitLoss >= 0 ? Colors.green : Colors.red;
     final dateStr =
-        DateFormat('EEEE, MMMM d, yyyy').format(DateTime.parse(session.date));
+        DateFormat.yMMMMEEEEd().format(DateTime.parse(session.date));
     final isTournament = isTournamentType(session.gameType);
     final currency = session.currency;
     final sym = currencySymbol(currency);
@@ -263,7 +263,7 @@ class SessionDetailScreen extends ConsumerWidget {
                 prefilledSessionId: session.id,
                 prefilledStakes: session.stakes,
                 prefilledSessionLabel:
-                    '${DateFormat('MMM d').format(DateTime.parse(session.date))}  ·  ${session.stakes}',
+                    '${DateFormat.MMMd().format(DateTime.parse(session.date))}  ·  ${session.stakes}',
                 isTournamentSession: isTournament,
               );
               // No Realtime — refresh so a newly recorded hand shows in the
@@ -422,7 +422,7 @@ class _SessionHandTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hero = hand.hero;
-    final fmt = DateFormat('MMM d · h:mm a');
+    final fmt = DateFormat.MMMd().addPattern('·').add_jm();
     final potStr = NumberFormat('#,###').format(hand.finalPot);
 
     return Card(
