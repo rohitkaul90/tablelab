@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 
 /// Shows the rank×suit card-picker bottom sheet used by hand recording.
@@ -65,7 +66,7 @@ class _HandCardPickerState extends State<HandCardPicker> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Row(children: [
             Text(
-              'Select ${widget.count} card${widget.count > 1 ? 's' : ''}',
+              context.l10n.cardPickerSelectCount(widget.count),
               style:
                   const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
@@ -190,8 +191,9 @@ class _HandCardPickerState extends State<HandCardPicker> {
                   minimumSize: const Size.fromHeight(48)),
               child: Text(
                 _selected.length == widget.count
-                    ? 'Confirm — ${_selected.join(' ')}'
-                    : 'Select ${widget.count - _selected.length} more',
+                    ? context.l10n.cardPickerConfirm(_selected.join(' '))
+                    : context.l10n
+                        .cardPickerSelectMore(widget.count - _selected.length),
               ),
             ),
           ),

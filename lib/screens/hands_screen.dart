@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../models/hand_model.dart';
 import '../models/hand_filter.dart';
+import '../l10n/l10n.dart';
 import '../providers/providers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/playing_card_widget.dart';
@@ -11,7 +12,6 @@ import 'hand_input/record_hand_sheet.dart';
 import 'hand_replayer/hand_replayer_screen.dart';
 import 'ai_analysis/hand_analysis_screen.dart';
 
-final _potFmt = NumberFormat('#,###');
 
 class HandsScreen extends ConsumerStatefulWidget {
   const HandsScreen({super.key});
@@ -26,6 +26,7 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
   final _deletingIds = <String>{};
 
   Future<void> _deleteHand(String handId) async {
+    final l10n = context.l10n;
     setState(() => _deletingIds.add(handId));
     try {
       await ref.read(handServiceProvider).deleteHand(handId);
@@ -33,7 +34,7 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
       if (!mounted) return;
       setState(() => _deletingIds.remove(handId));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete hand: $e')),
+        SnackBar(content: Text(l10n.handsDeleteFailed('$e'))),
       );
       return;
     }
@@ -60,12 +61,12 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
           icon: const Icon(Icons.menu),
           onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
         ),
-        title: const Text('Hands'),
+        title: Text(context.l10n.handsTitle),
         centerTitle: true,
         actions: [
           IconButton(
             icon: Icon(hasFilter ? Icons.filter_list_off : Icons.filter_list),
-            tooltip: 'Filter hands',
+            tooltip: context.l10n.handsFilterTooltip,
             color: hasFilter ? Theme.of(context).colorScheme.primary : null,
             onPressed: () => _showFilterSheet(context),
           ),
@@ -86,7 +87,7 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
               error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text('Error loading hands: $e',
+            child: Text(context.l10n.handsLoadError('$e'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.red)),
           ),
@@ -104,13 +105,13 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
                       color: Theme.of(context).colorScheme.outlineVariant),
                   const SizedBox(height: 16),
                   Text(
-                    'No hands recorded yet',
+                    context.l10n.handsEmptyTitle,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Tap + to record and replay a hand',
+                    context.l10n.handsEmptySubtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context)
                             .colorScheme
@@ -132,7 +133,7 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
                       color: Theme.of(context).colorScheme.outlineVariant),
                   const SizedBox(height: 14),
                   Text(
-                    'No hands match your filters',
+                    context.l10n.handsNoMatchTitle,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
@@ -142,7 +143,7 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
                         .read(handFilterProvider.notifier)
                         .state = const HandFilter(),
                     icon: const Icon(Icons.clear, size: 18),
-                    label: const Text('Clear filters'),
+                    label: Text(context.l10n.handsClearFilters),
                   ),
                 ],
               ),
@@ -168,7 +169,7 @@ class _HandsScreenState extends ConsumerState<HandsScreen> {
           if (!mounted) return;
           ref.invalidate(handsProvider);
         },
-        tooltip: 'Record hand',
+        tooltip: context.l10n.handsRecordTooltip,
         child: const Icon(Icons.add),
       ),
     );
@@ -183,12 +184,15 @@ class _HandTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final hero = hand.hero;
     final fmt = DateFormat('MMM d · h:mm a');
     final setup = hand.tableSetup;
     final stakes = '\$${setup.smallBlind}/\$${setup.bigBlind}'
         '${setup.straddle != null ? '/\$${setup.straddle}' : ''}';
-    final potStr = _potFmt.format(hand.finalPot);
+    // Built per call: a top-level NumberFormat freezes the locale that was
+    // active on first use and would ignore a later language switch.
+    final potStr = NumberFormat('#,###').format(hand.finalPot);
 
     return Dismissible(
       key: ValueKey(hand.id),
@@ -206,17 +210,17 @@ class _HandTile extends StatelessWidget {
       confirmDismiss: (_) => showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Delete hand?'),
-          content: const Text('This hand record will be permanently deleted.'),
+          title: Text(l10n.handsDeleteTitle),
+          content: Text(l10n.handsDeleteMessage),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(l10n.commonCancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-              child: const Text('Delete'),
+              child: Text(l10n.commonDelete),
             ),
           ],
         ),
@@ -239,9 +243,9 @@ class _HandTile extends StatelessWidget {
                 // Measure the text so the cards can be sized to fill exactly the
                 // leftover width — never clipping the hand info, and clamped so
                 // they can't exceed the 3-line text height (tile stays the same).
-                final l1 = 'Pot \$$potStr';
-                final l2 = '$stakes · ${hand.streetReached}'
-                    '${hand.isQuickEntry ? ' · Quick' : ''}';
+                final l1 = l10n.handsTilePot('\$$potStr');
+                final l2 = l10n.handsTileSummary(
+                    stakes, hand.streetReached, '${hand.isQuickEntry}');
                 final l3 = fmt.format(hand.playedAt.toLocal());
                 double measure(String t, double size, FontWeight weight) {
                   final tp = TextPainter(
@@ -330,7 +334,7 @@ class _HandTile extends StatelessWidget {
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert,
                       color: Theme.of(context).colorScheme.outline),
-                  tooltip: 'Hand actions',
+                  tooltip: l10n.handsMenuTooltip,
                   padding: EdgeInsets.zero,
                   onSelected: (value) async {
                     if (value == 'ai') {
@@ -344,19 +348,18 @@ class _HandTile extends StatelessWidget {
                       final ok = await showDialog<bool>(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('Delete hand?'),
-                          content: const Text(
-                              'This hand record will be permanently deleted.'),
+                          title: Text(l10n.handsDeleteTitle),
+                          content: Text(l10n.handsDeleteMessage),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, false),
-                              child: const Text('Cancel'),
+                              child: Text(l10n.commonCancel),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
                               style: TextButton.styleFrom(
                                   foregroundColor: Colors.redAccent),
-                              child: const Text('Delete'),
+                              child: Text(l10n.commonDelete),
                             ),
                           ],
                         ),
@@ -365,12 +368,12 @@ class _HandTile extends StatelessWidget {
                     }
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'ai',
                       child: Row(children: [
-                        Icon(Icons.auto_awesome, size: 18),
-                        SizedBox(width: 10),
-                        Text('AI Coaching'),
+                        const Icon(Icons.auto_awesome, size: 18),
+                        const SizedBox(width: 10),
+                        Text(l10n.handsMenuAiCoaching),
                       ]),
                     ),
                     PopupMenuItem(
@@ -379,8 +382,8 @@ class _HandTile extends StatelessWidget {
                         Icon(Icons.delete_outline,
                             size: 18, color: Colors.redAccent),
                         const SizedBox(width: 10),
-                        const Text('Delete',
-                            style: TextStyle(color: Colors.redAccent)),
+                        Text(l10n.commonDelete,
+                            style: const TextStyle(color: Colors.redAccent)),
                       ]),
                     ),
                   ],
@@ -458,6 +461,7 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final hands = ref.watch(handsProvider).valueOrNull ?? const <PokerHand>[];
 
     final hasCash = hands.any((h) => !h.isTournament);
@@ -489,21 +493,21 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
                 ),
               ),
             ),
-            Text('Filter Hands', style: theme.textTheme.titleLarge),
+            Text(l10n.handsFilterTitle, style: theme.textTheme.titleLarge),
             const SizedBox(height: 16),
 
             if (hasCash && hasTourney) ...[
-              _label('Game Type'),
+              _label(l10n.handsFilterGameType),
               Wrap(spacing: 8, children: [
-                _chip('Cash', _draft.gameType == 'cash',
+                _chip(l10n.handsFilterCash, _draft.gameType == 'cash',
                     (on) => setState(() => _draft = _draft.copyWith(gameType: on ? 'cash' : null))),
-                _chip('Tournament', _draft.gameType == 'tournament',
+                _chip(l10n.handsFilterTournament, _draft.gameType == 'tournament',
                     (on) => setState(() => _draft = _draft.copyWith(gameType: on ? 'tournament' : null))),
               ]),
               const SizedBox(height: 16),
             ],
 
-            _label('Minimum Pot'),
+            _label(l10n.handsFilterMinPot),
             Wrap(spacing: 8, children: [
               for (final bb in const [20, 50, 100])
                 _chip('≥ ${bb}bb', _draft.minPotBb == bb,
@@ -511,7 +515,7 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
             ]),
             const SizedBox(height: 16),
 
-            _label('Street Reached'),
+            _label(l10n.handsFilterStreet),
             Wrap(spacing: 8, children: [
               for (final s in const ['Pre-flop', 'Flop', 'Turn', 'River'])
                 _chip(s, _draft.streetReached == s,
@@ -520,7 +524,7 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
             const SizedBox(height: 16),
 
             if (stakesOpts.isNotEmpty) ...[
-              _label('Stakes'),
+              _label(l10n.handsFilterStakes),
               Wrap(spacing: 8, children: [
                 for (final s in stakesOpts)
                   _chip(s, _draft.stakes == s,
@@ -530,17 +534,17 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
             ],
 
             if (sizeOpts.isNotEmpty) ...[
-              _label('Table Size'),
+              _label(l10n.handsFilterTableSize),
               Wrap(spacing: 8, children: [
                 for (final n in sizeOpts)
-                  _chip(n == 2 ? 'Heads-up' : '$n-handed', _draft.tableSize == n,
+                  _chip(n == 2 ? l10n.handsFilterHeadsUp : l10n.handsFilterHanded(n), _draft.tableSize == n,
                       (on) => setState(() => _draft = _draft.copyWith(tableSize: on ? n : null))),
               ]),
               const SizedBox(height: 16),
             ],
 
             if (posOpts.isNotEmpty) ...[
-              _label('Your Position'),
+              _label(l10n.handsFilterPosition),
               Wrap(spacing: 8, children: [
                 for (final p in posOpts)
                   _chip(p, _draft.heroPosition == p,
@@ -549,13 +553,13 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
               const SizedBox(height: 16),
             ],
 
-            _label('Date Range'),
+            _label(l10n.handsFilterDateRange),
             Row(children: [
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _pickDate(_draft.dateFrom,
                       (v) => setState(() => _draft = _draft.copyWith(dateFrom: v))),
-                  child: Text(_draft.dateFrom ?? 'From',
+                  child: Text(_draft.dateFrom ?? l10n.handsFilterFrom,
                       overflow: TextOverflow.ellipsis),
                 ),
               ),
@@ -564,7 +568,7 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
                 child: OutlinedButton(
                   onPressed: () => _pickDate(_draft.dateTo,
                       (v) => setState(() => _draft = _draft.copyWith(dateTo: v))),
-                  child: Text(_draft.dateTo ?? 'To',
+                  child: Text(_draft.dateTo ?? l10n.handsFilterTo,
                       overflow: TextOverflow.ellipsis),
                 ),
               ),
@@ -575,7 +579,7 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
                 child: TextButton(
                   onPressed: () => setState(() =>
                       _draft = _draft.copyWith(dateFrom: null, dateTo: null)),
-                  child: const Text('Clear dates'),
+                  child: Text(l10n.handsFilterClearDates),
                 ),
               ),
             const SizedBox(height: 24),
@@ -588,7 +592,7 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
                         const HandFilter();
                     Navigator.pop(context);
                   },
-                  child: const Text('Clear All'),
+                  child: Text(l10n.handsFilterClearAll),
                 ),
               ),
               const SizedBox(width: 12),
@@ -598,7 +602,7 @@ class _HandFilterSheetState extends ConsumerState<_HandFilterSheet> {
                     ref.read(handFilterProvider.notifier).state = _draft;
                     Navigator.pop(context);
                   },
-                  child: const Text('Apply'),
+                  child: Text(l10n.handsFilterApply),
                 ),
               ),
             ]),

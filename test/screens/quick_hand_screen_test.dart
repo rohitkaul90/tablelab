@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tablelab/l10n/l10n.dart';
+import 'package:tablelab/l10n/generated/app_localizations.dart';
 import 'package:tablelab/models/hand_model.dart';
 import 'package:tablelab/providers/providers.dart';
 import 'package:tablelab/screens/hand_input/quick_hand_screen.dart';
 import 'package:tablelab/services/hand_service.dart';
+
+import '../helpers/pump_app.dart';
 
 /// Avoids Supabase entirely — HandService resolves its client lazily, so a
 /// subclass that overrides saveHand never touches Supabase.instance.
@@ -56,32 +57,21 @@ class FakeHandService extends HandService {
 
 /// The form is a single tall ListView; a phone-sized test viewport leaves the
 /// lower fields unbuilt (lazy list), so give the tests a tall surface.
-void useTallViewport(WidgetTester tester) {
-  tester.view.physicalSize = const Size(800, 2600);
-  tester.view.devicePixelRatio = 1.0;
-  addTearDown(tester.view.reset);
-}
+const tallViewport = Size(800, 2600);
 
 Future<void> pumpQuickHand(WidgetTester tester, FakeHandService fake,
     {String? prefilledSessionId,
     String? prefilledStakes,
     bool isTournamentSession = false}) async {
-  useTallViewport(tester);
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [handServiceProvider.overrideWithValue(fake)],
-      child: MaterialApp(
-        // QuickHandScreen embeds SessionPickerTile/LinkedSessionBanner, which
-        // read context.l10n (non-null getter) — the delegates are required.
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: QuickHandScreen(
-          prefilledSessionId: prefilledSessionId,
-          prefilledStakes: prefilledStakes,
-          isTournamentSession: isTournamentSession,
-        ),
-      ),
+  await pumpApp(
+    tester,
+    QuickHandScreen(
+      prefilledSessionId: prefilledSessionId,
+      prefilledStakes: prefilledStakes,
+      isTournamentSession: isTournamentSession,
     ),
+    overrides: [handServiceProvider.overrideWithValue(fake)],
+    size: tallViewport,
   );
 }
 
@@ -114,26 +104,19 @@ void main() {
   testWidgets('minimal fill saves once with isQuickEntry and pops',
       (tester) async {
     final fake = FakeHandService();
-    useTallViewport(tester);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [handServiceProvider.overrideWithValue(fake)],
-        child: MaterialApp(
-        // QuickHandScreen embeds SessionPickerTile/LinkedSessionBanner, which
-        // read context.l10n (non-null getter) — the delegates are required.
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-          home: Builder(
-            builder: (ctx) => ElevatedButton(
-              onPressed: () => Navigator.push(
-                ctx,
-                MaterialPageRoute(builder: (_) => const QuickHandScreen()),
-              ),
-              child: const Text('open'),
-            ),
+    await pumpApp(
+      tester,
+      Builder(
+        builder: (ctx) => ElevatedButton(
+          onPressed: () => Navigator.push(
+            ctx,
+            MaterialPageRoute(builder: (_) => const QuickHandScreen()),
           ),
+          child: const Text('open'),
         ),
       ),
+      overrides: [handServiceProvider.overrideWithValue(fake)],
+      size: tallViewport,
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -262,26 +245,19 @@ void main() {
     // Pushed from a host so the system back gesture (handlePopRoute →
     // Navigator.maybePop → PopScope) has a route to pop back to.
     Future<void> pumpWithHost(WidgetTester tester, FakeHandService fake) async {
-      useTallViewport(tester);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [handServiceProvider.overrideWithValue(fake)],
-          child: MaterialApp(
-        // QuickHandScreen embeds SessionPickerTile/LinkedSessionBanner, which
-        // read context.l10n (non-null getter) — the delegates are required.
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-            home: Builder(
-              builder: (ctx) => ElevatedButton(
-                onPressed: () => Navigator.push(
-                  ctx,
-                  MaterialPageRoute(builder: (_) => const QuickHandScreen()),
-                ),
-                child: const Text('open'),
-              ),
+      await pumpApp(
+        tester,
+        Builder(
+          builder: (ctx) => ElevatedButton(
+            onPressed: () => Navigator.push(
+              ctx,
+              MaterialPageRoute(builder: (_) => const QuickHandScreen()),
             ),
+            child: const Text('open'),
           ),
         ),
+        overrides: [handServiceProvider.overrideWithValue(fake)],
+        size: tallViewport,
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -352,5 +328,24 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(QuickHandScreen), findsOneWidget);
     });
+  });
+
+  testWidgets('renders in Dutch at phone width without overflow', (tester) async {
+    // nl/fr run ~30% longer than English; the 4-pill street SegmentedButton
+    // and the chip rows are the overflow risks on a 360-wide phone.
+    await pumpApp(
+      tester,
+      const QuickHandScreen(),
+      overrides: [handServiceProvider.overrideWithValue(FakeHandService())],
+      locale: const Locale('nl'),
+      size: const Size(360, 800),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    // Assert on the AppBar title (always built — the lazy ListView never
+    // builds the lower fields at 360x800, so asserting on those proves nothing).
+    final nl = lookupAppLocalizations(const Locale('nl'));
+    expect(find.text(nl.quickHandTitle), findsOneWidget);
+    expect(find.text('Quick Hand'), findsNothing);
   });
 }

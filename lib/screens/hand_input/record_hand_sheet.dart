@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import 'hand_input_screen.dart';
 import 'quick_hand_screen.dart';
 
@@ -23,15 +24,14 @@ Future<void> showRecordHandSheet(
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(Icons.bolt),
-            title: const Text('Quick Hand'),
-            subtitle:
-                const Text('Cards, the key decision, result — about 30 seconds'),
+            title: Text(sheetCtx.l10n.recordHandQuickTitle),
+            subtitle: Text(sheetCtx.l10n.recordHandQuickSubtitle),
             onTap: () => Navigator.pop(sheetCtx, true),
           ),
           ListTile(
             leading: const Icon(Icons.style_outlined),
-            title: const Text('Full Hand'),
-            subtitle: const Text('Street-by-street, replayable'),
+            title: Text(sheetCtx.l10n.recordHandFullTitle),
+            subtitle: Text(sheetCtx.l10n.recordHandFullSubtitle),
             onTap: () => Navigator.pop(sheetCtx, false),
           ),
           const SizedBox(height: 8),

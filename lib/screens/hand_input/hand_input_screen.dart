@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/l10n.dart';
 import '../../models/hand_model.dart';
 import '../../providers/providers.dart';
 import '../../providers/reads_provider.dart';
@@ -38,18 +39,33 @@ const kPresetStakes = [
   '1/2', '1/3', '2/3', '2/5', '5/10', '10/20', '10/25', '25/50',
 ];
 
-/// Tournament stage options (value, label) shared by the full wizard and
-/// Quick Hand mode.
-const kTournamentStages = [
-  (null, 'Not specified'),
-  ('early', 'Early stages (Day 1/2)'),
-  ('middle', 'Middle stages'),
-  ('late', 'Late stages'),
-  ('bubble', 'On the bubble'),
-  ('itm', 'In the money (ITM)'),
-  ('ft_bubble', 'Final table bubble'),
-  ('final_table', 'Final table'),
+/// Tournament stage values shared by the full wizard and Quick Hand mode.
+/// The values are persisted in the hand JSON (`tournamentStage`), so they are
+/// stable ids — only the displayed label is localized, via
+/// [tournamentStageLabel].
+const List<String?> kTournamentStages = [
+  null,
+  'early',
+  'middle',
+  'late',
+  'bubble',
+  'itm',
+  'ft_bubble',
+  'final_table',
 ];
+
+/// Localized display label for a [kTournamentStages] value.
+String tournamentStageLabel(AppLocalizations l10n, String? value) =>
+    switch (value) {
+      'early' => l10n.tournamentStageEarly,
+      'middle' => l10n.tournamentStageMiddle,
+      'late' => l10n.tournamentStageLate,
+      'bubble' => l10n.tournamentStageBubble,
+      'itm' => l10n.tournamentStageItm,
+      'ft_bubble' => l10n.tournamentStageFtBubble,
+      'final_table' => l10n.tournamentStageFinalTable,
+      _ => l10n.tournamentStageNone,
+    };
 
 enum _Step {
   setup,
@@ -610,7 +626,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save hand. Please try again.')),
+        SnackBar(content: Text(context.l10n.handSaveFailed)),
       );
     } finally {
       _saving = false;
@@ -665,7 +681,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_stepTitle),
+          title: Text(_stepTitle(context.l10n)),
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => _confirmExit(context),
@@ -677,7 +693,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                 _step != _Step.showdown)
               IconButton(
                 icon: const Icon(Icons.undo_rounded),
-                tooltip: 'Undo last action',
+                tooltip: context.l10n.wizardUndoTooltip,
                 onPressed: _undo,
               ),
           ],
@@ -687,22 +703,30 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
     );
   }
 
-  String get _stepTitle {
+  // Street names and "Showdown" are poker vocabulary and stay in English
+  // (see the l10n glossary); only the surrounding phrases are localized.
+  String _stepTitle(AppLocalizations l10n) {
     switch (_step) {
       case _Step.setup:
-        return 'Table Setup';
+        return l10n.wizardStepSetup;
       case _Step.preflopAction:
-        return _awaitingDeal ? 'Deal Flop' : 'Pre-flop';
+        return _awaitingDeal
+            ? l10n.wizardDealStreet(Street.flop.label)
+            : Street.preflop.label;
       case _Step.flopAction:
-        return _awaitingDeal ? 'Deal Turn' : 'Flop';
+        return _awaitingDeal
+            ? l10n.wizardDealStreet(Street.turn.label)
+            : Street.flop.label;
       case _Step.turnAction:
-        return _awaitingDeal ? 'Deal River' : 'Turn';
+        return _awaitingDeal
+            ? l10n.wizardDealStreet(Street.river.label)
+            : Street.turn.label;
       case _Step.riverAction:
-        return 'River';
+        return Street.river.label;
       case _Step.showdown:
         return 'Showdown';
       case _Step.done:
-        return 'Hand Saved';
+        return l10n.wizardStepSaved;
     }
   }
 
@@ -724,6 +748,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
 
   // ── step: setup ───────────────────────────────────────────────────────────────
   Widget _buildSetup() {
+    final l10n = context.l10n;
     final bb = _parsedBB;
     final sb = _parsedSB;
 
@@ -740,8 +765,8 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
           ),
         const SizedBox(height: 20),
 
-        const Text('Table Size',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(l10n.wizardTableSize,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
         DropdownButtonFormField<int>(
           initialValue: _numSeats,
@@ -779,13 +804,15 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
                 const SizedBox(width: 8),
                 Text(
-                  _isTournamentHand ? 'Tournament hand' : 'Cash hand',
+                  _isTournamentHand
+                      ? l10n.wizardTournamentHand
+                      : l10n.wizardCashHand,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '· from session',
+                  l10n.wizardFromSession,
                   style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -796,10 +823,10 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
         else
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Tournament hand'),
-            subtitle: const Text(
-              'Enables blind level labelling, ante, stage & BB-depth tracking',
-              style: TextStyle(fontSize: 11),
+            title: Text(l10n.wizardTournamentHand),
+            subtitle: Text(
+              l10n.wizardTournamentSubtitle,
+              style: const TextStyle(fontSize: 11),
             ),
             value: _isTournamentHand,
             onChanged: (v) => setState(() {
@@ -816,7 +843,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
 
         // ── Blind level (Stakes) ────────────────────────────────────────────
         Text(
-          _isTournamentHand ? 'Blind Level' : 'Stakes',
+          _isTournamentHand ? l10n.wizardBlindLevel : l10n.wizardStakes,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         const SizedBox(height: 8),
@@ -829,13 +856,13 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                   controller: _tournSbCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [_BlindFormatter()],
-                  decoration: const InputDecoration(
-                    labelText: 'Small Blind',
+                  decoration: InputDecoration(
+                    labelText: l10n.wizardSmallBlind,
                     hintText: '100',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                     isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -851,13 +878,13 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                   controller: _tournBbCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [_BlindFormatter()],
-                  decoration: const InputDecoration(
-                    labelText: 'Big Blind',
+                  decoration: InputDecoration(
+                    labelText: l10n.wizardBigBlind,
                     hintText: '200',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                     isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -896,11 +923,15 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
             padding: const EdgeInsets.only(top: 5),
             child: Text(
               _isTournamentHand
-                  ? 'SB ${_fmtBlind(sb)}  ·  BB ${_fmtBlind(bb)}'
-                    '  ·  Default stack ${_fmtBlind(100 * bb)} chips (100 BBs)'
-                  : 'SB \$$sb  ·  BB \$$bb'
-                    '${_hasStraddle ? '  ·  Straddle \$${bb * 2}' : ''}'
-                    '  ·  Default stack \$${_hasStraddle ? 200 * bb : 100 * bb}',
+                  ? l10n.wizardTournamentBlindsSummary(
+                      _fmtBlind(sb), _fmtBlind(bb), _fmtBlind(100 * bb))
+                  : l10n.wizardCashBlindsSummary(
+                      '\$$sb',
+                      '\$$bb',
+                      '$_hasStraddle',
+                      '\$${bb * 2}',
+                      '\$${_hasStraddle ? 200 * bb : 100 * bb}',
+                    ),
               style: const TextStyle(color: Colors.white38, fontSize: 11),
             ),
           ),
@@ -912,13 +943,13 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
             controller: _anteCtrl,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: 'Ante (optional)',
-              hintText: 'e.g. 500 for BB ante',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.wizardAnteLabel,
+              hintText: l10n.wizardAnteHint,
+              border: const OutlineInputBorder(),
               isDense: true,
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
           ),
           const SizedBox(height: 12),
@@ -926,17 +957,17 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
           // ── Tournament stage ───────────────────────────────────────────────
           DropdownButtonFormField<String?>(
             initialValue: _tournamentStage,
-            decoration: const InputDecoration(
-              labelText: 'Tournament Stage (optional)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.wizardStageLabel,
+              border: const OutlineInputBorder(),
               isDense: true,
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
             items: kTournamentStages
-                .map((entry) => DropdownMenuItem<String?>(
-                      value: entry.$1,
-                      child: Text(entry.$2),
+                .map((value) => DropdownMenuItem<String?>(
+                      value: value,
+                      child: Text(tournamentStageLabel(l10n, value)),
                     ))
                 .toList(),
             onChanged: (v) => setState(() => _tournamentStage = v),
@@ -948,9 +979,9 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
         if (!_isTournamentHand) ...[
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Straddle'),
+            title: Text(l10n.wizardStraddle),
             subtitle: bb != null
-                ? Text('Auto \$${bb * 2}  ·  200 BB stacks',
+                ? Text(l10n.wizardStraddleSubtitle('\$${bb * 2}'),
                     style: const TextStyle(fontSize: 11))
                 : null,
             value: _hasStraddle,
@@ -959,8 +990,8 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
         ],
         const SizedBox(height: 16),
 
-        const Text('Your Position',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(l10n.wizardYourPosition,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 6,
@@ -973,11 +1004,11 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
         ),
         const SizedBox(height: 20),
 
-        const Text('Players (optional)',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(l10n.wizardPlayersOptional,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 2),
-        const Text('Leave stack blank for default',
-            style: TextStyle(color: Colors.white38, fontSize: 11)),
+        Text(l10n.wizardStackHint,
+            style: const TextStyle(color: Colors.white38, fontSize: 11)),
         const SizedBox(height: 8),
         ...() {
           // Fetch reads once; ref.watch called only here, not once per seat.
@@ -1022,7 +1053,9 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                     focusNode: fn,
                     decoration: InputDecoration(
                       isDense: true,
-                      hintText: i == _heroSeat ? 'You' : 'Villain',
+                      hintText: i == _heroSeat
+                          ? l10n.wizardYouHint
+                          : l10n.wizardVillainHint,
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 8),
@@ -1072,7 +1105,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                       ],
                       decoration: InputDecoration(
                         isDense: true,
-                        hintText: 'Stack',
+                        hintText: l10n.wizardStackFieldHint,
                         prefixText: _isTournamentHand ? null : '\$',
                         border: const OutlineInputBorder(),
                         contentPadding: const EdgeInsets.symmetric(
@@ -1089,7 +1122,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                             : defaultStack;
                         final bbs = stack ~/ bb;
                         return Text(
-                          '$bbs BBs',
+                          l10n.wizardBbs(bbs),
                           style: const TextStyle(
                               fontSize: 9, color: Colors.white38),
                         );
@@ -1105,7 +1138,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
         FilledButton(
           onPressed: _canStart ? _startHand : null,
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          child: const Text('Start Recording'),
+          child: Text(l10n.wizardStartRecording),
         ),
         const SizedBox(height: 32),
       ]),
@@ -1196,7 +1229,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.white12),
                     ),
-                    child: Text('POT  \$$_currentPot',
+                    child: Text(context.l10n.tablePot('\$$_currentPot'),
                         style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -1267,9 +1300,13 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
 
   // ── deal panel (between streets) ─────────────────────────────────────────────
   Widget _buildDealPanel() {
+    final l10n = context.l10n;
     final numCompleted = _completedStreets.length;
-    final streetName =
-        numCompleted == 1 ? 'Flop' : numCompleted == 2 ? 'Turn' : 'River';
+    final streetName = numCompleted == 1
+        ? Street.flop.label
+        : numCompleted == 2
+            ? Street.turn.label
+            : Street.river.label;
     final runout = _isAllInRunout;
 
     return Container(
@@ -1295,12 +1332,16 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                 borderRadius: BorderRadius.circular(7),
                 border: Border.all(color: Colors.orange.withAlpha(80)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.all_inclusive, size: 13, color: Colors.orange),
-                  SizedBox(width: 6),
-                  Text('All-in — cards run out, no further betting',
-                      style: TextStyle(fontSize: 11, color: Colors.orange)),
+                  const Icon(Icons.all_inclusive,
+                      size: 13, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(l10n.wizardAllInRunout,
+                        style: const TextStyle(
+                            fontSize: 11, color: Colors.orange)),
+                  ),
                 ],
               ),
             ),
@@ -1311,7 +1352,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
               child: FilledButton.icon(
                 onPressed: _dealNextStreet,
                 icon: const Icon(Icons.style_outlined, size: 18),
-                label: Text('Deal $streetName'),
+                label: Text(l10n.wizardDealStreet(streetName)),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(0, 48),
                   backgroundColor: const Color(0xFF1565C0),
@@ -1323,8 +1364,8 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
               child: OutlinedButton(
                 onPressed: _beginShowdown,
                 style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-                child: const Text('End Hand',
-                    style: TextStyle(fontSize: 12),
+                child: Text(l10n.wizardEndHand,
+                    style: const TextStyle(fontSize: 12),
                     overflow: TextOverflow.ellipsis),
               ),
             ),
@@ -1406,9 +1447,9 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                         border: Border.all(color: Colors.white24),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text('+ cards',
-                          style:
-                              TextStyle(fontSize: 9, color: Colors.white38)),
+                      child: Text(context.l10n.wizardAddCards,
+                          style: const TextStyle(
+                              fontSize: 9, color: Colors.white38)),
                     ),
             ),
           const SizedBox(width: 6),
@@ -1465,7 +1506,9 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
                   prefixText: '\$',
-                  labelText: canBet ? 'Bet amount' : 'Raise to',
+                  labelText: canBet
+                      ? context.l10n.wizardBetAmount
+                      : context.l10n.wizardRaiseTo,
                   border: const OutlineInputBorder(),
                   isDense: true,
                 ),
@@ -1481,14 +1524,18 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(children: [
-              for (final lbl in [
-                '1/3 pot', '½ pot', '2/3 pot', 'Pot', 'All-in'
+              for (final (lbl, text) in [
+                ('1/3 pot', context.l10n.wizardChipThirdPot),
+                ('½ pot', context.l10n.wizardChipHalfPot),
+                ('2/3 pot', context.l10n.wizardChipTwoThirdsPot),
+                ('Pot', context.l10n.wizardChipPot),
+                ('All-in', context.l10n.wizardChipAllIn),
               ])
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: ActionChip(
                     label:
-                        Text(lbl, style: const TextStyle(fontSize: 11)),
+                        Text(text, style: const TextStyle(fontSize: 11)),
                     onPressed: () {
                       // Pot size = pot after the raiser calls, then raises by that amount.
                       final callAmt = _currentBet - prev;
@@ -1515,7 +1562,9 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
             },
             style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(44)),
-            child: Text(canBet ? 'Confirm Bet' : 'Confirm Raise'),
+            child: Text(canBet
+                ? context.l10n.wizardConfirmBet
+                : context.l10n.wizardConfirmRaise),
           ),
         ],
       ]),
@@ -1550,7 +1599,8 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
           Text('Showdown', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
-            '${_showdownIdx + 1} of ${_showdownOrder.length} players',
+            context.l10n
+                .wizardShowdownProgress(_showdownIdx + 1, _showdownOrder.length),
             style: const TextStyle(color: Colors.white38),
           ),
           const SizedBox(height: 24),
@@ -1594,7 +1644,9 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
               if (cards != null) setState(() => _showdownCards[seat] = cards);
             },
             icon: const Icon(Icons.style_outlined),
-            label: Text(picked != null ? 'Change Cards' : 'Show Cards'),
+            label: Text(picked != null
+                ? context.l10n.wizardChangeCards
+                : context.l10n.wizardShowCards),
           ),
           const SizedBox(height: 12),
           FilledButton.tonal(
@@ -1602,7 +1654,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
             style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(44),
                 backgroundColor: Colors.red[900]),
-            child: const Text('MUCK (fold cards)'),
+            child: Text(context.l10n.wizardMuck),
           ),
           if (picked != null) ...[
             const SizedBox(height: 12),
@@ -1610,7 +1662,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
               onPressed: _advanceShowdown,
               style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(44)),
-              child: const Text('Confirm & Next →'),
+              child: Text(context.l10n.wizardConfirmNext),
             ),
           ],
         ]),
@@ -1632,13 +1684,16 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
           const Icon(Icons.check_circle_outline,
               size: 64, color: Color(0xFF66BB6A)),
           const SizedBox(height: 16),
-          const Text('Hand recorded',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Text(context.l10n.wizardHandRecorded,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
-            '${_setup.numSeats}-max · \$${_setup.smallBlind}/\$${_setup.bigBlind}'
-            '${_setup.straddle != null ? '/\$${_setup.straddle}' : ''}'
-            ' · ${hand.streetReached}',
+            context.l10n.wizardDoneSummary(
+              _setup.numSeats,
+              '\$${_setup.smallBlind}/\$${_setup.bigBlind}'
+                  '${_setup.straddle != null ? '/\$${_setup.straddle}' : ''}',
+              hand.streetReached,
+            ),
             style: const TextStyle(color: Colors.white54),
           ),
           const SizedBox(height: 24),
@@ -1674,7 +1729,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
               );
             },
             icon: const Icon(Icons.play_circle_outline),
-            label: const Text('View Hand Replay'),
+            label: Text(context.l10n.wizardViewReplay),
             style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52)),
           ),
@@ -1683,7 +1738,7 @@ class HandInputScreenState extends ConsumerState<HandInputScreen> {
             onPressed: () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(44)),
-            child: const Text('Back to Hands'),
+            child: Text(context.l10n.wizardBackToHands),
           ),
         ]),
       ),
@@ -1930,8 +1985,8 @@ class _RecorderPlayerPanel extends StatelessWidget {
               )
             else if (player.isHero)
               // Prompt hero to add cards
-              const Text('tap to add cards',
-                  style: TextStyle(fontSize: 7, color: Colors.white24),
+              Text(context.l10n.wizardTapToAddCards,
+                  style: const TextStyle(fontSize: 7, color: Colors.white24),
                   textAlign: TextAlign.center)
             else
               Row(

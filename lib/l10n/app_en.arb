@@ -1898,5 +1898,933 @@
   "importSourcePokerStarsNote": "Tournament history export",
   "@importSourcePokerStarsNote": {
     "description": "Import source card subtitle for PokerStars History: the tournament-history export file."
+  },
+  "commonClose": "Close",
+  "@commonClose": {
+    "description": "Generic button label that dismisses a dialog or sheet."
+  },
+  "handSaveFailed": "Failed to save hand. Please try again.",
+  "@handSaveFailed": {
+    "description": "Snackbar after a hand could not be saved to the server (both recording modes)."
+  },
+  "recordHandQuickTitle": "Quick Hand",
+  "@recordHandQuickTitle": {
+    "description": "Record-hand chooser option: the ~30-second single-decision entry mode."
+  },
+  "recordHandQuickSubtitle": "Cards, the key decision, result — about 30 seconds",
+  "@recordHandQuickSubtitle": {
+    "description": "Subtitle under the Quick Hand option in the record-hand chooser."
+  },
+  "recordHandFullTitle": "Full Hand",
+  "@recordHandFullTitle": {
+    "description": "Record-hand chooser option: the full street-by-street wizard."
+  },
+  "recordHandFullSubtitle": "Street-by-street, replayable",
+  "@recordHandFullSubtitle": {
+    "description": "Subtitle under the Full Hand option in the record-hand chooser."
+  },
+  "discardHandTitle": "Discard hand?",
+  "@discardHandTitle": {
+    "description": "Dialog title when leaving a hand-recording screen with unsaved input."
+  },
+  "discardHandMessage": "This hand will not be saved.",
+  "@discardHandMessage": {
+    "description": "Dialog body under 'Discard hand?'."
+  },
+  "discardHandConfirm": "Discard",
+  "@discardHandConfirm": {
+    "description": "Destructive confirm button in the discard-hand dialog."
+  },
+  "cardPickerSelectCount": "{count, plural, one{Select {count} card} other{Select {count} cards}}",
+  "@cardPickerSelectCount": {
+    "description": "Card-picker sheet heading: how many cards to pick.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardPickerSelectMore": "{count, plural, one{Select {count} more} other{Select {count} more}}",
+  "@cardPickerSelectMore": {
+    "description": "Card-picker confirm button while more cards are still needed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardPickerConfirm": "Confirm — {cards}",
+  "@cardPickerConfirm": {
+    "description": "Card-picker confirm button once enough cards are picked; {cards} is the chosen cards, e.g. 'As Kh'.",
+    "placeholders": {
+      "cards": {
+        "type": "String"
+      }
+    }
+  },
+  "handsTitle": "Hands",
+  "@handsTitle": {
+    "description": "AppBar title of the recorded-hands list."
+  },
+  "handsFilterTooltip": "Filter hands",
+  "@handsFilterTooltip": {
+    "description": "Tooltip of the filter icon on the hands list."
+  },
+  "handsDeleteFailed": "Failed to delete hand: {error}",
+  "@handsDeleteFailed": {
+    "description": "Snackbar when deleting a hand fails; {error} is the raw error text.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "handsLoadError": "Error loading hands: {error}",
+  "@handsLoadError": {
+    "description": "Shown when the hands list cannot be loaded; {error} is the raw error text.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "handsEmptyTitle": "No hands recorded yet",
+  "@handsEmptyTitle": {
+    "description": "Empty-state title of the hands list."
+  },
+  "handsEmptySubtitle": "Tap + to record and replay a hand",
+  "@handsEmptySubtitle": {
+    "description": "Empty-state hint under the title; + refers to the floating action button."
+  },
+  "handsNoMatchTitle": "No hands match your filters",
+  "@handsNoMatchTitle": {
+    "description": "Shown when the active filter excludes every hand."
+  },
+  "handsClearFilters": "Clear filters",
+  "@handsClearFilters": {
+    "description": "Button that resets the hand filter from the no-match state."
+  },
+  "handsRecordTooltip": "Record hand",
+  "@handsRecordTooltip": {
+    "description": "Tooltip of the + floating action button on the hands list."
+  },
+  "handsDeleteTitle": "Delete hand?",
+  "@handsDeleteTitle": {
+    "description": "Confirmation dialog title before deleting a recorded hand."
+  },
+  "handsDeleteMessage": "This hand record will be permanently deleted.",
+  "@handsDeleteMessage": {
+    "description": "Body of the delete-hand confirmation dialog."
+  },
+  "handsTilePot": "Pot {amount}",
+  "@handsTilePot": {
+    "description": "First line of a hand tile; {amount} is the formatted final pot including currency symbol, e.g. '$1,250'.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "handsTileSummary": "{stakes} · {street}{quick, select, true{ · Quick} other{}}",
+  "@handsTileSummary": {
+    "description": "Second line of a hand tile: blinds, the last street reached (untranslated poker term) and a 'Quick' tag when recorded in Quick Hand mode.",
+    "placeholders": {
+      "stakes": {
+        "type": "String"
+      },
+      "street": {
+        "type": "String"
+      },
+      "quick": {
+        "type": "String"
+      }
+    }
+  },
+  "handsMenuTooltip": "Hand actions",
+  "@handsMenuTooltip": {
+    "description": "Tooltip of the ⋮ overflow menu on a hand tile."
+  },
+  "handsMenuAiCoaching": "AI Coaching",
+  "@handsMenuAiCoaching": {
+    "description": "Overflow-menu entry that opens the AI hand analysis."
+  },
+  "handsFilterTitle": "Filter Hands",
+  "@handsFilterTitle": {
+    "description": "Title of the hand filter bottom sheet."
+  },
+  "handsFilterGameType": "Game Type",
+  "@handsFilterGameType": {
+    "description": "Filter section label."
+  },
+  "handsFilterCash": "Cash",
+  "@handsFilterCash": {
+    "description": "Filter chip: cash-game hands."
+  },
+  "handsFilterTournament": "Tournament",
+  "@handsFilterTournament": {
+    "description": "Filter chip: tournament hands."
+  },
+  "handsFilterMinPot": "Minimum Pot",
+  "@handsFilterMinPot": {
+    "description": "Filter section label; chips show sizes in big blinds."
+  },
+  "handsFilterStreet": "Street Reached",
+  "@handsFilterStreet": {
+    "description": "Filter section label; chips are the untranslated street names."
+  },
+  "handsFilterStakes": "Stakes",
+  "@handsFilterStakes": {
+    "description": "Filter section label."
+  },
+  "handsFilterTableSize": "Table Size",
+  "@handsFilterTableSize": {
+    "description": "Filter section label."
+  },
+  "handsFilterHeadsUp": "Heads-up",
+  "@handsFilterHeadsUp": {
+    "description": "Filter chip for 2-player tables (poker term)."
+  },
+  "handsFilterHanded": "{n}-handed",
+  "@handsFilterHanded": {
+    "description": "Filter chip for an n-player table, e.g. '6-handed'.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "handsFilterPosition": "Your Position",
+  "@handsFilterPosition": {
+    "description": "Filter section label; chips are position abbreviations."
+  },
+  "handsFilterDateRange": "Date Range",
+  "@handsFilterDateRange": {
+    "description": "Filter section label."
+  },
+  "handsFilterFrom": "From",
+  "@handsFilterFrom": {
+    "description": "Date-range start button placeholder."
+  },
+  "handsFilterTo": "To",
+  "@handsFilterTo": {
+    "description": "Date-range end button placeholder."
+  },
+  "handsFilterClearDates": "Clear dates",
+  "@handsFilterClearDates": {
+    "description": "Button that clears both date-range bounds."
+  },
+  "handsFilterClearAll": "Clear All",
+  "@handsFilterClearAll": {
+    "description": "Button that resets every filter."
+  },
+  "handsFilterApply": "Apply",
+  "@handsFilterApply": {
+    "description": "Button that applies the drafted filter."
+  },
+  "quickHandSaved": "Hand saved",
+  "@quickHandSaved": {
+    "description": "Snackbar after a Quick Hand is saved."
+  },
+  "quickHandSwitchTitle": "Switch to Full mode?",
+  "@quickHandSwitchTitle": {
+    "description": "Dialog title when leaving Quick Hand with input for the full wizard."
+  },
+  "quickHandSwitchMessage": "Your quick entries won't carry over.",
+  "@quickHandSwitchMessage": {
+    "description": "Dialog body under 'Switch to Full mode?'."
+  },
+  "quickHandSwitchConfirm": "Switch",
+  "@quickHandSwitchConfirm": {
+    "description": "Confirm button of the switch-to-full-mode dialog."
+  },
+  "quickHandTitle": "Quick Hand",
+  "@quickHandTitle": {
+    "description": "AppBar title of the Quick Hand recording screen."
+  },
+  "quickHandFullMode": "Full mode",
+  "@quickHandFullMode": {
+    "description": "AppBar action that switches to the full street-by-street wizard."
+  },
+  "quickHandSectionGame": "GAME",
+  "@quickHandSectionGame": {
+    "description": "Uppercase section label: game type / stakes."
+  },
+  "quickHandFromSession": "{type, select, tournament{Tournament · from session} other{Cash · from session}}",
+  "@quickHandFromSession": {
+    "description": "Read-only game type when recording from a session (locked).",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "quickHandCash": "Cash",
+  "@quickHandCash": {
+    "description": "Game-type segment: cash game."
+  },
+  "quickHandTournament": "Tournament",
+  "@quickHandTournament": {
+    "description": "Game-type segment: tournament."
+  },
+  "quickHandSectionCards": "YOUR CARDS",
+  "@quickHandSectionCards": {
+    "description": "Uppercase section label: hero's hole cards."
+  },
+  "quickHandPickCards": "Pick cards",
+  "@quickHandPickCards": {
+    "description": "Button that opens the card picker when no hole cards are set."
+  },
+  "quickHandChangeCards": "Change",
+  "@quickHandChangeCards": {
+    "description": "Button that reopens the card picker to change the hole cards."
+  },
+  "quickHandSectionPosition": "POSITION",
+  "@quickHandSectionPosition": {
+    "description": "Uppercase section label: table size + hero position."
+  },
+  "quickHandSeats": "{n}-max",
+  "@quickHandSeats": {
+    "description": "Table-size dropdown entry, e.g. '6-max' (poker term for a 6-seat table).",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "quickHandSectionDecision": "THE DECISION",
+  "@quickHandSectionDecision": {
+    "description": "Uppercase section label: the one decision being recorded."
+  },
+  "quickHandStreetPre": "Pre",
+  "@quickHandStreetPre": {
+    "description": "Short segment label for pre-flop in the 4-pill street selector; must stay very short."
+  },
+  "quickHandAddBoard": "Add board ({count} cards) — optional",
+  "@quickHandAddBoard": {
+    "description": "Button to pick the community cards; {count} is how many the chosen street needs.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quickHandChangeBoard": "Change board",
+  "@quickHandChangeBoard": {
+    "description": "Button to change the picked community cards."
+  },
+  "quickHandFacing": "Facing",
+  "@quickHandFacing": {
+    "description": "Label above the chips describing what the hero faced."
+  },
+  "quickFacingUnopened": "Unopened",
+  "@quickFacingUnopened": {
+    "description": "Facing option: nobody has entered the pot yet."
+  },
+  "quickFacingLimp": "Limper(s)",
+  "@quickFacingLimp": {
+    "description": "Facing option: one or more players limped (poker term)."
+  },
+  "quickFacingOpen": "Open",
+  "@quickFacingOpen": {
+    "description": "Facing option: an open raise."
+  },
+  "quickFacingThreeBet": "3-bet",
+  "@quickFacingThreeBet": {
+    "description": "Facing option: a 3-bet (poker term, keep)."
+  },
+  "quickFacingFourBetPlus": "4-bet+",
+  "@quickFacingFourBetPlus": {
+    "description": "Facing option: a 4-bet or larger (poker term, keep)."
+  },
+  "quickFacingCheckedTo": "Checked to me",
+  "@quickFacingCheckedTo": {
+    "description": "Facing option (postflop): action was checked to the hero."
+  },
+  "quickFacingBet": "Bet",
+  "@quickFacingBet": {
+    "description": "Facing option: a bet."
+  },
+  "quickFacingRaise": "Raise",
+  "@quickFacingRaise": {
+    "description": "Facing option: a raise."
+  },
+  "quickFacingAllIn": "All-in",
+  "@quickFacingAllIn": {
+    "description": "Facing option: an all-in."
+  },
+  "quickHandSizeOptional": "Size (BB) — optional",
+  "@quickHandSizeOptional": {
+    "description": "Field label: size of the faced bet/raise in big blinds."
+  },
+  "quickHandEarlier": "Earlier this street",
+  "@quickHandEarlier": {
+    "description": "Label above the chips describing what happened before the faced action."
+  },
+  "quickEarlierNone": "Villain acted first",
+  "@quickEarlierNone": {
+    "description": "Earlier-this-street option."
+  },
+  "quickEarlierChecked": "I checked first",
+  "@quickEarlierChecked": {
+    "description": "Earlier-this-street option."
+  },
+  "quickEarlierBet": "I bet first",
+  "@quickEarlierBet": {
+    "description": "Earlier-this-street option."
+  },
+  "quickHandEarlierBetOptional": "Your earlier bet (BB) — optional",
+  "@quickHandEarlierBetOptional": {
+    "description": "Field label for the hero's earlier bet size in big blinds."
+  },
+  "quickHandYou": "You",
+  "@quickHandYou": {
+    "description": "Label above the chips for the hero's action."
+  },
+  "quickActionFold": "Fold",
+  "@quickActionFold": {
+    "description": "Hero action chip."
+  },
+  "quickActionCheck": "Check",
+  "@quickActionCheck": {
+    "description": "Hero action chip (poker: check, not 'verify')."
+  },
+  "quickActionCall": "Call",
+  "@quickActionCall": {
+    "description": "Hero action chip (poker: call a bet)."
+  },
+  "quickActionBet": "Bet",
+  "@quickActionBet": {
+    "description": "Hero action chip."
+  },
+  "quickActionRaise": "Raise",
+  "@quickActionRaise": {
+    "description": "Hero action chip."
+  },
+  "quickActionAllIn": "All-in",
+  "@quickActionAllIn": {
+    "description": "Hero action chip."
+  },
+  "quickHandYourSizeOptional": "Your size (BB) — optional",
+  "@quickHandYourSizeOptional": {
+    "description": "Field label: hero's bet/raise size in big blinds."
+  },
+  "quickHandPotEntering": "Pot entering this street (BB) — optional",
+  "@quickHandPotEntering": {
+    "description": "Field label: pot size at the start of the street, in big blinds."
+  },
+  "quickHandPreflopHow": "How preflop went — optional",
+  "@quickHandPreflopHow": {
+    "description": "Label above the chips describing the preflop action."
+  },
+  "quickPotAuto": "Auto",
+  "@quickPotAuto": {
+    "description": "Preflop-story chip: infer automatically."
+  },
+  "quickPotLimped": "Limped",
+  "@quickPotLimped": {
+    "description": "Preflop-story chip: limped pot (poker term)."
+  },
+  "quickPotSingleRaised": "Single-raised",
+  "@quickPotSingleRaised": {
+    "description": "Preflop-story chip: single-raised pot."
+  },
+  "quickPotThreeBet": "3-bet pot",
+  "@quickPotThreeBet": {
+    "description": "Preflop-story chip (poker term, keep '3-bet')."
+  },
+  "quickPotFourBet": "4-bet pot",
+  "@quickPotFourBet": {
+    "description": "Preflop-story chip (poker term, keep '4-bet')."
+  },
+  "quickHandEffStacks": "Effective stacks (BB)",
+  "@quickHandEffStacks": {
+    "description": "Field label: effective stack depth in big blinds."
+  },
+  "quickHandSectionResult": "RESULT — OPTIONAL",
+  "@quickHandSectionResult": {
+    "description": "Uppercase section label for the optional hand result."
+  },
+  "quickResultWon": "Won",
+  "@quickResultWon": {
+    "description": "Result chip."
+  },
+  "quickResultLost": "Lost",
+  "@quickResultLost": {
+    "description": "Result chip."
+  },
+  "quickResultChopped": "Chopped",
+  "@quickResultChopped": {
+    "description": "Result chip: the pot was split (poker term)."
+  },
+  "quickHandFinalPot": "Final pot (BB) — optional",
+  "@quickHandFinalPot": {
+    "description": "Field label: final pot in big blinds."
+  },
+  "quickHandNoteLabel": "Note — optional",
+  "@quickHandNoteLabel": {
+    "description": "Free-text note field label."
+  },
+  "quickHandNoteHint": "Reads, dynamics, why it was close…",
+  "@quickHandNoteHint": {
+    "description": "Placeholder inside the note field."
+  },
+  "quickHandSaving": "Saving…",
+  "@quickHandSaving": {
+    "description": "Save button label while the save is in flight."
+  },
+  "quickHandSave": "Save Hand",
+  "@quickHandSave": {
+    "description": "Primary save button label."
+  },
+  "quickHandCustom": "Custom",
+  "@quickHandCustom": {
+    "description": "Stakes chip that reveals a free-text stakes field."
+  },
+  "quickHandCustomHint": "e.g. 2/5",
+  "@quickHandCustomHint": {
+    "description": "Placeholder for the custom stakes field."
+  },
+  "quickHandAnte": "Ante",
+  "@quickHandAnte": {
+    "description": "Tournament ante field label (poker term)."
+  },
+  "quickHandStageOptional": "Stage — optional",
+  "@quickHandStageOptional": {
+    "description": "Tournament stage dropdown label."
+  },
+  "tournamentStageNone": "Not specified",
+  "@tournamentStageNone": {
+    "description": "Tournament stage option: none chosen."
+  },
+  "tournamentStageEarly": "Early stages (Day 1/2)",
+  "@tournamentStageEarly": {
+    "description": "Tournament stage option."
+  },
+  "tournamentStageMiddle": "Middle stages",
+  "@tournamentStageMiddle": {
+    "description": "Tournament stage option."
+  },
+  "tournamentStageLate": "Late stages",
+  "@tournamentStageLate": {
+    "description": "Tournament stage option."
+  },
+  "tournamentStageBubble": "On the bubble",
+  "@tournamentStageBubble": {
+    "description": "Tournament stage option (poker term: just before the payouts start)."
+  },
+  "tournamentStageItm": "In the money (ITM)",
+  "@tournamentStageItm": {
+    "description": "Tournament stage option (ITM is a poker term, keep)."
+  },
+  "tournamentStageFtBubble": "Final table bubble",
+  "@tournamentStageFtBubble": {
+    "description": "Tournament stage option."
+  },
+  "tournamentStageFinalTable": "Final table",
+  "@tournamentStageFinalTable": {
+    "description": "Tournament stage option."
+  },
+  "stageBadgeEarly": "EARLY STAGES",
+  "@stageBadgeEarly": {
+    "description": "Uppercase stage badge in the hand replayer."
+  },
+  "stageBadgeMiddle": "MIDDLE STAGES",
+  "@stageBadgeMiddle": {
+    "description": "Uppercase stage badge in the hand replayer."
+  },
+  "stageBadgeLate": "LATE STAGES",
+  "@stageBadgeLate": {
+    "description": "Uppercase stage badge in the hand replayer."
+  },
+  "stageBadgeBubble": "BUBBLE",
+  "@stageBadgeBubble": {
+    "description": "Uppercase stage badge in the hand replayer (poker term)."
+  },
+  "stageBadgeItm": "IN THE MONEY",
+  "@stageBadgeItm": {
+    "description": "Uppercase stage badge in the hand replayer."
+  },
+  "stageBadgeFtBubble": "FT BUBBLE",
+  "@stageBadgeFtBubble": {
+    "description": "Uppercase stage badge: final-table bubble."
+  },
+  "stageBadgeFinalTable": "FINAL TABLE",
+  "@stageBadgeFinalTable": {
+    "description": "Uppercase stage badge in the hand replayer."
+  },
+  "wizardUndoTooltip": "Undo last action",
+  "@wizardUndoTooltip": {
+    "description": "Tooltip of the undo icon in the full hand wizard."
+  },
+  "wizardStepSetup": "Table Setup",
+  "@wizardStepSetup": {
+    "description": "Wizard AppBar title for the setup step."
+  },
+  "wizardDealStreet": "Deal {street}",
+  "@wizardDealStreet": {
+    "description": "Wizard title/button while waiting to deal the next street; {street} is Flop/Turn/River (untranslated).",
+    "placeholders": {
+      "street": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardStepSaved": "Hand Saved",
+  "@wizardStepSaved": {
+    "description": "Wizard AppBar title after the hand is saved."
+  },
+  "wizardTableSize": "Table Size",
+  "@wizardTableSize": {
+    "description": "Setup field label."
+  },
+  "wizardTournamentHand": "Tournament hand",
+  "@wizardTournamentHand": {
+    "description": "Setup toggle label / locked game-type label."
+  },
+  "wizardCashHand": "Cash hand",
+  "@wizardCashHand": {
+    "description": "Locked game-type label when recording from a cash session."
+  },
+  "wizardFromSession": "· from session",
+  "@wizardFromSession": {
+    "description": "Suffix after the locked game type explaining it was inherited from the session."
+  },
+  "wizardTournamentSubtitle": "Enables blind level labelling, ante, stage & BB-depth tracking",
+  "@wizardTournamentSubtitle": {
+    "description": "Subtitle under the tournament-hand toggle."
+  },
+  "wizardBlindLevel": "Blind Level",
+  "@wizardBlindLevel": {
+    "description": "Stakes field label for tournament hands."
+  },
+  "wizardStakes": "Stakes",
+  "@wizardStakes": {
+    "description": "Stakes field label for cash hands."
+  },
+  "wizardSmallBlind": "Small Blind",
+  "@wizardSmallBlind": {
+    "description": "Field label."
+  },
+  "wizardBigBlind": "Big Blind",
+  "@wizardBigBlind": {
+    "description": "Field label."
+  },
+  "wizardTournamentBlindsSummary": "SB {sb}  ·  BB {bb}  ·  Default stack {stack} chips (100 BBs)",
+  "@wizardTournamentBlindsSummary": {
+    "description": "Helper line under tournament blinds; SB/BB are poker abbreviations.",
+    "placeholders": {
+      "sb": {
+        "type": "String"
+      },
+      "bb": {
+        "type": "String"
+      },
+      "stack": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardCashBlindsSummary": "SB {sb}  ·  BB {bb}{hasStraddle, select, true{  ·  Straddle {straddle}} other{}}  ·  Default stack {stack}",
+  "@wizardCashBlindsSummary": {
+    "description": "Helper line under cash stakes; amounts already carry a currency symbol; straddle is a poker term.",
+    "placeholders": {
+      "sb": {
+        "type": "String"
+      },
+      "bb": {
+        "type": "String"
+      },
+      "hasStraddle": {
+        "type": "String"
+      },
+      "straddle": {
+        "type": "String"
+      },
+      "stack": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardAnteLabel": "Ante (optional)",
+  "@wizardAnteLabel": {
+    "description": "Tournament ante field label."
+  },
+  "wizardAnteHint": "e.g. 500 for BB ante",
+  "@wizardAnteHint": {
+    "description": "Placeholder for the ante field."
+  },
+  "wizardStageLabel": "Tournament Stage (optional)",
+  "@wizardStageLabel": {
+    "description": "Tournament stage dropdown label."
+  },
+  "wizardStraddle": "Straddle",
+  "@wizardStraddle": {
+    "description": "Cash-game straddle toggle label (poker term)."
+  },
+  "wizardStraddleSubtitle": "Auto {amount}  ·  200 BB stacks",
+  "@wizardStraddleSubtitle": {
+    "description": "Subtitle under the straddle toggle; {amount} is the formatted straddle size.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardYourPosition": "Your Position",
+  "@wizardYourPosition": {
+    "description": "Setup section label above the position chips."
+  },
+  "wizardPlayersOptional": "Players (optional)",
+  "@wizardPlayersOptional": {
+    "description": "Setup section label above the per-seat name/stack rows."
+  },
+  "wizardStackHint": "Leave stack blank for default",
+  "@wizardStackHint": {
+    "description": "Hint under the players section."
+  },
+  "wizardYouHint": "You",
+  "@wizardYouHint": {
+    "description": "Placeholder of the hero's name field."
+  },
+  "wizardVillainHint": "Villain",
+  "@wizardVillainHint": {
+    "description": "Placeholder of an opponent's name field (poker term for opponent)."
+  },
+  "wizardStackFieldHint": "Stack",
+  "@wizardStackFieldHint": {
+    "description": "Placeholder of the stack-size field."
+  },
+  "wizardBbs": "{n} BBs",
+  "@wizardBbs": {
+    "description": "Stack depth shown under a tournament stack field, in big blinds.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "wizardStartRecording": "Start Recording",
+  "@wizardStartRecording": {
+    "description": "Primary button that leaves setup and starts the action recording."
+  },
+  "tablePot": "POT  {amount}",
+  "@tablePot": {
+    "description": "Uppercase pot badge on the table (wizard + replayer); {amount} includes the currency symbol.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardAllInRunout": "All-in — cards run out, no further betting",
+  "@wizardAllInRunout": {
+    "description": "Banner when every remaining player is all-in."
+  },
+  "wizardEndHand": "End Hand",
+  "@wizardEndHand": {
+    "description": "Button that ends the hand early and goes to showdown."
+  },
+  "wizardBetAmount": "Bet amount",
+  "@wizardBetAmount": {
+    "description": "Raise-mode field label when opening the betting."
+  },
+  "wizardRaiseTo": "Raise to",
+  "@wizardRaiseTo": {
+    "description": "Raise-mode field label: the new total bet level."
+  },
+  "wizardChipThirdPot": "1/3 pot",
+  "@wizardChipThirdPot": {
+    "description": "Quick-size chip: a third of the pot."
+  },
+  "wizardChipHalfPot": "½ pot",
+  "@wizardChipHalfPot": {
+    "description": "Quick-size chip: half the pot."
+  },
+  "wizardChipTwoThirdsPot": "2/3 pot",
+  "@wizardChipTwoThirdsPot": {
+    "description": "Quick-size chip: two thirds of the pot."
+  },
+  "wizardChipPot": "Pot",
+  "@wizardChipPot": {
+    "description": "Quick-size chip: a pot-sized bet."
+  },
+  "wizardChipAllIn": "All-in",
+  "@wizardChipAllIn": {
+    "description": "Quick-size chip: shove."
+  },
+  "wizardConfirmBet": "Confirm Bet",
+  "@wizardConfirmBet": {
+    "description": "Button confirming the typed bet size."
+  },
+  "wizardConfirmRaise": "Confirm Raise",
+  "@wizardConfirmRaise": {
+    "description": "Button confirming the typed raise size."
+  },
+  "wizardShowdownProgress": "{index} of {total} players",
+  "@wizardShowdownProgress": {
+    "description": "Progress line on the showdown step.",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "wizardChangeCards": "Change Cards",
+  "@wizardChangeCards": {
+    "description": "Showdown button to re-pick an opponent's shown cards."
+  },
+  "wizardShowCards": "Show Cards",
+  "@wizardShowCards": {
+    "description": "Showdown button to pick the cards an opponent showed."
+  },
+  "wizardMuck": "MUCK (fold cards)",
+  "@wizardMuck": {
+    "description": "Showdown button: the opponent mucked (poker term, keep MUCK)."
+  },
+  "wizardConfirmNext": "Confirm & Next →",
+  "@wizardConfirmNext": {
+    "description": "Showdown button to confirm the shown cards and move to the next player."
+  },
+  "wizardHandRecorded": "Hand recorded",
+  "@wizardHandRecorded": {
+    "description": "Title of the done step."
+  },
+  "wizardDoneSummary": "{seats}-max · {stakes} · {street}",
+  "@wizardDoneSummary": {
+    "description": "Summary line on the done step; {street} is the untranslated last street.",
+    "placeholders": {
+      "seats": {
+        "type": "int"
+      },
+      "stakes": {
+        "type": "String"
+      },
+      "street": {
+        "type": "String"
+      }
+    }
+  },
+  "wizardViewReplay": "View Hand Replay",
+  "@wizardViewReplay": {
+    "description": "Button opening the replayer for the saved hand."
+  },
+  "wizardBackToHands": "Back to Hands",
+  "@wizardBackToHands": {
+    "description": "Button returning to the hands list."
+  },
+  "wizardTapToAddCards": "tap to add cards",
+  "@wizardTapToAddCards": {
+    "description": "Tiny prompt on the hero's table panel before hole cards are set."
+  },
+  "wizardAddCards": "+ cards",
+  "@wizardAddCards": {
+    "description": "Tiny button on the acting hero's panel to add hole cards."
+  },
+  "replayerTitle": "{street} · {seats}-max",
+  "@replayerTitle": {
+    "description": "Replayer AppBar title: current street (untranslated) and table size.",
+    "placeholders": {
+      "street": {
+        "type": "String"
+      },
+      "seats": {
+        "type": "int"
+      }
+    }
+  },
+  "replayerHandStarts": "Hand starts · {seats}-max · {details}",
+  "@replayerHandStarts": {
+    "description": "First replay frame; {details} is the blinds/ante/depth summary built from numbers.",
+    "placeholders": {
+      "seats": {
+        "type": "int"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "replayerAnte": "ante {amount}",
+  "@replayerAnte": {
+    "description": "Fragment appended to the hand-start details for tournament hands.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "replayerHeroDepth": "Hero {bb}bb",
+  "@replayerHeroDepth": {
+    "description": "Fragment appended to the hand-start details: hero's stack depth in big blinds.",
+    "placeholders": {
+      "bb": {
+        "type": "int"
+      }
+    }
+  },
+  "replayerStreetDealt": "{street} dealt",
+  "@replayerStreetDealt": {
+    "description": "Replay frame message when a street's community cards are dealt; {street} is untranslated.",
+    "placeholders": {
+      "street": {
+        "type": "String"
+      }
+    }
+  },
+  "replayerHandComplete": "Hand complete",
+  "@replayerHandComplete": {
+    "description": "Final replay frame message."
+  },
+  "replayerAiCoachingTooltip": "AI Coaching",
+  "@replayerAiCoachingTooltip": {
+    "description": "Tooltip of the AI icon in the replayer AppBar."
+  },
+  "replayerShareTooltip": "Share hand",
+  "@replayerShareTooltip": {
+    "description": "Tooltip of the share icon."
+  },
+  "replayerLinkedTooltip": "Linked to session (tap to change)",
+  "@replayerLinkedTooltip": {
+    "description": "Tooltip of the link icon when the hand is linked to a session."
+  },
+  "replayerLinkTooltip": "Link to session",
+  "@replayerLinkTooltip": {
+    "description": "Tooltip of the link icon when the hand is not linked."
+  },
+  "replayerNoSessions": "No sessions saved yet. Log a session first.",
+  "@replayerNoSessions": {
+    "description": "Snackbar when trying to link a hand with no sessions available."
+  },
+  "replayerLinkRemoved": "Session link removed.",
+  "@replayerLinkRemoved": {
+    "description": "Snackbar after unlinking a hand from its session."
+  },
+  "replayerLinked": "Hand linked to session.",
+  "@replayerLinked": {
+    "description": "Snackbar after linking a hand to a session."
+  },
+  "replayerUpdateFailed": "Failed to update: {error}",
+  "@replayerUpdateFailed": {
+    "description": "Snackbar when the session link could not be saved; {error} is raw error text.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "replayerNotesTitle": "Notes",
+  "@replayerNotesTitle": {
+    "description": "Dialog title showing the hand's notes."
+  },
+  "replayerLinkSheetTitle": "Link to Session",
+  "@replayerLinkSheetTitle": {
+    "description": "Title of the session-link bottom sheet."
+  },
+  "replayerLinkNone": "None (remove link)",
+  "@replayerLinkNone": {
+    "description": "First entry of the session-link sheet."
   }
 }
