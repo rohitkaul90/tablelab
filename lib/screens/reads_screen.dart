@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/l10n.dart';
 import '../models/player_read.dart';
 import '../services/analytics_service.dart';
 import '../providers/reads_provider.dart';
@@ -27,6 +28,7 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
 
   void _openQuickAdd(List<PlayerRead> allPlayers) {
     final svc = ref.read(readsServiceProvider);
+    final l10n = context.l10n;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -60,7 +62,7 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to save read: $e')),
+                SnackBar(content: Text(l10n.readsSaveFailed('$e'))),
               );
             }
           }
@@ -79,7 +81,7 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
           icon: const Icon(Icons.menu),
           onPressed: () => mainScaffoldKey.currentState?.openDrawer(),
         ),
-        title: const Text('Player Reads'),
+        title: Text(context.l10n.readsTitle),
       ),
       body: Column(
         children: [
@@ -90,7 +92,7 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _search = v.toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'Search players…',
+                hintText: context.l10n.readsSearchHint,
                 prefixIcon: const Icon(Icons.search, size: 20),
                 filled: true,
                 isDense: true,
@@ -114,7 +116,8 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
           Expanded(
             child: readsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
+              error: (e, _) =>
+                  Center(child: Text(context.l10n.commonErrorWithDetail('$e'))),
               data: (reads) {
                 final filtered = _search.isEmpty
                     ? reads
@@ -135,8 +138,8 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
                           const SizedBox(height: 12),
                           Text(
                             _search.isEmpty
-                                ? 'No reads yet.\nTap + to log your first opponent.'
-                                : 'No players match "$_search".',
+                                ? context.l10n.readsEmpty
+                                : context.l10n.readsNoMatch(_search),
                             style: TextStyle(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -172,7 +175,7 @@ class _ReadsScreenState extends ConsumerState<ReadsScreen> {
         data: (reads) => FloatingActionButton(
           heroTag: 'fab_reads',
           onPressed: () => _openQuickAdd(reads),
-          tooltip: 'Add read',
+          tooltip: context.l10n.readsAddTooltip,
           child: const Icon(Icons.add),
         ),
         orElse: () => null,
@@ -195,7 +198,7 @@ class _ReadTile extends StatelessWidget {
     final archetypes = read.tags.where(isArchetype).toList();
     final tendencies = read.tags.where((t) => !isArchetype(t)).toList();
     final displayTags = [...archetypes, ...tendencies].take(4).toList();
-    final ago = _timeAgo(read.updatedAt);
+    final ago = _timeAgo(context.l10n, read.updatedAt);
 
     return Material(
       color: theme.colorScheme.surfaceContainerHighest,
@@ -249,7 +252,7 @@ class _ReadTile extends StatelessWidget {
                               color: c.withAlpha(40),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(tagDisplayName(t),
+                            child: Text(tagDisplayName(context.l10n, t),
                                 style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -280,13 +283,13 @@ class _ReadTile extends StatelessWidget {
     );
   }
 
-  String _timeAgo(DateTime dt) {
+  String _timeAgo(AppLocalizations l10n, DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 60) { return '${diff.inMinutes}m ago'; }
-    if (diff.inHours < 24) { return '${diff.inHours}h ago'; }
-    if (diff.inDays < 7) { return '${diff.inDays}d ago'; }
-    if (diff.inDays < 30) { return '${(diff.inDays / 7).floor()}w ago'; }
-    return '${(diff.inDays / 30).floor()}mo ago';
+    if (diff.inMinutes < 60) return l10n.timeAgoMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.timeAgoHours(diff.inHours);
+    if (diff.inDays < 7) return l10n.timeAgoDays(diff.inDays);
+    if (diff.inDays < 30) return l10n.timeAgoWeeks((diff.inDays / 7).floor());
+    return l10n.timeAgoMonths((diff.inDays / 30).floor());
   }
 }
 

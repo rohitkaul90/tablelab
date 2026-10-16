@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/l10n.dart';
 import '../../equity/gto_frequency_library.dart';
 import '../../equity/villain_range.dart';
 import '../../models/hand_model.dart';
@@ -966,7 +967,9 @@ void _showEquityAssumptions(BuildContext context, HandEquityCheck check) {
               if (v.appliedTags.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Reads: ${v.appliedTags.map(tagDisplayName).join(', ')}',
+                  // Text stays English until the AI cluster PR; only the tag
+                  // names follow the UI language.
+                  'Reads: ${v.appliedTags.map((t) => tagDisplayName(ctx.l10n, t)).join(', ')}',
                   style: theme.textTheme.bodySmall,
                 ),
               ],

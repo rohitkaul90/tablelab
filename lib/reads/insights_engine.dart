@@ -1,138 +1,144 @@
+import '../l10n/generated/app_localizations.dart';
+
+/// A strategy tip for an opponent read. [basisTags] are the TAG IDS the tip
+/// is derived from (empty = a follow-up to the previous tip); the UI renders
+/// them via `tagDisplayName`.
 class ReadInsight {
   final String tip;
-  final String? basis;
-  const ReadInsight(this.tip, {this.basis});
+  final List<String> basisTags;
+  const ReadInsight(this.tip, {this.basisTags = const []});
 }
 
-List<ReadInsight> getInsights(List<String> tags) {
+/// Rule-based coaching for a set of tag ids, worded in [l10n]'s language.
+List<ReadInsight> getInsights(List<String> tags, AppLocalizations l10n) {
   final s = tags.toSet();
   final insights = <ReadInsight>[];
 
   // ── Archetypes ──────────────────────────────────────────────────────────
   if (s.contains('fish') || s.contains('calling_station')) {
-    final basis = s.contains('calling_station') ? 'Calling Station' : 'Fish';
-    insights.add(ReadInsight('Value bet wide and thin to the river — they call too much.', basis: basis));
-    insights.add(ReadInsight('Never bluff — they won\'t fold.'));
+    final basisTags = [s.contains('calling_station') ? 'calling_station' : 'fish'];
+    insights.add(ReadInsight(l10n.insightValueBetWideThin, basisTags: basisTags));
+    insights.add(ReadInsight(l10n.insightNeverBluffWonT));
     if (s.contains('limps')) {
-      insights.add(ReadInsight('Isolate their limps with a wide raising range.', basis: 'Fish + Limps'));
+      insights.add(ReadInsight(l10n.insightIsolateLimpsWideRaising, basisTags: ['fish', 'limps']));
     }
   }
 
   if (s.contains('nit')) {
-    insights.add(ReadInsight('Give full credit to large bets — their range is extremely strong.', basis: 'Nit'));
-    insights.add(ReadInsight('Attack with light 3-bets and steal attempts; they fold the bottom of their range.'));
-    insights.add(ReadInsight('Fold to their continuation bets on wet boards unless you have a strong hand or draw.'));
+    insights.add(ReadInsight(l10n.insightGiveFullCreditLarge, basisTags: ['nit']));
+    insights.add(ReadInsight(l10n.insightAttackLight3Bets));
+    insights.add(ReadInsight(l10n.insightFoldContinuationBetsWet));
   }
 
   if (s.contains('lag_player')) {
-    insights.add(ReadInsight('Call down lighter than normal — they over-bluff.', basis: 'LAG'));
-    insights.add(ReadInsight('Check-raise as a trap; they c-bet too frequently.'));
-    insights.add(ReadInsight('Widen your 3-bet calling range vs. their opens.'));
-    insights.add(ReadInsight('Don\'t bloat pots out of position with marginal hands — keep the pot small or play back in position.'));
+    insights.add(ReadInsight(l10n.insightCallDownLighterThan, basisTags: ['lag_player']));
+    insights.add(ReadInsight(l10n.insightCheckRaiseAsTrap));
+    insights.add(ReadInsight(l10n.insightWiden3BetCalling));
+    insights.add(ReadInsight(l10n.insightDonTBloatPots));
   }
 
   if (s.contains('tag_player')) {
-    insights.add(ReadInsight('Respect their bets — they have range discipline.', basis: 'TAG'));
-    insights.add(ReadInsight('3-bet as a steal from late position; they fold the bottom of their range.'));
-    insights.add(ReadInsight('Don\'t pay off their river bets — bluff-catch tighter; when they fire, they have it.'));
-    insights.add(ReadInsight('Apply positional pressure — float and barrel when they c-bet and then give up.'));
+    insights.add(ReadInsight(l10n.insightRespectBetsHaveRange, basisTags: ['tag_player']));
+    insights.add(ReadInsight(l10n.insight3BetAsSteal));
+    insights.add(ReadInsight(l10n.insightDonTPayOff));
+    insights.add(ReadInsight(l10n.insightApplyPositionalPressureFloat));
   }
 
   if (s.contains('maniac')) {
-    insights.add(ReadInsight('Trap with strong hands — let them build the pot.', basis: 'Maniac'));
-    insights.add(ReadInsight('Don\'t semi-bluff; let them hang themselves with their aggression.'));
-    insights.add(ReadInsight('Call down with any pair or decent draw — they over-represent constantly.'));
+    insights.add(ReadInsight(l10n.insightTrapStrongHandsLet, basisTags: ['maniac']));
+    insights.add(ReadInsight(l10n.insightDonTSemiBluff));
+    insights.add(ReadInsight(l10n.insightCallDownAnyPair));
   }
 
   if (s.contains('tricky')) {
-    insights.add(ReadInsight('Don\'t bet-fold marginal hands — they exploit overfolding.', basis: 'Tricky/GTO'));
-    insights.add(ReadInsight('Mix up your own lines; they will find and exploit any pattern.'));
+    insights.add(ReadInsight(l10n.insightDonTBetFold, basisTags: ['tricky']));
+    insights.add(ReadInsight(l10n.insightMixUpOwnLines));
   }
 
   // ── Preflop tendencies ──────────────────────────────────────────────────
   if (s.contains('opens_wide')) {
-    insights.add(ReadInsight('3-bet and squeeze vs. their opens — their range is weak.', basis: 'Opens Wide'));
+    insights.add(ReadInsight(l10n.insight3BetSqueezeOpens, basisTags: ['opens_wide']));
   }
   if (s.contains('opens_tight')) {
-    insights.add(ReadInsight('Fold to their raises unless you have a premium hand.', basis: 'Opens Tight'));
+    insights.add(ReadInsight(l10n.insightFoldRaisesUnlessYou, basisTags: ['opens_tight']));
   }
   if (s.contains('limps') && !s.contains('fish') && !s.contains('calling_station')) {
-    insights.add(ReadInsight('Isolate their limps with a 3–4× raise.', basis: 'Limps'));
+    insights.add(ReadInsight(l10n.insightIsolateLimps34, basisTags: ['limps']));
   }
   if (s.contains('three_bets_light')) {
-    insights.add(ReadInsight('4-bet light for value; widen your flatting range vs. their 3-bets.', basis: '3-Bets Light'));
+    insights.add(ReadInsight(l10n.insight4BetLightFor, basisTags: ['three_bets_light']));
   }
   if (s.contains('four_bets_light')) {
-    insights.add(ReadInsight('Flat your strong 3-bets in position and let them barrel; 5-bet only premiums. Call their 4-bet a touch wider with hands that flop well.', basis: '4-Bets Light'));
+    insights.add(ReadInsight(l10n.insightFlatStrong3Bets, basisTags: ['four_bets_light']));
   }
   if (s.contains('folds_3bet')) {
-    insights.add(ReadInsight('3-bet them liberally as a steal from BTN and CO.', basis: 'Folds to 3-Bet'));
+    insights.add(ReadInsight(l10n.insight3BetThemLiberally, basisTags: ['folds_3bet']));
   }
   if (s.contains('calls_3bet_wide')) {
-    insights.add(ReadInsight('3-bet for value only (and size up) — don\'t 3-bet bluff. Then barrel postflop; they peel too wide.', basis: 'Calls 3-Bets Wide'));
+    insights.add(ReadInsight(l10n.insight3BetForValue, basisTags: ['calls_3bet_wide']));
   }
   if (s.contains('cold_calls')) {
-    insights.add(ReadInsight('Squeeze when they cold-call behind — they will often fold.', basis: 'Cold Calls'));
+    insights.add(ReadInsight(l10n.insightSqueezeWhenColdCall, basisTags: ['cold_calls']));
   }
   if (s.contains('squeezes')) {
-    insights.add(ReadInsight('Tighten your cold-calls in front of them, and flat your premiums to trap the squeeze.', basis: 'Squeezes'));
+    insights.add(ReadInsight(l10n.insightTightenColdCallsFront, basisTags: ['squeezes']));
   }
   if (s.contains('overfolds_blinds')) {
-    insights.add(ReadInsight('Steal relentlessly from the CO/BTN/SB — they surrender their blinds too cheaply.', basis: 'Overfolds Blinds'));
+    insights.add(ReadInsight(l10n.insightStealRelentlesslyFromCo, basisTags: ['overfolds_blinds']));
   }
 
   // ── Postflop tendencies ─────────────────────────────────────────────────
   if (s.contains('c_bets_always')) {
-    insights.add(ReadInsight('Check-raise their c-bets more freely — they bet too mechanically.', basis: 'C-Bets Always'));
-    insights.add(ReadInsight('Float in position and take the pot away on the turn.'));
+    insights.add(ReadInsight(l10n.insightCheckRaiseCBets, basisTags: ['c_bets_always']));
+    insights.add(ReadInsight(l10n.insightFloatPositionTakePot));
   }
   if (s.contains('check_folds')) {
-    insights.add(ReadInsight('Bet when they check — they give up with little fight.', basis: 'Check-Folds'));
+    insights.add(ReadInsight(l10n.insightBetWhenCheckGive, basisTags: ['check_folds']));
   }
   if (s.contains('folds_to_cbet')) {
-    insights.add(ReadInsight('C-bet relentlessly with a small size — they fold far too often to the first barrel.', basis: 'Folds to C-Bet'));
+    insights.add(ReadInsight(l10n.insightCBetRelentlesslySmall, basisTags: ['folds_to_cbet']));
   }
   if (s.contains('barrels_relentless')) {
-    insights.add(ReadInsight('Bluff-catch lighter, and don\'t fold the flop planning to fold the turn — they keep firing without the goods.', basis: 'Barrels Turns'));
+    insights.add(ReadInsight(l10n.insightBluffCatchLighterDon, basisTags: ['barrels_relentless']));
   }
   if (s.contains('gives_up_turn')) {
-    insights.add(ReadInsight('Float the flop in position and take it away on the turn when they check — they\'re one-and-done.', basis: 'Gives Up Turn'));
+    insights.add(ReadInsight(l10n.insightFloatFlopPositionTake, basisTags: ['gives_up_turn']));
   }
   if (s.contains('floats_wide')) {
-    insights.add(ReadInsight('Barrel turn and river for value and as a bluff, and size up — make their wide floats pay.', basis: 'Floats Wide'));
+    insights.add(ReadInsight(l10n.insightBarrelTurnRiverFor, basisTags: ['floats_wide']));
   }
   if (s.contains('donk_leads')) {
-    insights.add(ReadInsight('Their leads are usually a weak made hand or a draw — raise your value to deny equity; respect only a big lead into multiway.', basis: 'Donk-Leads'));
+    insights.add(ReadInsight(l10n.insightLeadsAreUsuallyWeak, basisTags: ['donk_leads']));
   }
   if (s.contains('over_bluffs')) {
-    insights.add(ReadInsight('Call rivers lighter — they over-bluff missed draws.', basis: 'Over-Bluffs'));
+    insights.add(ReadInsight(l10n.insightCallRiversLighterOver, basisTags: ['over_bluffs']));
   }
   if (s.contains('value_heavy')) {
-    insights.add(ReadInsight('Fold to large bets unless you have the nuts or near-nuts.', basis: 'Value-Heavy'));
-    insights.add(ReadInsight('Bluff them on boards where their value range is capped.'));
+    insights.add(ReadInsight(l10n.insightFoldLargeBetsUnless, basisTags: ['value_heavy']));
+    insights.add(ReadInsight(l10n.insightBluffThemBoardsWhere));
   }
   if (s.contains('overfolds_river')) {
-    insights.add(ReadInsight('Triple-barrel bluff rivers more, especially on scare cards — they hero-fold too often.', basis: 'Overfolds River'));
+    insights.add(ReadInsight(l10n.insightTripleBarrelBluffRivers, basisTags: ['overfolds_river']));
   }
   if (s.contains('slow_plays')) {
-    insights.add(ReadInsight('Be cautious when they check-call passively — they may be trapping.', basis: 'Slow-Plays'));
+    insights.add(ReadInsight(l10n.insightBeCautiousWhenCheck, basisTags: ['slow_plays']));
   }
   if (s.contains('check_raises')) {
-    insights.add(ReadInsight('Bet smaller on boards where they check-raise — or check behind for pot control.', basis: 'Check-Raises'));
+    insights.add(ReadInsight(l10n.insightBetSmallerBoardsWhere, basisTags: ['check_raises']));
   }
   if (s.contains('readable_sizing')) {
-    insights.add(ReadInsight('Use their bet sizing as a tell: fold marginal hands to the big bets, attack the small ones.', basis: 'Readable Sizing'));
+    insights.add(ReadInsight(l10n.insightUseBetSizingAs, basisTags: ['readable_sizing']));
   }
 
   // ── Tournament / ICM tendencies ─────────────────────────────────────────
   if (s.contains('tightens_bubble')) {
-    insights.add(ReadInsight('Pile on the pressure near the bubble — open and re-shove on their stack; they fold to survive.', basis: 'Tightens at Bubble'));
+    insights.add(ReadInsight(l10n.insightPilePressureNearBubble, basisTags: ['tightens_bubble']));
   }
   if (s.contains('shoves_wide_short')) {
-    insights.add(ReadInsight('Call their short-stack shoves wider — they jam far too light to fold equity.', basis: 'Shoves Wide (Short)'));
+    insights.add(ReadInsight(l10n.insightCallShortStackShoves, basisTags: ['shoves_wide_short']));
   }
   if (s.contains('calls_shoves_light')) {
-    insights.add(ReadInsight('Shove tight for value and stop bluff-shoving — they call off too light.', basis: 'Calls Shoves Light'));
+    insights.add(ReadInsight(l10n.insightShoveTightForValue, basisTags: ['calls_shoves_light']));
   }
 
   return insights;

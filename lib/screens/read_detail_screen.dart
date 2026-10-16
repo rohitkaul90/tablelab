@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/player_read.dart';
@@ -37,7 +38,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
       if (mounted) {
         setState(() => _loadingNotes = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load notes: $e')),
+          SnackBar(content: Text(context.l10n.readDetailLoadNotesFailed('$e'))),
         );
       }
     }
@@ -45,6 +46,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
 
   void _openAddNote() {
     final svc = ref.read(readsServiceProvider);
+    final l10n = context.l10n;
     final allPlayers = ref.read(readsProvider).valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
@@ -94,7 +96,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to save: $e')),
+                SnackBar(content: Text(l10n.readsSaveFailedShort('$e'))),
               );
             }
           }
@@ -104,6 +106,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
   }
 
   void _editNote(PlayerReadNote note) {
+    final l10n = context.l10n;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -127,7 +130,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to update note: $e')),
+                SnackBar(content: Text(l10n.readDetailUpdateNoteFailed('$e'))),
               );
             }
           }
@@ -137,17 +140,18 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
   }
 
   Future<void> _deleteNote(PlayerReadNote note) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete note?'),
-        content: const Text('This observation will be permanently removed.'),
+        title: Text(l10n.readDetailDeleteNoteTitle),
+        content: Text(l10n.readDetailDeleteNoteBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.commonCancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Delete'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -159,7 +163,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete: $e')),
+            SnackBar(content: Text(l10n.readDetailDeleteFailed('$e'))),
           );
         }
       }
@@ -167,41 +171,44 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
   }
 
   void _shareRead() {
+    final l10n = context.l10n;
     final buf = StringBuffer();
-    buf.writeln('Player Read: ${_read.playerLabel}');
+    buf.writeln(l10n.readShareTitle(_read.playerLabel));
     if (_read.tags.isNotEmpty) {
-      buf.writeln('Tags: ${_read.tags.map(tagDisplayName).join(', ')}');
+      buf.writeln(l10n.readShareTags(
+          _read.tags.map((t) => tagDisplayName(l10n, t)).join(', ')));
     }
     if (_notes.isNotEmpty) {
       buf.writeln();
-      buf.writeln('Observations:');
+      buf.writeln(l10n.readShareObservations);
       for (final note in _notes) {
         final parts = <String>[];
-        if (note.position != null) parts.add('Pos: ${note.position}');
-        if (note.street != null) parts.add('Street: ${note.street}');
-        if (note.action != null) parts.add('Action: ${note.action}');
-        if (note.sizing != null) parts.add('Sizing: ${note.sizing}');
-        if (note.cardsShown != null) parts.add('Cards: ${note.cardsShown}');
+        if (note.position != null) parts.add(l10n.readSharePos(note.position!));
+        if (note.street != null) parts.add(l10n.readShareStreet(note.street!));
+        if (note.action != null) parts.add(l10n.readShareAction(note.action!));
+        if (note.sizing != null) parts.add(l10n.readShareSizing(note.sizing!));
+        if (note.cardsShown != null) parts.add(l10n.readShareCards(note.cardsShown!));
         if (note.noteText?.isNotEmpty == true) parts.add(note.noteText!);
         if (parts.isNotEmpty) buf.writeln('• ${parts.join(' · ')}');
       }
     }
     SharePlus.instance.share(
-        ShareParams(subject: 'Player Read', text: buf.toString().trim()));
+        ShareParams(subject: l10n.readShareSubject, text: buf.toString().trim()));
   }
 
   Future<void> _deleteRead() async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete ${_read.playerLabel}?'),
-        content: const Text('All observations for this player will be removed.'),
+        title: Text(l10n.readDetailDeletePlayerTitle(_read.playerLabel)),
+        content: Text(l10n.readDetailDeletePlayerBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.commonCancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Delete'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -223,7 +230,8 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final insights = getInsights(_read.tags);
+    final l10n = context.l10n;
+    final insights = getInsights(_read.tags, l10n);
     final archetypes = _read.tags.where(isArchetype).toList();
     final tendencies = _read.tags.where((t) => !isArchetype(t)).toList();
 
@@ -233,13 +241,13 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined, size: 20),
-            tooltip: 'Share notes',
+            tooltip: l10n.readDetailShareTooltip,
             onPressed: _shareRead,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             color: Colors.redAccent,
-            tooltip: 'Delete player',
+            tooltip: l10n.readDetailDeleteTooltip,
             onPressed: _deleteRead,
           ),
         ],
@@ -252,7 +260,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
           if (_read.tags.isNotEmpty) ...[
             Row(
               children: [
-                _SectionLabel('Tags'),
+                _SectionLabel(l10n.readDetailTags),
                 if (archetypes.isNotEmpty) ...[
                   const SizedBox(width: 6),
                   GestureDetector(
@@ -276,7 +284,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: c.withAlpha(120), width: 1.5),
                     ),
-                    child: Text(tagDisplayName(t),
+                    child: Text(tagDisplayName(l10n, t),
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -298,7 +306,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: c.withAlpha(110)),
                     ),
-                    child: Text(tagDisplayName(t),
+                    child: Text(tagDisplayName(l10n, t),
                         style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -311,7 +319,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
 
           // ── Insights ──────────────────────────────────────────────────────
           if (insights.isNotEmpty) ...[
-            _SectionLabel('Strategy Notes'),
+            _SectionLabel(l10n.readDetailStrategyNotes),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(14),
@@ -339,8 +347,11 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
                             children: [
                               Text(ins.tip,
                                   style: const TextStyle(fontSize: 13, height: 1.4)),
-                              if (ins.basis != null)
-                                Text('Based on: ${ins.basis}',
+                              if (ins.basisTags.isNotEmpty)
+                                Text(
+                                    l10n.readDetailBasedOn(ins.basisTags
+                                        .map((t) => tagDisplayName(l10n, t))
+                                        .join(' + ')),
                                     style: TextStyle(
                                         fontSize: 10,
                                         color: theme.colorScheme.primary.withAlpha(180))),
@@ -359,9 +370,9 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
           // ── Observations ──────────────────────────────────────────────────
           Row(
             children: [
-              _SectionLabel('Observations'),
+              _SectionLabel(l10n.readDetailObservations),
               const Spacer(),
-              Text('${_notes.length} total',
+              Text(l10n.readDetailNotesTotal(_notes.length),
                   style: TextStyle(
                       fontSize: 11,
                       color: Theme.of(context)
@@ -379,7 +390,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Text(
-                  'No observations yet.\nTap + to add one.',
+                  l10n.readDetailNoObservations,
                   style: TextStyle(
                       color: Theme.of(context)
                           .colorScheme
@@ -404,7 +415,7 @@ class _ReadDetailScreenState extends ConsumerState<ReadDetailScreen> {
         heroTag: 'fab_read_detail',
         onPressed: _openAddNote,
         icon: const Icon(Icons.add_comment_outlined),
-        label: const Text('Add Observation'),
+        label: Text(l10n.readDetailAddObservation),
       ),
     );
   }
@@ -482,7 +493,7 @@ class _NoteTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Text(_formatDate(note.createdAt),
+                    Text(_formatDate(context.l10n, note.createdAt),
                         style: TextStyle(
                             fontSize: 10,
                             color: theme.colorScheme.onSurfaceVariant
@@ -491,7 +502,7 @@ class _NoteTile extends StatelessWidget {
                     Icon(Icons.edit_outlined,
                         size: 12, color: theme.colorScheme.outline),
                     const SizedBox(width: 2),
-                    Text('tap to edit',
+                    Text(context.l10n.readDetailTapToEdit,
                         style: TextStyle(
                             fontSize: 10, color: theme.colorScheme.outline)),
                   ],
@@ -504,10 +515,10 @@ class _NoteTile extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime dt) {
+  String _formatDate(AppLocalizations l10n, DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 60) { return '${diff.inMinutes}m ago'; }
-    if (diff.inHours < 24) { return '${diff.inHours}h ago'; }
+    if (diff.inMinutes < 60) return l10n.timeAgoMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.timeAgoHours(diff.inHours);
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 }
@@ -650,7 +661,7 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                     children: [
                       Row(
                         children: [
-                          const Text('Edit Observation',
+                          Text(context.l10n.readEditTitle,
                               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                           const Spacer(),
                           TextButton(
@@ -659,7 +670,7 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                                 ? const SizedBox(
                                     width: 16, height: 16,
                                     child: CircularProgressIndicator(strokeWidth: 2))
-                                : const Text('Save'),
+                                : Text(context.l10n.commonSave),
                           ),
                         ],
                       ),
@@ -669,12 +680,12 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                       Row(
                         children: [
                           Expanded(child: _DropField(
-                            label: 'Position', value: _position, items: _kPositions,
+                            label: context.l10n.readFieldPosition, value: _position, items: _kPositions,
                             onChanged: (v) => setState(() => _position = v),
                           )),
                           const SizedBox(width: 10),
                           Expanded(child: _DropField(
-                            label: 'Street', value: _street, items: _kStreets,
+                            label: context.l10n.readFieldStreet, value: _street, items: _kStreets,
                             onChanged: (v) => setState(() => _street = v),
                           )),
                         ],
@@ -685,7 +696,7 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                       Row(
                         children: [
                           Expanded(child: _DropField(
-                            label: 'Action', value: _action, items: _kActions,
+                            label: context.l10n.readFieldAction, value: _action, items: _kActions,
                             onChanged: (v) => setState(() => _action = v),
                           )),
                           const SizedBox(width: 10),
@@ -693,8 +704,8 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                             child: TextField(
                               controller: _sizingCtrl,
                               decoration: InputDecoration(
-                                labelText: 'Sizing',
-                                hintText: '4x / 75%',
+                                labelText: context.l10n.readFieldSizing,
+                                hintText: context.l10n.readFieldSizingHint,
                                 filled: true, isDense: true,
                                 border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -710,8 +721,8 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                       TextField(
                         controller: _cardsCtrl,
                         decoration: InputDecoration(
-                          labelText: 'Cards shown',
-                          hintText: 'AKo, JJ, 45s…',
+                          labelText: context.l10n.readFieldCards,
+                          hintText: context.l10n.readFieldCardsHint,
                           filled: true, isDense: true,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -725,8 +736,8 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                         controller: _noteCtrl,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          labelText: 'Note',
-                          hintText: 'Any other observations…',
+                          labelText: context.l10n.readFieldNote,
+                          hintText: context.l10n.readFieldNoteHint,
                           filled: true,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -748,7 +759,9 @@ class _EditNoteSheetState extends State<_EditNoteSheet> {
                                           .colorScheme
                                           .onPrimary))
                               : const Icon(Icons.save_outlined),
-                          label: Text(_saving ? 'Saving…' : 'Save Changes'),
+                          label: Text(_saving
+                              ? context.l10n.readSaving
+                              : context.l10n.readSaveChanges),
                           style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14)),
                         ),
