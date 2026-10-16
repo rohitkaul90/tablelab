@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../data/poker_rooms.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart' show safeDateFormat;
 import '../services/analytics_service.dart';
 import '../providers/providers.dart';
 import '../utils/helpers.dart';
@@ -11,38 +13,71 @@ import 'log_session_screen.dart' show kCurrencies;
 
 class _AppField {
   final String key;
-  final String label;
   final bool required;
-  final String? hint;
 
-  const _AppField(this.key, this.label, {this.required = false, this.hint});
+  const _AppField(this.key, {this.required = false});
 }
 
 const _appFields = [
-  _AppField('date',             'Date',                   required: true),
-  _AppField('buy_in',           'Buy-in',                 required: true),
-  _AppField('game_type',        'Game Type',              hint: 'cash / tournament'),
-  _AppField('stakes',           'Stakes',                 hint: 'e.g. 1/2, 2/5'),
-  _AppField('cash_out',         'Cash-out'),
-  _AppField('prize_won',        'Prize Won'),
-  _AppField('profit_loss',      'Profit',                 hint: 'used to derive cash-out if absent'),
-  _AppField('duration_minutes', 'Duration (minutes)'),
-  _AppField('duration_hours',   'Duration (hours)',       hint: 'also accepts "1h 30m", "1:30" etc.'),
-  _AppField('start_time',       'Start Time'),
-  _AppField('end_time',         'End Time'),
-  _AppField('location',         'Location / Venue'),
-  _AppField('currency',         'Currency',               hint: 'CAD, USD, GBP…'),
-  _AppField('country',          'Country',                hint: 'Canada, USA, UK…'),
-  _AppField('hands_per_hour',   'Hands per Hour'),
-  _AppField('table_size',       'Table Size',             hint: '2–9 players'),
-  _AppField('notes',            'Notes'),
-  _AppField('rake_paid',        'Rake / Fees'),
-  _AppField('finish_position',  'Finish Position'),
-  _AppField('total_entrants',   'Total Entrants'),
-  _AppField('table_quality',    'Table Quality (1–5)'),
+  _AppField('date', required: true),
+  _AppField('buy_in', required: true),
+  _AppField('game_type'),
+  _AppField('stakes'),
+  _AppField('cash_out'),
+  _AppField('prize_won'),
+  _AppField('profit_loss'),
+  _AppField('duration_minutes'),
+  _AppField('duration_hours'),
+  _AppField('start_time'),
+  _AppField('end_time'),
+  _AppField('location'),
+  _AppField('currency'),
+  _AppField('country'),
+  _AppField('hands_per_hour'),
+  _AppField('table_size'),
+  _AppField('notes'),
+  _AppField('rake_paid'),
+  _AppField('finish_position'),
+  _AppField('total_entrants'),
+  _AppField('table_quality'),
 ];
 
-const _notMapped = '-- Not in file --';
+/// Display name of an app field (keys are stable ids used by the mapping).
+String _fieldLabel(AppLocalizations l10n, String key) => switch (key) {
+      'date' => l10n.importFieldDate,
+      'buy_in' => l10n.importFieldBuyIn,
+      'game_type' => l10n.importFieldGameType,
+      'stakes' => l10n.importFieldStakes,
+      'cash_out' => l10n.importFieldCashOut,
+      'prize_won' => l10n.importFieldPrizeWon,
+      'profit_loss' => l10n.importFieldProfitLoss,
+      'duration_minutes' => l10n.importFieldDurationMinutes,
+      'duration_hours' => l10n.importFieldDurationHours,
+      'start_time' => l10n.importFieldStartTime,
+      'end_time' => l10n.importFieldEndTime,
+      'location' => l10n.importFieldLocation,
+      'currency' => l10n.importFieldCurrency,
+      'country' => l10n.importFieldCountry,
+      'hands_per_hour' => l10n.importFieldHandsPerHour,
+      'table_size' => l10n.importFieldTableSize,
+      'notes' => l10n.importFieldNotes,
+      'rake_paid' => l10n.importFieldRakePaid,
+      'finish_position' => l10n.importFieldFinishPosition,
+      'total_entrants' => l10n.importFieldTotalEntrants,
+      'table_quality' => l10n.importFieldTableQuality,
+      _ => key,
+    };
+
+String? _fieldHint(AppLocalizations l10n, String key) => switch (key) {
+      'game_type' => l10n.importFieldHintGameType,
+      'stakes' => l10n.importFieldHintStakes,
+      'profit_loss' => l10n.importFieldHintProfitLoss,
+      'duration_hours' => l10n.importFieldHintDurationHours,
+      'currency' => l10n.importFieldHintCurrency,
+      'country' => l10n.importFieldHintCountry,
+      'table_size' => l10n.importFieldHintTableSize,
+      _ => null,
+    };
 
 // ─── Import presets ───────────────────────────────────────────────────────────
 
@@ -356,10 +391,22 @@ const _presets = [
 
 // ─── Preview model ────────────────────────────────────────────────────────────
 
+enum _IssueKind { missingDate, badDate, badBuyIn, noResult }
+
+/// A per-row preview problem. Built in pure code (no BuildContext), so it
+/// carries a kind + the raw value; the card localizes it at render.
 class _RowIssue {
   final int rowNum;
-  final String message;
-  const _RowIssue(this.rowNum, this.message);
+  final _IssueKind kind;
+  final String value;
+  const _RowIssue(this.rowNum, this.kind, [this.value = '']);
+
+  String message(AppLocalizations l10n) => switch (kind) {
+        _IssueKind.missingDate => l10n.importIssueMissingDate,
+        _IssueKind.badDate => l10n.importIssueBadDate(value),
+        _IssueKind.badBuyIn => l10n.importIssueBadBuyIn(value),
+        _IssueKind.noResult => l10n.importIssueNoResult,
+      };
 }
 
 class _ImportPreview {
@@ -369,7 +416,8 @@ class _ImportPreview {
   final String? dateMax;
   final List<_RowIssue> issues;
   // Non-fatal: cash rows whose stakes can't be parsed for BB/100.
-  final String? stakesWarning;
+  final int unparseableStakes;
+  final String? unparseableExample;
 
   const _ImportPreview({
     required this.valid,
@@ -377,7 +425,8 @@ class _ImportPreview {
     this.dateMin,
     this.dateMax,
     this.issues = const [],
-    this.stakesWarning,
+    this.unparseableStakes = 0,
+    this.unparseableExample,
   });
 }
 
@@ -646,13 +695,13 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
 
       final dateRaw = cell(dateIdx);
       if (dateRaw.isEmpty) {
-        if (issues.length < 5) issues.add(_RowIssue(i + 2, 'Missing date'));
+        if (issues.length < 5) issues.add(_RowIssue(i + 2, _IssueKind.missingDate));
         continue;
       }
       final dateStr = _parseDate(dateRaw);
       if (dateStr == null) {
         if (issues.length < 5) {
-          issues.add(_RowIssue(i + 2, 'Unrecognised date: "$dateRaw"'));
+          issues.add(_RowIssue(i + 2, _IssueKind.badDate, dateRaw));
         }
         continue;
       }
@@ -661,7 +710,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
           cell(buyInIdx).replaceAll(RegExp(r'[\$,£€₹]'), '').trim();
       if (buyInStr.isEmpty || double.tryParse(buyInStr) == null) {
         if (issues.length < 5) {
-          issues.add(_RowIssue(i + 2, 'Invalid buy-in: "${cell(buyInIdx)}"'));
+          issues.add(_RowIssue(i + 2, _IssueKind.badBuyIn, cell(buyInIdx)));
         }
         continue;
       }
@@ -670,7 +719,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
           (prizeWonIdx >= 0 && cell(prizeWonIdx).isNotEmpty) ||
           (plIdx >= 0 && cell(plIdx).isNotEmpty);
       if (!hasResult && issues.length < 5) {
-        issues.add(_RowIssue(i + 2, 'No result column — will record \$0 profit'));
+        issues.add(_RowIssue(i + 2, _IssueKind.noResult));
       }
 
       if (dateMin == null || dateStr.compareTo(dateMin) < 0) dateMin = dateStr;
@@ -695,11 +744,6 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       valid++;
     }
 
-    final stakesWarning = unparseableStakes == 0
-        ? null
-        : '$unparseableStakes cash session${unparseableStakes == 1 ? '' : 's'} '
-            'have stakes that can\'t be read for BB/100 (e.g. "$unparseableExample") '
-            '— they\'ll still import, but won\'t count toward BB/100.';
 
     return _ImportPreview(
       valid: valid,
@@ -707,13 +751,15 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       dateMin: dateMin,
       dateMax: dateMax,
       issues: issues,
-      stakesWarning: stakesWarning,
+      unparseableStakes: unparseableStakes,
+      unparseableExample: unparseableExample,
     );
   }
 
   // ─── Import ───────────────────────────────────────────────────────────────
 
   Future<void> _import() async {
+    final l10n = context.l10n;
     final hasResult = _mapping['cash_out'] != null ||
         _mapping['prize_won'] != null ||
         _mapping['profit_loss'] != null;
@@ -722,20 +768,16 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('No result column mapped'),
-          content: const Text(
-            'You haven\'t mapped Cash-out, Prize Won, or Profit.\n\n'
-            'All imported sessions will show \$0 profit.\n\n'
-            'Import anyway?',
-          ),
+          title: Text(l10n.importNoResultTitle),
+          content: Text(l10n.importNoResultBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Go back'),
+              child: Text(l10n.importGoBack),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Import anyway'),
+              child: Text(l10n.importAnyway),
             ),
           ],
         ),
@@ -986,7 +1028,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
       }
 
       if (sessions.isEmpty) {
-        throw Exception('No valid rows found to import.');
+        throw FormatException(l10n.importNoValidRows);
       }
 
       if (_overwrite) await service.clearAllSessions();
@@ -1000,14 +1042,14 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              'Imported ${sessions.length} session${sessions.length == 1 ? '' : 's'}.'),
+          content: Text(l10n.importDone(sessions.length)),
         ));
         Navigator.pop(context);
         Navigator.pop(context);
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error =
+          e is FormatException ? e.message : l10n.importFailed('$e'));
     } finally {
       if (mounted) setState(() => _importing = false);
     }
@@ -1081,10 +1123,11 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final dropdownItems = <DropdownMenuItem<String>>[
       DropdownMenuItem<String>(
         value: null,
-        child: Text(_notMapped,
+        child: Text(l10n.importMapNotInFile,
             style: TextStyle(
                 color: Theme.of(context)
                     .colorScheme
@@ -1100,7 +1143,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Map Columns')),
+      appBar: AppBar(title: Text(l10n.importMapTitle)),
       body: Column(
         children: [
           Expanded(
@@ -1111,8 +1154,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                 _PreviewCard(preview: _preview),
                 const SizedBox(height: 12),
                 Text(
-                  'Match your file\'s columns to app fields. '
-                  'Only Date and Buy-in are required — everything else is inferred or optional.',
+                  l10n.importMapIntro,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.outline,
                       ),
@@ -1120,7 +1162,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                 const SizedBox(height: 16),
 
                 // ── Source App preset chips ──────────────────────────────────
-                Text('Source App',
+                Text(l10n.importMapSourceApp,
                     style: Theme.of(context).textTheme.labelMedium),
                 const SizedBox(height: 8),
                 SingleChildScrollView(
@@ -1128,7 +1170,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                   child: Row(
                     children: [
                       _PresetChip(
-                        label: 'Auto',
+                        label: l10n.importMapAuto,
                         selected: _selectedPreset == null,
                         onTap: () => _selectPreset(null),
                       ),
@@ -1145,7 +1187,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
 
                 // ── Data preview ─────────────────────────────────────────────
                 if (widget.rows.isNotEmpty) ...[
-                  Text('First row preview',
+                  Text(l10n.importMapFirstRow,
                       style: Theme.of(context).textTheme.labelLarge),
                   const SizedBox(height: 8),
                   SingleChildScrollView(
@@ -1194,8 +1236,8 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                           children: [
                             Text(
                               field.required
-                                  ? '${field.label} *'
-                                  : field.label,
+                                  ? '${_fieldLabel(l10n, field.key)} *'
+                                  : _fieldLabel(l10n, field.key),
                               style:
                                   Theme.of(context).textTheme.bodySmall?.copyWith(
                                         fontWeight: field.required
@@ -1203,9 +1245,9 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                                             : null,
                                       ),
                             ),
-                            if (field.hint != null)
+                            if (_fieldHint(l10n, field.key) != null)
                               Text(
-                                field.hint!,
+                                _fieldHint(l10n, field.key)!,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -1229,7 +1271,7 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                             _mapping[field.key] = v;
                             _preview = _computePreview();
                           }),
-                          hint: Text(_notMapped,
+                          hint: Text(l10n.importMapNotInFile,
                               style: TextStyle(
                                   color: Theme.of(context)
                                       .colorScheme
@@ -1247,9 +1289,8 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                 // ── Options ──────────────────────────────────────────────────
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Skip duplicate sessions'),
-                  subtitle: const Text(
-                      'Skip rows whose date, buy-in, and cash-out match an existing session.'),
+                  title: Text(l10n.importSkipDuplicates),
+                  subtitle: Text(l10n.importSkipDuplicatesBody),
                   value: _skipDuplicates,
                   onChanged: _overwrite
                       ? null
@@ -1257,9 +1298,8 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Overwrite existing sessions'),
-                  subtitle: const Text(
-                      'Delete all current sessions before importing.'),
+                  title: Text(l10n.importOverwrite),
+                  subtitle: Text(l10n.importOverwriteBody),
                   value: _overwrite,
                   onChanged: (v) => setState(() {
                     _overwrite = v;
@@ -1303,8 +1343,8 @@ class _ImportMappingScreenState extends ConsumerState<ImportMappingScreen> {
                               color: Theme.of(context).colorScheme.onPrimary),
                         )
                       : Text(_overwrite
-                          ? 'Import & overwrite  (${_preview.valid} rows)'
-                          : 'Import ${_preview.valid} rows'),
+                          ? l10n.importOverwriteRows(_preview.valid)
+                          : l10n.importRows(_preview.valid)),
                 ),
               ),
             ),
@@ -1350,6 +1390,7 @@ class _PreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final pct = preview.total > 0
         ? (preview.valid / preview.total * 100).round()
         : 0;
@@ -1358,9 +1399,10 @@ class _PreviewCard extends StatelessWidget {
 
     String dateRange = '';
     if (preview.dateMin != null && preview.dateMax != null) {
-      final fmt = DateFormat('MMM d, yyyy');
-      final min = fmt.format(DateTime.parse(preview.dateMin!));
-      final max = fmt.format(DateTime.parse(preview.dateMax!));
+      String fmt(String iso) => safeDateFormat(
+          (loc) => DateFormat.yMMMd(loc), l10n.localeName, DateTime.parse(iso));
+      final min = fmt(preview.dateMin!);
+      final max = fmt(preview.dateMax!);
       dateRange = preview.dateMin == preview.dateMax ? min : '$min – $max';
     }
 
@@ -1384,7 +1426,7 @@ class _PreviewCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${preview.valid} of ${preview.total} rows ready to import',
+                  l10n.importRowsReady(preview.valid, preview.total),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: color,
@@ -1395,7 +1437,7 @@ class _PreviewCard extends StatelessWidget {
             if (dateRange.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
-                'Sessions: $dateRange',
+                l10n.importSessionsRange(dateRange),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.outline,
                     ),
@@ -1407,7 +1449,7 @@ class _PreviewCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
-                    'Row ${issue.rowNum}: ${issue.message}',
+                    l10n.importRowIssue(issue.rowNum, issue.message(l10n)),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.orange,
                         ),
@@ -1417,14 +1459,14 @@ class _PreviewCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text(
-                    '… and $extraIssues more',
+                    l10n.importMoreIssues(extraIssues),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.orange,
                         ),
                   ),
                 ),
             ],
-            if (preview.stakesWarning != null) ...[
+            if (preview.unparseableStakes > 0) ...[
               const SizedBox(height: 8),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1434,7 +1476,8 @@ class _PreviewCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      preview.stakesWarning!,
+                      l10n.importStakesWarning(preview.unparseableStakes,
+                          preview.unparseableExample ?? ''),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                             height: 1.35,

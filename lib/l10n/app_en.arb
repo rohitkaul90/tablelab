@@ -5843,5 +5843,717 @@
         "type": "String"
       }
     }
+  },
+  "helpTitle": "Help & FAQ",
+  "@helpTitle": {
+    "description": "Help screen AppBar title."
+  },
+  "helpSectionGettingStarted": "Getting Started",
+  "@helpSectionGettingStarted": {
+    "description": "Help & FAQ section heading (shown uppercased): Getting Started."
+  },
+  "faqGettingStarted1Q": "What is TableLab?",
+  "@faqGettingStarted1Q": {
+    "description": "Help & FAQ question (Getting Started section)."
+  },
+  "faqGettingStarted1A": "TableLab is a poker tracking and analysis app for serious players. Log every session you play, review performance trends, record and replay hands for study, build a personal database of opponent reads, and get AI-powered coaching — all synced to the cloud across devices.",
+  "@faqGettingStarted1A": {
+    "description": "Help & FAQ answer to \"What is TableLab?\" (Getting Started section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqGettingStarted2Q": "Do I need an account to use the app?",
+  "@faqGettingStarted2Q": {
+    "description": "Help & FAQ question (Getting Started section)."
+  },
+  "faqGettingStarted2A": "Yes. TableLab uses a secure cloud backend so your data is always backed up and accessible from any device. You can sign in with Google (one tap) or create a traditional email/password account.",
+  "@faqGettingStarted2A": {
+    "description": "Help & FAQ answer to \"Do I need an account to use the app?\" (Getting Started section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqGettingStarted3Q": "How do I navigate the app?",
+  "@faqGettingStarted3Q": {
+    "description": "Help & FAQ question (Getting Started section)."
+  },
+  "faqGettingStarted3A": "The bottom navigation bar has five tabs: Stats, Sessions, Hands, Reads, and Tools (Equity Calculator and ICM Deal Calculator). Tap the menu icon (☰) in the top-left of any screen to open the side drawer. The drawer contains your profile, Tournament Calendar, Settings, Help, About, and Data & Privacy.",
+  "@faqGettingStarted3A": {
+    "description": "Help & FAQ answer to \"How do I navigate the app?\" (Getting Started section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqGettingStarted4Q": "Is my data private?",
+  "@faqGettingStarted4Q": {
+    "description": "Help & FAQ question (Getting Started section)."
+  },
+  "faqGettingStarted4A": "Yes. Every query to the database enforces Row-Level Security — meaning you can only ever read or write your own data. No other user can see your sessions, hands, or reads.",
+  "@faqGettingStarted4A": {
+    "description": "Help & FAQ answer to \"Is my data private?\" (Getting Started section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionSessions": "Sessions",
+  "@helpSectionSessions": {
+    "description": "Help & FAQ section heading (shown uppercased): Sessions."
+  },
+  "faqSessions1Q": "How do I log a session?",
+  "@faqSessions1Q": {
+    "description": "Help & FAQ question (Sessions section)."
+  },
+  "faqSessions1A": "Go to the Sessions tab and tap the + button in the bottom-right. Select Cash Game or Tournament, fill in the details, and tap Save. Required fields are marked — everything else is optional but improves your analytics.",
+  "@faqSessions1A": {
+    "description": "Help & FAQ answer to \"How do I log a session?\" (Sessions section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqSessions2Q": "What's the difference between Cash and Tournament logging?",
+  "@faqSessions2Q": {
+    "description": "Help & FAQ question (Sessions section)."
+  },
+  "faqSessions2A": "Cash Games track profit/loss as cash-out minus buy-in. Tournaments track profit/loss as prize won minus buy-in, and display your ROI (return on investment) as a percentage. The log form adapts based on which type you select, showing only relevant fields.",
+  "@faqSessions2A": {
+    "description": "Help & FAQ answer to \"What's the difference between Cash and Tournament logging?\" (Sessions section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqSessions3Q": "What is Rake and why should I track it?",
+  "@faqSessions3Q": {
+    "description": "Help & FAQ question (Sessions section)."
+  },
+  "faqSessions3A": "Rake is the fee the house takes for running the game. It's recorded for informational purposes only — it doesn't change your profit, but it helps you understand the true cost of play at different venues. You can save rake presets per location so you never have to re-enter the same value.",
+  "@faqSessions3A": {
+    "description": "Help & FAQ answer to \"What is Rake and why should I track it?\" (Sessions section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqSessions4Q": "What is Table Quality?",
+  "@faqSessions4Q": {
+    "description": "Help & FAQ question (Sessions section)."
+  },
+  "faqSessions4A": "Table Quality is your subjective 1–5 star rating of how good the game was — factoring in opponent skill level, game dynamics, or how soft the table felt. Analytics uses this to help you identify which games are most worth playing.",
+  "@faqSessions4A": {
+    "description": "Help & FAQ answer to \"What is Table Quality?\" (Sessions section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqSessions5Q": "What does \"Hands/Hour\" mean?",
+  "@faqSessions5Q": {
+    "description": "Help & FAQ question (Sessions section)."
+  },
+  "faqSessions5A": "Hands per hour is the pace of the game — how many hands were dealt each hour. Cash game players often track this to compare speed across venues. A faster game means more decisions per hour, which amplifies both edges and leaks.",
+  "@faqSessions5A": {
+    "description": "Help & FAQ answer to \"What does \"Hands/Hour\" mean?\" (Sessions section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqSessions6Q": "Can I edit or delete a session?",
+  "@faqSessions6Q": {
+    "description": "Help & FAQ question (Sessions section)."
+  },
+  "faqSessions6A": "Yes. In the Sessions tab, tap any session to open its detail view. Use the pencil icon in the top-right to edit, or the trash icon to delete. Deleted sessions are removed permanently.",
+  "@faqSessions6A": {
+    "description": "Help & FAQ answer to \"Can I edit or delete a session?\" (Sessions section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqSessions7Q": "What currencies are supported?",
+  "@faqSessions7Q": {
+    "description": "Help & FAQ question (Sessions section)."
+  },
+  "faqSessions7A": "CAD, USD, GBP, and EUR. The currency defaults to the same as your last logged session. When viewing analytics, all amounts are converted to your selected display currency at approximate exchange rates.",
+  "@faqSessions7A": {
+    "description": "Help & FAQ answer to \"What currencies are supported?\" (Sessions section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionAnalytics": "Analytics",
+  "@helpSectionAnalytics": {
+    "description": "Help & FAQ section heading (shown uppercased): Analytics."
+  },
+  "faqAnalytics1Q": "Where do I find Analytics?",
+  "@faqAnalytics1Q": {
+    "description": "Help & FAQ question (Analytics section)."
+  },
+  "faqAnalytics1A": "Go to the Stats tab and tap the \"Analytics\" chip at the top. The Analytics view lives alongside the Overview tab on the same screen.",
+  "@faqAnalytics1A": {
+    "description": "Help & FAQ answer to \"Where do I find Analytics?\" (Analytics section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAnalytics2Q": "What is the Profit Over Time chart?",
+  "@faqAnalytics2Q": {
+    "description": "Help & FAQ question (Analytics section)."
+  },
+  "faqAnalytics2A": "This chart tracks your cumulative profit and loss over time. A line trending upward means you're profitable — every session adds (or subtracts) from your running total. Switch between Cumulative, Weekly, Monthly, and Yearly views using the chips above the chart.",
+  "@faqAnalytics2A": {
+    "description": "Help & FAQ answer to \"What is the Profit Over Time chart?\" (Analytics section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAnalytics3Q": "How do Analytics filters work?",
+  "@faqAnalytics3Q": {
+    "description": "Help & FAQ question (Analytics section)."
+  },
+  "faqAnalytics3A": "Tap the filter icon (sliders) in the top-right of the screen when on the Analytics tab. You can filter by date range, display currency, country, venue type (Live/Online), and specific location. All charts and insight cards update to reflect the filtered data.",
+  "@faqAnalytics3A": {
+    "description": "Help & FAQ answer to \"How do Analytics filters work?\" (Analytics section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAnalytics4Q": "What are the Insight Cards?",
+  "@faqAnalytics4Q": {
+    "description": "Help & FAQ question (Analytics section)."
+  },
+  "faqAnalytics4A": "Insight Cards break down your performance by different dimensions: stakes, buy-in level, game type, day of week, time of day, session length, table quality, and location. Each card shows your profit and win rate for that segment so you can see exactly where you perform best.",
+  "@faqAnalytics4A": {
+    "description": "Help & FAQ answer to \"What are the Insight Cards?\" (Analytics section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAnalytics5Q": "What are Recommendations?",
+  "@faqAnalytics5Q": {
+    "description": "Help & FAQ question (Analytics section)."
+  },
+  "faqAnalytics5A": "Recommendations uses Welch's t-test — a statistical method — to detect meaningful differences in your performance across conditions. For example, if your live results are significantly stronger than online, it flags that. Expand the section to see actionable suggestions.",
+  "@faqAnalytics5A": {
+    "description": "Help & FAQ answer to \"What are Recommendations?\" (Analytics section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAnalytics6Q": "What is Hourly Rate?",
+  "@faqAnalytics6Q": {
+    "description": "Help & FAQ question (Analytics section)."
+  },
+  "faqAnalytics6A": "Hourly rate is your average profit per hour of play, calculated from sessions where you logged both a start and end time (or a duration). It's one of the most useful metrics for cash game players to compare across stakes and locations.",
+  "@faqAnalytics6A": {
+    "description": "Help & FAQ answer to \"What is Hourly Rate?\" (Analytics section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionHands": "Hand Replayer",
+  "@helpSectionHands": {
+    "description": "Help & FAQ section heading (shown uppercased): Hand Replayer."
+  },
+  "faqHands1Q": "How does the Hand Recorder work?",
+  "@faqHands1Q": {
+    "description": "Help & FAQ question (Hand Replayer section)."
+  },
+  "faqHands1A": "In the Hands tab, tap the + button. First set up the table: add player names, positions, and stack sizes. For cash games, select your stakes from the preset list. For tournament hands, enter the exact small blind and big blind (e.g. 500 / 1,000). Then step through each street — Pre-flop, Flop, Turn, River — recording each player's action and the community cards dealt.",
+  "@faqHands1A": {
+    "description": "Help & FAQ answer to \"How does the Hand Recorder work?\" (Hand Replayer section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqHands2Q": "How do I record tournament hands?",
+  "@faqHands2Q": {
+    "description": "Help & FAQ question (Hand Replayer section)."
+  },
+  "faqHands2A": "When recording a hand, toggle the \"Tournament hand\" switch in the setup screen. Instead of a fixed stakes dropdown, you'll get two free-form fields for Small Blind and Big Blind — enter any value from 100/200 up to 5M/10M or beyond. Thousands formatting is applied automatically as you type.",
+  "@faqHands2A": {
+    "description": "Help & FAQ answer to \"How do I record tournament hands?\" (Hand Replayer section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqHands3Q": "Do I have to record hands in real time?",
+  "@faqHands3Q": {
+    "description": "Help & FAQ question (Hand Replayer section)."
+  },
+  "faqHands3A": "No. The hand recorder is designed to be used from memory after a session. Record the key hands while they're fresh — what mattered was the decision-making, not the timing.",
+  "@faqHands3A": {
+    "description": "Help & FAQ answer to \"Do I have to record hands in real time?\" (Hand Replayer section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqHands4Q": "What is the Hand Replayer?",
+  "@faqHands4Q": {
+    "description": "Help & FAQ question (Hand Replayer section)."
+  },
+  "faqHands4A": "Tap a recorded hand in the Hands list to open the replayer. It shows a top-down table view with player panels, chip counts, community cards, and action labels. Use the controls at the bottom to step forward/back through each action, or press Play to auto-advance. Speed can be adjusted with the speed chips.",
+  "@faqHands4A": {
+    "description": "Help & FAQ answer to \"What is the Hand Replayer?\" (Hand Replayer section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqHands5Q": "Can I link a hand to a session?",
+  "@faqHands5Q": {
+    "description": "Help & FAQ question (Hand Replayer section)."
+  },
+  "faqHands5A": "Yes. In the Hand Replayer, tap \"Link to session\" to connect a recorded hand to one of your saved sessions. This is useful if you recorded a hand from memory and want to tie it back to the session it came from.",
+  "@faqHands5A": {
+    "description": "Help & FAQ answer to \"Can I link a hand to a session?\" (Hand Replayer section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqHands6Q": "Can I share a hand?",
+  "@faqHands6Q": {
+    "description": "Help & FAQ question (Hand Replayer section)."
+  },
+  "faqHands6A": "Yes — in the Hand Replayer, tap the share icon in the top-right. This exports the hand as a formatted text hand history (street by street, pot sizes included) which you can share via any messaging or chat app.",
+  "@faqHands6A": {
+    "description": "Help & FAQ answer to \"Can I share a hand?\" (Hand Replayer section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqHands7Q": "Can I delete a recorded hand?",
+  "@faqHands7Q": {
+    "description": "Help & FAQ question (Hand Replayer section)."
+  },
+  "faqHands7A": "Yes. In the Hands list, swipe left on any hand to reveal the delete action.",
+  "@faqHands7A": {
+    "description": "Help & FAQ answer to \"Can I delete a recorded hand?\" (Hand Replayer section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionAi": "AI Analysis",
+  "@helpSectionAi": {
+    "description": "Help & FAQ section heading (shown uppercased): AI Analysis."
+  },
+  "faqAi1Q": "What is AI Hand Analysis?",
+  "@faqAi1Q": {
+    "description": "Help & FAQ question (AI Analysis section)."
+  },
+  "faqAi1A": "In the Hand Replayer, tap the AI chip to get a full coaching breakdown of a recorded hand. The analysis covers pre-flop decisions, post-flop play, sizing tells, and specific spots where you may have deviated from optimal lines — with actionable suggestions.",
+  "@faqAi1A": {
+    "description": "Help & FAQ answer to \"What is AI Hand Analysis?\" (AI Analysis section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAi2Q": "What is AI Session Analysis?",
+  "@faqAi2Q": {
+    "description": "Help & FAQ question (AI Analysis section)."
+  },
+  "faqAi2A": "From a session detail view, tap Analyze to get an AI summary of your overall session performance. The analysis looks at your logged stats, notes, and context to identify patterns, tilt indicators, and areas of focus for your next session.",
+  "@faqAi2A": {
+    "description": "Help & FAQ answer to \"What is AI Session Analysis?\" (AI Analysis section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAi3Q": "Is there a limit on AI analysis?",
+  "@faqAi3Q": {
+    "description": "Help & FAQ question (AI Analysis section)."
+  },
+  "faqAi3A": "Yes — AI analysis uses a cloud model and has daily usage limits to keep the service fast and fair: 20 hand analyses and 5 session analyses per day. Results are cached, so re-opening the same analysis doesn't count against your limit.",
+  "@faqAi3A": {
+    "description": "Help & FAQ answer to \"Is there a limit on AI analysis?\" (AI Analysis section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAi4Q": "How accurate is the AI analysis?",
+  "@faqAi4Q": {
+    "description": "Help & FAQ question (AI Analysis section)."
+  },
+  "faqAi4A": "The AI uses a state-of-the-art language model with strong poker fundamentals. It reasons well about common spots but can occasionally misjudge niche or highly exploitative lines. Treat it as a study partner, not an oracle — it's most useful for identifying patterns and blind spots.",
+  "@faqAi4A": {
+    "description": "Help & FAQ answer to \"How accurate is the AI analysis?\" (AI Analysis section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionReads": "Player Reads",
+  "@helpSectionReads": {
+    "description": "Help & FAQ section heading (shown uppercased): Player Reads."
+  },
+  "faqReads1Q": "What is the Reads tab?",
+  "@faqReads1Q": {
+    "description": "Help & FAQ question (Player Reads section)."
+  },
+  "faqReads1A": "Reads is your private database of opponent notes. Add any player you've encountered and record tells, tendencies, bet-sizing patterns, or any observations from your time at the table with them.",
+  "@faqReads1A": {
+    "description": "Help & FAQ answer to \"What is the Reads tab?\" (Player Reads section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqReads2Q": "How do I add a read?",
+  "@faqReads2Q": {
+    "description": "Help & FAQ question (Player Reads section)."
+  },
+  "faqReads2A": "Go to the Reads tab and tap the + button. Enter the player's name and your notes. You can add and edit notes over time as you encounter the player in future sessions.",
+  "@faqReads2A": {
+    "description": "Help & FAQ answer to \"How do I add a read?\" (Player Reads section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqReads3Q": "Can I use Reads with the Hand Recorder?",
+  "@faqReads3Q": {
+    "description": "Help & FAQ question (Player Reads section)."
+  },
+  "faqReads3A": "Yes. When recording a hand, player name fields autocomplete from your Reads database. This lets you build a connected record of hands involving players you've profiled.",
+  "@faqReads3A": {
+    "description": "Help & FAQ answer to \"Can I use Reads with the Hand Recorder?\" (Player Reads section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqReads4Q": "Can I share a player read?",
+  "@faqReads4Q": {
+    "description": "Help & FAQ question (Player Reads section)."
+  },
+  "faqReads4A": "Yes. Open a read's detail view and tap the share icon. This exports the player name and your notes as plain text to share via any app.",
+  "@faqReads4A": {
+    "description": "Help & FAQ answer to \"Can I share a player read?\" (Player Reads section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionCalendar": "Tournament Calendar",
+  "@helpSectionCalendar": {
+    "description": "Help & FAQ section heading (shown uppercased): Tournament Calendar."
+  },
+  "faqCalendar1Q": "What is the Tournament Calendar?",
+  "@faqCalendar1Q": {
+    "description": "Help & FAQ question (Tournament Calendar section)."
+  },
+  "faqCalendar1A": "The Calendar tab shows upcoming live poker tournaments sourced from PokerNews — major series like WSOP, WPT, EPT, and regional events worldwide. Each listing shows dates, buy-in, guarantee, venue, and country.",
+  "@faqCalendar1A": {
+    "description": "Help & FAQ answer to \"What is the Tournament Calendar?\" (Tournament Calendar section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqCalendar2Q": "How current is the tournament data?",
+  "@faqCalendar2Q": {
+    "description": "Help & FAQ question (Tournament Calendar section)."
+  },
+  "faqCalendar2A": "The calendar refreshes automatically every Monday from PokerNews. Pull down on the Calendar screen to force a refresh at any time.",
+  "@faqCalendar2A": {
+    "description": "Help & FAQ answer to \"How current is the tournament data?\" (Tournament Calendar section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqCalendar3Q": "Can I filter by country?",
+  "@faqCalendar3Q": {
+    "description": "Help & FAQ question (Tournament Calendar section)."
+  },
+  "faqCalendar3A": "Yes. Tap the country filter chips below the app bar to narrow the list to a specific country. Tap \"Show past\" in the top-right to also display tournaments that have already ended.",
+  "@faqCalendar3A": {
+    "description": "Help & FAQ answer to \"Can I filter by country?\" (Tournament Calendar section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqCalendar4Q": "Can I register or buy in through the app?",
+  "@faqCalendar4Q": {
+    "description": "Help & FAQ question (Tournament Calendar section)."
+  },
+  "faqCalendar4A": "Not directly — TableLab is a tracking and study tool, not a registration platform. Each tournament card shows a link to the full PokerNews listing where registration details are available.",
+  "@faqCalendar4A": {
+    "description": "Help & FAQ answer to \"Can I register or buy in through the app?\" (Tournament Calendar section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionTools": "Tools",
+  "@helpSectionTools": {
+    "description": "Help & FAQ section heading (shown uppercased): Tools."
+  },
+  "faqTools1Q": "What is the Equity Calculator?",
+  "@faqTools1Q": {
+    "description": "Help & FAQ question (Tools section)."
+  },
+  "faqTools1A": "The Equity Calculator (under Tools in the drawer) lets you calculate hand vs. range equity. Enter a specific hand and one or more opponent ranges, and it computes each side's equity across all possible run-outs — useful for understanding how ahead or behind you are in a given spot.",
+  "@faqTools1A": {
+    "description": "Help & FAQ answer to \"What is the Equity Calculator?\" (Tools section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqTools2Q": "What is the ICM Deal Calculator?",
+  "@faqTools2Q": {
+    "description": "Help & FAQ question (Tools section)."
+  },
+  "faqTools2A": "The ICM Deal Calculator (under Tools in the drawer) helps final table players agree on a fair chip-chop deal. Enter each player's chip count and the remaining prize spots, and it computes two values: the ICM deal (which accounts for payout structure and risk of elimination) and a straight chip-chop (chips ÷ total chips × prize pool). The Diff column shows who gains or loses under each method.",
+  "@faqTools2A": {
+    "description": "Help & FAQ answer to \"What is the ICM Deal Calculator?\" (Tools section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqTools3Q": "What is ICM and why does it differ from chip-chop?",
+  "@faqTools3Q": {
+    "description": "Help & FAQ question (Tools section)."
+  },
+  "faqTools3A": "ICM (Independent Chip Model) treats tournament chips differently from cash. A chip stack worth 30% of the chips doesn't guarantee 30% of the remaining prize money, because the short stack risks busting first and losing all equity in higher places. ICM accounts for this risk — short stacks receive proportionally more than their chip % suggests, while big stacks receive less. This makes ICM fairer for short stacks.",
+  "@faqTools3A": {
+    "description": "Help & FAQ answer to \"What is ICM and why does it differ from chip-chop?\" (Tools section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqTools4Q": "How many players can the ICM calculator handle?",
+  "@faqTools4Q": {
+    "description": "Help & FAQ question (Tools section)."
+  },
+  "faqTools4A": "Up to 9 players and 9 prize places. The algorithm uses memoised recursion (Malmuth-Harville) and handles any realistic final table configuration in under a second.",
+  "@faqTools4A": {
+    "description": "Help & FAQ answer to \"How many players can the ICM calculator handle?\" (Tools section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionImportExport": "Import & Export",
+  "@helpSectionImportExport": {
+    "description": "Help & FAQ section heading (shown uppercased): Import & Export."
+  },
+  "faqImportExport1Q": "How do I export my sessions?",
+  "@faqImportExport1Q": {
+    "description": "Help & FAQ question (Import & Export section)."
+  },
+  "faqImportExport1A": "Go to the Sessions tab and tap the Import/Export button in the top-right. Choose Export, select CSV or Excel format, and the file will be generated and ready to save or share. CSV works with any spreadsheet app; Excel exports a formatted .xlsx file.",
+  "@faqImportExport1A": {
+    "description": "Help & FAQ answer to \"How do I export my sessions?\" (Import & Export section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqImportExport2Q": "How do I import sessions from a spreadsheet?",
+  "@faqImportExport2Q": {
+    "description": "Help & FAQ question (Import & Export section)."
+  },
+  "faqImportExport2A": "Tap Import on the Import/Export screen and pick a CSV or Excel file from your device. TableLab will show a column mapping UI — drag or assign your spreadsheet's columns to the correct session fields. Confirm the mapping and the sessions will be imported.",
+  "@faqImportExport2A": {
+    "description": "Help & FAQ answer to \"How do I import sessions from a spreadsheet?\" (Import & Export section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqImportExport3Q": "What columns does the CSV export include?",
+  "@faqImportExport3Q": {
+    "description": "Help & FAQ question (Import & Export section)."
+  },
+  "faqImportExport3A": "The export includes all session fields: date, game type, stakes, location, buy-in, cash-out, profit/loss, duration, rake, table quality, hands/hour, notes, currency, and more.",
+  "@faqImportExport3A": {
+    "description": "Help & FAQ answer to \"What columns does the CSV export include?\" (Import & Export section). Keep app feature names consistent with the rest of the UI."
+  },
+  "helpSectionAccount": "Account & Data",
+  "@helpSectionAccount": {
+    "description": "Help & FAQ section heading (shown uppercased): Account & Data."
+  },
+  "faqAccount1Q": "How do I reset my password?",
+  "@faqAccount1Q": {
+    "description": "Help & FAQ question (Account & Data section)."
+  },
+  "faqAccount1A": "On the login screen, tap \"Forgot password?\" below the password field and enter your email. A reset link will be sent to your inbox.",
+  "@faqAccount1A": {
+    "description": "Help & FAQ answer to \"How do I reset my password?\" (Account & Data section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAccount2Q": "Where is my data stored?",
+  "@faqAccount2Q": {
+    "description": "Help & FAQ question (Account & Data section)."
+  },
+  "faqAccount2A": "Your data lives in Supabase — a secure, cloud-hosted PostgreSQL database. Row-Level Security policies are enforced at the database level, so your data is accessible only to you.",
+  "@faqAccount2A": {
+    "description": "Help & FAQ answer to \"Where is my data stored?\" (Account & Data section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAccount3Q": "Can I use TableLab on multiple devices?",
+  "@faqAccount3Q": {
+    "description": "Help & FAQ question (Account & Data section)."
+  },
+  "faqAccount3A": "Yes. Sign in with the same account on any device — web, Android, or desktop — and all your sessions, hands, and reads sync automatically.",
+  "@faqAccount3A": {
+    "description": "Help & FAQ answer to \"Can I use TableLab on multiple devices?\" (Account & Data section). Keep app feature names consistent with the rest of the UI."
+  },
+  "faqAccount4Q": "Can I delete my account?",
+  "@faqAccount4Q": {
+    "description": "Help & FAQ question (Account & Data section)."
+  },
+  "faqAccount4A": "In-app account deletion is not yet supported. To request full deletion of your data, contact support.",
+  "@faqAccount4A": {
+    "description": "Help & FAQ answer to \"Can I delete my account?\" (Account & Data section). Keep app feature names consistent with the rest of the UI."
+  },
+  "importFieldDate": "Date",
+  "@importFieldDate": {
+    "description": "Import column-mapping screen: name of the app field \"date\" that a spreadsheet column is mapped to."
+  },
+  "importFieldBuyIn": "Buy-in",
+  "@importFieldBuyIn": {
+    "description": "Import column-mapping screen: name of the app field \"buy_in\" that a spreadsheet column is mapped to."
+  },
+  "importFieldGameType": "Game Type",
+  "@importFieldGameType": {
+    "description": "Import column-mapping screen: name of the app field \"game_type\" that a spreadsheet column is mapped to."
+  },
+  "importFieldHintGameType": "cash / tournament",
+  "@importFieldHintGameType": {
+    "description": "Import column-mapping screen: small hint under the \"Game Type\" field. Keep example values (currency codes, numbers) as-is."
+  },
+  "importFieldStakes": "Stakes",
+  "@importFieldStakes": {
+    "description": "Import column-mapping screen: name of the app field \"stakes\" that a spreadsheet column is mapped to."
+  },
+  "importFieldHintStakes": "e.g. 1/2, 2/5",
+  "@importFieldHintStakes": {
+    "description": "Import column-mapping screen: small hint under the \"Stakes\" field. Keep example values (currency codes, numbers) as-is."
+  },
+  "importFieldCashOut": "Cash-out",
+  "@importFieldCashOut": {
+    "description": "Import column-mapping screen: name of the app field \"cash_out\" that a spreadsheet column is mapped to."
+  },
+  "importFieldPrizeWon": "Prize Won",
+  "@importFieldPrizeWon": {
+    "description": "Import column-mapping screen: name of the app field \"prize_won\" that a spreadsheet column is mapped to."
+  },
+  "importFieldProfitLoss": "Profit",
+  "@importFieldProfitLoss": {
+    "description": "Import column-mapping screen: name of the app field \"profit_loss\" that a spreadsheet column is mapped to."
+  },
+  "importFieldHintProfitLoss": "used to derive cash-out if absent",
+  "@importFieldHintProfitLoss": {
+    "description": "Import column-mapping screen: small hint under the \"Profit\" field. Keep example values (currency codes, numbers) as-is."
+  },
+  "importFieldDurationMinutes": "Duration (minutes)",
+  "@importFieldDurationMinutes": {
+    "description": "Import column-mapping screen: name of the app field \"duration_minutes\" that a spreadsheet column is mapped to."
+  },
+  "importFieldDurationHours": "Duration (hours)",
+  "@importFieldDurationHours": {
+    "description": "Import column-mapping screen: name of the app field \"duration_hours\" that a spreadsheet column is mapped to."
+  },
+  "importFieldHintDurationHours": "also accepts \"1h 30m\", \"1:30\" etc.",
+  "@importFieldHintDurationHours": {
+    "description": "Import column-mapping screen: small hint under the \"Duration (hours)\" field. Keep example values (currency codes, numbers) as-is."
+  },
+  "importFieldStartTime": "Start Time",
+  "@importFieldStartTime": {
+    "description": "Import column-mapping screen: name of the app field \"start_time\" that a spreadsheet column is mapped to."
+  },
+  "importFieldEndTime": "End Time",
+  "@importFieldEndTime": {
+    "description": "Import column-mapping screen: name of the app field \"end_time\" that a spreadsheet column is mapped to."
+  },
+  "importFieldLocation": "Location / Venue",
+  "@importFieldLocation": {
+    "description": "Import column-mapping screen: name of the app field \"location\" that a spreadsheet column is mapped to."
+  },
+  "importFieldCurrency": "Currency",
+  "@importFieldCurrency": {
+    "description": "Import column-mapping screen: name of the app field \"currency\" that a spreadsheet column is mapped to."
+  },
+  "importFieldHintCurrency": "CAD, USD, GBP…",
+  "@importFieldHintCurrency": {
+    "description": "Import column-mapping screen: small hint under the \"Currency\" field. Keep example values (currency codes, numbers) as-is."
+  },
+  "importFieldCountry": "Country",
+  "@importFieldCountry": {
+    "description": "Import column-mapping screen: name of the app field \"country\" that a spreadsheet column is mapped to."
+  },
+  "importFieldHintCountry": "Canada, USA, UK…",
+  "@importFieldHintCountry": {
+    "description": "Import column-mapping screen: small hint under the \"Country\" field. Keep example values (currency codes, numbers) as-is."
+  },
+  "importFieldHandsPerHour": "Hands per Hour",
+  "@importFieldHandsPerHour": {
+    "description": "Import column-mapping screen: name of the app field \"hands_per_hour\" that a spreadsheet column is mapped to."
+  },
+  "importFieldTableSize": "Table Size",
+  "@importFieldTableSize": {
+    "description": "Import column-mapping screen: name of the app field \"table_size\" that a spreadsheet column is mapped to."
+  },
+  "importFieldHintTableSize": "2–9 players",
+  "@importFieldHintTableSize": {
+    "description": "Import column-mapping screen: small hint under the \"Table Size\" field. Keep example values (currency codes, numbers) as-is."
+  },
+  "importFieldNotes": "Notes",
+  "@importFieldNotes": {
+    "description": "Import column-mapping screen: name of the app field \"notes\" that a spreadsheet column is mapped to."
+  },
+  "importFieldRakePaid": "Rake / Fees",
+  "@importFieldRakePaid": {
+    "description": "Import column-mapping screen: name of the app field \"rake_paid\" that a spreadsheet column is mapped to."
+  },
+  "importFieldFinishPosition": "Finish Position",
+  "@importFieldFinishPosition": {
+    "description": "Import column-mapping screen: name of the app field \"finish_position\" that a spreadsheet column is mapped to."
+  },
+  "importFieldTotalEntrants": "Total Entrants",
+  "@importFieldTotalEntrants": {
+    "description": "Import column-mapping screen: name of the app field \"total_entrants\" that a spreadsheet column is mapped to."
+  },
+  "importFieldTableQuality": "Table Quality (1–5)",
+  "@importFieldTableQuality": {
+    "description": "Import column-mapping screen: name of the app field \"table_quality\" that a spreadsheet column is mapped to."
+  },
+  "importMapNotInFile": "-- Not in file --",
+  "@importMapNotInFile": {
+    "description": "Import column-mapping dropdown placeholder: this app field has no matching column in the file."
+  },
+  "importIssueMissingDate": "Missing date",
+  "@importIssueMissingDate": {
+    "description": "Import preview: a row has no date."
+  },
+  "importIssueBadDate": "Unrecognised date: \"{value}\"",
+  "@importIssueBadDate": {
+    "description": "Import preview: a row date could not be parsed; {value} is the raw cell text.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "importIssueBadBuyIn": "Invalid buy-in: \"{value}\"",
+  "@importIssueBadBuyIn": {
+    "description": "Import preview: a row buy-in is not a number; {value} is the raw cell text.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "importIssueNoResult": "No result column — will record $0 profit",
+  "@importIssueNoResult": {
+    "description": "Import preview: no cash-out/prize/profit for the row, so profit will be zero."
+  },
+  "importStakesWarning": "{count, plural, one{1 cash session has stakes} other{{count} cash sessions have stakes}} that can't be read for BB/100 (e.g. \"{example}\") — they'll still import, but won't count toward BB/100.",
+  "@importStakesWarning": {
+    "description": "Import preview note: some cash rows have unreadable stakes; {example} is one raw stakes value. Keep BB/100 as-is.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "importNoResultTitle": "No result column mapped",
+  "@importNoResultTitle": {
+    "description": "Import confirm dialog title: no cash-out / prize / profit column was mapped."
+  },
+  "importNoResultBody": "You haven't mapped Cash-out, Prize Won, or Profit.\n\nAll imported sessions will show $0 profit.\n\nImport anyway?",
+  "@importNoResultBody": {
+    "description": "Import confirm dialog body. Keep the paragraph breaks."
+  },
+  "importGoBack": "Go back",
+  "@importGoBack": {
+    "description": "Import confirm dialog: cancel and return to the mapping."
+  },
+  "importAnyway": "Import anyway",
+  "@importAnyway": {
+    "description": "Import confirm dialog: proceed despite the missing result column."
+  },
+  "importNoValidRows": "No valid rows found to import.",
+  "@importNoValidRows": {
+    "description": "Import error: nothing in the file could be imported."
+  },
+  "importDone": "{count, plural, one{Imported 1 session.} other{Imported {count} sessions.}}",
+  "@importDone": {
+    "description": "Snackbar after a successful import.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importFailed": "Import failed: {error}",
+  "@importFailed": {
+    "description": "Import error box; {error} is the technical error text.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importMapTitle": "Map Columns",
+  "@importMapTitle": {
+    "description": "Import column-mapping screen AppBar title."
+  },
+  "importMapIntro": "Match your file's columns to app fields. Only Date and Buy-in are required — everything else is inferred or optional.",
+  "@importMapIntro": {
+    "description": "Import column-mapping intro text."
+  },
+  "importMapSourceApp": "Source App",
+  "@importMapSourceApp": {
+    "description": "Import column-mapping: label above the source-app preset chips."
+  },
+  "importMapAuto": "Auto",
+  "@importMapAuto": {
+    "description": "Import column-mapping preset chip: detect columns automatically."
+  },
+  "importMapFirstRow": "First row preview",
+  "@importMapFirstRow": {
+    "description": "Import column-mapping: heading above a table showing the first data row of the file."
+  },
+  "importSkipDuplicates": "Skip duplicate sessions",
+  "@importSkipDuplicates": {
+    "description": "Import option switch title."
+  },
+  "importSkipDuplicatesBody": "Skip rows whose date, buy-in, and cash-out match an existing session.",
+  "@importSkipDuplicatesBody": {
+    "description": "Import option switch subtitle."
+  },
+  "importOverwrite": "Overwrite existing sessions",
+  "@importOverwrite": {
+    "description": "Import option switch title: replace all current sessions."
+  },
+  "importOverwriteBody": "Delete all current sessions before importing.",
+  "@importOverwriteBody": {
+    "description": "Import option switch subtitle (destructive)."
+  },
+  "importOverwriteRows": "{count, plural, one{Import & overwrite (1 row)} other{Import & overwrite ({count} rows)}}",
+  "@importOverwriteRows": {
+    "description": "Import button when the overwrite option is on.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importRows": "{count, plural, one{Import 1 row} other{Import {count} rows}}",
+  "@importRows": {
+    "description": "Import button.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importRowsReady": "{valid} of {total} rows ready to import",
+  "@importRowsReady": {
+    "description": "Import preview headline.",
+    "placeholders": {
+      "valid": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "importSessionsRange": "Sessions: {range}",
+  "@importSessionsRange": {
+    "description": "Import preview: date span of the importable sessions; {range} is a formatted date or date range.",
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "importRowIssue": "Row {row}: {message}",
+  "@importRowIssue": {
+    "description": "Import preview: a problem on one spreadsheet row.",
+    "placeholders": {
+      "row": {
+        "type": "int"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "importMoreIssues": "… and {count} more",
+  "@importMoreIssues": {
+    "description": "Import preview: how many further row problems are not listed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "legalEnglishOnlyNotice": "This document is provided in English.",
+  "@legalEnglishOnlyNotice": {
+    "description": "Notice at the top of the Terms of Service and Data & Privacy screens, shown only in non-English UIs, saying the legal text below is English-only."
   }
 }

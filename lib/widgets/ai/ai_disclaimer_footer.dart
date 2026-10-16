@@ -35,11 +35,6 @@ class AiDisclaimerFooter extends StatelessWidget {
   }
 }
 
-/// Whether the UI is English — the one test both the footer note and the
-/// error-text choice use, so they can't disagree.
-bool isEnglishUi(AppLocalizations l10n) =>
-    l10n.localeName.split(RegExp('[_-]')).first == 'en';
-
 /// Localized (title, body) for a failed AI call. The English UI keeps the
 /// Edge Function's own message (it's specific and already English); other
 /// languages get a localized body because the server text is English-only.
