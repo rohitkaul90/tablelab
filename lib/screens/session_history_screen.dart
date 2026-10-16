@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../l10n/labels.dart' show uiDate, capitalizeFirst;
 import '../l10n/l10n.dart';
 import '../models/session_model.dart';
 import '../providers/profile_provider.dart';
@@ -333,7 +334,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       );
                       if (picked != null) {
                         setState(() => _draft = _draft.copyWith(
-                            dateFrom: DateFormat('yyyy-MM-dd').format(picked)));
+                            dateFrom: DateFormat('yyyy-MM-dd', 'en_US').format(picked)));
                       }
                     },
                     onClear: () => setState(
@@ -356,7 +357,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       );
                       if (picked != null) {
                         setState(() => _draft = _draft.copyWith(
-                            dateTo: DateFormat('yyyy-MM-dd').format(picked)));
+                            dateTo: DateFormat('yyyy-MM-dd', 'en_US').format(picked)));
                       }
                     },
                     onClear: () =>
@@ -414,9 +415,12 @@ class _DateButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Read l10n unconditionally so the button depends on Localizations and
+    // rebuilds on a language change even when a date is set.
+    final l10n = context.l10n;
     final display = value != null
-        ? DateFormat('MMM d, yyyy').format(DateTime.parse(value!))
-        : context.l10n.filterAny;
+        ? uiDate((l) => DateFormat.yMMMd(l), DateTime.parse(value!))
+        : l10n.filterAny;
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: const Icon(Icons.calendar_today, size: 16),
@@ -448,7 +452,10 @@ class _SessionList extends StatelessWidget {
   Map<String, List<SessionModel>> _groupByMonth() {
     final map = <String, List<SessionModel>>{};
     for (final s in sessions) {
-      final key = DateFormat('MMMM yyyy').format(DateTime.parse(s.date));
+      // Group label in the UI language; grouping is per render so a localized
+      // header is still a consistent key.
+      final key = capitalizeFirst(
+          uiDate((l) => DateFormat.yMMMM(l), DateTime.parse(s.date)));
       map.putIfAbsent(key, () => []).add(s);
     }
     return map;

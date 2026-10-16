@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../l10n/labels.dart' show uiDate, capitalizeFirst;
 
 class TournamentListing {
   final String id;
@@ -61,15 +62,15 @@ class TournamentListing {
     return startDate.isBefore(now) && !isPast;
   }
 
-  String get monthKey => DateFormat('MMMM yyyy').format(startDate);
+  String get monthKey =>
+      capitalizeFirst(uiDate((l) => DateFormat.yMMMM(l), startDate));
 
   String get formattedDates {
-    final mFmt = DateFormat('MMM d');
-    if (endDate == null) return mFmt.format(startDate);
-    if (endDate!.month == startDate.month && endDate!.year == startDate.year) {
-      return '${mFmt.format(startDate)}–${endDate!.day}';
-    }
-    return '${mFmt.format(startDate)} – ${mFmt.format(endDate!)}';
+    String md(DateTime d) => uiDate((l) => DateFormat.MMMd(l), d);
+    if (endDate == null) return md(startDate);
+    // Both ends in full: a "Oct 16–18" shortcut assumes month-before-day,
+    // which only holds in English ("16 oct.–18" in French).
+    return '${md(startDate)} – ${md(endDate!)}';
   }
 
   String get formattedBuyIn {

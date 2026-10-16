@@ -42,7 +42,16 @@ int playedMinutes(int grossMinutes, int breakMinutes) {
 String formatClockTime(DateTime t) =>
     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-final _numFmt = NumberFormat('#,##0', 'en_US');
+/// Display-only grouping formatter in the UI language (Intl.defaultLocale,
+/// set by locale_provider.applyIntlLocale): "1,234" en / "1.234" nl.
+/// Cached per locale. Never use it for values that are parsed back or
+/// stored — input formatters and export stay en_US.
+NumberFormat get _numFmt {
+  final loc = Intl.defaultLocale ?? 'en_US';
+  return _numFmtCache[loc] ??= NumberFormat('#,##0', loc);
+}
+
+final Map<String, NumberFormat> _numFmtCache = {};
 
 String formatPL(double amount, [String sym = '\$']) {
   final abs = amount.abs().round();
@@ -314,15 +323,6 @@ int? parseTableSize(String raw) {
   return (n != null && n >= 2 && n <= 9) ? n : null;
 }
 
-
-String monthLabel(String date) {
-  final dt = DateTime.tryParse(date) ?? DateTime.now();
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  return '${months[dt.month - 1]} ${dt.year}';
-}
 
 // ─── BB/100 ───────────────────────────────────────────────────────────────────
 

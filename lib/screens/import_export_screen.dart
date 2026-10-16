@@ -89,7 +89,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
       final saved = await _saveExportFile(
         bytes: bytes,
         fileName:
-            'poker_sessions_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
+            'poker_sessions_${DateFormat('yyyyMMdd', 'en_US').format(DateTime.now())}.csv',
         extension: 'csv',
         mimeType: 'text/csv',
         dialogTitle: l10n.exportCsvDialogTitle,
@@ -148,7 +148,7 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
       final saved = await _saveExportFile(
         bytes: Uint8List.fromList(encoded),
         fileName:
-            'poker_sessions_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx',
+            'poker_sessions_${DateFormat('yyyyMMdd', 'en_US').format(DateTime.now())}.xlsx',
         extension: 'xlsx',
         mimeType:
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

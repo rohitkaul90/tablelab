@@ -18,6 +18,8 @@ import '../../theme/app_theme.dart';
 import '../hand_replayer/hand_replayer_screen.dart';
 
 class _BlindFormatter extends TextInputFormatter {
+  // en_US on purpose: this formats typed input, and the value is parsed
+  // back by stripping ',' — a locale separator would corrupt it.
   static final _fmt = NumberFormat('#,###', 'en_US');
   @override
   TextEditingValue formatEditUpdate(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/labels.dart' show uiDate;
 import '../l10n/l10n.dart';
 import '../models/session_model.dart';
 import '../utils/helpers.dart';
@@ -33,7 +34,7 @@ class SessionTile extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final plColor = session.profitLoss >= 0 ? Colors.green : Colors.red;
-    final date = DateFormat('MMM d').format(DateTime.parse(session.date));
+    final date = uiDate((l) => DateFormat.MMMd(l), DateTime.parse(session.date));
     final dur = formatDuration(session.durationMinutes);
     final isTournament = isTournamentType(session.gameType);
     final location = session.location ?? gameTypeLabel(session.gameType);

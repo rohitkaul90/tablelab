@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:tablelab/l10n/generated/app_localizations.dart';
 import 'package:tablelab/l10n/labels.dart';
 import 'package:tablelab/utils/helpers.dart';
@@ -65,5 +66,23 @@ void main() {
     await initializeDateFormatting('fr');
     final fr = lookupAppLocalizations(const Locale('fr'));
     expect(weekdayShortLabel(fr, 1).toLowerCase(), startsWith('lun'));
+  });
+
+  test('uiDate follows Intl.defaultLocale and capitalizes headers', () async {
+    await initializeDateFormatting('fr');
+    await initializeDateFormatting('es');
+    final d = DateTime(2026, 10, 16);
+    Intl.withLocale('fr', () {
+      // Day before month in French.
+      expect(uiDate((l) => DateFormat.MMMd(l), d), startsWith('16'));
+    });
+    Intl.withLocale('es', () {
+      final header = capitalizeFirst(uiDate((l) => DateFormat.yMMMM(l), d));
+      expect(header, startsWith('Octubre'));
+    });
+    // Unloaded locale falls back to English instead of throwing.
+    Intl.withLocale('xx', () {
+      expect(uiDate((l) => DateFormat.MMMd(l), d), 'Oct 16');
+    });
   });
 }

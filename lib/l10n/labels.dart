@@ -116,3 +116,15 @@ String expenseCategoryLabel(AppLocalizations l10n, String id) => switch (id) {
 
 /// "+$25/hr" — a pre-formatted money amount per hour.
 String perHour(AppLocalizations l10n, String amount) => l10n.statsPerHour(amount);
+
+/// Formats [d] in the UI language (`Intl.defaultLocale`, kept in step with the
+/// app language by applyIntlLocale) with the en_US fallback of
+/// [safeDateFormat] — use for every display date, e.g.
+/// `uiDate((l) => DateFormat.yMMMd(l), d)`.
+String uiDate(DateFormat Function(String locale) build, DateTime d) =>
+    safeDateFormat(build, Intl.defaultLocale ?? 'en_US', d);
+
+/// Upper-cases the first character (for headers like "octubre de 2026",
+/// which es/fr/it month skeletons render in lowercase).
+String capitalizeFirst(String s) =>
+    s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
