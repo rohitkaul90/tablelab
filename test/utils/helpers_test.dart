@@ -916,7 +916,24 @@ void analyticsKeyTests() {
       expect(buyInBucketOf(500), BuyInBucket.over500);
     });
 
-    test('buyInBucketOfSession classifies in USD whatever the currency', () {
+    test('band edges are round numbers in the display currency', () {
+      expect(buyInBandEdges('USD'), [50, 100, 200, 500]);
+      for (final c in ['EUR', 'GBP', 'CAD', 'INR', 'AUD']) {
+        final e = buyInBandEdges(c);
+        for (var i = 1; i < e.length; i++) {
+          expect(e[i], greaterThan(e[i - 1]), reason: c);
+        }
+        for (final x in e) {
+          expect(roundBandEdge(x), x, reason: '$c edge $x is round');
+        }
+      }
+      expect(roundBandEdge(46), 50);
+      expect(roundBandEdge(92), 100);
+      expect(roundBandEdge(185), 200);
+      expect(roundBandEdge(4150), 5000);
+    });
+
+    test('buyInBucketOfSession classifies against display-currency edges', () {
       SessionModel t(double buyIn, String currency) => SessionModel(
             id: 't',
             date: '2026-01-01',
@@ -931,12 +948,18 @@ void analyticsKeyTests() {
             createdAt: '2026-01-01T18:00:00Z',
             currency: currency,
           );
-      // A ₹5,000 buy-in is ~US$60 — a $50–$100 tournament, not "> 500".
-      final inr = convertCurrency(60, 'USD', 'INR');
-      expect(buyInBucketOfSession(t(inr, 'INR')), BuyInBucket.from50to100);
-      expect(buyInBucketOfSession(t(40, 'USD')), BuyInBucket.under50);
-      expect(buyInBucketOfSession(t(convertCurrency(600, 'USD', 'EUR'), 'EUR')),
+      // A round €100 tournament sits in the €100+ band for a EUR viewer.
+      expect(buyInBucketOfSession(t(100, 'EUR'), 'EUR'),
+          BuyInBucket.from100to200);
+      // ₹-scale buy-ins spread across bands instead of all landing on top.
+      final inrEdges = buyInBandEdges('INR');
+      expect(buyInBucketOfSession(t(inrEdges[0] - 1, 'INR'), 'INR'),
+          BuyInBucket.under50);
+      expect(buyInBucketOfSession(t(inrEdges[3], 'INR'), 'INR'),
           BuyInBucket.over500);
+      expect(buyInBucketOfSession(t(40, 'USD'), 'USD'), BuyInBucket.under50);
+      // A USD session viewed in EUR is converted before classifying.
+      expect(buyInBucketOfSession(t(600, 'USD'), 'EUR'), BuyInBucket.over500);
     });
 
     test('fieldSizeBucketOf band edges; null when entrants are unknown', () {

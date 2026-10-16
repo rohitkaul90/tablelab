@@ -16,10 +16,9 @@ void main() {
     expect(buyInBucketLabel(en, BuyInBucket.under50, 'USD'), r'< $50');
     expect(buyInBucketLabel(en, BuyInBucket.from200to500, 'USD'), r'$200–$500');
     // Band edges are USD amounts converted into the display currency.
-    expect(buyInBucketLabel(en, BuyInBucket.over500, 'EUR'),
-        '> ${formatAmount(convertCurrency(500, 'USD', 'EUR'), 'EUR')}');
-    expect(buyInBucketLabel(en, BuyInBucket.under50, 'INR'),
-        '< ${formatAmount(convertCurrency(50, 'USD', 'INR'), 'INR')}');
+    // Non-USD edges are converted then rounded to readable amounts.
+    expect(buyInBucketLabel(en, BuyInBucket.over500, 'EUR'), '> €500');
+    expect(buyInBucketLabel(en, BuyInBucket.from50to100, 'EUR'), '€50–€100');
     expect(fieldSizeBucketLabel(en, FieldSizeBucket.medium), 'Medium (50–200)');
     expect(timeOfDayBucketLabel(en, TimeOfDayBucket.evening), 'Evening (6pm–11pm)');
     expect(timeOfDayBucketLabel(en, TimeOfDayBucket.lateNight, short: true),

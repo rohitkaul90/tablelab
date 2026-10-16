@@ -4168,15 +4168,6 @@
       }
     }
   },
-  "statsLastPreset": "Last {preset}",
-  "@statsLastPreset": {
-    "description": "Chart filter chip for a date preset; {preset} is a compact code like 1Y, 6M, 3M or 1M.",
-    "placeholders": {
-      "preset": {
-        "type": "String"
-      }
-    }
-  },
   "statsDate1Year": "1 year",
   "@statsDate1Year": {
     "description": "Filter summary: the last year."

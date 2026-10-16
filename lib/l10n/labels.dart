@@ -8,14 +8,13 @@ import 'package:intl/intl.dart';
 import '../utils/helpers.dart';
 import 'generated/app_localizations.dart';
 
-/// Label for a buy-in band, with its USD edges converted to and formatted in
-/// [displayCurrency] ("< ₹4,150" for INR) so the label describes the same
-/// amounts the converted ROI beside it does.
+/// Label for a buy-in band, with the rounded [displayCurrency] edges from
+/// `buyInBandEdges` ("€50–€100", "< ₹5,000") — the same edges the sessions
+/// are classified against.
 String buyInBucketLabel(
     AppLocalizations l10n, BuyInBucket b, String displayCurrency) {
-  String edge(int i) => formatAmount(
-      convertCurrency(kBuyInBucketEdgesUsd[i], 'USD', displayCurrency),
-      displayCurrency);
+  final edges = buyInBandEdges(displayCurrency);
+  String edge(int i) => formatAmount(edges[i], displayCurrency);
   return switch (b) {
     BuyInBucket.under50 => l10n.bucketBuyInUnder(edge(0)),
     BuyInBucket.from50to100 => l10n.bucketBuyInRange(edge(0), edge(1)),
@@ -65,17 +64,20 @@ String sessionLengthBucketLabel(AppLocalizations l10n, SessionLengthBucket b) =>
 /// loads them via applyIntlLocale before any frame renders).
 String weekdayShortLabel(AppLocalizations l10n, int weekday) {
   // 2024-01-01 is a Monday; offsetting from it yields any weekday.
-  final date = DateTime(2024, 1, weekday);
+  return safeDateFormat(
+      (loc) => DateFormat.E(loc), l10n.localeName, DateTime(2024, 1, weekday));
+}
+
+/// Formats [d] with [build] in [locale], falling back to en_US when the
+/// locale's date symbols were never loaded (ArgumentError, or intl's
+/// unexported LocaleDataException). Other Errors still propagate.
+String safeDateFormat(
+    DateFormat Function(String locale) build, String locale, DateTime d) {
   try {
-    return DateFormat.E(l10n.localeName).format(date);
-  } on ArgumentError {
-    // The locale's date symbols were never loaded (initializeDateFormatting
-    // not run for it): fall back to English rather than crash.
-    return DateFormat.E('en_US').format(date);
-  } on Exception {
-    // intl's LocaleDataException (no locale data initialised at all) — not
-    // exported publicly, so catch it as an Exception. Errors still propagate.
-    return DateFormat.E('en_US').format(date);
+    return build(locale).format(d);
+  } catch (e) {
+    if (e is Error && e is! ArgumentError) rethrow;
+    return build('en_US').format(d);
   }
 }
 

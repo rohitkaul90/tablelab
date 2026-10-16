@@ -158,7 +158,7 @@ class AnalyticsData {
             null,
             StatMetric.buyIn),
       if (hasExpenses)
-        SummaryItem(l10n.statsExpenses, '-$sym${totalExpenses.toStringAsFixed(0)}',
+        SummaryItem(l10n.statsExpenses, '-${formatAmount(totalExpenses, displayCurrency)}',
             null, StatMetric.expenses),
       if (hasExpenses)
         SummaryItem(
@@ -280,7 +280,8 @@ class AnalyticsFactor {
 // differently. Keys are stable ids; display text comes from labels.dart.
 
 /// Buy-in band, classified in USD (the band edges are USD amounts).
-String buyInKey(SessionModel s) => buyInBucketOfSession(s).name;
+String buyInKey(SessionModel s, String displayCurrency) =>
+    buyInBucketOfSession(s, displayCurrency).name;
 
 /// Field-size band, or null when the entrant count is unknown.
 String? fieldSizeKey(SessionModel s) => fieldSizeBucketOf(s.totalEntrants)?.name;
@@ -339,7 +340,7 @@ List<AnalyticsFactor> analyticsFactors(
         sessions: d.tSessions,
         // Bucketed in USD (the edges are USD amounts); the label converts the
         // edges into the display currency so it matches the converted ROI.
-        keyFn: buyInKey,
+        keyFn: (s) => buyInKey(s, d.displayCurrency),
         orderedKeys: [for (final b in BuyInBucket.values) b.name],
         labelFn: (l10n, k) => buyInBucketLabel(
             l10n, BuyInBucket.values.byName(k), d.displayCurrency),
@@ -382,8 +383,10 @@ List<AnalyticsFactor> analyticsFactors(
       labelFn: (l10n, k) => weekdayShortLabel(l10n, int.parse(k)),
       isTournament: mixedTournament,
     ),
-    // Time of Day — cash only; less actionable for tournaments.
-    if (d.showingCash)
+    // Time of Day — cash only; less actionable for tournaments. Data-gated:
+    // imported sessions often have no start time, and those are skipped.
+    if (d.showingCash &&
+        d.cashSessions.where((s) => timeOfDayKey(s) != null).length >= 2)
       AnalyticsFactor(
         id: 'time',
         tabLabel: l10n.statsFactorTime,
@@ -918,7 +921,6 @@ class _TypeComparisonCard extends StatelessWidget {
     final cashExp = exp(cash);
     final tExp = exp(tournaments);
     final hasExpenses = cashExp > 0 || tExp > 0;
-    final sym = currencySymbol(displayCurrency);
     // The $/hr SD has no cell of its own here — fold it into the cash SD
     // dialog so the combined view loses no information vs the type lists.
     final cashSdInfo = hourlyStdDev == null
@@ -1082,11 +1084,11 @@ class _TypeComparisonCard extends StatelessWidget {
               row(
                 l10n.statsExpenses,
                 cashExp > 0
-                    ? cell('-$sym${cashExp.toStringAsFixed(0)}',
+                    ? cell('-${formatAmount(cashExp, displayCurrency)}',
                         StatMetric.expenses, cash, cashChip)
                     : cell('—', StatMetric.expenses, const [], cashChip),
                 tExp > 0
-                    ? cell('-$sym${tExp.toStringAsFixed(0)}',
+                    ? cell('-${formatAmount(tExp, displayCurrency)}',
                         StatMetric.expenses, tournaments, tChip)
                     : cell('—', StatMetric.expenses, const [], tChip),
               ),
@@ -1540,7 +1542,7 @@ class _RecommendationsCard extends StatelessWidget {
       case 'location':
         return l10n.statsRecStrongestVenue(best);
       case 'game type':
-        return l10n.statsRecFocusMore(best.toLowerCase());
+        return l10n.statsRecFocusMore(best);
       default:
         return l10n.statsRecFavour(best, worst);
     }
@@ -1629,7 +1631,7 @@ class _RecommendationsCard extends StatelessWidget {
     if (_isTournament) {
       // Tournament factors — scored by ROI
       checkFactor(
-        keyFn: buyInKey,
+        keyFn: (s) => buyInKey(s, displayCurrency),
         labelFn: (k) => buyInBucketLabel(
             l10n, BuyInBucket.values.byName(k), displayCurrency),
         icon: Icons.attach_money,

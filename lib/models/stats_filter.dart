@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:intl/intl.dart';
 import '../l10n/generated/app_localizations.dart';
-import '../l10n/labels.dart' show venueLabel;
+import '../l10n/labels.dart' show safeDateFormat, venueLabel;
 import 'session_model.dart';
 import '../data/poker_rooms.dart' show isOnlineSession;
 import '../utils/helpers.dart' show mostRecentSession;
@@ -126,10 +126,10 @@ class StatsFilter {
   // Month + day in the UI language (intl symbols are loaded by
   // applyIntlLocale before any frame renders): "Jan 5" / "5 janv.".
   static String _fmtDate(AppLocalizations l10n, DateTime d) =>
-      DateFormat.MMMd(l10n.localeName).format(d);
+      safeDateFormat((loc) => DateFormat.MMMd(loc), l10n.localeName, d);
 
   static String _fmtDateYear(AppLocalizations l10n, DateTime d) =>
-      DateFormat.yMMMd(l10n.localeName).format(d);
+      safeDateFormat((loc) => DateFormat.yMMMd(loc), l10n.localeName, d);
 
   /// Short label for the active date filter, or null when "all time".
   String? dateLabel(AppLocalizations l10n) {
@@ -137,7 +137,7 @@ class StatsFilter {
       return '${_fmtDate(l10n, dateRange!.start)} – '
           '${_fmtDate(l10n, dateRange!.end)}';
     }
-    if (datePreset != null) return l10n.statsLastPreset(datePreset!);
+    if (datePreset != null) return _presetLabel(l10n);
     return null;
   }
 
@@ -147,6 +147,12 @@ class StatsFilter {
       return '${_fmtDateYear(l10n, dateRange!.start)} – '
           '${_fmtDateYear(l10n, dateRange!.end)}';
     }
+    return _presetLabel(l10n);
+  }
+
+  /// Localized name of the date preset ("Last 12 months", …); the raw
+  /// '1Y'/'6M' codes are keys, never shown.
+  String _presetLabel(AppLocalizations l10n) {
     return switch (datePreset) {
       '1Y' => l10n.statsDate1Year,
       '6M' => l10n.statsDate6Months,
