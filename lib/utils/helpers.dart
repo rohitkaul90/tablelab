@@ -324,12 +324,6 @@ int? parseTableSize(String raw) {
 }
 
 
-/// Abbreviated month + year ("Jan 2026", "janv. 2026") in the UI language.
-String monthLabel(String date) {
-  final dt = DateTime.tryParse(date) ?? DateTime.now();
-  return DateFormat.yMMM().format(dt);
-}
-
 // ─── BB/100 ───────────────────────────────────────────────────────────────────
 
 /// Parses the big-blind size from a stakes string like "1/2", "2/5", "$1/$2".

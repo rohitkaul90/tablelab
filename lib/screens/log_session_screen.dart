@@ -464,7 +464,7 @@ class _LogSessionScreenState extends ConsumerState<LogSessionScreen> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today),
               title: Text(l10n.logSessionDate),
-              subtitle: Text(DateFormat.yMMMEd().format(_date)),
+              subtitle: Text(uiDate((l) => DateFormat.yMMMMEEEEd(l), _date)),
               onTap: _pickDate,
             ),
             const Divider(),

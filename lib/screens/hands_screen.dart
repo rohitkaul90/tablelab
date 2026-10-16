@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import '../l10n/labels.dart' show uiDate;
 import '../models/hand_model.dart';
 import '../models/hand_filter.dart';
 import '../l10n/l10n.dart';
+import '../utils/helpers.dart' show formatWholeNum;
 import '../providers/providers.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/playing_card_widget.dart';
@@ -186,13 +188,14 @@ class _HandTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final hero = hand.hero;
-    final fmt = DateFormat.MMMd().addPattern('·').add_jm();
+    String fmtPlayed(DateTime d) =>
+        uiDate((l) => DateFormat.MMMd(l).addPattern('·').add_jm(), d);
     final setup = hand.tableSetup;
     final stakes = '\$${setup.smallBlind}/\$${setup.bigBlind}'
         '${setup.straddle != null ? '/\$${setup.straddle}' : ''}';
     // Built per call: a top-level NumberFormat freezes the locale that was
     // active on first use and would ignore a later language switch.
-    final potStr = NumberFormat('#,###').format(hand.finalPot);
+    final potStr = formatWholeNum(hand.finalPot.toDouble());
 
     return Dismissible(
       key: ValueKey(hand.id),
@@ -246,7 +249,7 @@ class _HandTile extends StatelessWidget {
                 final l1 = l10n.handsTilePot('\$$potStr');
                 final l2 = l10n.handsTileSummary(
                     stakes, hand.streetReached, '${hand.isQuickEntry}');
-                final l3 = fmt.format(hand.playedAt.toLocal());
+                final l3 = fmtPlayed(hand.playedAt.toLocal());
                 double measure(String t, double size, FontWeight weight) {
                   final tp = TextPainter(
                     text: TextSpan(

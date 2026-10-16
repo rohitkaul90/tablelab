@@ -25,7 +25,7 @@ class SessionDetailScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final plColor = session.profitLoss >= 0 ? Colors.green : Colors.red;
     final dateStr =
-        DateFormat.yMMMMEEEEd().format(DateTime.parse(session.date));
+        uiDate((l) => DateFormat.yMMMMEEEEd(l), DateTime.parse(session.date));
     final isTournament = isTournamentType(session.gameType);
     final currency = session.currency;
     final sym = currencySymbol(currency);
@@ -263,7 +263,7 @@ class SessionDetailScreen extends ConsumerWidget {
                 prefilledSessionId: session.id,
                 prefilledStakes: session.stakes,
                 prefilledSessionLabel:
-                    '${DateFormat.MMMd().format(DateTime.parse(session.date))}  ·  ${session.stakes}',
+                    '${uiDate((l) => DateFormat.MMMd(l), DateTime.parse(session.date))}  ·  ${session.stakes}',
                 isTournamentSession: isTournament,
               );
               // No Realtime — refresh so a newly recorded hand shows in the
@@ -422,8 +422,9 @@ class _SessionHandTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hero = hand.hero;
-    final fmt = DateFormat.MMMd().addPattern('·').add_jm();
-    final potStr = NumberFormat('#,###').format(hand.finalPot);
+    String fmtPlayed(DateTime d) =>
+        uiDate((l) => DateFormat.MMMd(l).addPattern('·').add_jm(), d);
+    final potStr = formatWholeNum(hand.finalPot.toDouble());
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -467,7 +468,7 @@ class _SessionHandTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      fmt.format(hand.playedAt.toLocal()),
+                      fmtPlayed(hand.playedAt.toLocal()),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant
                             .withValues(alpha: 0.75),

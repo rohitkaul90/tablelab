@@ -621,20 +621,6 @@ void main() {
 
   // ── dayOfWeekLabel ───────────────────────────────────────────────────────────
 
-  // ── monthLabel ───────────────────────────────────────────────────────────────
-
-  group('monthLabel', () {
-    test('returns month and year', () {
-      expect(monthLabel('2026-01-15'), equals('Jan 2026'));
-      expect(monthLabel('2026-12-31'), equals('Dec 2026'));
-      expect(monthLabel('2025-06-01'), equals('Jun 2025'));
-    });
-
-    test('does not throw on invalid date', () {
-      expect(() => monthLabel('bad-date'), returnsNormally);
-    });
-  });
-
   // ── formatBB100 ──────────────────────────────────────────────────────────────
 
   group('formatBB100', () {
@@ -1007,7 +993,7 @@ void analyticsKeyTests() {
 }
 
 // ── Locale-aware display formatting (i18n PR 9) ─────────────────────────────
-// Registered via main() below.
+// Registered at the top of main().
 void localeFormattingTests() {
   group('display formatting follows Intl.defaultLocale', () {
     test('thousands separator switches with the UI language', () {
