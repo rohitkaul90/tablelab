@@ -86,7 +86,7 @@ FREE & PRIVATE
 • No ads. We never sell your data.
 • Your records are private to your account, protected by row-level security.
 
-Available on Android and on the web at tablelab.app.
+Available in English, Spanish, French, Italian and Dutch, on Android and on the web at tablelab.app.
 
 Built and operated by MagpiQ. Questions or feedback? support@tablelab.app
 ```
