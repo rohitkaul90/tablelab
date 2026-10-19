@@ -67,10 +67,25 @@ jobs:
       - name: Boot simulator, install, launch, deep-link, assert alive
         run: |
           set -euo pipefail
-          # Newest iPhone device type the runner image offers.
-          DEVICE_TYPE=$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; t=[d["identifier"] for d in json.load(sys.stdin)["devicetypes"] if d["name"].startswith("iPhone")]; print(t[-1])')
-          echo "Device type: $DEVICE_TYPE"
-          UDID=$(xcrun simctl create ci-iphone "$DEVICE_TYPE")
+          # Use an iPhone simulator the runner image already provides (device types
+          # alone aren't ordered and old ones have no runtime): newest iOS runtime,
+          # highest-numbered iPhone in it.
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, re, sys
+          devs = json.load(sys.stdin)["devices"]
+          best = None
+          for runtime, items in devs.items():
+              if "iOS" not in runtime: continue
+              ver = tuple(int(x) for x in re.findall(r"\d+", runtime.rsplit(".", 1)[-1]))
+              for d in items:
+                  if not d.get("isAvailable") or not d["name"].startswith("iPhone"): continue
+                  num = tuple(int(x) for x in re.findall(r"\d+", d["name"])) or (0,)
+                  key = (ver, num, "Pro" in d["name"])
+                  if best is None or key > best[0]: best = (key, d["udid"], d["name"], runtime)
+          if best is None: sys.exit("no available iPhone simulator")
+          print(best[1]); print("Simulator:", best[2], best[3], file=sys.stderr)
+          ')
+          echo "UDID: $UDID"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" build/ios/iphonesimulator/Runner.app
