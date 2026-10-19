@@ -281,6 +281,7 @@
   "loginConnecting": "Connexion…",
   "loginContinueWithGoogle": "Continuer avec Google",
   "loginContinueWithApple": "Continuer avec Apple",
+  "loginAppleFailed": "La connexion avec Apple n'a pas abouti. Réessaie ou utilise ton e-mail.",
   "loginOr": "ou",
   "loginEmail": "E-mail",
   "loginPassword": "Mot de passe",

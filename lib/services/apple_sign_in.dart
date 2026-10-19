@@ -21,3 +21,13 @@ String generateRawNonce([int byteLength = 32]) {
 
 /// Lowercase hex SHA-256 of [input] (UTF-8).
 String sha256Hex(String input) => sha256.convert(utf8.encode(input)).toString();
+
+/// Apple's `givenName`/`familyName` → one display name, or null when Apple
+/// sent nothing (every authorization after the first, or the user cleared it).
+String? appleDisplayName(String? givenName, String? familyName) {
+  final parts = [givenName, familyName]
+      .map((p) => p?.trim() ?? '')
+      .where((p) => p.isNotEmpty);
+  final joined = parts.join(' ');
+  return joined.isEmpty ? null : joined;
+}

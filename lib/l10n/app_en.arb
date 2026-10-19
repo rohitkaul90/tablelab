@@ -1235,6 +1235,10 @@
   "@loginContinueWithApple": {
     "description": "Sign in with Apple button label, shown on iOS only. Keep the brand name Apple untranslated."
   },
+  "loginAppleFailed": "Apple sign-in didn't complete. Try again, or use your email.",
+  "@loginAppleFailed": {
+    "description": "Error shown under the login form when Sign in with Apple fails for any reason other than the user cancelling."
+  },
   "loginOr": "or",
   "@loginOr": {
     "description": "Divider word between Google sign-in and the email form."

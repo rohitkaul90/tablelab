@@ -281,6 +281,7 @@
   "loginConnecting": "Verbinden…",
   "loginContinueWithGoogle": "Doorgaan met Google",
   "loginContinueWithApple": "Doorgaan met Apple",
+  "loginAppleFailed": "Inloggen met Apple is niet gelukt. Probeer het opnieuw of gebruik je e-mail.",
   "loginOr": "of",
   "loginEmail": "E-mail",
   "loginPassword": "Wachtwoord",

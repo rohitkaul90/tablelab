@@ -53,25 +53,32 @@ void main() {
     // App Store guideline 4.8: Apple login must sit alongside Google on iOS —
     // and must NOT appear elsewhere (no Services ID / web redirect is set up).
     testWidgets('shows Continue with Apple on iOS only', (tester) async {
+      // Reset inside the body (the binding checks foundation debug vars
+      // before tear-downs run) and in a finally, so a failed expect can't
+      // leak the override into every later test in the file.
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      await _pumpLogin(tester);
+      try {
+        await _pumpLogin(tester);
 
-      expect(find.byKey(const Key('sign_in_with_apple')), findsOneWidget);
-      expect(find.text('Continue with Apple'), findsOneWidget);
-      // Google stays available next to it.
-      expect(find.text('Continue with Google'), findsOneWidget);
-      // Reset inside the body: the binding checks foundation debug vars
-      // before tear-downs run.
-      debugDefaultTargetPlatformOverride = null;
+        expect(find.byKey(const Key('sign_in_with_apple')), findsOneWidget);
+        expect(find.text('Continue with Apple'), findsOneWidget);
+        // Google stays available next to it.
+        expect(find.text('Continue with Google'), findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
 
     testWidgets('hides Continue with Apple on Android', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      await _pumpLogin(tester);
+      try {
+        await _pumpLogin(tester);
 
-      expect(find.byKey(const Key('sign_in_with_apple')), findsNothing);
-      expect(find.text('Continue with Apple'), findsNothing);
-      debugDefaultTargetPlatformOverride = null;
+        expect(find.byKey(const Key('sign_in_with_apple')), findsNothing);
+        expect(find.text('Continue with Apple'), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
   });
 

@@ -157,6 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
   /// signs the SHA-256 of a nonce into the identity token and Supabase
   /// verifies it against the raw nonce (see apple_sign_in.dart).
   Future<void> _signInWithApple() async {
+    final l10n = context.l10n; // captured before the first await
     setState(() {
       _appleLoading = true;
       _error = null;
@@ -164,28 +165,48 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final rawNonce = generateRawNonce();
       final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [AppleIDAuthorizationScopes.email],
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
         nonce: sha256Hex(rawNonce),
       );
       final idToken = credential.identityToken;
       if (idToken == null) {
-        throw const AuthException('Apple returned no identity token');
+        debugPrint('Sign in with Apple: credential carried no identityToken');
+        if (mounted) setState(() => _error = l10n.loginAppleFailed);
+        return;
       }
-      await Supabase.instance.client.auth.signInWithIdToken(
+      final auth = Supabase.instance.client.auth;
+      await auth.signInWithIdToken(
         provider: OAuthProvider.apple,
         idToken: idToken,
         nonce: rawNonce,
       );
+      // Apple sends the name ONLY on the very first authorization and never
+      // inside the ID token, so persist it now or it is lost for good.
+      // user_metadata.full_name is what ProfileService.googleName reads.
+      final name = appleDisplayName(credential.givenName, credential.familyName);
+      if (name != null) {
+        try {
+          await auth.updateUser(UserAttributes(data: {'full_name': name}));
+        } catch (e) {
+          debugPrint('Sign in with Apple: could not store full_name: $e');
+        }
+      }
       // AuthGate picks up the session from onAuthStateChange.
     } on SignInWithAppleAuthorizationException catch (e) {
-      // Dismissing Apple's sheet is not an error worth surfacing.
-      if (e.code != AuthorizationErrorCode.canceled && mounted) {
-        setState(() => _error = e.message);
-      }
+      // `canceled` = the user dismissed the sheet. Everything else (incl.
+      // `unknown`, which Apple uses for a device with no iCloud account)
+      // carries a raw NSError string — log it, show a localized message.
+      if (e.code == AuthorizationErrorCode.canceled) return;
+      debugPrint('Sign in with Apple failed: ${e.code} ${e.message}');
+      if (mounted) setState(() => _error = l10n.loginAppleFailed);
     } on AuthException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      debugPrint('Sign in with Apple failed: $e');
+      if (mounted) setState(() => _error = l10n.loginAppleFailed);
     } finally {
       if (mounted) setState(() => _appleLoading = false);
     }
@@ -263,11 +284,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: theme.brightness == Brightness.dark
                             ? SignInWithAppleButtonStyle.white
                             : SignInWithAppleButtonStyle.black,
-                        // The package's onPressed is non-nullable; a no-op
-                        // while any sign-in is in flight mirrors the
-                        // disabled state of the other buttons.
                         onPressed: (_loading || _googleLoading || _appleLoading)
-                            ? () {}
+                            ? null
                             : _signInWithApple,
                       ),
                       const SizedBox(height: 12),

@@ -19,6 +19,22 @@ void main() {
     });
   });
 
+  group('appleDisplayName', () {
+    test('joins given + family name', () {
+      expect(appleDisplayName('Rohit', 'Kaul'), 'Rohit Kaul');
+    });
+
+    test('tolerates a missing half and stray whitespace', () {
+      expect(appleDisplayName(' Rohit ', null), 'Rohit');
+      expect(appleDisplayName(null, 'Kaul'), 'Kaul');
+    });
+
+    test('is null when Apple sent nothing (repeat sign-ins)', () {
+      expect(appleDisplayName(null, null), isNull);
+      expect(appleDisplayName('', '  '), isNull);
+    });
+  });
+
   group('sha256Hex', () {
     test('matches the known SHA-256 of "abc"', () {
       expect(

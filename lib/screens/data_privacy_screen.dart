@@ -23,7 +23,9 @@ class DataPrivacyScreen extends StatelessWidget {
             title: 'What we collect',
             body:
                 'TableLab stores the data you enter: your email address (for '
-                'account login), session records (stakes, buy-ins, cash-outs, '
+                'account login — by email, Google, or Sign in with Apple; if '
+                'you use Apple\'s Hide My Email we only see the relay address '
+                'Apple assigns), session records (stakes, buy-ins, cash-outs, '
                 'locations, dates, and notes), hand histories you record, '
                 'player reads, and your account profile including bankroll '
                 'information.\n\n'
