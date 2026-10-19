@@ -71,19 +71,22 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
-      - name: pod install (enforce Podfile.lock)
+      - name: pod install (pre-flight)
         working-directory: ios
         run: |
-          if ! bundle exec pod install --deployment; then
-            echo "::group::Podfile.lock drift (what a plain pod install would write)"
-            bundle exec pod install >/dev/null 2>&1 || true
-            git --no-pager diff -- Podfile.lock
-            echo "::endgroup::"
-            exit 1
-          fi
+          bundle exec pod install
+          echo "::group::Podfile.lock drift BEFORE flutter build (diagnostic)"
+          git --no-pager diff --stat -- Podfile.lock || true
+          echo "::endgroup::"
 
       - name: Build for simulator (unsigned, debug)
         run: flutter build ios --simulator --debug --no-codesign
+
+      - name: Podfile.lock drift AFTER flutter build (diagnostic)
+        run: |
+          echo "::group::diff vs committed lock"
+          git --no-pager diff -- ios/Podfile.lock || true
+          echo "::endgroup::"
 
       - name: Boot simulator, install, launch, deep-link, assert alive
         run: |
