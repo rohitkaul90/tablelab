@@ -35,23 +35,30 @@ def asc_key
 end
 
 platform :ios do
-  desc "One-off: register the App ID (+ Sign in with Apple), then create the distribution cert + App Store profile in the match repo"
+  desc "One-off: create the distribution cert + App Store profile in the match repo"
   lane :bootstrap_signing do
     setup_ci
-    key = asc_key
-    # Profiles embed the App ID's capabilities: Runner.entitlements demands
-    # com.apple.developer.applesignin, so enable it BEFORE match generates the
-    # profile (otherwise `flutter build ipa` fails at export with "profile
-    # doesn't include the applesignin entitlement"). produce is idempotent on an
-    # existing App ID; skip_itc leaves the App Store Connect record to the owner.
-    produce(
-      api_key: key,
-      app_identifier: APP_ID,
-      app_name: "TableLab",
-      skip_itc: true,
-      enable_services: { sign_in_with_apple: "on" },
-    )
-    match(type: "appstore", readonly: false, force: true, api_key: key)
+    # PRECONDITION (owner, developer portal): the App ID named by APP_ID exists
+    # with the Sign in with Apple capability ON. Profiles embed capabilities and
+    # Runner.entitlements demands com.apple.developer.applesignin, so a profile
+    # generated without it only fails much later, at `flutter build ipa` export
+    # on a tag push. `produce` can't enforce this (it has no API-key auth), so
+    # the lane verifies the profile it just created and fails fast instead.
+    match(type: "appstore", readonly: false, force: true, api_key: asc_key)
+
+    profile = ENV["sigh_#{APP_ID}_appstore_profile-path"]
+    UI.user_error!("match did not report a profile path for #{APP_ID}") unless profile && File.exist?(profile)
+    # A .mobileprovision is a CMS-signed plist; its Entitlements dict lists the
+    # App ID's capabilities. `security` is on every macOS runner.
+    entitlements = sh("security cms -D -i '#{profile}'", log: false)
+    unless entitlements.include?("com.apple.developer.applesignin")
+      UI.user_error!(
+        "The App Store profile for #{APP_ID} has NO Sign in with Apple entitlement. " \
+        "Enable the capability on the App ID in the developer portal " \
+        "(Certificates, Identifiers & Profiles → Identifiers), then re-run bootstrap_signing.",
+      )
+    end
+    UI.success("Profile for #{APP_ID} carries com.apple.developer.applesignin")
   end
 
   desc "Install signing assets and configure Runner.xcodeproj for manual signing"
