@@ -124,19 +124,21 @@ jobs:
           restore-keys: pods-${{ runner.os }}-
 
       # Pre-flight pod install — a clearer failure than the same error buried in
-      # `flutter build ipa`. `--deployment` REFUSES to drift from the committed
-      # Podfile.lock (a plugin bump that needs new pods fails here, loudly).
-      # There is no local Ruby/CocoaPods on the Windows dev box, so the only
-      # regeneration path is the `update_pods` dispatch: it runs `pod update`,
-      # and the refreshed lock rides out in the run artifact to be committed.
-      - name: pod install (enforce Podfile.lock) / pod update
+      # `flutter build ipa`. NOT `--deployment`: before the first `flutter build`
+      # the Flutter-plugin pods hash differently (their SPEC CHECKSUMS settle only
+      # once the build has run), so the committed lock is the POST-build state
+      # and is enforced by the post-build diff step below. There is no local
+      # Ruby/CocoaPods on the Windows dev box, so the only regeneration path is
+      # the `update_pods` dispatch: `pod update` here, build, and the refreshed
+      # lock rides out in the run artifact to be committed.
+      - name: pod install / pod update
         if: ${{ !inputs.bootstrap_signing }}
         working-directory: ios
         run: |
           if [ "${{ inputs.update_pods }}" = "true" ]; then
             bundle exec pod update
           else
-            bundle exec pod install --deployment
+            bundle exec pod install
           fi
 
       - name: Install signing (match) and configure the Xcode project
@@ -150,11 +152,17 @@ jobs:
           sed -i '' "s/__TEAM_ID__/${APPLE_TEAM_ID}/" ios/ExportOptions.plist
           flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 
-      # flutter build ipa runs its own `pod install`; it must not have moved the
-      # lock either (ignored in update_pods mode, where a new lock is the point).
-      - name: Podfile.lock unchanged by the build
+      # THE lock enforcement: after flutter build ipa's own `pod install` the lock
+      # must equal the committed one (a plugin bump that needs new pods shows up
+      # here as a diff → run the update_pods dispatch and commit its artifact).
+      # Skipped in update_pods mode, where a new lock is the point.
+      - name: Podfile.lock matches the committed lock
         if: ${{ !inputs.bootstrap_signing && !inputs.update_pods }}
-        run: git diff --exit-code -- ios/Podfile.lock
+        run: |
+          if ! git diff --exit-code -- ios/Podfile.lock; then
+            echo "::error::ios/Podfile.lock drifted from the committed lock — dispatch build-ios.yml with update_pods=true and commit the lock from its artifact"
+            exit 1
+          fi
 
       - name: Upload to TestFlight
         if: ${{ !inputs.bootstrap_signing }}
