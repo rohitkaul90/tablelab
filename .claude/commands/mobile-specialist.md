@@ -589,7 +589,7 @@ flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 [ ] Create new app:
     - Platform: iOS
     - Name: TableLab: Poker Tracker
-    - Bundle ID: com.pokertracker.poker_tracker
+    - Bundle ID: app.tablelab.ios
     - SKU: tablelab-ios-001
 
 [ ] App Information:

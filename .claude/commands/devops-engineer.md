@@ -408,7 +408,7 @@ Prerequisites: Apple Developer account ($99/year), Xcode installed on a Mac.
 
 1. Create App ID in Apple Developer Portal:
    - Identifiers → App IDs → + → App → 
-   - Bundle ID: com.pokertracker.poker_tracker
+   - Bundle ID: app.tablelab.ios
    - Capabilities: none required for v1
 
 2. Create Distribution Certificate:
@@ -543,7 +543,7 @@ Create `ios/ExportOptions.plist` (required for `flutter build ipa`):
   <string>manual</string>
   <key>provisioningProfiles</key>
   <dict>
-    <key>com.pokertracker.poker_tracker</key>
+    <key>app.tablelab.ios</key>
     <string>TableLab AppStore</string>
   </dict>
 </dict>

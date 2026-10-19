@@ -67,13 +67,16 @@ class DefaultFirebaseOptions {
     iosBundleId: 'app.tablelab.ios',
   );
 
+  // macOS is not a build target; it keeps the original registration that
+  // matches macos/Runner/Configs/AppInfo.xcconfig. Only iOS moved to
+  // app.tablelab.ios — change both halves together if macOS is ever built.
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyCdPU8-8W-sz7I_Lxyv_hGqNIprhZNkmMI',
-    appId: '1:654619781138:ios:56ced65c6093d4487e50cb',
+    appId: '1:654619781138:ios:1304e58fbe83fea27e50cb',
     messagingSenderId: '654619781138',
     projectId: 'tablelab-ab615',
     storageBucket: 'tablelab-ab615.firebasestorage.app',
-    iosBundleId: 'app.tablelab.ios',
+    iosBundleId: 'com.pokertracker.pokerTracker',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
