@@ -93,7 +93,11 @@ jobs:
           sleep 25
           mkdir -p smoke
           xcrun simctl io "$UDID" screenshot smoke/01-launch.png
-          # The Supabase OAuth callback must be delivered to app_links and must not crash.
+          # Fire the Supabase OAuth callback scheme at the app. iOS answers an
+          # external openurl with its "Open in TableLab?" system prompt (seen in
+          # 02-after-deeplink.png), so this proves the scheme is REGISTERED and the
+          # app survives the foreground interruption — the in-app app_links handler
+          # itself is exercised on a real device in TestFlight QA.
           xcrun simctl openurl "$UDID" "io.supabase.pokertracker://login-callback/#error=smoke"
           sleep 5
           xcrun simctl io "$UDID" screenshot smoke/02-after-deeplink.png
