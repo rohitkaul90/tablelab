@@ -337,12 +337,16 @@ Full audit + fixes 2026-07-05 (SEO health ~75/100); details in `memory/seo-marke
 
 ### iOS build
 
-- iOS is **deprioritized** — not building until Android + Web are stable in production
-- `ios/Runner/Info.plist` `CFBundleDisplayName` = "TableLab" ✅
-- `ios/Runner/PrivacyInfo.xcprivacy` exists ✅ — must be added to Xcode Runner target before first build (right-click Runner folder in Xcode → Add Files)
-- `flutter_launcher_icons` has `ios: false` in `pubspec.yaml` — change to `true` before the first iOS build
-- `ios/ExportOptions.plist` exists for App Store export; update `teamID` before use
-- iOS builds require a macOS machine; cannot be built on Windows
+**iOS is in rollout (plan approved 2026-10-19; Phase 1 = pipeline).** There is **no Mac** in this project: every iOS build, signing step and upload runs on GitHub Actions `macos-15` runners (free for this public repo). Nothing requires the Xcode GUI — the Xcode project is edited by hand in `project.pbxproj` and verified by CI.
+
+- **Bundle ID is `com.pokertracker.pokerTracker`** (camelCase — underscores are invalid in iOS bundle IDs; the Firebase iOS app in `lib/firebase_options.dart` is registered under it). Android stays `com.pokertracker.poker_tracker`. Deep-link scheme `io.supabase.pokertracker` is shared.
+- **Deployment target iOS 15.0** (`IPHONEOS_DEPLOYMENT_TARGET` in the 3 project-level pbxproj configs + `platform :ios, '15.0'` in `ios/Podfile`) — Firebase 12.x (`firebase_core` 4.x) requires 15; keep both in sync. **iPhone-only** (`TARGETED_DEVICE_FAMILY = 1`, portrait only) for v1 — re-enabling iPad needs `sharePositionOrigin` on the three `Share.share` calls (share_plus throws on iPad without it).
+- **CocoaPods-only, SwiftPM off.** Flutter 3.44 defaults SwiftPM on, but `posthog_flutter` ships no `Package.swift`, so a Podfile is unavoidable; CI sets `FLUTTER_SWIFT_PACKAGE_MANAGER=false` + `flutter config --no-enable-swift-package-manager`. `ios/Podfile` is committed (stock Flutter template + 15.0 floor forced on every pod); `ios/Podfile.lock` is committed from CI's artifact — commit the updated lock whenever a plugin bumps.
+- **Signing = fastlane `match`** (`ios/fastlane/`, `ios/Gemfile`): certs + App Store profile created through the App Store Connect API key and stored encrypted in the PRIVATE repo `rohitkaul90/tablelab-ios-certs`. Secrets: `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64`, `MATCH_PASSWORD`, `MATCH_GIT_URL`, `MATCH_GIT_BASIC_AUTHORIZATION`. Lanes: `bootstrap_signing` (one-off; re-run after adding an App ID capability — profiles embed capabilities), `prepare_signing`, `upload` (TestFlight), `upload_symbols` (Crashlytics dSYMs via `-ai <app id>`; Dart-only Firebase init, no `GoogleService-Info.plist`). `ios/ExportOptions.plist` has `__TEAM_ID__` sed-filled by CI and names the match profile.
+- **`build-ios.yml`** runs on every `v*.*.*` tag (same tag as the Android AAB) and **auto-uploads to TestFlight**; App Store submission is a manual App Store Connect click. `workflow_dispatch` with `bootstrap_signing=true` is the one-time cert/profile creation. **`ios-smoke.yml`** (PRs touching `ios/`/`pubspec`/`main.dart`, or manual) builds unsigned for the simulator, launches, fires the OAuth deep link, and fails if the process died — the only launch-crash signal we have without a device.
+- `ios/Runner/PrivacyInfo.xcprivacy` is referenced in the pbxproj Resources phase and declares email / user id / user content / product interaction / crash data (linked, not tracking) — keep it in agreement with the App Store Connect privacy labels. `Runner.entitlements` carries Sign in with Apple (`CODE_SIGN_ENTITLEMENTS` in the 3 target-level configs). `Info.plist`: `ITSAppUsesNonExemptEncryption=false` (HTTPS only), `CFBundleLocalizations` must mirror the ARB set (like `locales_config.xml` on Android), `com.posthog.posthog.AUTO_INIT=false` (Dart `setup()` configures PostHog).
+- `flutter_launcher_icons` has `ios: true` + `remove_alpha_ios` + `background_color_ios: #111811` — rerun `dart run flutter_launcher_icons` and commit when the icon changes (App Store Connect rejects alpha/placeholder icons). The launch storyboard is already the `#111811` tile.
+- Local Windows machines can still edit everything here; `flutter run -d ios` is impossible — use the smoke workflow + TestFlight for verification.
 
 ### Analytics — PostHog
 

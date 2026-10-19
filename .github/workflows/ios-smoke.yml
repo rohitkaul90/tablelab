@@ -1,0 +1,98 @@
+name: iOS Simulator Smoke
+
+# No Apple account, certificate or device needed: builds the app unsigned for the
+# iOS Simulator, launches it, fires the OAuth deep link at it, and fails if the
+# process is no longer alive. Catches the "crashes at launch on iOS" class
+# (bad Info.plist key, Podfile/pbxproj mistakes, plugin init throws) that this
+# project cannot otherwise see without a Mac.
+
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'lib/main.dart'
+      - '.github/workflows/ios-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Build + launch on simulator
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      FLUTTER_SWIFT_PACKAGE_MANAGER: 'false'
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Disable Swift Package Manager
+        run: flutter config --no-enable-swift-package-manager
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate Supabase config
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          mkdir -p lib/config
+          cat > lib/config/supabase_config.dart << DART
+          class SupabaseConfig {
+            static const String url = '${SUPABASE_URL}';
+            static const String anonKey = '${SUPABASE_ANON_KEY}';
+          }
+          DART
+
+      - name: Build for simulator (unsigned, debug)
+        run: flutter build ios --simulator --debug --no-codesign
+
+      - name: Boot simulator, install, launch, deep-link, assert alive
+        run: |
+          set -euo pipefail
+          # Newest iPhone device type the runner image offers.
+          DEVICE_TYPE=$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; t=[d["identifier"] for d in json.load(sys.stdin)["devicetypes"] if d["name"].startswith("iPhone")]; print(t[-1])')
+          echo "Device type: $DEVICE_TYPE"
+          UDID=$(xcrun simctl create ci-iphone "$DEVICE_TYPE")
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/ios/iphonesimulator/Runner.app
+          xcrun simctl launch "$UDID" com.pokertracker.pokerTracker
+          sleep 25
+          mkdir -p smoke
+          xcrun simctl io "$UDID" screenshot smoke/01-launch.png
+          # The Supabase OAuth callback must be delivered to app_links and must not crash.
+          xcrun simctl openurl "$UDID" "io.supabase.pokertracker://login-callback/#error=smoke"
+          sleep 5
+          xcrun simctl io "$UDID" screenshot smoke/02-after-deeplink.png
+          if ! pgrep -f "Runner.app/Runner" > /dev/null; then
+            echo "::error::Runner is no longer running after launch + deep link"
+            cp -R ~/Library/Logs/DiagnosticReports smoke/ 2>/dev/null || true
+            exit 1
+          fi
+          echo "Runner alive after launch + deep link"
+
+      - name: Upload screenshots / crash logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ios-smoke
+          path: smoke/
+          if-no-files-found: ignore

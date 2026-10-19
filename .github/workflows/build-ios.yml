@@ -1,0 +1,156 @@
+name: Build iOS Release
+
+# Builds a signed IPA on a macOS runner and uploads it to TestFlight.
+# There is no Mac in this project: fastlane match (ios/fastlane/) creates and
+# installs the Apple Distribution cert + App Store profile via the App Store
+# Connect API, so the whole chain is secrets + this workflow.
+#
+# First-time setup: run once with bootstrap_signing=true (creates the cert and
+# profile in the private match repo), then every v*.*.* tag ships to TestFlight.
+# App Store *submission* stays a manual App Store Connect step.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      bootstrap_signing:
+        description: 'One-off: create cert + profile in the match repo (no build)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    name: Build, sign, TestFlight
+    runs-on: macos-15
+    timeout-minutes: 60
+    # Required so the Attach-to-Release step can write to the GitHub Release.
+    permissions:
+      contents: write
+    env:
+      # CocoaPods-only build. Flutter 3.44 defaults SwiftPM on, but posthog_flutter
+      # ships no Package.swift so a Podfile is unavoidable; one dependency manager
+      # keeps Podfile.lock authoritative and the Crashlytics upload-symbols path stable.
+      FLUTTER_SWIFT_PACKAGE_MANAGER: 'false'
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Set up Ruby (fastlane + cocoapods from ios/Gemfile)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Disable Swift Package Manager (belt and braces with the env var)
+        run: flutter config --no-enable-swift-package-manager
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          flutter precache --ios
+
+      - name: Generate Supabase config
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          mkdir -p lib/config
+          cat > lib/config/supabase_config.dart << DART
+          class SupabaseConfig {
+            static const String url = '${SUPABASE_URL}';
+            static const String anonKey = '${SUPABASE_ANON_KEY}';
+          }
+          DART
+
+      - name: Bootstrap signing (one-off)
+        if: ${{ inputs.bootstrap_signing }}
+        working-directory: ios
+        run: bundle exec fastlane ios bootstrap_signing
+
+      - name: Cache CocoaPods
+        if: ${{ !inputs.bootstrap_signing }}
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: pods-${{ runner.os }}-
+
+      # Pre-flight pod install: a clearer failure than the same error buried in
+      # `flutter build ipa`, and it produces Podfile.lock even if the build fails.
+      - name: pod install
+        if: ${{ !inputs.bootstrap_signing }}
+        working-directory: ios
+        run: bundle exec pod install --repo-update
+
+      - name: Install signing (match) and configure the Xcode project
+        if: ${{ !inputs.bootstrap_signing }}
+        working-directory: ios
+        run: bundle exec fastlane ios prepare_signing
+
+      - name: Build IPA
+        if: ${{ !inputs.bootstrap_signing }}
+        run: |
+          sed -i '' "s/__TEAM_ID__/${APPLE_TEAM_ID}/" ios/ExportOptions.plist
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload to TestFlight
+        if: ${{ !inputs.bootstrap_signing }}
+        working-directory: ios
+        run: bundle exec fastlane ios upload
+
+      # A failed dSYM upload must not fail a release that is already in TestFlight.
+      - name: Upload dSYMs to Crashlytics
+        if: ${{ !inputs.bootstrap_signing }}
+        continue-on-error: true
+        working-directory: ios
+        run: bundle exec fastlane ios upload_symbols
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME:-manual-build}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        if: ${{ always() && !inputs.bootstrap_signing }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: tablelab-ios-${{ steps.version.outputs.VERSION }}
+          path: |
+            build/ios/ipa/*.ipa
+            ios/Podfile.lock
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Attach IPA to GitHub Release
+        if: ${{ startsWith(github.ref, 'refs/tags/') && !inputs.bootstrap_signing }}
+        uses: softprops/action-gh-release@v3
+        with:
+          files: build/ios/ipa/*.ipa
