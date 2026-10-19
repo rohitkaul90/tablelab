@@ -34,7 +34,7 @@ Deno.test("appleClientSecret: ES256 JWS with Apple's claims, verifiable by the p
     ["sign", "verify"],
   );
   const pem = toPem(await crypto.subtle.exportKey("pkcs8", pair.privateKey));
-  const cfg = { keyId: "ABC123DEFG", privateKeyPem: pem, teamId: "TEAM567890", bundleId: "com.pokertracker.pokerTracker" };
+  const cfg = { keyId: "ABC123DEFG", privateKeyPem: pem, teamId: "TEAM567890", bundleId: "app.tablelab.ios" };
   const now = 1_800_000_000;
 
   const jwt = await appleClientSecret(cfg, now, 600);

@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '654619781138',
     projectId: 'tablelab-ab615',
     storageBucket: 'tablelab-ab615.firebasestorage.app',
-    iosBundleId: 'com.pokertracker.pokerTracker',
+    iosBundleId: 'app.tablelab.ios',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '654619781138',
     projectId: 'tablelab-ab615',
     storageBucket: 'tablelab-ab615.firebasestorage.app',
-    iosBundleId: 'com.pokertracker.pokerTracker',
+    iosBundleId: 'app.tablelab.ios',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

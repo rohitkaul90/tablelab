@@ -14,7 +14,7 @@
 #                       Firebase init ⇒ no GoogleService-Info.plist ⇒ app-id flag).
 default_platform(:ios)
 
-APP_ID = "com.pokertracker.pokerTracker"
+APP_ID = "app.tablelab.ios"
 PROFILE_NAME = "match AppStore #{APP_ID}"
 # Must match `ios` in lib/firebase_options.dart.
 FIREBASE_IOS_APP_ID = "1:654619781138:ios:1304e58fbe83fea27e50cb"
