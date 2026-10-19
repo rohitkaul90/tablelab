@@ -61,6 +61,20 @@ jobs:
           }
           DART
 
+      # Same Gemfile-pinned CocoaPods as the release workflow, enforcing the
+      # committed lock — otherwise the PR gate resolves pods with the runner's
+      # system CocoaPods and can green a lock the tag build then rejects.
+      - name: Set up Ruby (cocoapods from ios/Gemfile)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: pod install (enforce Podfile.lock)
+        working-directory: ios
+        run: bundle exec pod install --deployment
+
       - name: Build for simulator (unsigned, debug)
         run: flutter build ios --simulator --debug --no-codesign
 
