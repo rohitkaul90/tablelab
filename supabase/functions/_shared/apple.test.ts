@@ -2,7 +2,16 @@
 // Proves the client_secret JWT is a well-formed ES256 JWS that Apple's public
 // key check would accept: generate a P-256 key, export it as the same PKCS#8 PEM
 // the developer portal hands out, sign, then verify with the public half.
-import { appleClientSecret } from "./apple.ts";
+import { appleClientSecret, idTokenSubject } from "./apple.ts";
+
+Deno.test("idTokenSubject: reads sub from a base64url JWT payload, null on garbage", () => {
+  const payload = btoa(JSON.stringify({ sub: "001234.abcdef.5678", aud: "x" }))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  if (idTokenSubject(`eyJhbGciOiJSUzI1NiJ9.${payload}.sig`) !== "001234.abcdef.5678") throw new Error("sub");
+  if (idTokenSubject("not.a.jwt.at.all") !== null) throw new Error("expected null for 4 parts");
+  if (idTokenSubject("a.b") !== null) throw new Error("expected null for 2 parts");
+  if (idTokenSubject(`h.${btoa("{}")}.s`) !== null) throw new Error("expected null without sub");
+});
 
 function b64urlDecode(s: string): Uint8Array<ArrayBuffer> {
   const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));

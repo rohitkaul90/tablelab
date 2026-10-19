@@ -23,15 +23,37 @@ export interface AppleConfig {
   bundleId: string;
 }
 
-/** Reads the four secrets; returns null (not throws) when any is unset so callers
- *  can degrade with an alert instead of failing the request. */
+/** The iOS bundle id doubles as Apple's client_id for the native flow. It is
+ *  public (pinned in ios/fastlane + ExportOptions.plist), so it is a default,
+ *  not a required secret — only the three genuinely secret values can fail the
+ *  path closed. */
+export const DEFAULT_BUNDLE_ID = "com.pokertracker.pokerTracker";
+
+/** Reads the secrets; returns null (not throws) when a required one is unset so
+ *  callers can degrade with an alert instead of failing the request. */
 export function appleConfigFromEnv(): AppleConfig | null {
   const keyId = Deno.env.get("APPLE_SIWA_KEY_ID");
   const privateKeyPem = Deno.env.get("APPLE_SIWA_PRIVATE_KEY");
   const teamId = Deno.env.get("APPLE_TEAM_ID");
-  const bundleId = Deno.env.get("APPLE_BUNDLE_ID");
-  if (!keyId || !privateKeyPem || !teamId || !bundleId) return null;
+  const bundleId = Deno.env.get("APPLE_BUNDLE_ID") || DEFAULT_BUNDLE_ID;
+  if (!keyId || !privateKeyPem || !teamId) return null;
   return { keyId, privateKeyPem, teamId, bundleId };
+}
+
+/** `sub` claim of a JWT's payload without verifying the signature — only for a
+ *  token Apple just handed us over TLS in its own /auth/token response, where
+ *  the transport is the trust anchor. Returns null on any malformed input. */
+export function idTokenSubject(idToken: string): string | null {
+  const parts = idToken.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    const payload = JSON.parse(atob(b64 + pad));
+    return typeof payload.sub === "string" && payload.sub.length > 0 ? payload.sub : null;
+  } catch {
+    return null;
+  }
 }
 
 function base64url(bytes: Uint8Array): string {
@@ -91,6 +113,9 @@ export async function appleClientSecret(
 export interface AppleTokens {
   refreshToken: string;
   accessToken?: string;
+  /** Apple's ID token for the authorization that produced the code — its `sub`
+   *  is the Apple user id the caller MUST be checked against before storing. */
+  idToken?: string;
 }
 
 /** Exchanges the sign-in `authorizationCode` (valid ~5 min, single use) for a
@@ -115,7 +140,11 @@ export async function exchangeAuthorizationCode(
   if (!res.ok || typeof json.refresh_token !== "string") {
     throw new Error(`apple token exchange failed: ${res.status} ${json.error ?? ""}`.trim());
   }
-  return { refreshToken: json.refresh_token, accessToken: json.access_token };
+  return {
+    refreshToken: json.refresh_token,
+    accessToken: json.access_token,
+    idToken: typeof json.id_token === "string" ? json.id_token : undefined,
+  };
 }
 
 /** Revokes a refresh token. Apple answers 200 on success (and also when the
