@@ -48,11 +48,16 @@ Deno.serve(async (req) => {
 
   const uid = user.id;
 
-  // Sign in with Apple: revoke the user's Apple token first (App Store Review
-  // Guideline 5.1.1(v)). The refresh token was stored by `apple-link` at
-  // sign-in; a user who never used Apple has no row. Best-effort: a revoke
-  // failure is alerted but must not strand the user with an undeletable
-  // account — the row itself cascades away with auth.users below.
+  // Sign in with Apple (App Store Review Guideline 5.1.1(v)): read the refresh
+  // token `apple-link` stored at sign-in NOW (the row is swept + cascaded away
+  // below) and revoke it only AFTER the auth user is gone — revoking first
+  // would, on a failed deleteUser, leave a live account whose Apple
+  // authorization is already destroyed. An Apple identity with no stored token
+  // is a silent non-compliance path (the fire-and-forget link call failed), so
+  // it is alerted rather than ignored.
+  const hasAppleIdentity = ((user.identities ?? []) as Array<{ provider?: string }>)
+    .some((i) => i.provider === "apple");
+  let appleRefreshToken: string | null = null;
   {
     const { data: appleRow, error: appleReadErr } = await adminClient
       .from("apple_refresh_tokens")
@@ -62,16 +67,9 @@ Deno.serve(async (req) => {
     if (appleReadErr) {
       await reportError("delete-account", `apple_refresh_tokens read failed: ${appleReadErr.message}`);
     } else if (appleRow?.refresh_token) {
-      const cfg = appleConfigFromEnv();
-      if (!cfg) {
-        await reportError("delete-account", "user has an Apple token but APPLE_SIWA_* secrets are unset — NOT revoked");
-      } else {
-        try {
-          await revokeRefreshToken(cfg, appleRow.refresh_token);
-        } catch (e) {
-          await reportError("delete-account", `apple revoke failed: ${e instanceof Error ? e.message : e}`);
-        }
-      }
+      appleRefreshToken = appleRow.refresh_token;
+    } else if (hasAppleIdentity) {
+      await reportError("delete-account", "user has an Apple identity but no stored refresh token — nothing to revoke");
     }
   }
 
@@ -95,6 +93,10 @@ Deno.serve(async (req) => {
     // the user's email/free-text message, leaving PII after "delete account".
     // Requires service_role DELETE grant (20260619_feedback.sql).
     "feedback",
+    // Bearer secret for Apple revocation (read above). Cascades from auth.users
+    // too, but a live token deserves the belt-and-braces sweep. Grant in
+    // 20261019_apple_refresh_tokens.sql.
+    "apple_refresh_tokens",
   ];
 
   for (const table of userScopedTables) {
@@ -128,6 +130,21 @@ Deno.serve(async (req) => {
       status: 500,
       headers: { ...cors, "Content-Type": "application/json" },
     });
+  }
+
+  // The account is gone; now sever the Apple side. Best-effort with an alert —
+  // there is no user left to retry for, and the token itself is already purged.
+  if (appleRefreshToken) {
+    const cfg = appleConfigFromEnv();
+    if (!cfg) {
+      await reportError("delete-account", "deleted an Apple user but APPLE_SIWA_* secrets are unset — token NOT revoked");
+    } else {
+      try {
+        await revokeRefreshToken(cfg, appleRefreshToken);
+      } catch (e) {
+        await reportError("delete-account", `apple revoke failed: ${e instanceof Error ? e.message : e}`);
+      }
+    }
   }
 
   return new Response(JSON.stringify({ success: true }), {
