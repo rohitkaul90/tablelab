@@ -280,6 +280,7 @@
   "loginTagline": "Suivi de bankroll, replays de mains et coaching IA pour le cash game et les tournois.",
   "loginConnecting": "Connexion…",
   "loginContinueWithGoogle": "Continuer avec Google",
+  "loginContinueWithApple": "Continuer avec Apple",
   "loginOr": "ou",
   "loginEmail": "E-mail",
   "loginPassword": "Mot de passe",

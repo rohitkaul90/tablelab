@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/l10n.dart';
+import '../../services/apple_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isRegister = false;
   bool _loading = false;
   bool _googleLoading = false;
+  bool _appleLoading = false;
   bool _resetLoading = false;
   String? _error;
 
@@ -149,6 +152,52 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// App Store Review Guideline 4.8: an app offering Google login must also
+  /// offer Sign in with Apple. Native flow — no browser round trip: Apple
+  /// signs the SHA-256 of a nonce into the identity token and Supabase
+  /// verifies it against the raw nonce (see apple_sign_in.dart).
+  Future<void> _signInWithApple() async {
+    setState(() {
+      _appleLoading = true;
+      _error = null;
+    });
+    try {
+      final rawNonce = generateRawNonce();
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email],
+        nonce: sha256Hex(rawNonce),
+      );
+      final idToken = credential.identityToken;
+      if (idToken == null) {
+        throw const AuthException('Apple returned no identity token');
+      }
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+      // AuthGate picks up the session from onAuthStateChange.
+    } on SignInWithAppleAuthorizationException catch (e) {
+      // Dismissing Apple's sheet is not an error worth surfacing.
+      if (e.code != AuthorizationErrorCode.canceled && mounted) {
+        setState(() => _error = e.message);
+      }
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _appleLoading = false);
+    }
+  }
+
+  /// iOS only: the native sheet needs the applesignin entitlement, and on
+  /// Android/web Apple login would need a Services ID + web redirect that
+  /// the project deliberately doesn't set up (Google + email cover them).
+  /// `defaultTargetPlatform` honours the test override.
+  bool get _showAppleSignIn =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -203,10 +252,31 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 28),
 
+                    // ── Sign in with Apple (iOS only) ──────────────────────
+                    if (_showAppleSignIn) ...[
+                      SignInWithAppleButton(
+                        key: const Key('sign_in_with_apple'),
+                        text: _appleLoading
+                            ? l10n.loginConnecting
+                            : l10n.loginContinueWithApple,
+                        height: 48,
+                        style: theme.brightness == Brightness.dark
+                            ? SignInWithAppleButtonStyle.white
+                            : SignInWithAppleButtonStyle.black,
+                        // The package's onPressed is non-nullable; a no-op
+                        // while any sign-in is in flight mirrors the
+                        // disabled state of the other buttons.
+                        onPressed: (_loading || _googleLoading || _appleLoading)
+                            ? () {}
+                            : _signInWithApple,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
                     // ── Google sign-in ─────────────────────────────────────
                     OutlinedButton.icon(
                       onPressed:
-                          (_loading || _googleLoading) ? null : _signInWithGoogle,
+                          (_loading || _googleLoading || _appleLoading) ? null : _signInWithGoogle,
                       icon: _googleLoading
                           ? const SizedBox(
                               width: 18,
@@ -278,7 +348,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: (_loading || _googleLoading || _resetLoading)
+                          onPressed: (_loading || _googleLoading || _appleLoading || _resetLoading)
                               ? null
                               : _forgotPassword,
                           style: TextButton.styleFrom(
@@ -365,7 +435,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                         FilledButton(
                           onPressed:
-                              (_loading || _googleLoading) ? null : _submit,
+                              (_loading || _googleLoading || _appleLoading) ? null : _submit,
                           style: FilledButton.styleFrom(
                             minimumSize: const Size.fromHeight(48),
                           ),

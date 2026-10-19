@@ -53,6 +53,10 @@ dependencies:
   posthog_flutter: ^4.0.0
   package_info_plus: ^8.0.0
   shared_preferences: ^2.3.2
+  # Native Sign in with Apple (App Store guideline 4.8 — required alongside Google).
+  sign_in_with_apple: ^7.0.1
+  # SHA-256 of the Sign in with Apple nonce; also used by tool/l10n (ARB hashes).
+  crypto: ^3.0.0
   # Direct dep for the web export download path (save_bytes_web.dart) — was
   # already resolved transitively at this version, so the lockfile is unchanged.
   web: ^1.1.1
@@ -73,8 +77,6 @@ dev_dependencies:
   riverpod_generator: ^2.6.1
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.4
-  # tool/l10n/translate.dart + check_arb.dart hash ARB source strings (sha256).
-  crypto: ^3.0.0
 
 flutter_native_splash:
   color: "#111811"

@@ -131,7 +131,7 @@ void main() async {
       AnalyticsService.identify(
         user.id,
         email: user.email,
-        // GoTrue records the primary provider here ('email' | 'google');
+        // GoTrue records the primary provider here ('email' | 'google' | 'apple');
         // mirrors auth.identities.provider, set once as a person property.
         signupMethod: user.appMetadata['provider'] as String?,
         // Re-resolved per sign-in (not the captured startup value) so a

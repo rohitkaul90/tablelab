@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/l10n/generated/app_localizations.dart';
@@ -47,6 +48,30 @@ void main() {
       await _pumpLogin(tester);
 
       expect(find.text('Continue with Google'), findsOneWidget);
+    });
+
+    // App Store guideline 4.8: Apple login must sit alongside Google on iOS —
+    // and must NOT appear elsewhere (no Services ID / web redirect is set up).
+    testWidgets('shows Continue with Apple on iOS only', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      await _pumpLogin(tester);
+
+      expect(find.byKey(const Key('sign_in_with_apple')), findsOneWidget);
+      expect(find.text('Continue with Apple'), findsOneWidget);
+      // Google stays available next to it.
+      expect(find.text('Continue with Google'), findsOneWidget);
+      // Reset inside the body: the binding checks foundation debug vars
+      // before tear-downs run.
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('hides Continue with Apple on Android', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      await _pumpLogin(tester);
+
+      expect(find.byKey(const Key('sign_in_with_apple')), findsNothing);
+      expect(find.text('Continue with Apple'), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
     });
   });
 

@@ -1231,6 +1231,10 @@
   "@loginContinueWithGoogle": {
     "description": "Google sign-in button label."
   },
+  "loginContinueWithApple": "Continue with Apple",
+  "@loginContinueWithApple": {
+    "description": "Sign in with Apple button label, shown on iOS only. Keep the brand name Apple untranslated."
+  },
   "loginOr": "or",
   "@loginOr": {
     "description": "Divider word between Google sign-in and the email form."
