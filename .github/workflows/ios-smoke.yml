@@ -87,7 +87,15 @@ jobs:
             cp -R ~/Library/Logs/DiagnosticReports smoke/ 2>/dev/null || true
             exit 1
           fi
-          echo "Runner alive after launch + deep link"
+          # Liveness alone greens a red error screen (main() threw before runApp,
+          # a plugin init throwing into the Flutter error handler). The debug engine
+          # mirrors Dart exceptions to the unified log, so fail on those too.
+          xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'process == "Runner"' > smoke/runner.log 2>/dev/null || true
+          if grep -E "Unhandled Exception|EXCEPTION CAUGHT BY|Error \(Xcode\)|FlutterError" smoke/runner.log; then
+            echo "::error::Runner logged a Dart/Flutter exception during launch (see smoke/runner.log)"
+            exit 1
+          fi
+          echo "Runner alive and exception-free after launch + deep link"
 
       - name: Upload screenshots / crash logs
         if: always()

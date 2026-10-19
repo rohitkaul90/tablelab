@@ -98,10 +98,12 @@ jobs:
 
       - name: Cache CocoaPods
         if: ${{ !inputs.bootstrap_signing }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ios/Pods
-          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+          # Podfile.lock is the real key once committed; Podfile + pubspec.lock keep
+          # the key moving on plugin bumps until then (an empty hash would pin a stale tree).
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock', 'ios/Podfile', 'pubspec.lock') }}
           restore-keys: pods-${{ runner.os }}-
 
       # Pre-flight pod install: a clearer failure than the same error buried in
@@ -146,6 +148,7 @@ jobs:
           path: |
             build/ios/ipa/*.ipa
             ios/Podfile.lock
+            ios/Gemfile.lock
           retention-days: 30
           if-no-files-found: ignore
 

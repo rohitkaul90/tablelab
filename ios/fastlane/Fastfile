@@ -18,8 +18,11 @@ APP_ID = "com.pokertracker.pokerTracker"
 PROFILE_NAME = "match AppStore #{APP_ID}"
 # Must match `ios` in lib/firebase_options.dart.
 FIREBASE_IOS_APP_ID = "1:654619781138:ios:1304e58fbe83fea27e50cb"
-# fastlane's Ruby cwd is the folder that CONTAINS fastlane/ (ios/); the repo root is one up.
-REPO_ROOT = File.expand_path("..", Dir.pwd)
+# Lanes run with cwd = ios/fastlane (actions chdir up to ios/ themselves), and the
+# Fastfile is parsed inside that folder too — so never derive paths from Dir.pwd.
+# FastlaneFolder.path is the absolute fastlane/ dir regardless of how we were invoked.
+IOS_DIR = File.expand_path("..", FastlaneCore::FastlaneFolder.path)
+REPO_ROOT = File.expand_path("..", IOS_DIR)
 
 def asc_key
   app_store_connect_api_key(
@@ -32,10 +35,23 @@ def asc_key
 end
 
 platform :ios do
-  desc "One-off: create the distribution cert + App Store profile in the match repo"
+  desc "One-off: register the App ID (+ Sign in with Apple), then create the distribution cert + App Store profile in the match repo"
   lane :bootstrap_signing do
     setup_ci
-    match(type: "appstore", readonly: false, force: true, api_key: asc_key)
+    key = asc_key
+    # Profiles embed the App ID's capabilities: Runner.entitlements demands
+    # com.apple.developer.applesignin, so enable it BEFORE match generates the
+    # profile (otherwise `flutter build ipa` fails at export with "profile
+    # doesn't include the applesignin entitlement"). produce is idempotent on an
+    # existing App ID; skip_itc leaves the App Store Connect record to the owner.
+    produce(
+      api_key: key,
+      app_identifier: APP_ID,
+      app_name: "TableLab",
+      skip_itc: true,
+      enable_services: { sign_in_with_apple: "on" },
+    )
+    match(type: "appstore", readonly: false, force: true, api_key: key)
   end
 
   desc "Install signing assets and configure Runner.xcodeproj for manual signing"
@@ -66,7 +82,7 @@ platform :ios do
 
   desc "Upload dSYMs to Firebase Crashlytics"
   lane :upload_symbols do
-    tool = File.join(Dir.pwd, "Pods/FirebaseCrashlytics/upload-symbols")
+    tool = File.join(IOS_DIR, "Pods/FirebaseCrashlytics/upload-symbols")
     dsyms = File.join(REPO_ROOT, "build/ios/archive/Runner.xcarchive/dSYMs")
     UI.user_error!("upload-symbols not found at #{tool}") unless File.exist?(tool)
     UI.user_error!("dSYMs not found at #{dsyms}") unless File.directory?(dsyms)
