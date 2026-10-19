@@ -73,7 +73,14 @@ jobs:
 
       - name: pod install (enforce Podfile.lock)
         working-directory: ios
-        run: bundle exec pod install --deployment
+        run: |
+          if ! bundle exec pod install --deployment; then
+            echo "::group::Podfile.lock drift (what a plain pod install would write)"
+            bundle exec pod install >/dev/null 2>&1 || true
+            git --no-pager diff -- Podfile.lock
+            echo "::endgroup::"
+            exit 1
+          fi
 
       - name: Build for simulator (unsigned, debug)
         run: flutter build ios --simulator --debug --no-codesign
