@@ -280,6 +280,8 @@
   "loginTagline": "Control de bankroll, repeticiones de manos y coaching con IA para Cash y Torneos.",
   "loginConnecting": "Conectando…",
   "loginContinueWithGoogle": "Continuar con Google",
+  "loginContinueWithApple": "Continuar con Apple",
+  "loginAppleFailed": "No se completó el inicio de sesión con Apple. Reinténtalo o usa tu email.",
   "loginOr": "o",
   "loginEmail": "Email",
   "loginPassword": "Contraseña",

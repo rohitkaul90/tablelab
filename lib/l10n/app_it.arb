@@ -280,6 +280,8 @@
   "loginTagline": "Bankroll tracking, replay delle mani e coaching AI per cash game e tornei.",
   "loginConnecting": "Connessione…",
   "loginContinueWithGoogle": "Continua con Google",
+  "loginContinueWithApple": "Continua con Apple",
+  "loginAppleFailed": "Accesso con Apple non riuscito. Riprova o usa la tua email.",
   "loginOr": "oppure",
   "loginEmail": "Email",
   "loginPassword": "Password",

@@ -19,7 +19,7 @@ class AnalyticsService {
   static Future<void> identify(
     String userId, {
     String? email,
-    String? signupMethod, // 'email' | 'google' — from user.appMetadata['provider']
+    String? signupMethod, // 'email' | 'google' | 'apple' — from user.appMetadata['provider']
     String? language, // resolved UI language code ('en' | 'es' | …)
   }) async {
     if (!_analyticsSupported) return;
