@@ -1,2 +1,2 @@
-app_identifier("com.pokertracker.pokerTracker")
+app_identifier("app.tablelab.ios")
 team_id(ENV["APPLE_TEAM_ID"])

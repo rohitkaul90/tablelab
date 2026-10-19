@@ -14,10 +14,10 @@
 #                       Firebase init ⇒ no GoogleService-Info.plist ⇒ app-id flag).
 default_platform(:ios)
 
-APP_ID = "com.pokertracker.pokerTracker"
+APP_ID = "app.tablelab.ios"
 PROFILE_NAME = "match AppStore #{APP_ID}"
 # Must match `ios` in lib/firebase_options.dart.
-FIREBASE_IOS_APP_ID = "1:654619781138:ios:1304e58fbe83fea27e50cb"
+FIREBASE_IOS_APP_ID = "1:654619781138:ios:56ced65c6093d4487e50cb"
 # Lanes run with cwd = ios/fastlane (actions chdir up to ios/ themselves), and the
 # Fastfile is parsed inside that folder too — so never derive paths from Dir.pwd.
 # FastlaneFolder.path is the absolute fastlane/ dir regardless of how we were invoked.

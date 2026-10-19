@@ -17,8 +17,8 @@
   <string>Apple Distribution</string>
   <key>provisioningProfiles</key>
   <dict>
-    <key>com.pokertracker.pokerTracker</key>
-    <string>match AppStore com.pokertracker.pokerTracker</string>
+    <key>app.tablelab.ios</key>
+    <string>match AppStore app.tablelab.ios</string>
   </dict>
   <key>uploadSymbols</key>
   <true/>

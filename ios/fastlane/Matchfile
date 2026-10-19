@@ -3,5 +3,5 @@
 git_url(ENV["MATCH_GIT_URL"])
 storage_mode("git")
 type("appstore")
-app_identifier(["com.pokertracker.pokerTracker"])
+app_identifier(["app.tablelab.ios"])
 readonly(true)

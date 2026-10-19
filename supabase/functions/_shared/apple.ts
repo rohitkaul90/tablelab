@@ -7,7 +7,7 @@
 //   APPLE_SIWA_PRIVATE_KEY   — the downloaded AuthKey_XXXX.p8 contents (PEM;
 //                              literal newlines or "\n"-escaped both accepted)
 //   APPLE_TEAM_ID            — 10-char Team ID
-//   APPLE_BUNDLE_ID          — com.pokertracker.pokerTracker (the client_id for
+//   APPLE_BUNDLE_ID          — app.tablelab.ios (the client_id for
 //                              the native iOS flow)
 // Used by `apple-link` (authorization code → refresh token at sign-in) and
 // `delete-account` (revoke on deletion; App Store guideline 5.1.1(v)).
@@ -27,7 +27,7 @@ export interface AppleConfig {
  *  public (pinned in ios/fastlane + ExportOptions.plist), so it is a default,
  *  not a required secret — only the three genuinely secret values can fail the
  *  path closed. */
-export const DEFAULT_BUNDLE_ID = "com.pokertracker.pokerTracker";
+export const DEFAULT_BUNDLE_ID = "app.tablelab.ios";
 
 /** Reads the secrets; returns null (not throws) when a required one is unset so
  *  callers can degrade with an alert instead of failing the request. */

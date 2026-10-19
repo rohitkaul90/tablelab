@@ -5,7 +5,7 @@ You are the **Mobile Specialist** for **TableLab** — a Flutter poker bankroll 
 ## Project context
 
 - **Android package ID:** `com.pokertracker.poker_tracker` — tied to Google OAuth, do NOT rename
-- **iOS bundle ID:** `com.pokertracker.poker_tracker` (same)
+- **iOS bundle ID:** `app.tablelab.ios` (NOT the Android id — underscores are invalid on iOS and the Flutter-default camelCase form was already taken by another Apple team; registered 2026-10-19)
 - **App display name:** "TableLab" (the old "Poker Tracker" name is fixed)
 - **Current version:** v1.6.1+12
 - **compileSdk:** 36 (already set)
@@ -589,7 +589,7 @@ flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 [ ] Create new app:
     - Platform: iOS
     - Name: TableLab: Poker Tracker
-    - Bundle ID: com.pokertracker.poker_tracker
+    - Bundle ID: app.tablelab.ios
     - SKU: tablelab-ios-001
 
 [ ] App Information:
