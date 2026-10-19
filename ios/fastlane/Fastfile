@@ -35,23 +35,16 @@ def asc_key
 end
 
 platform :ios do
-  desc "One-off: register the App ID (+ Sign in with Apple), then create the distribution cert + App Store profile in the match repo"
+  desc "One-off: create the distribution cert + App Store profile in the match repo"
   lane :bootstrap_signing do
     setup_ci
-    key = asc_key
-    # Profiles embed the App ID's capabilities: Runner.entitlements demands
-    # com.apple.developer.applesignin, so enable it BEFORE match generates the
-    # profile (otherwise `flutter build ipa` fails at export with "profile
-    # doesn't include the applesignin entitlement"). produce is idempotent on an
-    # existing App ID; skip_itc leaves the App Store Connect record to the owner.
-    produce(
-      api_key: key,
-      app_identifier: APP_ID,
-      app_name: "TableLab",
-      skip_itc: true,
-      enable_services: { sign_in_with_apple: "on" },
-    )
-    match(type: "appstore", readonly: false, force: true, api_key: key)
+    # PRECONDITION (owner, developer portal): the App ID app.tablelab.ios exists
+    # with the Sign in with Apple capability ON. Profiles embed capabilities and
+    # Runner.entitlements demands com.apple.developer.applesignin, so a profile
+    # generated without it fails `flutter build ipa` at export. `produce` can't
+    # do this for us — it has no API-key auth (Apple-ID password only) — so the
+    # portal checkbox is the source of truth; re-run this lane after changing it.
+    match(type: "appstore", readonly: false, force: true, api_key: asc_key)
   end
 
   desc "Install signing assets and configure Runner.xcodeproj for manual signing"
