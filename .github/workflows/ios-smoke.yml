@@ -61,8 +61,31 @@ jobs:
           }
           DART
 
+      # Same Gemfile-pinned CocoaPods as the release workflow, enforcing the
+      # committed lock — otherwise the PR gate resolves pods with the runner's
+      # system CocoaPods and can green a lock the tag build then rejects.
+      - name: Set up Ruby (cocoapods from ios/Gemfile)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: ios
+
+      # Pre-flight for a clear error; the lock itself is checked AFTER the build
+      # (Flutter-plugin pod checksums only settle once flutter build has run).
+      - name: pod install (pre-flight)
+        working-directory: ios
+        run: bundle exec pod install
+
       - name: Build for simulator (unsigned, debug)
         run: flutter build ios --simulator --debug --no-codesign
+
+      - name: Podfile.lock matches the committed lock
+        run: |
+          if ! git diff --exit-code -- ios/Podfile.lock; then
+            echo "::error::ios/Podfile.lock drifted — a plugin change needs new pods: dispatch build-ios.yml with update_pods=true and commit the lock from its artifact"
+            exit 1
+          fi
 
       - name: Boot simulator, install, launch, deep-link, assert alive
         run: |

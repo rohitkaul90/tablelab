@@ -27,6 +27,10 @@ on:
         description: 'One-off: create cert + profile in the match repo (no build). Needs the App ID registered with Sign in with Apple ON.'
         type: boolean
         default: false
+      update_pods:
+        description: 'Regenerate ios/Podfile.lock (pod update) instead of enforcing it — after a plugin bump; commit the lock from the run artifact.'
+        type: boolean
+        default: false
 
 concurrency:
   group: ios-${{ github.ref }}
@@ -114,17 +118,28 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ios/Pods
-          # Podfile.lock is the real key once committed; Podfile + pubspec.lock keep
-          # the key moving on plugin bumps until then (an empty hash would pin a stale tree).
-          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock', 'ios/Podfile', 'pubspec.lock') }}
+          # Keyed on the committed lock (+ Podfile): a pure-Dart dependency bump
+          # must not evict the Pods cache.
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock', 'ios/Podfile') }}
           restore-keys: pods-${{ runner.os }}-
 
-      # Pre-flight pod install: a clearer failure than the same error buried in
-      # `flutter build ipa`, and it produces Podfile.lock even if the build fails.
-      - name: pod install
+      # Pre-flight pod install — a clearer failure than the same error buried in
+      # `flutter build ipa`. NOT `--deployment`: before the first `flutter build`
+      # the Flutter-plugin pods hash differently (their SPEC CHECKSUMS settle only
+      # once the build has run), so the committed lock is the POST-build state
+      # and is enforced by the post-build diff step below. There is no local
+      # Ruby/CocoaPods on the Windows dev box, so the only regeneration path is
+      # the `update_pods` dispatch: `pod update` here, build, and the refreshed
+      # lock rides out in the run artifact to be committed.
+      - name: pod install / pod update
         if: ${{ !inputs.bootstrap_signing }}
         working-directory: ios
-        run: bundle exec pod install --repo-update
+        run: |
+          if [ "${{ inputs.update_pods }}" = "true" ]; then
+            bundle exec pod update
+          else
+            bundle exec pod install
+          fi
 
       - name: Install signing (match) and configure the Xcode project
         if: ${{ !inputs.bootstrap_signing }}
@@ -136,6 +151,18 @@ jobs:
         run: |
           sed -i '' "s/__TEAM_ID__/${APPLE_TEAM_ID}/" ios/ExportOptions.plist
           flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+
+      # THE lock enforcement: after flutter build ipa's own `pod install` the lock
+      # must equal the committed one (a plugin bump that needs new pods shows up
+      # here as a diff → run the update_pods dispatch and commit its artifact).
+      # Skipped in update_pods mode, where a new lock is the point.
+      - name: Podfile.lock matches the committed lock
+        if: ${{ !inputs.bootstrap_signing && !inputs.update_pods }}
+        run: |
+          if ! git diff --exit-code -- ios/Podfile.lock; then
+            echo "::error::ios/Podfile.lock drifted from the committed lock — dispatch build-ios.yml with update_pods=true and commit the lock from its artifact"
+            exit 1
+          fi
 
       - name: Upload to TestFlight
         if: ${{ !inputs.bootstrap_signing }}
