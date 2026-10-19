@@ -1,0 +1,2 @@
+app_identifier("com.pokertracker.pokerTracker")
+team_id(ENV["APPLE_TEAM_ID"])

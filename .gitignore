@@ -83,3 +83,11 @@ crash_reports/
 .pull-tmp-*/
 
 marketing/
+
+# iOS signing material — never commit (fastlane match keeps it in a private repo)
+*.p12
+*.mobileprovision
+*.p8
+ios/fastlane/report.xml
+ios/fastlane/README.md
+ios/fastlane/test_output/

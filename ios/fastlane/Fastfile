@@ -1,0 +1,91 @@
+# TableLab iOS release automation. Runs ONLY on the GitHub Actions macOS runner
+# (.github/workflows/build-ios.yml) — the project has no Mac. Signing is handled
+# by fastlane match with App Store Connect API-key auth, so no Xcode GUI, CSR or
+# Keychain Access step is ever needed.
+#
+# Lanes:
+#   bootstrap_signing — ONE-OFF: create the Apple Distribution cert + App Store
+#                       provisioning profile and store them in the match repo.
+#                       Re-run (it forces) after adding a capability to the App ID.
+#   prepare_signing   — every build: install cert+profile into a temp keychain
+#                       and point Runner.xcodeproj at them (manual signing).
+#   upload            — after `flutter build ipa`: push the IPA to TestFlight.
+#   upload_symbols    — after upload: send dSYMs to Crashlytics (Dart-only
+#                       Firebase init ⇒ no GoogleService-Info.plist ⇒ app-id flag).
+default_platform(:ios)
+
+APP_ID = "com.pokertracker.pokerTracker"
+PROFILE_NAME = "match AppStore #{APP_ID}"
+# Must match `ios` in lib/firebase_options.dart.
+FIREBASE_IOS_APP_ID = "1:654619781138:ios:1304e58fbe83fea27e50cb"
+# Lanes run with cwd = ios/fastlane (actions chdir up to ios/ themselves), and the
+# Fastfile is parsed inside that folder too — so never derive paths from Dir.pwd.
+# FastlaneFolder.path is the absolute fastlane/ dir regardless of how we were invoked.
+IOS_DIR = File.expand_path("..", FastlaneCore::FastlaneFolder.path)
+REPO_ROOT = File.expand_path("..", IOS_DIR)
+
+def asc_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_content: ENV.fetch("ASC_KEY_P8_BASE64"),
+    is_key_content_base64: true,
+    in_house: false,
+  )
+end
+
+platform :ios do
+  desc "One-off: register the App ID (+ Sign in with Apple), then create the distribution cert + App Store profile in the match repo"
+  lane :bootstrap_signing do
+    setup_ci
+    key = asc_key
+    # Profiles embed the App ID's capabilities: Runner.entitlements demands
+    # com.apple.developer.applesignin, so enable it BEFORE match generates the
+    # profile (otherwise `flutter build ipa` fails at export with "profile
+    # doesn't include the applesignin entitlement"). produce is idempotent on an
+    # existing App ID; skip_itc leaves the App Store Connect record to the owner.
+    produce(
+      api_key: key,
+      app_identifier: APP_ID,
+      app_name: "TableLab",
+      skip_itc: true,
+      enable_services: { sign_in_with_apple: "on" },
+    )
+    match(type: "appstore", readonly: false, force: true, api_key: key)
+  end
+
+  desc "Install signing assets and configure Runner.xcodeproj for manual signing"
+  lane :prepare_signing do
+    setup_ci
+    match(type: "appstore", readonly: true, api_key: asc_key)
+    update_code_signing_settings(
+      path: "Runner.xcodeproj",
+      targets: ["Runner"],
+      use_automatic_signing: false,
+      team_id: ENV.fetch("APPLE_TEAM_ID"),
+      code_sign_identity: "Apple Distribution",
+      bundle_identifier: APP_ID,
+      profile_name: PROFILE_NAME,
+    )
+  end
+
+  desc "Upload the IPA produced by `flutter build ipa` to TestFlight"
+  lane :upload do
+    ipa = Dir.glob(File.join(REPO_ROOT, "build/ios/ipa/*.ipa")).first
+    UI.user_error!("No IPA found under build/ios/ipa — did `flutter build ipa` run?") unless ipa
+    upload_to_testflight(
+      api_key: asc_key,
+      ipa: ipa,
+      skip_waiting_for_build_processing: true,
+    )
+  end
+
+  desc "Upload dSYMs to Firebase Crashlytics"
+  lane :upload_symbols do
+    tool = File.join(IOS_DIR, "Pods/FirebaseCrashlytics/upload-symbols")
+    dsyms = File.join(REPO_ROOT, "build/ios/archive/Runner.xcarchive/dSYMs")
+    UI.user_error!("upload-symbols not found at #{tool}") unless File.exist?(tool)
+    UI.user_error!("dSYMs not found at #{dsyms}") unless File.directory?(dsyms)
+    sh("'#{tool}' -ai #{FIREBASE_IOS_APP_ID} -p ios '#{dsyms}'")
+  end
+end

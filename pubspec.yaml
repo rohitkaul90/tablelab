@@ -97,7 +97,10 @@ flutter_native_splash:
 
 flutter_launcher_icons:
   android: true
-  ios: false
+  # iOS icons must be opaque; flatten onto the launch-chain dark (#111811), not white.
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#111811"
   web:
     generate: true
     image_path: "flutter_native_splash/app_icon.png"

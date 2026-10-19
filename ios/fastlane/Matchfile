@@ -1,0 +1,7 @@
+# Certificates + profiles live encrypted (MATCH_PASSWORD) in a PRIVATE git repo.
+# Auth to that repo comes from MATCH_GIT_BASIC_AUTHORIZATION (base64 "user:PAT").
+git_url(ENV["MATCH_GIT_URL"])
+storage_mode("git")
+type("appstore")
+app_identifier(["com.pokertracker.pokerTracker"])
+readonly(true)

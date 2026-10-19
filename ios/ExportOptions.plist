@@ -2,22 +2,31 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <!-- Consumed by `flutter build ipa --export-options-plist` in build-ios.yml.
+       __TEAM_ID__ is substituted from the APPLE_TEAM_ID secret at build time;
+       the profile name is what fastlane match creates (ios/fastlane/Fastfile). -->
   <key>method</key>
-  <string>app-store</string>
+  <string>app-store-connect</string>
+  <key>destination</key>
+  <string>export</string>
   <key>teamID</key>
-  <string>REPLACE_WITH_YOUR_TEAM_ID</string>
+  <string>__TEAM_ID__</string>
+  <key>signingStyle</key>
+  <string>manual</string>
+  <key>signingCertificate</key>
+  <string>Apple Distribution</string>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>com.pokertracker.pokerTracker</key>
+    <string>match AppStore com.pokertracker.pokerTracker</string>
+  </dict>
+  <key>uploadSymbols</key>
+  <true/>
   <key>uploadBitcode</key>
   <false/>
   <key>compileBitcode</key>
   <false/>
-  <key>uploadSymbols</key>
+  <key>stripSwiftSymbols</key>
   <true/>
-  <key>signingStyle</key>
-  <string>manual</string>
-  <key>provisioningProfiles</key>
-  <dict>
-    <key>com.pokertracker.poker_tracker</key>
-    <string>TableLab AppStore</string>
-  </dict>
 </dict>
 </plist>
