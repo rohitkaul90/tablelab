@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -183,6 +185,12 @@ class _LoginScreenState extends State<LoginScreen> {
         idToken: idToken,
         nonce: rawNonce,
       );
+      // Store the refresh token server-side for revocation on account deletion.
+      // Fire-and-forget: the user is already signed in at this point.
+      unawaited(linkAppleAuthorization(
+        Supabase.instance.client,
+        credential.authorizationCode,
+      ));
       // Apple sends the name ONLY on the very first authorization and never
       // inside the ID token, so persist it now or it is lost for good.
       // user_metadata.full_name is what ProfileService.googleName reads.
