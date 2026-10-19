@@ -2,6 +2,30 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Hands Apple's one-shot `authorizationCode` to the `apple-link` Edge
+/// Function, which exchanges it for a refresh token and stores it server-side
+/// so `delete-account` can revoke it (App Store Review Guideline 5.1.1(v)).
+///
+/// Best-effort by design: the code expires in ~5 minutes and is single-use, so
+/// this must run right after `signInWithIdToken` (the session's JWT is what
+/// authorizes the call), but a failure (function not yet deployed, offline,
+/// secrets unset) must never block sign-in — the server alerts on its side.
+Future<void> linkAppleAuthorization(
+  SupabaseClient client,
+  String authorizationCode,
+) async {
+  try {
+    await client.functions.invoke(
+      'apple-link',
+      body: {'authorizationCode': authorizationCode},
+    );
+  } catch (e) {
+    debugPrint('apple-link failed (sign-in unaffected): $e');
+  }
+}
 
 /// Nonce helpers for the native Sign in with Apple → Supabase flow.
 ///

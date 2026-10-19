@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { reportError } from "../_shared/alert.ts";
+import { appleConfigFromEnv, revokeRefreshToken } from "../_shared/apple.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -46,6 +47,33 @@ Deno.serve(async (req) => {
   );
 
   const uid = user.id;
+
+  // Sign in with Apple: revoke the user's Apple token first (App Store Review
+  // Guideline 5.1.1(v)). The refresh token was stored by `apple-link` at
+  // sign-in; a user who never used Apple has no row. Best-effort: a revoke
+  // failure is alerted but must not strand the user with an undeletable
+  // account — the row itself cascades away with auth.users below.
+  {
+    const { data: appleRow, error: appleReadErr } = await adminClient
+      .from("apple_refresh_tokens")
+      .select("refresh_token")
+      .eq("user_id", uid)
+      .maybeSingle();
+    if (appleReadErr) {
+      await reportError("delete-account", `apple_refresh_tokens read failed: ${appleReadErr.message}`);
+    } else if (appleRow?.refresh_token) {
+      const cfg = appleConfigFromEnv();
+      if (!cfg) {
+        await reportError("delete-account", "user has an Apple token but APPLE_SIWA_* secrets are unset — NOT revoked");
+      } else {
+        try {
+          await revokeRefreshToken(cfg, appleRow.refresh_token);
+        } catch (e) {
+          await reportError("delete-account", `apple revoke failed: ${e instanceof Error ? e.message : e}`);
+        }
+      }
+    }
+  }
 
   // Delete user data in FK-safe order before removing the auth record.
   // If cascade deletes are configured on auth.users, these are redundant but harmless.
