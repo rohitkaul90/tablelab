@@ -153,7 +153,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   app_links: 6d01271b3907b0ee7325c5297c75d697c4226c4d
-  file_picker: b159e0c068aef54932bb15dc9fd1571818edaf49
+  file_picker: 9e4c55a49b5bec4a3cc3c01410ce11348811c551
   Firebase: 7d62445aeabdaea36f7d372f33052fed9a72514f
   firebase_core: 8863b8f05ae77d045fbd3ce0b6e86a8ae12f443b
   firebase_crashlytics: 8790e8cdd1e0b3105b813beb39354099aafd4dbc
