@@ -52,6 +52,8 @@ class _ImportExportScreenState extends ConsumerState<ImportExportScreen> {
       downloadBytesWeb(bytes, fileName, mimeType);
       return true;
     }
+    // iOS compiles file_picker's media/audio pickers OUT (see ios/Podfile):
+    // keep this on FileType.custom / document types.
     final path = await FilePicker.platform.saveFile(
       dialogTitle: dialogTitle,
       fileName: fileName,

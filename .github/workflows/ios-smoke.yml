@@ -71,6 +71,13 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
+      - name: Cache CocoaPods
+        uses: actions/cache@v5
+        with:
+          path: ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock', 'ios/Podfile') }}
+          restore-keys: pods-${{ runner.os }}-
+
       # Pre-flight for a clear error; the lock itself is checked AFTER the build
       # (Flutter-plugin pod checksums only settle once flutter build has run).
       - name: pod install (pre-flight)
@@ -80,10 +87,17 @@ jobs:
       - name: Build for simulator (unsigned, debug)
         run: flutter build ios --simulator --debug --no-codesign
 
+      # The regenerated lock always rides out in the `ios-smoke` artifact (as
+      # `Podfile.lock` at its root), even when the build itself fails, so a lock
+      # drift is fixed by committing that file; no TestFlight dispatch needed.
+      - name: Attach the post-build Podfile.lock
+        if: always()
+        run: mkdir -p smoke && cp ios/Podfile.lock smoke/Podfile.lock
+
       - name: Podfile.lock matches the committed lock
         run: |
           if ! git diff --exit-code -- ios/Podfile.lock; then
-            echo "::error::ios/Podfile.lock drifted — a plugin change needs new pods: dispatch build-ios.yml with update_pods=true and commit the lock from its artifact"
+            echo "::error::ios/Podfile.lock drifted — a plugin change needs new pods: commit the Podfile.lock from this run's ios-smoke artifact"
             exit 1
           fi
 
