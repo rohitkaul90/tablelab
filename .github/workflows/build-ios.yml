@@ -128,9 +128,10 @@ jobs:
       # the Flutter-plugin pods hash differently (their SPEC CHECKSUMS settle only
       # once the build has run), so the committed lock is the POST-build state
       # and is enforced by the post-build diff step below. There is no local
-      # Ruby/CocoaPods on the Windows dev box, so the only regeneration path is
-      # the `update_pods` dispatch: `pod update` here, build, and the refreshed
-      # lock rides out in the run artifact to be committed.
+      # Ruby/CocoaPods on the Windows dev box: a PR's ios-smoke run attaches its
+      # post-build lock (commit that for a plain drift); the `update_pods`
+      # dispatch is the `pod update` path (bump every pod): build, and the
+      # refreshed lock rides out in the run artifact to be committed.
       - name: pod install / pod update
         if: ${{ !inputs.bootstrap_signing }}
         working-directory: ios

@@ -61,6 +61,9 @@ class _ImportSourceScreenState extends State<ImportSourceScreen> {
   Future<void> _onSourceSelected(String? presetId) async {
     final l10n = context.l10n;
     // Open file picker first; set busy only during parsing.
+    // iOS compiles file_picker's media/audio pickers OUT (Pod::PICKER_MEDIA /
+    // PICKER_AUDIO = false in ios/Podfile, ITMS-90683): only FileType.custom /
+    // document types work there; image/video/media/audio throw at runtime.
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv', 'xlsx', 'xls'],
