@@ -31,8 +31,11 @@ end
 # Connect otherwise rejects the build with ITMS-90683 (a Photos API is linked
 # but Info.plist has no NSPhotoLibraryUsageDescription; build 1.9.0 (16) was hit).
 # Keep PICKER_DOCUMENT on: pickFiles() and saveFile() need it.
-PICKER_MEDIA = false
-PICKER_AUDIO = false
+# NOTE: the constants must live on the Pod module (the Podfile is evaluated
+# inside Flutter's podhelper; a bare PICKER_MEDIA = false is silently ignored
+# and the gallery pods come back - verified by the ios-smoke lock check).
+Pod::PICKER_MEDIA = false
+Pod::PICKER_AUDIO = false
 
 require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
 
