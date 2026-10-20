@@ -25,6 +25,15 @@ def flutter_root
   raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
 end
 
+# file_picker compiles in a photo/video gallery picker (DKImagePickerController,
+# Photos/PhotosUI) and a music picker (MediaPlayer) by default. TableLab only
+# picks and saves CSV/Excel documents, so both are switched off: App Store
+# Connect otherwise rejects the build with ITMS-90683 (a Photos API is linked
+# but Info.plist has no NSPhotoLibraryUsageDescription; build 1.9.0 (16) was hit).
+# Keep PICKER_DOCUMENT on: pickFiles() and saveFile() need it.
+PICKER_MEDIA = false
+PICKER_AUDIO = false
+
 require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
 
 flutter_ios_podfile_setup
