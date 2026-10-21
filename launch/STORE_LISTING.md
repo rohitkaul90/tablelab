@@ -16,7 +16,7 @@ Grounded in `web/about.html` (positioning + features) and `launch/competitive-po
 - **Field limits:** title **30 chars**, short description **80 chars**, full description **4000 chars**.
 - **Weight:** the **title** carries the most ASO weight → the primary keyword ("Poker Tracker") belongs there. Short description is second + the main conversion line.
 - **Don't keyword-stuff** (Play policy can suppress/reject) and **don't name competitors** ("GTO Wizard", "Pokerbase") in the listing — trademark/policy risk.
-- **Don't claim what's false:** no iOS (Android + Web only); AI is plain-English feedback, **not** solver-grade.
+- **Don't claim what's false:** AI is plain-English feedback, **not** solver-grade. (iOS shipped 2026-10 — the Play copy's availability line may now say iPhone too.)
 
 ---
 
@@ -105,7 +105,7 @@ Check each primary/secondary term appears at least once in the title/short/full 
 ---
 
 ## Deliberately NOT claimed
-- **iOS** — Android + Web only today. Don't imply an iPhone app.
+- ~~**iOS** — Android + Web only today. Don't imply an iPhone app.~~ Retired 2026-10: the iPhone app is on the App Store (Apple ID 6824665110).
 - **"Solves any hand" / live solving** — REVISED 2026-07-11: the Study tab genuinely ships
   solver-computed strategies (licensed solver, ≤0.5% exploitability pre-solved library), so
   "browse/study solver-computed strategies" is now truthful and claimed. What stays OFF-limits:
