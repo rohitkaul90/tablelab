@@ -19,6 +19,9 @@ Future<bool?> showFeedbackSheet(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
+    // A tall sheet (large Dynamic Type + keyboard) must not slide under the
+    // iPhone status bar.
+    useSafeArea: true,
     builder: (_) => _FeedbackSheet(
       initialCategory: initialCategory,
       prefillMessage: prefillMessage,
@@ -140,7 +143,24 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.feedbackTitle, style: theme.textTheme.titleLarge),
+            // Explicit close button: with the keyboard up (autofocus) the
+            // sheet fills the screen, so there is no scrim to tap and the
+            // scroll body eats drags. Android's back gesture still pops the
+            // sheet, but iOS has no system back for a modal, so without this
+            // the only way out was killing the app (iPhone QA, 2026-10-20).
+            Row(
+              children: [
+                Expanded(
+                  child: Text(l10n.feedbackTitle,
+                      style: theme.textTheme.titleLarge),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: l10n.commonClose,
+                  onPressed: _saving ? null : () => Navigator.pop(context),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
             Text(
               l10n.feedbackSubtitle,

@@ -76,6 +76,22 @@ void main() {
     expect(find.text('Please write a little something first.'), findsOneWidget);
   });
 
+  testWidgets('close button dismisses the sheet without submitting',
+      (tester) async {
+    // iOS has no system back gesture for a modal sheet, and with the
+    // autofocused keyboard up there is no scrim to tap, so the header X is
+    // the only discoverable exit there.
+    final fake = _FakeFeedbackService();
+    await _open(tester, fake);
+
+    await tester.enterText(find.byType(TextField), 'Changed my mind');
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+
+    expect(fake.wasCalled, isFalse);
+    expect(find.text('Send'), findsNothing);
+  });
+
   testWidgets('submits category + message and closes the sheet', (tester) async {
     final fake = _FakeFeedbackService();
     await _open(tester, fake);
