@@ -47,7 +47,8 @@
     </array>
     <key>NSPrivacyCollectedDataTypes</key>
     <array>
-        <!-- Account email (Supabase auth) -->
+        <!-- Account email (Supabase auth). Also a PostHog person property
+             (AnalyticsService.identify sets `email`), hence Analytics too. -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
             <string>NSPrivacyCollectedDataTypeEmailAddress</string>
@@ -58,6 +59,7 @@
             <key>NSPrivacyCollectedDataTypePurposes</key>
             <array>
                 <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
             </array>
         </dict>
         <!-- Display name on profiles (optional; Sign in with Apple may supply it) -->
