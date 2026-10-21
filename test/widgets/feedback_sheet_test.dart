@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +18,9 @@ class _FakeFeedbackService extends FeedbackService {
   bool? shareEmail;
   Object? throwThis;
 
+  /// When set, submit() stays pending until this completes (a stalled call).
+  Completer<void>? hang;
+
   @override
   Future<void> submit({
     required String category,
@@ -28,17 +33,26 @@ class _FakeFeedbackService extends FeedbackService {
     this.message = message;
     this.rating = rating;
     this.shareEmail = shareEmail;
+    if (hang != null) await hang!.future;
     if (throwThis != null) throw throwThis!;
   }
 }
 
-Future<void> _open(WidgetTester tester, _FakeFeedbackService fake) async {
+/// Holds the sheet's result future so tests can assert the documented
+/// true / false / null contract of [showFeedbackSheet].
+class _Opened {
+  Future<bool?>? result;
+}
+
+Future<_Opened> _open(WidgetTester tester, _FakeFeedbackService fake) async {
+  final opened = _Opened();
   await tester.pumpWidget(
     wrapApp(
       Scaffold(
         body: Builder(
           builder: (ctx) => ElevatedButton(
-            onPressed: () => showFeedbackSheet(ctx, initialCategory: 'idea'),
+            onPressed: () =>
+                opened.result = showFeedbackSheet(ctx, initialCategory: 'idea'),
             child: const Text('open'),
           ),
         ),
@@ -48,6 +62,7 @@ Future<void> _open(WidgetTester tester, _FakeFeedbackService fake) async {
   );
   await tester.tap(find.text('open'));
   await tester.pumpAndSettle();
+  return opened;
 }
 
 void main() {
@@ -57,12 +72,13 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-            const MethodChannel('posthog_flutter'), (_) async => null);
+          const MethodChannel('posthog_flutter'),
+          (_) async => null,
+        );
   });
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-            const MethodChannel('posthog_flutter'), null);
+        .setMockMethodCallHandler(const MethodChannel('posthog_flutter'), null);
   });
 
   testWidgets('empty message blocks submit and shows a prompt', (tester) async {
@@ -76,13 +92,14 @@ void main() {
     expect(find.text('Please write a little something first.'), findsOneWidget);
   });
 
-  testWidgets('close button dismisses the sheet without submitting',
-      (tester) async {
+  testWidgets('close button dismisses the sheet without submitting', (
+    tester,
+  ) async {
     // iOS has no system back gesture for a modal sheet, and with the
     // autofocused keyboard up there is no scrim to tap, so the header X is
     // the only discoverable exit there.
     final fake = _FakeFeedbackService();
-    await _open(tester, fake);
+    final opened = await _open(tester, fake);
 
     await tester.enterText(find.byType(TextField), 'Changed my mind');
     await tester.tap(find.byTooltip('Close'));
@@ -90,13 +107,43 @@ void main() {
 
     expect(fake.wasCalled, isFalse);
     expect(find.text('Send'), findsNothing);
+    // X = explicit cancel (false), distinct from a barrier dismiss (null).
+    expect(await opened.result, isFalse);
   });
 
-  testWidgets('submits category + message and closes the sheet', (tester) async {
+  testWidgets('close stays usable while a submit is stalled', (tester) async {
+    // A hung Edge Function call must not re-create the trap: every other
+    // control is disabled during _saving, the X must not be.
+    final fake = _FakeFeedbackService()..hang = Completer<void>();
+    final opened = await _open(tester, fake);
+
+    await tester.enterText(find.byType(TextField), 'Slow network');
+    await tester.tap(find.text('Send'));
+    await tester.pump();
+    expect(fake.wasCalled, isTrue);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget); // saving
+
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Close'), findsNothing);
+    expect(await opened.result, isFalse);
+
+    // Let the orphaned call finish; the mounted guard must swallow it.
+    fake.hang!.complete();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('submits category + message and closes the sheet', (
+    tester,
+  ) async {
     final fake = _FakeFeedbackService();
     await _open(tester, fake);
 
-    await tester.enterText(find.byType(TextField), 'Add a hand-history importer');
+    await tester.enterText(
+      find.byType(TextField),
+      'Add a hand-history importer',
+    );
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
 
@@ -109,8 +156,9 @@ void main() {
     expect(find.text('Thanks for the feedback! 🙏'), findsOneWidget);
   });
 
-  testWidgets('surfaces a network error and keeps the sheet open on failure',
-      (tester) async {
+  testWidgets('surfaces a network error and keeps the sheet open on failure', (
+    tester,
+  ) async {
     final fake = _FakeFeedbackService()..throwThis = Exception('network');
     await _open(tester, fake);
 
@@ -126,10 +174,14 @@ void main() {
     );
   });
 
-  testWidgets('shows the limit message on a 429 FeedbackException',
-      (tester) async {
+  testWidgets('shows the limit message on a 429 FeedbackException', (
+    tester,
+  ) async {
     final fake = _FakeFeedbackService()
-      ..throwThis = const FeedbackException(status: 429, message: 'Daily feedback limit reached.');
+      ..throwThis = const FeedbackException(
+        status: 429,
+        message: 'Daily feedback limit reached.',
+      );
     await _open(tester, fake);
 
     await tester.enterText(find.byType(TextField), 'One too many');

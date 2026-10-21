@@ -8,7 +8,8 @@ import '../services/feedback_service.dart';
 
 /// Opens the in-app feedback sheet. [initialCategory] preselects a chip and
 /// [prefillMessage] seeds the text field (used by the AI screens' "tell us
-/// more" entry point). Returns true if feedback was submitted.
+/// more" entry point). Returns true if feedback was submitted, false if the
+/// user closed it with the X, null if it was swiped away / barrier-dismissed.
 Future<bool?> showFeedbackSheet(
   BuildContext context, {
   String? initialCategory,
@@ -38,11 +39,11 @@ const _categoryIcons = <String, IconData>{
 };
 
 String _categoryLabel(AppLocalizations l10n, String id) => switch (id) {
-      'bug' => l10n.feedbackCategoryBug,
-      'idea' => l10n.feedbackCategoryIdea,
-      'praise' => l10n.feedbackCategoryPraise,
-      _ => l10n.feedbackCategoryOther,
-    };
+  'bug' => l10n.feedbackCategoryBug,
+  'idea' => l10n.feedbackCategoryIdea,
+  'praise' => l10n.feedbackCategoryPraise,
+  _ => l10n.feedbackCategoryOther,
+};
 
 class _FeedbackSheet extends ConsumerStatefulWidget {
   final String? initialCategory;
@@ -90,7 +91,9 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
     }
     setState(() => _saving = true);
     try {
-      await ref.read(feedbackServiceProvider).submit(
+      await ref
+          .read(feedbackServiceProvider)
+          .submit(
             category: _category,
             message: message,
             rating: _rating,
@@ -99,15 +102,11 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
       AnalyticsService.feedbackSubmitted(category: _category);
       if (!mounted) return;
       Navigator.pop(context, true);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.feedbackThanks)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.feedbackThanks)));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text(_friendlyError(l10n, e))),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(_friendlyError(l10n, e))));
     }
   }
 
@@ -136,121 +135,158 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
     final l10n = context.l10n;
     return Padding(
       // Lift above the keyboard when the text field is focused.
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Explicit close button: with the keyboard up (autofocus) the
-            // sheet fills the screen, so there is no scrim to tap and the
-            // scroll body eats drags. Android's back gesture still pops the
-            // sheet, but iOS has no system back for a modal, so without this
-            // the only way out was killing the app (iPhone QA, 2026-10-20).
-            Row(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Pinned header with an explicit close button, OUTSIDE the scroll
+          // body so it can't scroll off the top on a large-text phone. With
+          // the keyboard up (autofocus) the sheet fills the screen, so there
+          // is no scrim to tap and the scroll body eats drags. Android's back
+          // gesture still pops the sheet, but iOS has no system back for a
+          // modal, so without this the only way out was killing the app
+          // (iPhone QA, 2026-10-20). Deliberately NOT disabled while saving:
+          // a stalled submit must never trap the user again (the in-flight
+          // future already guards with `if (!mounted) return`).
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
+            child: Row(
               children: [
                 Expanded(
-                  child: Text(l10n.feedbackTitle,
-                      style: theme.textTheme.titleLarge),
+                  child: Text(
+                    l10n.feedbackTitle,
+                    style: theme.textTheme.titleLarge,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   tooltip: l10n.commonClose,
-                  onPressed: _saving ? null : () => Navigator.pop(context),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Navigator.pop(context, false),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              l10n.feedbackSubtitle,
-              style: theme.textTheme.bodySmall?.copyWith(color: cs.outline),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final entry in _categoryIcons.entries)
-                  ChoiceChip(
-                    label: Text(_categoryLabel(l10n, entry.key)),
-                    avatar: Icon(entry.value, size: 18),
-                    selected: _category == entry.key,
-                    onSelected:
-                        _saving ? null : (_) => setState(() => _category = entry.key),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _controller,
-              enabled: !_saving,
-              autofocus: true,
-              minLines: 3,
-              maxLines: 6,
-              maxLength: 4000,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                hintText: l10n.feedbackHint,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.feedbackRate,
-                style: theme.textTheme.bodySmall?.copyWith(color: cs.outline)),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                for (var i = 1; i <= 5; i++)
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      (_rating ?? 0) >= i ? Icons.star : Icons.star_border,
-                      color: (_rating ?? 0) >= i ? Colors.amber : cs.outline,
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.feedbackSubtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.outline,
                     ),
-                    onPressed: _saving
-                        ? null
-                        // Tapping the current rating clears it.
-                        : () => setState(() => _rating = _rating == i ? null : i),
                   ),
-              ],
-            ),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              dense: true,
-              value: _shareEmail,
-              onChanged:
-                  _saving ? null : (v) => setState(() => _shareEmail = v ?? false),
-              title: Text(l10n.feedbackOkToEmail),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _saving ? null : _submit,
-                child: _saving
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.feedbackSend),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final entry in _categoryIcons.entries)
+                        ChoiceChip(
+                          label: Text(_categoryLabel(l10n, entry.key)),
+                          avatar: Icon(entry.value, size: 18),
+                          selected: _category == entry.key,
+                          onSelected: _saving
+                              ? null
+                              : (_) => setState(() => _category = entry.key),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _controller,
+                    enabled: !_saving,
+                    autofocus: true,
+                    minLines: 3,
+                    maxLines: 6,
+                    maxLength: 4000,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: l10n.feedbackHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.feedbackRate,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.outline,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      for (var i = 1; i <= 5; i++)
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: Icon(
+                            (_rating ?? 0) >= i
+                                ? Icons.star
+                                : Icons.star_border,
+                            color: (_rating ?? 0) >= i
+                                ? Colors.amber
+                                : cs.outline,
+                          ),
+                          onPressed: _saving
+                              ? null
+                              // Tapping the current rating clears it.
+                              : () => setState(
+                                  () => _rating = _rating == i ? null : i,
+                                ),
+                        ),
+                    ],
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    dense: true,
+                    value: _shareEmail,
+                    onChanged: _saving
+                        ? null
+                        : (v) => setState(() => _shareEmail = v ?? false),
+                    title: Text(l10n.feedbackOkToEmail),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _saving ? null : _submit,
+                      child: _saving
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(l10n.feedbackSend),
+                    ),
+                  ),
+                  Center(
+                    child: TextButton(
+                      onPressed: _saving
+                          ? null
+                          : () => launchUrl(
+                              Uri(
+                                scheme: 'mailto',
+                                path: 'feedback@tablelab.app',
+                                queryParameters: {
+                                  'subject': 'TableLab Feedback',
+                                },
+                              ),
+                            ),
+                      child: Text(l10n.feedbackEmailInstead),
+                    ),
+                  ),
+                ],
               ),
             ),
-            Center(
-              child: TextButton(
-                onPressed: _saving
-                    ? null
-                    : () => launchUrl(Uri(
-                          scheme: 'mailto',
-                          path: 'feedback@tablelab.app',
-                          queryParameters: {'subject': 'TableLab Feedback'},
-                        )),
-                child: Text(l10n.feedbackEmailInstead),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
