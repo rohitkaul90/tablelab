@@ -34,11 +34,14 @@ ffmpeg -y -i in.PNG -vf "scale=1179:-1:flags=lanczos,pad=1179:2556:0:(oh-ih):col
 headline). Edit the HTML, then re-render with headless Chrome from the repo root:
 
 ```bash
+# Git Bash on Windows: Chrome needs C:/... paths, not /c/... (hence cygpath -m)
+W=$(cygpath -m "$PWD")
 "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu \
   --hide-scrollbars --force-device-scale-factor=1 --window-size=3840,1646 \
-  --screenshot="$PWD/store/ios/header/header-3840x1646.png" \
-  "file:///$PWD/store/ios/header/header.html"
+  --screenshot="$W/store/ios/header/header-3840x1646.png" \
+  "file:///$W/store/ios/header/header.html"
 ```
+(Verified 2026-10-21: the re-render is pixel-identical to the committed PNG.)
 
 Keep text inside the middle of the frame; App Store crops the edges on narrower devices.
 The "Search Results" asset slot is intentionally left empty (the first screenshot serves).
