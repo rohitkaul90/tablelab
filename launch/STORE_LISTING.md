@@ -220,12 +220,13 @@ TableLab is a results tracker and study tool for poker players. It contains no g
 - Contact: your name, phone, and `support@tablelab.app`.
 
 ## Screenshots
-App Store Connect requires **one** iPhone set at **6.9"** (1320×2868) *or* **6.5"** (1284×2778);
-6.1" captures from the iPhone 17e (1179×2556) are not accepted as the required set. Fastest route:
-take the six scenes on the 17e in dark mode (Stats, Sessions, Hands list, Replayer, Study, AI
-coaching) and upscale to 1320×2868 — the aspect ratios differ by 0.2%, a one-pixel-row crop
-nobody will see. Ask Claude to batch the resize (Pillow/ffmpeg). Fallback: a CI-booted
-iPhone 17 Pro Max simulator with `xcrun simctl io booted screenshot`.
+App Store Connect (layout as of 2026-10-21) has ONE required iPhone slot, **"iPhone with Dynamic
+Island (medium display)"**, accepting **1179×2556** or **1206×2622** (portrait); it scales down for
+smaller iPhones. The old 6.9"/6.5" slots are gone. Owner captures the six scenes on the iPhone 17e
+(Stats, Sessions, Hands, Replayer, Study, AI coaching; light mode is fine; status bar may be
+cropped) and Claude normalises them with ffmpeg: scale to 1179 wide, pad the top to 2556 with each
+image's own top-edge colour (never centre-crop — it clips the right edge). Done 2026-10-21 →
+`~/Downloads/appstore-medium/*.png`.
 
 ## Localized listings (es-ES / fr-FR / it-IT / nl-NL)
 Description + name: reuse `STORE_LISTING_translations.md` with the same two edits as the English
