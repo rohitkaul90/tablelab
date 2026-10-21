@@ -351,6 +351,7 @@ Full audit + fixes 2026-07-05 (SEO health ~75/100); details in `memory/seo-marke
 - `ios/Runner/PrivacyInfo.xcprivacy` is referenced in the pbxproj Resources phase and declares email / name / user id / user content / product interaction / crash data (linked, not tracking) — keep it in agreement with the App Store Connect privacy labels. `Runner.entitlements` carries Sign in with Apple (`CODE_SIGN_ENTITLEMENTS` in the 3 target-level configs). `Info.plist`: `ITSAppUsesNonExemptEncryption=false` (HTTPS only), `CFBundleLocalizations` must mirror the ARB set (like `locales_config.xml` on Android), `com.posthog.posthog.AUTO_INIT=false` (Dart `setup()` configures PostHog).
 - `flutter_launcher_icons` has `ios: true` + `remove_alpha_ios` + `background_color_ios: #111811` — rerun `dart run flutter_launcher_icons` and commit when the icon changes (App Store Connect rejects alpha/placeholder icons). The launch storyboard is already the `#111811` tile.
 - Local Windows machines can still edit everything here; `flutter run -d ios` is impossible — use the smoke workflow + TestFlight for verification.
+- **App Store listing assets live in `store/ios/`** (screenshots 1179×2556 for App Store Connect's single "medium display" iPhone slot, the 3840×1646 product-page header + its HTML source, and a README with the ffmpeg/headless-Chrome reproduction commands). Listing copy, privacy-label table and review notes are in `launch/STORE_LISTING.md` (App Store section; `launch/` is gitignored, the file is force-tracked).
 
 ### Analytics — PostHog
 
