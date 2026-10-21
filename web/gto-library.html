@@ -51,7 +51,7 @@
         "@id": "https://tablelab.app/gto-library#dataset",
         "name": "TableLab GTO Library",
         "url": "https://tablelab.app/gto-library",
-        "description": "26,325 fully solved no-limit hold'em postflop spots: 5 preflop scenarios (BTN vs BB, CO vs BB, UTG vs BB, SB vs BB, and a BB vs BTN 3-bet pot) × all 1,755 strategically distinct flops × 3 stack-depth buckets, solved flop to river with TexasSolver to at most 0.5% exploitability. Includes per-combo strategy frequencies, EV at flop decision nodes, equities, and reach. Browsable for free in the TableLab app on the web and on Android.",
+        "description": "26,325 fully solved no-limit hold'em postflop spots: 5 preflop scenarios (BTN vs BB, CO vs BB, UTG vs BB, SB vs BB, and a BB vs BTN 3-bet pot) × all 1,755 strategically distinct flops × 3 stack-depth buckets, solved flop to river with TexasSolver to at most 0.5% exploitability. Includes per-combo strategy frequencies, EV at flop decision nodes, equities, and reach. Browsable for free in the TableLab app on the web, iPhone and Android.",
         "creator": { "@id": "https://tablelab.app/#organization" },
         "isAccessibleForFree": true,
         "license": "https://tablelab.app/terms"
@@ -88,10 +88,10 @@
         "@id": "https://tablelab.app/gto-library#faq",
         "mainEntity": [
           { "@type": "Question", "name": "What is GTO poker strategy?", "acceptedAnswer": { "@type": "Answer", "text": "GTO (game-theory optimal) strategy is the equilibrium solution to a poker spot: a mix of bets, checks, calls, raises, and folds for every hand such that no opponent strategy can exploit it. Solvers compute these equilibria numerically. Studying GTO output tells you the baseline — how often each hand in your range wants to take each action — which you can then deviate from to exploit real opponents." } },
-          { "@type": "Question", "name": "Is the TableLab GTO library really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The library is part of the free TableLab app — the web app at tablelab.app and the Android app on Google Play. There is no paywall on the Study tab, no locked scenarios, and no credit card. Comparable precomputed-solution products are paid subscriptions." } },
+          { "@type": "Question", "name": "Is the TableLab GTO library really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The library is part of the free TableLab app — the web app at tablelab.app and the iPhone and Android apps. There is no paywall on the Study tab, no locked scenarios, and no credit card. Comparable precomputed-solution products are paid subscriptions." } },
           { "@type": "Question", "name": "How accurate are the solutions?", "acceptedAnswer": { "@type": "Answer", "text": "Every spot is solved with TexasSolver, a CFR solver used under a commercial license, to an exploitability of at most 0.5% of the pot. That means a theoretically perfect opponent could gain no more than half a percent of the pot per hand against the computed strategy — a standard precision target for practical GTO study. The in-app footer labels the library Beta, flop to river." } },
           { "@type": "Question", "name": "Why do the suits in the library sometimes differ from my actual hand?", "acceptedAnswer": { "@type": "Answer", "text": "Boards are stored in canonical suit-isomorphic form. Suits have no inherent value in hold'em, so A♠7♥2♦ and A♥7♦2♣ play identically — the 22,100 raw flops collapse to 1,755 strategically distinct ones. The library solves each distinct flop once and represents it with one canonical suit assignment; map your hand's suits onto the canonical board and the strategy is exactly the same." } },
-          { "@type": "Question", "name": "Does the GTO library work on mobile?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The library lives in the TableLab app's Study tab, which runs on Android via Google Play and in any modern browser at tablelab.app — the same solved spots, streamed on demand, on both platforms." } },
+          { "@type": "Question", "name": "Does the GTO library work on mobile?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The library lives in the TableLab app's Study tab, which runs on iPhone via the App Store, on Android via Google Play, and in any modern browser at tablelab.app — the same solved spots, streamed on demand, on every platform." } },
           { "@type": "Question", "name": "Can it solve my exact custom spot?", "acceptedAnswer": { "@type": "Answer", "text": "No — it is a precomputed library, not an on-demand solver. Solutions exist for five specific preflop lines with standard open sizes, across three stack-depth buckets per scenario. If your spot came from a different preflop line or a non-standard size, the nearest library spot is a reference point, not an exact answer; a custom tree needs a full solver." } }
         ]
       }
@@ -157,7 +157,8 @@
       <p class="lead">TableLab's Study tab holds 26,325 fully solved postflop spots — five common
       preflop battles, every one of the 1,755 strategically distinct flops, three stack depths
       each, solved from the flop through the river. It is hosted, streamed on demand, and free
-      inside the free TableLab app: in your browser at <a href="/">tablelab.app</a> or on
+      inside the free TableLab app: in your browser at <a href="/">tablelab.app</a>, on
+      <a href="https://apps.apple.com/app/id6824665110" rel="noopener" target="_blank">iPhone via the App Store</a>, or on
       <a href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker" rel="noopener" target="_blank">Android
       via Google Play</a>.</p>
 
@@ -303,7 +304,8 @@
 
       <div class="tool-cta">
         <p><strong>Open the library.</strong> The Study tab is live in the free TableLab app —
-        <a href="/">open the web app</a> or
+        <a href="/">open the web app</a>,
+        <a href="https://apps.apple.com/app/id6824665110" rel="noopener" target="_blank">download it on the App Store</a>, or
         <a href="https://play.google.com/store/apps/details?id=com.pokertracker.poker_tracker" rel="noopener" target="_blank">get it on Google Play</a>.
         No signup fee, no locked scenarios.</p>
       </div>
@@ -321,7 +323,7 @@
         <details>
           <summary>Is the TableLab GTO library really free?</summary>
           <p>Yes. The library is part of the free TableLab app — the web app at
-          <a href="/">tablelab.app</a> and the Android app on Google Play. There is no paywall
+          <a href="/">tablelab.app</a> and the iPhone and Android apps. There is no paywall
           on the Study tab, no locked scenarios, and no credit card. Comparable
           precomputed-solution products are paid subscriptions.</p>
         </details>
@@ -343,9 +345,9 @@
         </details>
         <details>
           <summary>Does the GTO library work on mobile?</summary>
-          <p>Yes. The library lives in the TableLab app's Study tab, which runs on Android via
-          Google Play and in any modern browser at tablelab.app — the same solved spots,
-          streamed on demand, on both platforms.</p>
+          <p>Yes. The library lives in the TableLab app's Study tab, which runs on iPhone via the
+          App Store, on Android via Google Play, and in any modern browser at tablelab.app — the
+          same solved spots, streamed on demand, on every platform.</p>
         </details>
         <details>
           <summary>Can it solve my exact custom spot?</summary>
