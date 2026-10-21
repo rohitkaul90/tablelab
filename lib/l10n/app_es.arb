@@ -1314,7 +1314,7 @@
   "faqAccount2Q": "¿Dónde se guardan mis datos?",
   "faqAccount2A": "Tus datos se guardan en Supabase, una base de datos PostgreSQL segura alojada en la nube. Las políticas de seguridad a nivel de fila (Row-Level Security) se aplican en la propia base de datos, así que solo tú puedes acceder a tus datos.",
   "faqAccount3Q": "¿Puedo usar TableLab en varios dispositivos?",
-  "faqAccount3A": "Sí. Inicia sesión con la misma cuenta en cualquier dispositivo (web, iPhone, Android o escritorio) y todas tus Sesiones, Manos y Lecturas se sincronizan automáticamente.",
+  "faqAccount3A": "Sí. Inicia sesión con la misma cuenta en cualquier dispositivo en el que uses TableLab y todas tus Sesiones, Manos y Lecturas se sincronizan automáticamente.",
   "faqAccount4Q": "¿Puedo eliminar mi cuenta?",
   "faqAccount4A": "Sí. Ve a Ajustes → Zona de peligro → Eliminar cuenta. Tras dos confirmaciones, tu cuenta y todos tus datos (Sesiones, Manos, Lecturas, análisis de IA y perfil) se eliminan para siempre. No se puede deshacer.",
   "importFieldDate": "Fecha",

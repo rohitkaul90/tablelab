@@ -6260,7 +6260,7 @@
   "@faqAccount3Q": {
     "description": "Help & FAQ question (Account & Data section)."
   },
-  "faqAccount3A": "Yes. Sign in with the same account on any device — web, iPhone, Android, or desktop — and all your sessions, hands, and reads sync automatically.",
+  "faqAccount3A": "Yes. Sign in with the same account on every device you use TableLab on, and all your sessions, hands, and reads sync automatically.",
   "@faqAccount3A": {
     "description": "Help & FAQ answer to \"Can I use TableLab on multiple devices?\" (Account & Data section). Keep app feature names consistent with the rest of the UI."
   },

@@ -29,8 +29,8 @@ class DataPrivacyScreen extends StatelessWidget {
                 'locations, dates, and notes), hand histories you record, '
                 'player reads, and your account profile including bankroll '
                 'information.\n\n'
-                'On Android and iOS, crash data is collected automatically by Firebase '
-                'Crashlytics when the app encounters an error. This includes '
+                'On Android and iOS, crash data is collected automatically by '
+                'Firebase Crashlytics when the app encounters an error. This includes '
                 'device model, OS version, and anonymised crash identifiers — '
                 'no personal poker data is included in crash reports.',
           ),
@@ -43,8 +43,8 @@ class DataPrivacyScreen extends StatelessWidget {
                 'Canada). Row-Level Security (RLS) policies ensure only your '
                 'authenticated account can read or write your records. '
                 'TableLab staff cannot query individual user data.\n\n'
-                'Crash data (Android and iOS) is processed by Firebase Crashlytics, '
-                'a Google service, on Google Cloud infrastructure.',
+                'Crash data (Android and iOS) is processed by Firebase '
+                'Crashlytics, a Google service, on Google Cloud infrastructure.',
           ),
           _Section(
             icon: Icons.auto_awesome_outlined,

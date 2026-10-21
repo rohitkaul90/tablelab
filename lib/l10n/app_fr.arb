@@ -1314,7 +1314,7 @@
   "faqAccount2Q": "Où sont stockées mes données ?",
   "faqAccount2A": "Tes données sont hébergées sur Supabase, une base de données PostgreSQL sécurisée dans le cloud. Des règles Row-Level Security sont appliquées au niveau de la base : toi seul as accès à tes données.",
   "faqAccount3Q": "Je peux utiliser TableLab sur plusieurs appareils ?",
-  "faqAccount3A": "Oui. Connecte-toi avec le même compte sur n'importe quel appareil (web, iPhone, Android ou ordi) et toutes tes sessions, mains et lectures se synchronisent automatiquement.",
+  "faqAccount3A": "Oui. Connecte-toi avec le même compte sur chaque appareil où tu utilises TableLab, et toutes tes sessions, mains et lectures se synchronisent automatiquement.",
   "faqAccount4Q": "Je peux supprimer mon compte ?",
   "faqAccount4A": "Oui. Va dans Paramètres → Zone de danger → Supprimer le compte. Après deux confirmations, ton compte et toutes tes données (sessions, mains, lectures, analyses IA et profil) sont définitivement supprimés. C'est irréversible.",
   "importFieldDate": "Date",
