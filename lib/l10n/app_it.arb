@@ -1314,7 +1314,7 @@
   "faqAccount2Q": "Dove sono salvati i miei dati?",
   "faqAccount2A": "I tuoi dati sono su Supabase, un database PostgreSQL sicuro ospitato nel cloud. Le policy di Row-Level Security sono applicate a livello di database, quindi solo tu puoi accedere ai tuoi dati.",
   "faqAccount3Q": "Posso usare TableLab su più dispositivi?",
-  "faqAccount3A": "Sì. Accedi con lo stesso account su qualsiasi dispositivo (web, Android o desktop) e sessioni, mani e letture si sincronizzano in automatico.",
+  "faqAccount3A": "Sì. Accedi con lo stesso account su ogni dispositivo in cui usi TableLab e tutte le tue sessioni, mani e letture si sincronizzano in automatico.",
   "faqAccount4Q": "Posso eliminare il mio account?",
   "faqAccount4A": "Sì. Vai in Impostazioni → Zona pericolosa → Elimina account. Dopo due conferme, il tuo account e tutti i tuoi dati (sessioni, mani, letture, analisi IA e profilo) vengono eliminati definitivamente. L'operazione è irreversibile.",
   "importFieldDate": "Data",

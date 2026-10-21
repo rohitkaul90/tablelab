@@ -1314,7 +1314,7 @@
   "faqAccount2Q": "Waar worden mijn gegevens opgeslagen?",
   "faqAccount2A": "Je gegevens staan in Supabase — een veilige PostgreSQL-database in de cloud. Row-Level Security-regels worden op databaseniveau afgedwongen, dus alleen jij hebt toegang tot je gegevens.",
   "faqAccount3Q": "Kan ik TableLab op meerdere apparaten gebruiken?",
-  "faqAccount3A": "Ja. Log op elk apparaat in met hetzelfde account — web, Android of desktop — en al je sessies, handen en reads worden automatisch gesynchroniseerd.",
+  "faqAccount3A": "Ja. Log op elk apparaat waarop je TableLab gebruikt in met hetzelfde account, en al je sessies, handen en reads worden automatisch gesynchroniseerd.",
   "faqAccount4Q": "Kan ik mijn account verwijderen?",
   "faqAccount4A": "Ja. Ga naar Instellingen → Gevarenzone → Account verwijderen. Na twee bevestigingen worden je account en al je gegevens (sessies, handen, reads, AI-analyses en profiel) definitief verwijderd. Dit kan niet ongedaan worden gemaakt.",
   "importFieldDate": "Datum",
