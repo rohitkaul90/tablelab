@@ -123,10 +123,10 @@ Check each primary/secondary term appears at least once in the title/short/full 
 ---
 ---
 
-# App Store (iOS) listing — drafted 2026-10-20 for 1.10.1 (build 18)
+# App Store (iOS) listing — drafted 2026-10-20 for 1.10.1 (build 18, PR #111)
 
-Paste into App Store Connect → My Apps → TableLab (Apple ID 6824665110) → App Store tab →
-the 1.10.1 version page. Apple indexes **name + subtitle + keyword field** (the description is
+Paste into App Store Connect → My Apps → TableLab (Apple ID 6824665110 — confirm against the
+App Information page; it is recorded nowhere else) → App Store tab → the 1.10.1 version page. Apple indexes **name + subtitle + keyword field** (the description is
 NOT indexed), so the keyword field must not repeat words already in the name/subtitle.
 Once this listing is live, retire the "no iOS" lines in the Play section above and update
 `web/about.html` / `index.html` / `gto-library.html` / `llms.txt` (deferred web PR).
@@ -156,7 +156,8 @@ Free poker bankroll tracker: log cash and tournament sessions, replay hands, run
 ## Description (≤4000)
 The Play full description above, verbatim, with two edits:
 - Under **FREE & PRIVATE** add the bullet `• Sign in with Apple, Google, or email.`
-- Last paragraph → `Available in English, Spanish, French, Italian and Dutch, on iPhone, Android and on the web at tablelab.app.`
+- The availability line (second-to-last paragraph; keep the closing MagpiQ / support@ line) →
+  `Available in English, Spanish, French, Italian and Dutch, on iPhone, Android and on the web at tablelab.app.`
 
 ## What's New (first iOS release)
 ```
@@ -174,23 +175,35 @@ Primary **Sports**, secondary **Utilities**. (Finance implies money management o
 pulls the app next to banking apps in review; poker trackers on the store sit under Sports/Utilities.)
 
 ## Age rating questionnaire
-Mirror the Play IARC answers. Apple's items that matter here:
-- Simulated Gambling: **Infrequent/Mild** — the app is *about* poker but does not let anyone play
-  or wager; choosing "None" invites a reviewer to disagree. Expected result **12+**.
-- Gambling (real money): **No**. Contests: **No**. Unrestricted web access: **No**.
-- Everything else (violence, mature themes, profanity, drugs, medical): **None**.
+Apple's revised questionnaire (mandatory since 31 Jan 2026; tiers 4+/9+/13+/16+/18+) has more
+items than the old one. One consistent story everywhere, including the review notes below:
+**TableLab contains no gambling, real or simulated — it is a results log and study tool for a
+game people play elsewhere.**
+- Simulated gambling: **None** (nothing is played or wagered in the app). Real-money gambling /
+  lotteries: **No**. Contests: **No**.
+- Violence, horror, sexual/mature themes, profanity, alcohol/tobacco/drugs references: **None**.
+- Medical/wellness or health-related content: **No**. Unrestricted web access: **No**.
+  In-app parental controls / age assurance: **No**. Messaging or user-generated content shown to
+  others: **No** (reads/notes are private to the account). Advertising: **No**.
+- Expected result **4+**. If App Review pushes back on the poker subject matter, accept their
+  request to raise simulated gambling to "Infrequent or mild" (→ 13+) rather than argue; nothing
+  else in the listing depends on the tier. Keep the Play IARC answers consistent with whatever
+  Apple settles on.
 
 ## App Privacy (must agree with `ios/Runner/PrivacyInfo.xcprivacy`)
 Data collected, all **Linked to you**, none **Used to track you**:
 
 | Data type | Purpose(s) | Source |
 |---|---|---|
-| Email Address | App Functionality (account) | Supabase auth |
+| Email Address | App Functionality (account), Analytics | Supabase auth; also a PostHog person property (`identify`) |
 | Name | App Functionality | Sign in with Apple / Google profile |
-| User ID | App Functionality, Analytics | Supabase user id → PostHog `identify`, Crashlytics |
+| User ID | App Functionality, Analytics | Supabase user id = the PostHog distinct id |
 | Other User Content | App Functionality (sessions, hands, reads, notes) | Supabase |
 | Product Interaction | Analytics | PostHog events |
-| Crash Data | App Functionality, Analytics | Firebase Crashlytics |
+| Crash Data | App Functionality | Firebase Crashlytics (its own installation id; no account id is set — "linked" is declared conservatively, matching the manifest) |
+
+The table is a one-to-one copy of `NSPrivacyCollectedDataTypes` in the manifest (same PR); change
+both together.
 
 Not collected: location, contacts, purchases, browsing, search history, identifiers for advertising,
 health, financial info (bankroll figures are user content, not financial-account data), photos.
@@ -202,7 +215,7 @@ when the user taps Analyse (disclosed in the policy's AI section).
   Play (see memory `play-review-credentials`); confirm the password still works the day you submit.
 - Notes text:
 ```
-TableLab is a results tracker and study tool for poker players. It does not offer real-money or simulated gambling: users log sessions they played elsewhere, record hands, and review statistics and AI-generated coaching. No in-app purchases. Sign in with Apple, Google, and email are all available; the demo account above uses email. The Study tab shows pre-computed strategy charts bundled from our own server. The "Delete account" option in Settings removes all data and revokes the Sign in with Apple authorization server-side.
+TableLab is a results tracker and study tool for poker players. It contains no gambling, real or simulated: nothing can be played or wagered in the app. Users log sessions they played elsewhere, record hands, and review statistics and AI-generated coaching. No in-app purchases. Sign in with Apple, Google, and email are all available; the demo account above uses email. The Study tab shows pre-computed strategy charts bundled from our own server. The "Delete account" option in Settings removes all data and revokes the Sign in with Apple authorization server-side.
 ```
 - Contact: your name, phone, and `support@tablelab.app`.
 
@@ -216,7 +229,17 @@ iPhone 17 Pro Max simulator with `xcrun simctl io booted screenshot`.
 
 ## Localized listings (es-ES / fr-FR / it-IT / nl-NL)
 Description + name: reuse `STORE_LISTING_translations.md` with the same two edits as the English
-description. Short fields (poker terms deliberately kept in English):
+description, using these lines (the availability line replaces the existing one in each
+translation; the sign-in bullet goes under the "no ads" bullet):
+
+| | Sign-in bullet | Availability line |
+|---|---|---|
+| es | `• Inicia sesión con Apple, Google o tu email.` | `Disponible en español, inglés, francés, italiano y neerlandés, en iPhone, Android y en la web en tablelab.app.` |
+| fr | `• Connexion avec Apple, Google ou par e-mail.` | `Disponible en français, anglais, espagnol, italien et néerlandais, sur iPhone, Android et sur le web à tablelab.app.` |
+| it | `• Accedi con Apple, Google o email.` | `Disponibile in italiano, inglese, spagnolo, francese e olandese, su iPhone, Android e sul web su tablelab.app.` |
+| nl | `• Log in met Apple, Google of e-mail.` | `Beschikbaar in het Nederlands, Engels, Spaans, Frans en Italiaans, op iPhone, Android en op het web via tablelab.app.` |
+
+Short fields (poker terms deliberately kept in English):
 
 | | Subtitle (≤30) | Promotional text (≤170) |
 |---|---|---|
