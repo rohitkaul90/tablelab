@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset your password — TableLab</title>
+  <meta name="description" content="Continue your TableLab password reset.">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <style>
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      background: #111811;
+      color: rgba(255,255,255,0.87);
+      line-height: 1.6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .card { max-width: 420px; width: 100%; text-align: center; }
+    .badge {
+      width: 72px; height: 72px; border-radius: 50%; background: #1B5E20;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;
+    }
+    .badge svg { width: 38px; height: 38px; stroke: #fff; }
+    .badge.error { background: #7f1d1d; }
+    h1 { color: #4CAF50; font-size: 1.6rem; margin: 0 0 10px; }
+    .error h1, h1.error { color: #ef9a9a; }
+    p { color: rgba(255,255,255,0.72); margin: 0 0 28px; }
+    .cta {
+      display: block; width: 100%; box-sizing: border-box; padding: 14px 28px;
+      background: #2E7D32; color: #fff; text-decoration: none; border-radius: 8px;
+      font-weight: 600; font-size: 1rem; margin-bottom: 14px;
+    }
+    .cta:hover { background: #388E3C; }
+    .secondary { color: rgba(255,255,255,0.45); font-size: 0.9rem; text-decoration: none; }
+    .secondary:hover { color: rgba(255,255,255,0.7); }
+    a.secondary u { text-decoration: none; color: #81C784; }
+    .footer { margin-top: 40px; font-size: 0.8rem; color: rgba(255,255,255,0.3); }
+    .footer a { color: rgba(255,255,255,0.35); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge" id="badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="11" width="14" height="10" rx="2"/>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      </svg>
+    </div>
+    <h1 id="title">Reset your password</h1>
+    <p id="subtitle">Choose where to set your new password.</p>
+
+    <a class="cta" id="primaryCta" href="https://tablelab.app">Continue to TableLab</a>
+    <a class="secondary" id="secondaryLink" href="https://tablelab.app">or reset it on the <u>web</u></a>
+
+    <div class="footer">
+      <a href="https://tablelab.app/privacy">Privacy Policy</a> &nbsp;·&nbsp; © 2026 TableLab
+    </div>
+  </div>
+
+  <script>
+    // The Supabase "Reset Password" email links here with
+    //   ?token_hash=…&type=recovery   (token-hash template — works on any device)
+    // or, under the default template, with ?code=… (PKCE — only the client that
+    // requested the reset can redeem it). Either way the params are forwarded
+    // untouched: on a phone the primary button deep-links into the installed
+    // app, otherwise the web app at tablelab.app handles them. Nothing is
+    // verified on this page.
+    (function () {
+      var params = new URLSearchParams(location.search);
+      if (location.hash.length > 1) {
+        new URLSearchParams(location.hash.slice(1)).forEach(function (v, k) {
+          if (!params.has(k)) params.set(k, v);
+        });
+      }
+      var title = document.getElementById('title');
+      var sub = document.getElementById('subtitle');
+      var cta = document.getElementById('primaryCta');
+      var sec = document.getElementById('secondaryLink');
+      var badge = document.getElementById('badge');
+
+      function fail(heading, text) {
+        badge.className = 'badge error';
+        title.className = 'error';
+        title.textContent = heading;
+        sub.textContent = text;
+        cta.textContent = 'Go to TableLab';
+        cta.href = 'https://tablelab.app';
+        sec.style.display = 'none';
+      }
+
+      var err = params.get('error_description');
+      if (err) {
+        fail('This link didn’t work', err + '. Request a new reset link from the sign-in screen.');
+        return;
+      }
+      var hasToken = params.get('type') === 'recovery' && params.get('token_hash');
+      if (!hasToken && !params.get('code')) {
+        fail('This link is incomplete', 'Open the most recent reset email again, or request a new link from the sign-in screen.');
+        return;
+      }
+
+      var query = '?' + params.toString();
+      var webUrl = 'https://tablelab.app/' + query;
+      var appUrl = 'io.supabase.pokertracker://reset-password' + query;
+      var isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+      if (isMobile) {
+        cta.textContent = 'Open the TableLab app';
+        cta.href = appUrl;
+        sec.href = webUrl;
+        sub.textContent = 'Open the app to set your new password, or continue on the web.';
+      } else {
+        cta.textContent = 'Set a new password';
+        cta.href = webUrl;
+        sec.style.display = 'none';
+        sub.textContent = 'Continue to TableLab to choose a new password.';
+      }
+    })();
+  </script>
+</body>
+</html>
