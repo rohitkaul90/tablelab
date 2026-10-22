@@ -52,30 +52,49 @@ void main() {
     });
   });
 
-  group('classifyAuthLinkError', () {
-    test('missing PKCE verifier → wrongDevice', () {
-      expect(
-        classifyAuthLinkError(const AuthException(
-            'Code verifier could not be found in local storage.')),
-        AuthLinkError.wrongDevice,
-      );
+  group('isLinkError / classifyAuthLinkError', () {
+    const verifier =
+        AuthException('Code verifier could not be found in local storage.');
+    const otpExpired = AuthException('Email link is invalid or has expired',
+        statusCode: '403', code: 'otp_expired');
+    const flowExpired = AuthException('PKCE flow state expired',
+        statusCode: '403', code: 'flow_state_expired');
+    const badVerifier = AuthException('invalid code verifier',
+        statusCode: '400', code: 'bad_code_verifier');
+    // Session-refresh failures also travel the auth stream — never a link.
+    const refreshToken = AuthException('Invalid Refresh Token: Already Used',
+        statusCode: '400', code: 'refresh_token_already_used');
+    const sessionExpired = AuthException('Session expired.');
+    const clockSkew =
+        AuthException('invalid claim: token is expired', statusCode: '401');
+
+    test('link errors are recognised by SDK message or GoTrue code', () {
+      expect(isLinkError(verifier), isTrue);
+      expect(isLinkError(otpExpired), isTrue);
+      expect(isLinkError(flowExpired), isTrue);
+      expect(isLinkError(badVerifier), isTrue);
     });
 
-    test('expired / invalid / 403 → expired', () {
-      expect(
-        classifyAuthLinkError(const AuthException(
-            'Email link is invalid or has expired',
-            statusCode: '403')),
-        AuthLinkError.expired,
-      );
-      expect(
-        classifyAuthLinkError(
-            const AuthException('Token has expired', statusCode: '401')),
-        AuthLinkError.expired,
-      );
+    test('refresh / session / skew / non-auth errors are NOT link errors', () {
+      expect(isLinkError(refreshToken), isFalse);
+      expect(isLinkError(sessionExpired), isFalse);
+      expect(isLinkError(clockSkew), isFalse);
+      expect(isLinkError(StateError('x')), isFalse);
     });
 
-    test('anything else → failed', () {
+    test('missing / wrong verifier → wrongDevice', () {
+      expect(classifyAuthLinkError(verifier), AuthLinkError.wrongDevice);
+      expect(classifyAuthLinkError(badVerifier), AuthLinkError.wrongDevice);
+    });
+
+    test('otp / flow expiry → expired', () {
+      expect(classifyAuthLinkError(otpExpired), AuthLinkError.expired);
+      expect(classifyAuthLinkError(flowExpired), AuthLinkError.expired);
+    });
+
+    test('free-text "invalid"/"expired" without a code is NOT expired', () {
+      // Substring matching misclassified unrelated errors (review finding).
+      expect(classifyAuthLinkError(clockSkew), AuthLinkError.failed);
       expect(classifyAuthLinkError(const AuthException('boom')),
           AuthLinkError.failed);
       expect(classifyAuthLinkError(StateError('x')), AuthLinkError.failed);
@@ -92,6 +111,9 @@ void main() {
   });
 
   group('RecoveryLinkHandler', () {
+    Uri recovery(String hash) => Uri.parse(
+        'io.supabase.pokertracker://reset-password?token_hash=$hash&type=recovery');
+
     test('web: redeems the initial URL hash and clears a stale notice', () async {
       final verified = <String>[];
       final statuses = <AuthLinkError?>[];
@@ -127,16 +149,52 @@ void main() {
       final handler = RecoveryLinkHandler(
         isWeb: false,
         links: links.stream,
+        getInitialLink: () async => null,
         verify: (h) async => verified.add(h),
         onStatus: statuses.add,
       );
       await handler.start();
       links.add(Uri.parse('io.supabase.pokertracker://login-callback/?code=x'));
-      links.add(Uri.parse(
-          'io.supabase.pokertracker://reset-password?token_hash=m1&type=recovery'));
+      links.add(recovery('m1'));
       await Future<void>.delayed(Duration.zero);
       expect(verified, ['m1']);
       expect(statuses, [null]);
+      handler.dispose();
+      await links.close();
+    });
+
+    test('mobile: the cold-start link is fetched explicitly (app_links only '
+        'replays it to the FIRST stream listener, which is the SDK)', () async {
+      final links = StreamController<Uri>();
+      final verified = <String>[];
+      final handler = RecoveryLinkHandler(
+        isWeb: false,
+        links: links.stream,
+        getInitialLink: () async => recovery('cold'),
+        verify: (h) async => verified.add(h),
+        onStatus: (_) {},
+      );
+      await handler.start();
+      expect(verified, ['cold']);
+      handler.dispose();
+      await links.close();
+    });
+
+    test('mobile: the same link delivered twice is redeemed once', () async {
+      final links = StreamController<Uri>();
+      final verified = <String>[];
+      final handler = RecoveryLinkHandler(
+        isWeb: false,
+        links: links.stream,
+        getInitialLink: () async => recovery('dup'),
+        verify: (h) async => verified.add(h),
+        onStatus: (_) {},
+      );
+      await handler.start();
+      links.add(recovery('dup')); // the stream replays the launch link too
+      links.add(recovery('next')); // a genuinely new link still works
+      await Future<void>.delayed(Duration.zero);
+      expect(verified, ['dup', 'next']);
       handler.dispose();
       await links.close();
     });
@@ -149,7 +207,8 @@ void main() {
             Uri.parse('https://tablelab.app/?token_hash=old&type=recovery'),
         verify: (_) async => throw const AuthException(
             'Email link is invalid or has expired',
-            statusCode: '403'),
+            statusCode: '403',
+            code: 'otp_expired'),
         onStatus: statuses.add,
       );
       await handler.start();

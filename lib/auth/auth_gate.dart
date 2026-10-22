@@ -10,6 +10,8 @@ import '../screens/auth/reset_password_screen.dart';
 import '../screens/onboarding_screen.dart';
 import '../widgets/splash_screen.dart';
 import 'recovery_link.dart';
+import '../l10n/l10n.dart';
+import '../providers/recovery_link_provider.dart';
 
 class AuthGate extends ConsumerStatefulWidget {
   const AuthGate({super.key});
@@ -19,34 +21,45 @@ class AuthGate extends ConsumerStatefulWidget {
 }
 
 class _AuthGateState extends ConsumerState<AuthGate> {
-  late final RecoveryLinkHandler _recovery;
-
-  /// Why the last sign-in / reset link failed (shown on the login screen).
-  AuthLinkError? _linkError;
+  /// The last stream error already announced to a signed-in user (SnackBar),
+  /// so a rebuild doesn't repeat it.
+  Object? _announcedError;
 
   @override
   void initState() {
     super.initState();
-    // Redeems token-hash recovery links (web initial URL + mobile deep links);
-    // a success surfaces as AuthChangeEvent.passwordRecovery on the stream.
-    _recovery = RecoveryLinkHandler(
-      verify: (hash) => Supabase.instance.client.auth
-          .verifyOTP(type: OtpType.recovery, tokenHash: hash),
-      onStatus: (status) {
-        if (mounted) setState(() => _linkError = status);
-      },
-    );
-    _recovery.start();
+    // ONE app-level handler (a second AuthGate from onUnknownRoute shares it);
+    // start() is idempotent. Redeems token-hash recovery links; a success
+    // surfaces as AuthChangeEvent.passwordRecovery on the stream below.
+    ref.read(recoveryLinkHandlerProvider).start();
   }
 
-  @override
-  void dispose() {
-    _recovery.dispose();
-    super.dispose();
+  /// Clears the link notice once it has served its purpose (a session exists
+  /// again), so a later sign-out doesn't resurrect it on the login screen.
+  void _clearLinkErrorLater() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(authLinkErrorProvider.notifier).state = null;
+    });
+  }
+
+  /// A signed-in user who opened a failing link gets told so (the main app
+  /// renders, nothing visibly happens otherwise).
+  void _announceToSignedInUser(Object error) {
+    if (identical(_announcedError, error)) return;
+    _announcedError = error;
+    final l10n = context.l10n;
+    final text = authLinkErrorMessage(l10n, classifyAuthLinkError(error));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)
+          ?.showSnackBar(SnackBar(content: Text(text)));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final linkError = ref.watch(authLinkErrorProvider);
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
@@ -56,15 +69,19 @@ class _AuthGateState extends ConsumerState<AuthGate> {
           // The SDK reports a failed link redemption (e.g. a PKCE code opened
           // on a device that never requested it) as a stream ERROR, and a
           // StreamBuilder drops its data on error — this used to fall through
-          // to the splash forever. A signed-in user keeps their session; an
-          // anonymous visitor gets the login screen with the reason.
+          // to the splash forever. Session-refresh failures arrive the same
+          // way and are NOT link problems (isLinkError), so they get the plain
+          // login screen. A signed-in user keeps their session.
+          final error = snapshot.error!;
           final session = Supabase.instance.client.auth.currentSession;
+          final link = isLinkError(error);
           if (session != null) {
+            if (link) _announceToSignedInUser(error);
             child = const _OnboardingGate(key: ValueKey('authed'));
           } else {
             child = LoginScreen(
               key: const ValueKey('login'),
-              notice: classifyAuthLinkError(snapshot.error!),
+              notice: link ? classifyAuthLinkError(error) : null,
             );
           }
         } else if (!snapshot.hasData) {
@@ -81,11 +98,18 @@ class _AuthGateState extends ConsumerState<AuthGate> {
           } else if (session == null) {
             child = LoginScreen(
               key: const ValueKey('login'),
-              notice: _linkError,
+              notice: linkError,
             );
           } else if (event == AuthChangeEvent.passwordRecovery) {
+            if (linkError != null) _clearLinkErrorLater();
             child = const ResetPasswordScreen(key: ValueKey('reset'));
           } else {
+            if (linkError != null) {
+              // A signed-in user's token-hash link failed (e.g. expired):
+              // say so once, then forget it.
+              _announceToSignedInUser(linkError);
+              _clearLinkErrorLater();
+            }
             child = const _OnboardingGate(key: ValueKey('authed'));
           }
         }

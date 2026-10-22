@@ -13,7 +13,8 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.notice});
 
   /// Why the sign-in / reset link that brought the user here could not be
-  /// used (see `AuthGate`). Shown in the error slot until the user acts.
+  /// used (see `AuthGate`). Shown in the error slot until the user's first
+  /// action on this screen (a new notice re-shows).
   final AuthLinkError? notice;
 
   @override
@@ -30,6 +31,19 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _appleLoading = false;
   bool _resetLoading = false;
   String? _error;
+  AuthLinkError? _notice;
+
+  @override
+  void initState() {
+    super.initState();
+    _notice = widget.notice;
+  }
+
+  @override
+  void didUpdateWidget(covariant LoginScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.notice != oldWidget.notice) _notice = widget.notice;
+  }
 
   @override
   void dispose() {
@@ -44,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _notice = null;
     });
     try {
       final client = Supabase.instance.client;
@@ -116,7 +131,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (target == null || target.isEmpty || !target.contains('@')) return;
-    setState(() => _resetLoading = true);
+    setState(() {
+      _resetLoading = true;
+      _notice = null; // the user is acting on the notice's advice
+    });
     try {
       await Supabase.instance.client.auth.resetPasswordForEmail(
         target,
@@ -144,6 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _googleLoading = true;
       _error = null;
+      _notice = null;
     });
     try {
       const mobileRedirect = 'io.supabase.pokertracker://login-callback/';
@@ -172,6 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _appleLoading = true;
       _error = null;
+      _notice = null;
     });
     try {
       final rawNonce = generateRawNonce();
@@ -460,10 +480,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Error sits WITH the button in the pinned footer so a
                         // failed sign-in is visible even with the keyboard up
                         // (it used to live in the scroll body, above the fold).
-                        if (_error != null || widget.notice != null) ...[
+                        if (_error != null || _notice != null) ...[
                           Text(
-                            _error ??
-                                authLinkErrorMessage(l10n, widget.notice!),
+                            _error ?? authLinkErrorMessage(l10n, _notice!),
                             style: TextStyle(color: theme.colorScheme.error),
                             textAlign: TextAlign.center,
                           ),
@@ -490,6 +509,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: () => setState(() {
                             _isRegister = !_isRegister;
                             _error = null;
+                            _notice = null;
                           }),
                           child: Text(
                             _isRegister

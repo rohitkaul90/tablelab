@@ -14,14 +14,18 @@
 ///    offers "Open the TableLab app" (deep link, same query) or "Continue on
 ///    the web" (`https://tablelab.app/?token_hash=…&type=recovery`).
 ///  * This module watches both entry points (the web app's initial URL and the
-///    mobile deep-link stream), and redeems the hash with
+///    mobile deep links), and redeems the hash with
 ///    `verifyOTP(type: recovery, tokenHash:)` — which needs no stored verifier
 ///    and emits `AuthChangeEvent.passwordRecovery`, so `AuthGate` shows the
 ///    reset screen exactly as before.
 ///
-/// `recoveryTokenHash` and `classifyAuthLinkError` are pure and unit-tested;
-/// `RecoveryLinkHandler` takes its side effects by injection so the consume /
-/// error paths are testable without an initialised Supabase.
+/// ONE handler per app (see `recoveryLinkHandlerProvider`): `AuthGate` can be
+/// instantiated twice (`MaterialApp.onUnknownRoute` builds another for OS
+/// route pushes), and two handlers would redeem every link twice.
+///
+/// `recoveryTokenHash` / `classifyAuthLinkError` / `isLinkError` are pure and
+/// unit-tested; `RecoveryLinkHandler` takes its side effects by injection so
+/// the consume / error paths are testable without an initialised Supabase.
 library;
 
 import 'dart:async';
@@ -72,16 +76,35 @@ String? recoveryTokenHash(Uri uri) {
   return hash;
 }
 
-/// Maps an auth-stream or `verifyOTP` failure to a user-facing category.
+// GoTrue error codes (gotrue-dart `ErrorCode`) that identify a LINK problem.
+// The local SDK throws the verifier error before any request, so it carries
+// no code — its constant message is matched instead.
+const _kVerifierMessage = 'code verifier';
+const _kWrongDeviceCodes = {'bad_code_verifier', 'flow_state_not_found'};
+const _kExpiredCodes = {'otp_expired', 'flow_state_expired'};
+
+/// Whether an error from the auth stream is about a sign-in / reset LINK.
+/// Session-refresh failures ("Invalid Refresh Token", "Session expired.")
+/// also arrive on that stream and must NOT be presented as a link problem.
+bool isLinkError(Object error) {
+  if (error is! AuthException) return false;
+  if (error.message.toLowerCase().contains(_kVerifierMessage)) return true;
+  final code = error.code;
+  return code != null &&
+      (_kWrongDeviceCodes.contains(code) || _kExpiredCodes.contains(code));
+}
+
+/// Maps a `verifyOTP` / link-redemption failure to a user-facing category.
+/// Only called for errors that ARE about a link (the handler's own failures,
+/// or stream errors that pass [isLinkError]).
 AuthLinkError classifyAuthLinkError(Object error) {
   if (error is AuthException) {
-    final msg = error.message.toLowerCase();
-    if (msg.contains('code verifier')) return AuthLinkError.wrongDevice;
-    if (msg.contains('expired') ||
-        msg.contains('invalid') ||
-        error.statusCode == '403') {
-      return AuthLinkError.expired;
+    if (error.message.toLowerCase().contains(_kVerifierMessage)) {
+      return AuthLinkError.wrongDevice;
     }
+    final code = error.code;
+    if (_kWrongDeviceCodes.contains(code)) return AuthLinkError.wrongDevice;
+    if (_kExpiredCodes.contains(code)) return AuthLinkError.expired;
   }
   return AuthLinkError.failed;
 }
@@ -97,13 +120,14 @@ String authLinkErrorMessage(AppLocalizations l10n, AuthLinkError error) {
   }
 }
 
-/// Redeems recovery links from the web initial URL and the mobile deep-link
-/// stream. Construct once (the gate owns it), call [start], [dispose] with it.
+/// Redeems recovery links from the web initial URL and the mobile deep links.
+/// Construct ONCE per app, call [start] (idempotent), [dispose] with the app.
 class RecoveryLinkHandler {
   RecoveryLinkHandler({
     required this.verify,
     required this.onStatus,
     this.links,
+    this.getInitialLink,
     this.initialWebUri,
     this.isWeb = kIsWeb,
   });
@@ -120,10 +144,19 @@ class RecoveryLinkHandler {
   /// Test seam for the mobile deep-link stream (defaults to `app_links`).
   final Stream<Uri>? links;
 
+  /// Test seam for the mobile cold-start link (defaults to `app_links`).
+  /// Needed because `app_links` replays the initial link only to the FIRST
+  /// stream listener — and that is supabase_flutter's own subscription made
+  /// inside `Supabase.initialize()`, so this handler never sees it on the
+  /// stream.
+  final Future<Uri?> Function()? getInitialLink;
+
   /// Test seam for the web initial URL (defaults to `Uri.base`).
   final Uri? initialWebUri;
+
   StreamSubscription<Uri>? _sub;
   bool _started = false;
+  String? _lastHandled;
 
   Future<void> start() async {
     if (_started) return;
@@ -133,16 +166,26 @@ class RecoveryLinkHandler {
       await handle(initialWebUri ?? Uri.base);
       return;
     }
-    // On mobile the initial link (cold start from the email) is delivered on
-    // the same stream as later ones, so one subscription covers both.
-    final stream = links ?? AppLinks().uriLinkStream;
+    final appLinks = (links == null || getInitialLink == null) ? AppLinks() : null;
+    final stream = links ?? appLinks!.uriLinkStream;
     _sub = stream.listen(handle, onError: (Object _) {});
+    // Cold start from the email: fetch the launch link explicitly (see
+    // [getInitialLink]); the dedupe below absorbs the rare double delivery.
+    try {
+      final initial = await (getInitialLink ?? appLinks!.getInitialLink)();
+      if (initial != null) await handle(initial);
+    } catch (_) {
+      // Platform channel hiccup — a warm deep link will still arrive on the stream.
+    }
   }
 
   /// Returns true when [uri] was a recovery link (consumed, success or not).
   Future<bool> handle(Uri uri) async {
     final hash = recoveryTokenHash(uri);
     if (hash == null) return false;
+    final key = uri.toString();
+    if (key == _lastHandled) return true; // same link delivered twice
+    _lastHandled = key;
     onStatus(null);
     if (isWeb) {
       // Drop the token from the address bar BEFORE the network call: a reload

@@ -1,12 +1,30 @@
 import 'package:web/web.dart' as web;
 
-/// Replaces the current history entry with the bare app URL so the recovery
-/// `token_hash` is not kept in the address bar / history (a reload would
-/// otherwise retry an already-consumed hash and surface a confusing error).
+/// Removes ONLY the recovery params from the address bar, keeping the path,
+/// any other query params, the fragment (Flutter's URL strategy lives there)
+/// and the current `history.state` (Flutter's own entry marker — replacing it
+/// with null would confuse its back-button handling), so a reload never
+/// retries an already-consumed hash.
 void clearRecoveryParamsFromAddressBar() {
   try {
-    final loc = web.window.location;
-    web.window.history.replaceState(null, '', '${loc.origin}/');
+    final current = Uri.parse(web.window.location.href);
+    final query = Map<String, String>.from(current.queryParameters)
+      ..remove('token_hash')
+      ..remove('type');
+    final href = StringBuffer(current.origin)
+      ..write(current.path.isEmpty ? '/' : current.path);
+    if (query.isNotEmpty) {
+      href
+        ..write('?')
+        ..write(Uri(queryParameters: query).query);
+    }
+    if (current.hasFragment) {
+      href
+        ..write('#')
+        ..write(current.fragment);
+    }
+    web.window.history
+        .replaceState(web.window.history.state, '', href.toString());
   } catch (_) {
     // Cosmetic; never let it break sign-in.
   }
