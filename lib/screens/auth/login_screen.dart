@@ -5,11 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../auth/recovery_link.dart';
 import '../../l10n/l10n.dart';
 import '../../services/apple_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.notice});
+
+  /// Why the sign-in / reset link that brought the user here could not be
+  /// used (see `AuthGate`). Shown in the error slot until the user acts.
+  final AuthLinkError? notice;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -115,7 +120,11 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await Supabase.instance.client.auth.resetPasswordForEmail(
         target,
-        redirectTo: 'https://tablelab.app',
+        // Lands on the static reset page, which forwards the link's params
+        // to the app (deep link) or the web app — see lib/auth/recovery_link.dart.
+        // Unused once the Supabase "Reset Password" template carries
+        // token_hash itself; kept so the default template still routes there.
+        redirectTo: 'https://tablelab.app/reset.html',
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -451,9 +460,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Error sits WITH the button in the pinned footer so a
                         // failed sign-in is visible even with the keyboard up
                         // (it used to live in the scroll body, above the fold).
-                        if (_error != null) ...[
+                        if (_error != null || widget.notice != null) ...[
                           Text(
-                            _error!,
+                            _error ??
+                                authLinkErrorMessage(l10n, widget.notice!),
                             style: TextStyle(color: theme.colorScheme.error),
                             textAlign: TextAlign.center,
                           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/auth/recovery_link.dart';
 import 'package:tablelab/l10n/generated/app_localizations.dart';
 import 'package:tablelab/screens/auth/login_screen.dart';
 
@@ -36,6 +37,22 @@ void main() {
       await _pumpLogin(tester);
 
       expect(find.text('Forgot password?'), findsOneWidget);
+    });
+
+    // A reset link opened on the wrong device / after expiry used to leave the
+    // user on a permanent splash; the gate now hands the reason to this screen.
+    testWidgets('renders the auth-link notice in the error slot', (tester) async {
+      await pumpApp(
+        tester,
+        const LoginScreen(notice: AuthLinkError.wrongDevice),
+        size: const Size(1080, 2600),
+      );
+
+      expect(
+        find.text(
+            "This link can't be opened on this device. Request a new reset link from here."),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows Privacy Policy button', (tester) async {
