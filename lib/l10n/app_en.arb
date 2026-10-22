@@ -1287,6 +1287,18 @@
   "@loginNoAccount": {
     "description": "Toggle link shown in sign-in mode."
   },
+  "authLinkWrongDevice": "This link can't be opened on this device. Request a new reset link from here.",
+  "@authLinkWrongDevice": {
+    "description": "Login-screen error when a password-reset link was opened on a different device or browser than the one that requested it."
+  },
+  "authLinkExpired": "This link has expired or was already used. Request a new one.",
+  "@authLinkExpired": {
+    "description": "Login-screen error when a password-reset link is no longer valid."
+  },
+  "authLinkFailed": "The link couldn't be processed. Please request a new one.",
+  "@authLinkFailed": {
+    "description": "Login-screen error when a password-reset link failed for an unknown reason."
+  },
   "resetPasswordUpdated": "Password updated — please sign in.",
   "@resetPasswordUpdated": {
     "description": "Snackbar after a successful password change."
