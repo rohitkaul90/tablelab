@@ -213,10 +213,16 @@ when the user taps Analyse (disclosed in the policy's AI section).
 ## Review notes (App Review Information)
 - Sign-in required: **Yes**. Demo account = the non-smoke review account already on file with Google
   Play (see memory `play-review-credentials`); confirm the password still works the day you submit.
-- Notes text:
-```
-TableLab is a results tracker and study tool for poker players. It contains no gambling, real or simulated: nothing can be played or wagered in the app. Users log sessions they played elsewhere, record hands, and review statistics and AI-generated coaching. No in-app purchases. Sign in with Apple, Google, and email are all available; the demo account above uses email. The Study tab shows pre-computed strategy charts bundled from our own server. The "Delete account" option in Settings removes all data and revokes the Sign in with Apple authorization server-side.
-```
+- Notes text: the **long version in `launch/APP_REVIEW_REPLY.md` block B** (access, features,
+  user-content, external services, regions, IAP, review history — ≤ 4000 chars). Keep the Notes
+  field populated with it on every future submission; a short paragraph was not enough.
+- **First submission of 1.10.1 (18) was rejected 2026-10-22 under Guideline 2.1 "Information
+  Needed – New App Submission"** (limited App Review history, not a fault with the build): Apple
+  wanted a physical-device screen recording (launch → registration → login → account deletion),
+  purpose/audience, setup instructions, the external-services list, regional differences,
+  regulated-industry status and an IAP overview. The reply text, the Notes text and the recording
+  runbook live in `launch/APP_REVIEW_REPLY.md`. For a NEW app record in future, attach the
+  recording and the full notes at first submission to skip this round.
 - Contact: your name, phone, and `support@tablelab.app`.
 
 ## Screenshots
