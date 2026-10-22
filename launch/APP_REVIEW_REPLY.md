@@ -1,6 +1,6 @@
 # App Review reply — iOS 1.10.1 (18), Guideline 2.1 "Information Needed"
 
-Submission `249d6273-dcfa-4f9c-b959-a17ea937fdbf`, rejected 2026-10-22 01:05 (Apple message
+Submission `249d6273-dcfa-4f9c-b959-a17ea937fdbf`, rejected 2026-10-22 01:05 — **answered and RESUBMITTED 2026-10-22 with build 1.10.2 (19)** (the App Store version field had to be changed 1.10.1 → 1.10.2 so build 19 became selectable) (Apple message
 "Guideline 2.1 - Information Needed - New App Submission"). Not a bug, metadata or policy finding:
 Apple asks every developer account with a *limited App Review history* for extra context on its
 first submission. **Same build 18 is resubmitted — no code change, no re-tag.**
@@ -25,46 +25,41 @@ update) and `<link>` (only if the video is hosted) before pasting.
 
 ## A. Reply text (paste into "Reply to App Review")
 
-~4,900 characters. If the reply box enforces a limit (it may cap at 4,000), send it as TWO
-messages in the same thread: items 1–4 first (with the video attached), then items 5–7 — the
-thread accepts multiple replies before resubmitting.
+**The reply box caps at 4,000 characters** (confirmed 2026-10-22). This version is ~3,550 chars with all seven items; the recording went as a Google Photos share link (900 MB was too big to attach — an anonymous fetch confirmed the link opens without a Google account).
 
 ```
-Thank you for the review. Below is the requested information, numbered to match your list. The same information has been added to the Notes field of App Review Information.
+Thank you for the review. Here is the requested information, numbered to match your list. It has also been added to the Notes field of App Review Information.
 
 1. Screen recording
-Attached: tablelab-ios-review.mp4, recorded on an iPhone 17e running iOS <iOS version>, starting from a cold launch. It shows: onboarding, account registration with email and the confirmation link, login, logging a poker session, recording a hand and requesting AI coaching, the Study tab (strategy charts), the Tools and Settings screens, and account deletion from Settings, which returns the user to the login screen.
-- The app has no user-generated content that is visible to other users. Sessions, hands, player reads and notes are private to the account that created them, so there is no content reporting or blocking mechanism.
-- The app has no paid content or features. Everything is free.
+<link to the recording> (about 900 MB, so shared as a link). Recorded on an iPhone 17e running iOS 27.0.1, from a cold launch. It shows onboarding, email registration and the confirmation link, login, logging a session, recording a hand and requesting AI coaching, the Study tab, Tools and Settings, and account deletion from Settings back to the login screen.
+- No user-generated content is visible to other users (sessions, hands, reads and notes are private to the account), so there is no reporting or blocking mechanism.
+- There is no paid content; everything is free.
 
 2. Purpose and audience
-TableLab is a results tracker and study tool for people who play poker elsewhere (live card rooms, home games, online sites). Players log the sessions they have already played and the app computes their bankroll trend, win rate, ROI, variance and other statistics. They can record individual hands, replay them, and request AI-generated coaching that is grounded in deterministic equity and pot-odds math and in strategy charts we computed offline with a solver. The audience is adult poker players who want to understand where their results come from and what to fix in their decisions. Nothing is played or wagered inside the app.
+TableLab is a results tracker and study tool for people who play poker elsewhere (card rooms, home games, online). Players log sessions they have already played and get bankroll trend, win rate, ROI and variance statistics; they can record hands, replay them, and request AI coaching grounded in deterministic equity and pot-odds math and in strategy charts we computed offline with a solver. The audience is adult poker players. Nothing is played or wagered in the app.
 
 3. Setup and access
-Sign in with the demo account listed in App Review Information (email and password; the same account is on file with Google Play for the Android version). Alternatively create a new account with email, Google, or Sign in with Apple; email sign-up sends a confirmation link.
-Main features: Stats tab (bankroll and statistics, tap any stat for its chart); Sessions tab (the + button offers "Start live" to run a session in real time or "Log past" to enter one); Hands tab (the + button offers Quick Hand or Full Hand; a hand's menu opens AI Coaching and the replayer); Reads tab (private notes and tags about opponents); Study tab (solver-computed strategy charts for preflop and postflop spots); the side menu holds Tools (Equity, ICM and Variance calculators), Tournament Calendar, Settings, Help and Data & Privacy. Account deletion is in Settings ("Delete account") and removes all server data and, for Sign in with Apple users, revokes the Apple authorization. No sample files are required; the demo account already contains sessions and hands. CSV/Excel import of sessions from other apps is optional (Settings → Data).
+Sign in with the demo account in App Review Information (email and password; the same account is on file with Google Play), or create an account with email, Google, or Sign in with Apple. Main features: Stats tab; Sessions tab (+ = Start live or Log past); Hands tab (+ = Quick or Full hand; a hand's menu opens AI Coaching and the replayer); Reads tab (private opponent notes); Study tab (strategy charts); side menu = Tools (Equity, ICM, Variance calculators), Tournament Calendar, Settings, Help, Data & Privacy. "Delete account" in Settings removes all server data and revokes the Sign in with Apple authorization. No sample files are needed; the demo account already has sessions and hands.
 
 4. External services
-- Supabase: authentication (email/password, Google, and Sign in with Apple providers), PostgreSQL database with row-level security, and Edge Functions; hosted on Amazon Web Services.
-- Anthropic (Claude API): generates the AI coaching text. Called only when the user taps Analyse, through our Supabase Edge Function; the hand or session details are sent, no API key is on the device.
-- Firebase Crashlytics (Google): crash reporting.
-- PostHog: product usage analytics (feature usage events; no cross-app tracking, no advertising).
-- Cloudflare R2 (packs.tablelab.app): hosts our own pre-computed strategy chart files that the Study tab downloads.
-- PokerNews: the source of the tournament calendar listings (public event schedules, collected weekly by our server and attributed in the app); declared under Content Rights.
-- Loops: delivery of the account emails described in our privacy policy (receives the email address only).
-- tablelab.app (GitHub Pages behind Cloudflare): the email-confirmation landing page, privacy policy and terms.
-No payment processor, no advertising SDK, no third-party login other than Google and Apple.
+- Supabase: authentication (email, Google, Sign in with Apple), Postgres database, Edge Functions (hosted on AWS).
+- Anthropic (Claude API): generates the AI coaching text, only when the user taps Analyse, via our Edge Function; no API key on the device.
+- Firebase Crashlytics: crash reporting. PostHog: usage analytics (no cross-app tracking, no ads).
+- Cloudflare R2 (packs.tablelab.app): hosts our own strategy chart files for the Study tab.
+- PokerNews: source of the tournament calendar listings (public event schedules, attributed; declared under Content Rights).
+- Loops: delivery of account emails. tablelab.app: email-confirmation page, privacy policy, terms.
+No payment processor, no advertising SDK.
 
 5. Regional differences
-None. The app functions identically in every region with the same content. The interface is available in English, Spanish, French, Italian and Dutch and follows the device language; AI coaching text is in English everywhere.
+None. The app works identically everywhere. The UI is in English, Spanish, French, Italian and Dutch, following the device language; AI coaching text is English.
 
 6. Regulated industry / protected material
-TableLab is not a gambling product. It does not offer real-money or simulated gambling, takes no wagers, holds no funds, and does not connect to any poker operator, betting provider or odds service; it records results of games played elsewhere, like a sports results diary. No licence or regulatory authorization applies. The only third-party material is the tournament calendar, which lists public event schedules sourced from PokerNews with attribution (declared under Content Rights). The strategy charts and all coaching content are our own output.
+Not a gambling product: no real-money or simulated gambling, no wagers, no funds held, no connection to any poker operator or betting service. It records results of games played elsewhere, like a sports results diary; no licence applies. The only third-party material is the tournament calendar sourced from PokerNews (declared under Content Rights). Strategy charts and coaching are our own output.
 
 7. In-App Purchases
-None. The app is completely free: no subscriptions, no consumables, no unlockable features, and no In-App Purchase products are configured.
+None. The app is completely free: no subscriptions, no unlockable features, no IAP products configured.
 
-Please let us know if anything else would help complete the review.
+Please let us know if anything else would help.
 ```
 
 ## B. Notes field (App Review Information → Notes; replaces the earlier paragraph; ≤ 4000 chars)
