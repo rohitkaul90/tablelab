@@ -1,6 +1,6 @@
 # Blog Strategy: TableLab
 
-> Built on `BRAND.md` + `VOICE.md` (project root) and the `tablelab` persona. Last updated: 2026-10-06.
+> Built on `BRAND.md` + `VOICE.md` (project root) and the `tablelab` persona. Last updated: 2026-10-26.
 > Primary goal: **organic authority + AI citations** (SEO long-game). Cadence: **~1 post/week**. Mix: **~70% owned / 30% earned**.
 > **Editorial mix since 2026-10-06: ~70% news and trends / ~30% evergreen** (owner decision; see "News & Trend Layer"). The cluster tables and the 90-day roadmap below are now the evergreen 30% pool, not the publishing sequence.
 
@@ -137,6 +137,8 @@ Review every news post at **30 days** and every older trend-pegged post at **90 
 
 | Post | Review by | Why |
 |---|---|---|
+| `/blog/ggpoker-bans-third-party-software` | **2026-12-02** | Published 2026-10-26. The story expires at GGPoker's Dec 1 enforcement: confirm it happened as stated, whether the Security Ecology Policy page was revised past version 20260313, whether WPN adopted its own third-party prohibition, and any vendor statement (PokerTracker / HM3 / Hand2Note) or investigation finding. Past-tense the "before December 1" advice. |
+| `/blog/are-poker-solvers-allowed` (Oct 26 update) | **2026-12-02** | Refreshed 2026-10-26 with the GGPoker ban callout + matrix/FAQ caveats. Re-check alongside the ban post; if the policy page was revised, replace the "still on the page" wording. |
 | `/blog/who-makes-money-in-high-stakes-poker` | **2026-11-06** | Check the outcome of the Hustler Casino Live review, any reply from Negreanu to Mateos, and whether a Ketola–Antonius rematch was announced. Update the three stories or mark them resolved. |
 | `/blog/are-poker-solvers-allowed` | ~~2026-09-30~~ **done 2026-10-06**; next **2027-01-06** | Past-tense refresh shipped; PokerStars and GGPoker policy pages re-checked unchanged (GGPoker version 20260313). Re-check the policy pages again at the next review. |
 | `/blog/poker-tournament-variance` | **2026-08-06** | Written before the WSOP Main Event final table (Aug 3–5). Its intro, conclusion, and FAQ #5 use future tense about a result that will exist by Aug 6. Swap to past tense, name the champion, and consider replacing the pure-news FAQ with an evergreen question. |
@@ -146,11 +148,16 @@ Review every news post at **30 days** and every older trend-pegged post at **90 
 
 | Candidate | Lens | Key dated facts | Shelf life |
 |---|---|---|---|
-| **Hole-card malware explainer** — tampered third-party software updates exposed about 30 high-stakes players' hole cards; ACR shipped "Screen Shield" (Oct 2); GGPoker is accused of ignoring a warning. Account names and loss totals are alleged, not established. | Honesty about tools | PokerNews Sep 29 – Oct 2; poker.org Oct 2 | Weeks to months |
+| ~~**Hole-card malware explainer**~~ — **SHIPPED 2026-10-26** as `/blog/ggpoker-bans-third-party-software` (news-led: GGPoker's Oct 15 blanket ban + Dec 1 enforcement; lasting section = HUD vs hand tracker vs results log). | Honesty about tools | GGPoker blog Oct 15 + X Oct 18; PokerNews Sep 29–Oct 18; Jurojin notice Oct 2; ACR WebWire Oct 6/16 | Review 2026-12-02 |
 | **Live rooms under pressure** — Maverick Gaming closing 10 Washington cardrooms (Nov 1 and Nov 30); Las Vegas high-stakes games squeezed by anti-money-laundering enforcement; sweepstakes poker retreating. | Live-player relevance | Card Player Sep 29, Oct 2 | Months |
 | **US gambling-loss deduction** — House Ways and Means voted 38–5 (Sep 16) to restore the full deduction from tax year 2026; needs full House and Senate votes; House returns Nov 9. | Results tracking | TheLines, SportsBettingDime | Months |
 | **Canada** — WSOP Super Circuit Montreal paid C$24.5M on a C$14M guarantee (Sep 18); Supreme Court of Canada shared-liquidity hearing (Oct 7); Alberta market opening. | Live-player relevance (the author plays in Ontario) | pokerfuse Sep 1, Sep 18 | Months |
 | **Mystery-bounty wave** — Winamax €922K bounty haul (Sep 25), GGPoker Ocean KO (Oct 5), WPT World Championship moving to mystery bounty; peg to WSOP Paradise (Dec 2–17) and the WPT Championship (Dec 13–20). | Variance | pokerfuse | Publish mid-November |
+| **WSOP Paradise 2026 preview (bankroll lens)** — Dec 2–17 at Baha Mar; $250K Pro-Am bracelet (Dec 5, $10M gtd, 3 days; pros self-register, amateurs committee-approved); $10K GGMillion$ $20M gtd; POY decided there; early-bird deposits due Oct 31; 20 vs 21 bracelet-event count differs between WSOP and PokerNews. Pair with the mystery-bounty wave item. | Variance / bankroll | WSOP.com schedule release; PokerNews Sep 2026 Pro-Am piece | Publish mid-November (post #11 candidate) |
+| **Alberta opens regulated online poker** — 888poker first licensed room Oct 13, 2026; PokerStars exited the province the same day; GGPoker registration approved, not live; Supreme Court of Canada shared-liquidity hearing (Oct 7) pending. | Live-player relevance (Ontario author) | pokerfuse Rail wk 42 | Months |
+| **Texas 101 Poker Club raid** (~Oct 20) — reasons unclear at scan time; fits a "live rooms under pressure" roundup with the Maverick WA closures (Nov 1 / Nov 30). | Live-player relevance | pokerfuse Rail wk 43; Card Player | Weeks |
+| **Circuit beats (scan 2026-10-26)** — Triton Jeju II: Nick Schulman wins for $3.85M, Dvoress leads POY after three Montenegro titles; Mateos leads the Poker Masters Purple Jacket at halfway; Stake Showdown $1K raised to $200K gtd (Oct 25); Bryn Kenney suit v. GGPoker/NSUS (unpaid commissions, ownership stake; allegations). | Mixed | PokerNews Triton pages; pokerfuse Rail wk 43; Card Player | Roundup fodder |
+| **US gambling-loss deduction** — status unchanged since Sep 16 committee vote (38–5); House not back until after the Nov midterms, so no floor vote before then. | Results tracking | Card Player; Covers | Re-check after Nov 9 |
 | **Monthly roundup** — six to eight stories with a short take each. | Mixed | — | Recurring |
 
 ### Older trend backlog
