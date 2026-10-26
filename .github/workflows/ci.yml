@@ -67,3 +67,22 @@ jobs:
           name: coverage-report
           path: coverage/lcov.info
           retention-days: 7
+
+  # Edge Function unit tests (pure helpers: scrape-tournaments parser fixture,
+  # _shared/apple.ts JWT builder, _shared/capacity.ts). Nothing here boots
+  # Deno.serve or needs a Supabase/Anthropic secret. --allow-read is for the
+  # parser's HTML fixture.
+  deno-tests:
+    name: Deno tests (Edge Functions)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Deno test
+        run: deno test --allow-read supabase/functions/
