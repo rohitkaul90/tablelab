@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GGPoker Banned All Third-Party Poker Software — TableLab</title>
+  <meta name="description" content="GGPoker banned every third-party poker tool after the superuser exploit; enforcement starts December 1. What a HUD, a hand tracker and a results log each do.">
+  <link rel="canonical" href="https://tablelab.app/blog/ggpoker-bans-third-party-software">
+  <meta property="og:title" content="GGPoker Banned All Third-Party Poker Software. What a Tracker Actually Does, and What Survives">
+  <meta property="og:description" content="PokerTracker, Hold'em Manager, Jurojin, even Equilab: all out on GGPoker from December 1 after a remote-access exploit exposed hole cards. What each kind of tool does, and what survives.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://tablelab.app/blog/ggpoker-bans-third-party-software">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GGPoker Banned All Third-Party Poker Software">
+  <meta name="twitter:description" content="Every HUD and hand tracker is out on GGPoker from December 1. What each kind of tool does, which family the exploit used, and what still works.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta property="article:published_time" content="2026-10-26">
+  <meta property="article:modified_time" content="2026-10-26">
+  <meta name="author" content="Rohit Kaul">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="stylesheet" href="/site.css?v=2e84643698">
+  <script src="/site.js?v=302dfa2fc7" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://tablelab.app/blog/ggpoker-bans-third-party-software#article",
+        "headline": "GGPoker Banned All Third-Party Poker Software. What a Tracker Actually Does, and What Survives",
+        "description": "On October 15, 2026 GGPoker banned every third-party poker tool, naming PokerTracker 4, Hold'em Manager 3, Hand2Note, Jurojin, Equilab and more, after a remote-access agent delivered through tampered third-party updates exposed about 30 high-stakes players' screens. Enforcement starts December 1. We set out what is established and what is alleged, what a HUD, a hand tracker and a results log each actually do, which of them the exploit went through, and what still works for GGPoker players and for live players.",
+        "datePublished": "2026-10-26",
+        "dateModified": "2026-10-26",
+        "author": {
+          "@id": "https://tablelab.app/#rohit"
+        },
+        "publisher": {
+          "@id": "https://tablelab.app/#organization"
+        },
+        "image": {
+          "@id": "https://tablelab.app/blog/ggpoker-bans-third-party-software#primaryimage"
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://tablelab.app/blog/ggpoker-bans-third-party-software"
+        },
+        "isPartOf": {
+          "@id": "https://tablelab.app/blog#blog"
+        },
+        "wordCount": 2812,
+        "keywords": [
+          "ggpoker third-party software ban",
+          "ggpoker hud ban",
+          "ggpoker pokertracker",
+          "poker superuser scandal 2026",
+          "hud vs tracker",
+          "is a poker tracker allowed",
+          "ggpoker december 1 enforcement"
+        ],
+        "articleSection": "Poker News"
+      },
+      {
+        "@type": "Blog",
+        "@id": "https://tablelab.app/blog#blog",
+        "name": "The TableLab Blog",
+        "url": "https://tablelab.app/blog/",
+        "publisher": {
+          "@id": "https://tablelab.app/#organization"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": [
+          "https://magpiq.com",
+          "https://www.youtube.com/channel/UCaslEsv-BMGKuOY4ssKQqVQ"
+        ],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://tablelab.app/#rohit",
+        "name": "Rohit Kaul",
+        "givenName": "Rohit",
+        "description": "Live cash-game poker player and data-analytics professional; maker of TableLab. Around 20 years playing poker, focused on live cash as a winning player, with over a decade building quantitative models in Python.",
+        "jobTitle": "Founder",
+        "worksFor": {
+          "@id": "https://tablelab.app/#organization"
+        },
+        "knowsAbout": [
+          "Poker strategy",
+          "Cash game poker",
+          "Game theory optimal (GTO) poker",
+          "Poker bankroll management",
+          "Data analytics",
+          "Quantitative modeling"
+        ],
+        "alumniOf": [
+          {
+            "@type": "CollegeOrUniversity",
+            "name": "Purdue University"
+          },
+          {
+            "@type": "CollegeOrUniversity",
+            "name": "University of Mumbai"
+          }
+        ],
+        "sameAs": [
+          "https://www.linkedin.com/in/rohit-kaul-a761171a2",
+          "https://x.com/RohitKaul90",
+          "https://www.youtube.com/@rohitkaul1990",
+          "https://pokerdb.thehendonmob.com/player.php?a=r&n=877305",
+          "https://cardplayerlifestyle.com/authors/rohit-kaul/"
+        ]
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://tablelab.app/blog/ggpoker-bans-third-party-software#primaryimage",
+        "url": "https://tablelab.app/og-cover.png",
+        "width": 2400,
+        "height": 1260
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/blog/ggpoker-bans-third-party-software#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://tablelab.app"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://tablelab.app/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "GGPoker Banned All Third-Party Poker Software",
+            "item": "https://tablelab.app/blog/ggpoker-bans-third-party-software"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/blog/ggpoker-bans-third-party-software#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "When does GGPoker's third-party software ban take effect?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GGPoker announced the ban on October 15, 2026 and said on October 18 that the prohibition and its warning system start on December 1, 2026, with no automated warnings or penalties before that date. Native table swapping, layout locking and focus management roll out in phases from October 23 (GGPoker on X)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which tools are banned on GGPoker?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GGPoker's list names Jurojin, PokerTracker 4, Hand2Note, Hold'em Manager 3, StarsCaption, DriveHUD 2, IntuitiveTables, Lobbyze, Equilab and AutoHotkey, plus other third-party poker software and automation tools. Window managers such as PowerToys and Rectangle and standalone RNG generators stay permitted (GGPoker)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Was GGPoker's client hacked?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No report says so. The researcher who exposed the exploit and Jurojin's own notice both say the remote-access agent arrived through tampered update packages for third-party desktop tools, not through any poker client. ACR's review likewise found no compromise of its systems or downloads (PokerNews; Jurojin; ACR)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is a bankroll tracker app allowed on GGPoker after the ban?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A results log you type into is not on GGPoker's restricted list, which names desktop programs that run beside the client: HUDs, hand trackers, table managers, an equity calculator and a macro tool. GGPoker's own PokerCraft and Smart HUD remain available. Nothing in the announcement touches a live-poker session log, which never connects to a client."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How many players were affected by the 2026 poker superuser exploit?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "About 30 high-stakes players, by the estimate of the researcher who found it; Jurojin says its own list of affected users may not be complete. Loss totals reported in the press are estimates by individual players and have not been verified (PokerNews; poker.org)."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-H4D9DBVXDD');
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/gto-library">GTO Library</a>
+      <a class="link" href="/about">About</a>
+            <details class="nav-dropdown">
+        <summary>Tools<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <nav aria-label="Free poker calculators">
+          <a href="/variance-calculator">Variance Calculator</a>
+          <a href="/icm-calculator">ICM Calculator</a>
+        </nav>
+      </details>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+    <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / GGPoker Banned All Third-Party Poker Software</div>
+
+      <h1>GGPoker Banned All Third-Party Poker Software. What a Tracker Actually Does, and What Survives</h1>
+      <p class="byline">By Rohit Kaul · October 26, 2026 · 10 min read</p>
+
+      <div class="hero-banner">
+        <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The tool was the hole, so the tools are out. GGPoker bans every third-party poker program from December 1, 2026 after a remote-access exploit arrived through tampered updates to two table-management tools. What a HUD, a hand tracker, a table manager and a results log each do, and which was never in scope.">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0d130d"/>
+              <stop offset="1" stop-color="#16201a"/>
+            </linearGradient>
+          </defs>
+          <rect width="1200" height="380" fill="url(#bg)"/>
+          <rect x="0" y="0" width="6" height="380" fill="#4CAF50"/>
+          <text x="70" y="86" fill="#81C784" font-size="22" letter-spacing="3" font-family="sans-serif">POKER NEWS</text>
+          <text x="68" y="170" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">The tool was the hole,</text>
+          <text x="68" y="242" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">so the tools are out.</text>
+          <text x="70" y="300" fill="#b0bec5" font-size="26" font-family="sans-serif">GGPoker bans every third-party program from December 1. Here&rsquo;s what each kind does.</text>
+          <rect x="70" y="324" width="640" height="40" rx="8" fill="rgba(76,175,80,0.14)" stroke="#4CAF50" stroke-opacity="0.5"/>
+          <text x="86" y="351" fill="#81C784" font-size="20" font-weight="700" font-family="sans-serif">HUD · hand tracker · table manager · results log &mdash; which was never in scope</text>
+        </svg>
+      </div>
+
+      <p>On October 15, GGPoker announced a ban on all third-party poker software and automation tools, naming PokerTracker 4, Hold'em Manager 3, Hand2Note, Jurojin, Equilab and five others (<a href="https://ggpoker.com/blog/new-security-measures-at-ggpoker/">GGPoker</a>). Three days later it set the date: the prohibition and an in-client warning system start on December 1, 2026 (<a href="https://x.com/GGPoker/status/2111830439597916427">GGPoker on X</a>). The trigger was the superuser case that broke on September 29, in which a remote-access agent planted through tampered third-party updates let someone watch about 30 high-stakes players' screens, hole cards included (<a href="https://pokernews.com/news/2026/09/superuser-targets-online-poker-players-52500.htm">PokerNews</a>).</p>
+
+      <p>The word most headlines used was HUD (<a href="https://www.pokernews.com/news/2026/10/ggpoker-bans-huds-52622.htm">PokerNews</a>; <a href="https://pokerfuse.com/latest-news/2026/10/ggpoker-takes-security-next-level-five-new/">pokerfuse</a>). That's the least interesting part. Third-party HUDs were already banned on GGPoker. What changed is that any poker program running next to the client is now out, and that puts three very different kinds of tool in one bin. This post sorts them.</p>
+
+      <div class="tldr">
+        <p><strong>TL;DR:</strong> GGPoker announced a blanket ban on third-party poker software on October 15, 2026 and set enforcement for December 1, with native multi-tabling features rolling out from October 23 to replace what the tools did. The cause was a remote-access agent delivered through tampered update packages for two desktop tools, Jurojin and IntuitiveTables, not through any poker client. About 30 high-stakes players are believed to have been targeted; who ran it is alleged, not established. GGPoker's own policy page has not been revised and still says tools that don't interact with the client won't be flagged. A HUD reads the table live, a hand tracker reads the hand histories afterward, a table manager moves the client's windows, and a results log reads only what you type. The exploit went through two table managers, and the ban reaches everything that runs beside the client. The results log was never in scope, and for live players none of this changes anything except the lesson.</p>
+      </div>
+
+      <h2>What did GGPoker announce, and when?</h2>
+
+      <p>Two things, three days apart. On October 15 a post on GGPoker's blog headed New Security Measures introduced a policy banning all third-party poker software and automation tools (<a href="https://ggpoker.com/blog/new-security-measures-at-ggpoker/">GGPoker</a>). The same post added four optional client security settings, a win-rate anomaly detector, and the end of support for Windows 7, 8 and 8.1 and macOS 11 from 2027. The post's own words on the reversal: "Previously, we permitted certain third-party tools that did not affect gameplay." It asked players to close the listed applications before launching the client, and gave no date.</p>
+
+      <p>Players asked whether that was a recommendation or a rule; PokerListings collected the questions from Juan Pardo, Niall Farrell, Sergi Reixach and others the next day (<a href="https://www.pokerlistings.com/news/ggpoker-has-tightened-its-policy-on-third-party-software">PokerListings</a>). On October 18 GGPoker answered with an article on X. The prohibition and a warning system take effect December 1, 2026, with no automated warnings or penalties before then. Table swapping, layout locking and focus management arrive in the client in phases from October 23 and are finished by December 1. Repeated warnings without a prompt fix lead to restrictions up to a permanent ban, while window managers such as PowerToys and Rectangle, along with standalone RNG generators, stay permitted (<a href="https://x.com/GGPoker/status/2111830439597916427">GGPoker on X</a>). PokerNews España read that as a transition period to November 30 (<a href="https://es.pokernews.com/noticias/2026/10/ggpoker-prohibe-hud-y-otros-programas-escandalo-superuser-54079.htm">PokerNews España</a>).</p>
+
+      <p>One detail worth knowing before December. As of October 26 the binding document, GGPoker's Security Ecology Policy, is still version 20260313, and it still contains the sentence the blog post reversed: "tools or services that do not support or interact with GGPoker during gameplay will not be flagged" (<a href="https://ggpoker.com/network/security-ecology-policy/">GGPoker policy</a>). The blog and the X article say one thing, the policy page another. Until the page is revised, go by the stricter one.</p>
+
+      <figure>
+        <svg viewBox="0 0 580 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Timeline of the 2026 poker superuser case and the responses to it. September 29: a researcher reports a remote-access agent on about 30 high-stakes players' PCs. September 30 to October 2: Jurojin confirms tampered update packages and names IntuitiveTables as also targeted. October 6: ACR announces ScreenShield. October 15: GGPoker bans all third-party poker software. October 18: GGPoker sets enforcement for December 1. October 23: native multi-tabling starts rolling out. November 4: ScreenShield on by default across WPN. December 1: GGPoker enforcement begins." style="max-width:100%;height:auto">
+          <text x="20" y="22" fill="#eceff1" font-size="14">From exploit to ban: the 2026 timeline</text>
+          <line x1="40" y1="118" x2="560" y2="118" stroke="#546e7a" stroke-width="2"/>
+          <g font-family="sans-serif" font-size="10.5" fill="#cfd8dc">
+            <circle cx="50" cy="118" r="5" fill="#ef5350"/>
+            <text x="50" y="100" text-anchor="middle">Sep 29</text>
+            <text x="50" y="140" text-anchor="middle">Exploit</text>
+            <text x="50" y="153" text-anchor="middle">reported</text>
+            <circle cx="112" cy="118" r="5" fill="#ef5350"/>
+            <text x="112" y="100" text-anchor="middle">Sep 30&ndash;Oct 2</text>
+            <text x="112" y="140" text-anchor="middle">Jurojin</text>
+            <text x="112" y="153" text-anchor="middle">confirms</text>
+            <circle cx="186" cy="118" r="5" fill="#64b5f6"/>
+            <text x="186" y="100" text-anchor="middle">Oct 6</text>
+            <text x="186" y="140" text-anchor="middle">ACR</text>
+            <text x="186" y="153" text-anchor="middle">ScreenShield</text>
+            <circle cx="268" cy="118" r="6" fill="#4CAF50"/>
+            <text x="268" y="100" text-anchor="middle" fill="#81C784" font-weight="700">Oct 15</text>
+            <text x="268" y="140" text-anchor="middle">GGPoker</text>
+            <text x="268" y="153" text-anchor="middle">announces ban</text>
+            <circle cx="336" cy="118" r="5" fill="#4CAF50"/>
+            <text x="336" y="100" text-anchor="middle">Oct 18</text>
+            <text x="336" y="140" text-anchor="middle">Dec 1 date</text>
+            <text x="336" y="153" text-anchor="middle">set</text>
+            <circle cx="396" cy="118" r="5" fill="#4CAF50"/>
+            <text x="396" y="100" text-anchor="middle">Oct 23</text>
+            <text x="396" y="140" text-anchor="middle">Native</text>
+            <text x="396" y="153" text-anchor="middle">multi-tabling</text>
+            <circle cx="460" cy="118" r="5" fill="#64b5f6"/>
+            <text x="460" y="100" text-anchor="middle">Nov 4</text>
+            <text x="460" y="140" text-anchor="middle">ScreenShield</text>
+            <text x="460" y="153" text-anchor="middle">default on</text>
+            <circle cx="540" cy="118" r="6" fill="#81C784"/>
+            <text x="540" y="100" text-anchor="middle" fill="#81C784" font-weight="700">Dec 1</text>
+            <text x="540" y="140" text-anchor="middle">Enforcement</text>
+            <text x="540" y="153" text-anchor="middle">begins</text>
+          </g>
+          <g font-family="sans-serif" font-size="10" fill="#90a4ae">
+            <circle cx="30" cy="195" r="4" fill="#ef5350"/><text x="40" y="199">incident</text>
+            <circle cx="110" cy="195" r="4" fill="#64b5f6"/><text x="120" y="199">ACR / WPN</text>
+            <circle cx="210" cy="195" r="4" fill="#4CAF50"/><text x="220" y="199">GGPoker</text>
+          </g>
+          <text x="20" y="222" fill="#78909c" font-size="9.5">Sources: PokerNews, Jurojin, ACR (WebWire), GGPoker. Dates as given by each source.</text>
+        </svg>
+        <figcaption>Two operators, two responses: WPN shielded the screen, GGPoker removed the software. Sources in the list below.</figcaption>
+      </figure>
+
+      <h2>What was the superuser case that caused it?</h2>
+
+      <p>A remote-access agent on players' own computers, delivered through the update channel of third-party poker tools. On September 29 a cybersecurity researcher posting as WolfSec0x0 reported a covert agent on high-stakes players' Windows PCs, planted through compromised poker software, with activity going back to 2024 and about 30 users affected (<a href="https://pokernews.com/news/2026/09/superuser-targets-online-poker-players-52500.htm">PokerNews</a>). poker.org identified the agent as Mesh Agent, part of MeshCentral, a legitimate open-source remote-management package, and described what it can do: view the screen, hole cards included, control the mouse and keyboard, run commands and copy files (<a href="https://www.poker.org/latest-news/online-poker-rocked-by-fresh-hole-card-scandal-as-players-urged-to-check-pcs-aI8xa7r6rg2K/">poker.org</a>).</p>
+
+      <p>Jurojin, a table-management tool, published a security notice confirming its part. Between June 2025 and January 2026 an attacker intermittently replaced the update package delivered to one specific group of its users with a tampered version, some of which carried a remote-access tool. It describes a highly targeted operation worked by hand, not a mass attack, says IntuitiveTables was targeted by the same actor, and says nothing has been uploaded to its servers since January 28, 2026 (<a href="https://jurojinpoker.com/security-notice">Jurojin</a>). Its later statement to PokerNews added that the spyware was installed on more machines than were actually used to snipe hands, and that its list of affected users may not be complete (<a href="https://www.pokernews.com/news/2026/10/jurojin-speaks-after-superuser-scandal-52575.htm">PokerNews</a>). The researcher's 2024 start and Jurojin's June 2025 window don't match, and neither source reconciles them; we report both as stated.</p>
+
+      <p>What is established: the agent, the delivery route, the two tools, and a count of roughly 30 high-stakes players. What is alleged: who ran it, and how much was taken. Community reports attribute the accounts to one player; Jurojin's notice calls those reports accusations and says no official investigation has confirmed them (<a href="https://jurojinpoker.com/security-notice">Jurojin</a>). One unregulated site confiscated about $100,000 from an account it banned, and individual players have estimated their own losses in the low six figures (<a href="https://pokernews.com/news/2026/10/poker-sites-warned-about-superuser-account-52532.htm">PokerNews</a>). No verified total exists, and we don't name the accused here.</p>
+
+      <p>The point that matters for the rest of this post: no poker client was breached. The researcher, Jurojin and ACR's own review all say the hole was a desktop tool sitting next to the client (<a href="https://www.webwire.com/ViewPressRel.asp?aId=361519">ACR</a>). That is why GGPoker's answer was to remove the tools.</p>
+
+      <h2>Which tools are banned, and did the HUD part really change?</h2>
+
+      <p>The named list is Jurojin, PokerTracker 4, Hand2Note, Hold'em Manager 3, StarsCaption, DriveHUD 2, IntuitiveTables, Lobbyze, Equilab and AutoHotkey, framed as not limited to those (<a href="https://ggpoker.com/blog/new-security-measures-at-ggpoker/">GGPoker</a>). It mixes four jobs: HUDs and hand trackers, table managers and layout tools, an equity calculator, and a general macro program.</p>
+
+      <p>The HUD part is old news. GGPoker's own feature guide from January said third-party HUDs were banned and its Smart HUD was the only permitted overlay (<a href="https://ggpoker.com/blog/games-features-guide/">GGPoker</a>), and PokerTracker's moderators have said since 2024 that PT4 offers no HUD on GGPoker, only import of downloaded hands (<a href="https://www.pokertracker.com/forums/viewtopic.php?t=103641">PokerTracker forum</a>). What is new is that a tracker merely running in the background, or a table manager that never touched a decision, is now prohibited while the client is open, and from December 1 the client will warn when it detects them.</p>
+
+      <p>Jurojin's reply came two hours after the announcement: it said it understood why GGPoker was acting, and asked it to reconsider blanket restrictions regardless of what each tool does (<a href="https://x.com/JurojinPoker/status/2110843963309695195">Jurojin on X</a>; <a href="https://www.poker.org/latest-news/ggpoker-drops-the-hammer-on-all-huds-after-superuser-scandal-aiaxn4s3wF4n/">poker.org</a>). We found no public statement from PokerTracker, Hold'em Manager or Hand2Note as of October 26.</p>
+
+      <div class="callout"><p>Our read: GGPoker is not banning tools because of what they show. It is banning them because of where they run. Any program with the client's data on your machine is a second door, and the exploit walked in through one. That's a security argument, and the distinction it ignores is the one the next section is about.</p></div>
+
+      <h2>HUD, hand tracker, results log: what does each one do?</h2>
+
+      <p>Four kinds of program get lumped together as poker software, and they read four different things. A HUD reads the table while you play and paints opponent statistics over it. A hand tracker reads hand-history files after the fact and builds a database of every hand you played. A table manager reads the client's windows and moves them: swapping, layouts, hotkeys. A results log reads nothing but what you type: the session, the buy-in, the cash-out. The first three have contact with a poker client, and they are what a ban on software running beside it reaches.</p>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption>Three tools, three data sources. What each reads and what a client-side ban reaches.</caption>
+          <thead>
+            <tr><th>Tool</th><th>What it reads</th><th>What it gives you</th><th>Touched by the GGPoker ban?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>HUD</strong></td><td>The live table, through the client's hand feed or screen</td><td>Opponent stats mid-hand: VPIP, PFR, 3-bet</td><td>Yes. Third-party HUDs were already banned; Smart HUD is the only overlay</td></tr>
+            <tr><td><strong>Hand tracker</strong></td><td>Hand-history files the client writes or you download</td><td>Your full hand database, leak finders, replays</td><td>Yes, if it runs while the client is open. GGPoker's PokerCraft is the in-house replacement</td></tr>
+            <tr><td><strong>Table manager / hotkeys</strong></td><td>The client's windows</td><td>Table swapping, layouts, bet-size keys</td><td>Yes. Native table swapping, layout locking and focus management replace it from Oct 23</td></tr>
+            <tr><td><strong>Results log</strong></td><td>Only what you type</td><td>Win rate, hourly, variance, bankroll in buy-ins</td><td>No. Not on the list, no client contact; the live-poker case was never in scope</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The exploit went through the third row, not the first two. Jurojin is a table manager, IntuitiveTables a table-layout tool; both run with the client's windows in reach, both update themselves, and both update channels were tampered with. A results log never sees a card, and a phone or web app isn't on the gaming PC at all; the ban reaches what reads the client, and a log you type into reads nothing from it. That's a structural difference, not a marketing one, and it's also why GGPoker's Smart HUD and PokerCraft survive the ban: they're inside the client, so there's no second door (<a href="https://ggpoker.com/blog/your-strategy-guide-to-ggpokers-smart-hud/">GGPoker</a>).</p>
+
+      <figure>
+        <svg viewBox="0 0 580 262" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram of four tool families and their data sources. The poker client feeds a HUD live; the hand-history files it writes feed a hand tracker afterward; the client's windows are what a table manager reads. All three are marked as inside the scope of a client-side ban, and the table-manager row is marked as the route the 2026 exploit used through tampered updates to Jurojin and IntuitiveTables. At the bottom, the player types sessions into a results log, marked as outside the ban's scope with no client contact." style="max-width:100%;height:auto">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#90a4ae"/></marker>
+          </defs>
+          <text x="20" y="22" fill="#eceff1" font-size="14">Where each tool gets its data</text>
+          <g font-family="sans-serif">
+            <rect x="20" y="40" width="150" height="34" rx="6" fill="#263238" stroke="#546e7a"/>
+            <text x="95" y="62" text-anchor="middle" fill="#eceff1" font-size="12">Poker client (live)</text>
+            <rect x="230" y="40" width="130" height="34" rx="6" fill="rgba(239,83,80,0.15)" stroke="#ef5350"/>
+            <text x="295" y="62" text-anchor="middle" fill="#ef9a9a" font-size="12">HUD</text>
+            <line x1="170" y1="57" x2="228" y2="57" stroke="#90a4ae" stroke-width="1.5" marker-end="url(#arr)"/>
+
+            <rect x="20" y="92" width="150" height="34" rx="6" fill="#263238" stroke="#546e7a"/>
+            <text x="95" y="114" text-anchor="middle" fill="#eceff1" font-size="12">Hand-history files</text>
+            <rect x="230" y="92" width="130" height="34" rx="6" fill="rgba(239,83,80,0.15)" stroke="#ef5350"/>
+            <text x="295" y="114" text-anchor="middle" fill="#ef9a9a" font-size="12">Hand tracker</text>
+            <line x1="170" y1="109" x2="228" y2="109" stroke="#90a4ae" stroke-width="1.5" marker-end="url(#arr)"/>
+
+            <rect x="20" y="144" width="150" height="34" rx="6" fill="#263238" stroke="#546e7a"/>
+            <text x="95" y="166" text-anchor="middle" fill="#eceff1" font-size="12">Client windows</text>
+            <rect x="230" y="144" width="130" height="34" rx="6" fill="rgba(239,83,80,0.15)" stroke="#ef5350" stroke-width="2"/>
+            <text x="295" y="166" text-anchor="middle" fill="#ef9a9a" font-size="12">Table manager</text>
+            <line x1="170" y1="161" x2="228" y2="161" stroke="#90a4ae" stroke-width="1.5" marker-end="url(#arr)"/>
+
+            <rect x="20" y="212" width="150" height="34" rx="6" fill="#263238" stroke="#546e7a"/>
+            <text x="95" y="234" text-anchor="middle" fill="#eceff1" font-size="12">You, typing</text>
+            <rect x="230" y="212" width="130" height="34" rx="6" fill="rgba(76,175,80,0.15)" stroke="#4CAF50"/>
+            <text x="295" y="234" text-anchor="middle" fill="#a5d6a7" font-size="12">Results log</text>
+            <line x1="170" y1="229" x2="228" y2="229" stroke="#90a4ae" stroke-width="1.5" marker-end="url(#arr)"/>
+
+            <rect x="385" y="40" width="175" height="138" rx="6" fill="none" stroke="#ef5350" stroke-dasharray="4 3"/>
+            <text x="472" y="62" text-anchor="middle" fill="#ef9a9a" font-size="11" font-weight="700">In scope of the ban</text>
+            <text x="472" y="82" text-anchor="middle" fill="#cfd8dc" font-size="10">runs beside the client</text>
+            <text x="472" y="110" text-anchor="middle" fill="#ef9a9a" font-size="10" font-weight="700">Exploit's route: row 3</text>
+            <text x="472" y="126" text-anchor="middle" fill="#cfd8dc" font-size="10">tampered updates to the</text>
+            <text x="472" y="140" text-anchor="middle" fill="#cfd8dc" font-size="10">table managers Jurojin</text>
+            <text x="472" y="154" text-anchor="middle" fill="#cfd8dc" font-size="10">and IntuitiveTables</text>
+            <rect x="385" y="212" width="175" height="34" rx="6" fill="none" stroke="#4CAF50" stroke-dasharray="4 3"/>
+            <text x="472" y="233" text-anchor="middle" fill="#a5d6a7" font-size="11" font-weight="700">No client contact</text>
+          </g>
+        </svg>
+        <figcaption>A client-side ban reaches whatever reads the client. A log you type into isn't on that path.</figcaption>
+      </figure>
+
+      <p>None of this is a knock on hand trackers. A full hand database is a better study tool than a session log, and <a href="/blog/are-poker-solvers-allowed">the major operators still allow that study with the client closed</a>. GGPoker's policy even spells out the surviving use: importing your hand histories is permitted to track your own gameplay, and nothing else (<a href="https://ggpoker.com/network/security-ecology-policy/">GGPoker policy</a>, section 7.2). The ban is on what runs during the session, not on what you learn from it afterward.</p>
+
+      <h2>Does any of this change anything at a live table?</h2>
+
+      <p>Not the rules. There's no client in a cardroom, so there's nothing for a ban like this to reach; the live rules on phones and charts are the TDA's and the house's, and <a href="/blog/are-poker-solvers-allowed">we quoted them in full in the solvers post</a>. What transfers is the lesson about where numbers come from.</p>
+
+      <p>An online player who leaned on a HUD had opponent stats they never had to think about. Live players never had that, which is why <a href="/blog/how-to-read-players-without-a-hud">reading players without a HUD</a> is a skill rather than a setting. The same goes for your own numbers. A hand tracker's win rate is the best one there is, every hand counted, but it lives in a tool the site can now switch off. Live players only ever had the log, and even a logged win rate needs <a href="/blog/good-live-poker-win-rate">a far larger sample than most players think</a> before it means much. The online players who have to rebuild their routine after December 1 are rebuilding toward the position live players have always been in: write it down yourself, then do the math.</p>
+
+      <div class="callout"><p>Our read: GGPoker is moving toward a world where the only overlay is the one it ships and the only database is the one it hosts, and WPN says it's weighing the same. Whatever you think of that, it leaves your results in someone else's hands. Keep a copy that doesn't depend on any client existing.</p></div>
+
+      <h2>What should you do if you play on GGPoker with PokerTracker or Hold'em Manager?</h2>
+
+      <p>Three things before December 1, and one habit after it.</p>
+
+      <ul>
+        <li><strong>Check the machine.</strong> Jurojin's notice recommends a clean Windows reinstall, or at minimum running its Mesh Check tool, and reporting any exposed hands to the room for refunds (<a href="https://jurojinpoker.com/security-notice">Jurojin</a>). ACR's ScreenShield, on by default across WPN from November 4, hides tables from screen-capture and remote-viewing software, and GGPoker's new Screen Guard and Connection Monitor do the equivalent inside its client (<a href="https://www.webwire.com/ViewPressRel.asp?aId=362988">ACR</a>; <a href="https://ggpoker.com/blog/new-security-measures-at-ggpoker/">GGPoker</a>).</li>
+        <li><strong>Export what you own.</strong> Download your GGPoker hand histories now and import them with the client closed; that use stays permitted under section 7.2. Export your tracker's results summary too, so your lifetime numbers don't live only in a tool you can no longer run alongside the site.</li>
+        <li><strong>Learn the native features.</strong> Table swapping, layout locking and focus management start arriving October 23, and the full set is due by December 1 (<a href="https://x.com/GGPoker/status/2111830439597916427">GGPoker on X</a>). If a warning does fire after that date, close the tool immediately; disputes go to GGPoker's security address named in the same article.</li>
+        <li><strong>Keep the results outside.</strong> A log of sessions you type yourself is the one record no policy change can switch off, on GGPoker or anywhere else. <a href="/blog/poker-bankroll-management">Bankroll in buy-ins, win rate, hourly</a>: those only need the numbers, not the client.</li>
+      </ul>
+
+      <p>Where TableLab sits: it's a results log with a hand recorder, a browsable GTO library and AI hand review. It has no online-client integration, no HUD and no hand-history import; you enter sessions and hands yourself, after the fact, and the GTO numbers come from a real CFR solver we run offline, with <a href="/about#how-analysis-works">the AI explaining those numbers rather than producing them</a>. That is the last row of the table above by construction. The honest caveat is the same one as always: the analysis can be wrong, so verify big decisions, and at a live table your phone answers to the house rule, not ours.</p>
+
+      <h2>What to watch next</h2>
+
+      <p>Whether GGPoker's policy page is revised before December 1 to match the blog and the X article. Whether WPN adopts the broader third-party prohibition it said it was evaluating on October 16 (<a href="https://www.webwire.com/ViewPressRel.asp?aId=362988">ACR</a>). Whether PokerTracker or Hold'em Manager say anything at all. And whether any investigation produces a finding on who ran the agent. We'll update this post at the enforcement date.</p>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>When does GGPoker's third-party software ban take effect?</summary>
+          <p>GGPoker announced the ban on October 15, 2026 and said on October 18 that the prohibition and its warning system start on December 1, 2026, with no automated warnings or penalties before that date. Native table swapping, layout locking and focus management roll out in phases from October 23 (<a href="https://x.com/GGPoker/status/2111830439597916427">GGPoker on X</a>).</p>
+        </details>
+        <details>
+          <summary>Which tools are banned on GGPoker?</summary>
+          <p>GGPoker's list names Jurojin, PokerTracker 4, Hand2Note, Hold'em Manager 3, StarsCaption, DriveHUD 2, IntuitiveTables, Lobbyze, Equilab and AutoHotkey, plus other third-party poker software and automation tools. Window managers such as PowerToys and Rectangle and standalone RNG generators stay permitted (<a href="https://ggpoker.com/blog/new-security-measures-at-ggpoker/">GGPoker</a>).</p>
+        </details>
+        <details>
+          <summary>Was GGPoker's client hacked?</summary>
+          <p>No report says so. The researcher who exposed the exploit and Jurojin's own notice both say the remote-access agent arrived through tampered update packages for third-party desktop tools, not through any poker client. ACR's review likewise found no compromise of its systems or downloads (<a href="https://pokernews.com/news/2026/09/superuser-targets-online-poker-players-52500.htm">PokerNews</a>; <a href="https://jurojinpoker.com/security-notice">Jurojin</a>; <a href="https://www.webwire.com/ViewPressRel.asp?aId=361519">ACR</a>).</p>
+        </details>
+        <details>
+          <summary>Is a bankroll tracker app allowed on GGPoker after the ban?</summary>
+          <p>A results log you type into is not on GGPoker's restricted list, which names desktop programs that run beside the client: HUDs, hand trackers, table managers, an equity calculator and a macro tool. GGPoker's own PokerCraft and Smart HUD remain available. Nothing in the announcement touches a live-poker session log, which never connects to a client.</p>
+        </details>
+        <details>
+          <summary>How many players were affected by the 2026 poker superuser exploit?</summary>
+          <p>About 30 high-stakes players, by the estimate of the researcher who found it; Jurojin says its own list of affected users may not be complete. Loss totals reported in the press are estimates by individual players and have not been verified (<a href="https://pokernews.com/news/2026/10/poker-sites-warned-about-superuser-account-52532.htm">PokerNews</a>; <a href="https://www.poker.org/latest-news/online-poker-rocked-by-fresh-hole-card-scandal-as-players-urged-to-check-pcs-aI8xa7r6rg2K/">poker.org</a>).</p>
+        </details>
+      </section>
+
+      <h2>The bottom line</h2>
+
+      <p>A desktop tool's update channel was the hole, so GGPoker is closing every desktop tool, with the client warning anyone who runs one from December 1. The HUD headline was already true; the new part reaches trackers and table managers that never influenced a decision. Sort your tools by what they read. The ones that read the client are gone on GGPoker and may follow elsewhere. The one that reads only what you type was never in scope, and it's the one your long-run numbers should live in anyway.</p>
+
+      <p>Log the session, the buy-in and the cash-out yourself, and keep that record somewhere no client can revoke. <a href="/">Start logging your sessions</a>.</p>
+
+      <h3>Sources</h3>
+      <ul class="sources">
+        <li>GGPoker &mdash; "New Security Measures at GGPoker" (Oct 15, 2026), <a href="https://ggpoker.com/blog/new-security-measures-at-ggpoker/">ggpoker.com</a></li>
+        <li>GGPoker on X &mdash; "Regarding Policy Changes Related to Third-Party Tools" (Oct 18, 2026), <a href="https://x.com/GGPoker/status/2111830439597916427">x.com</a></li>
+        <li>GGPoker &mdash; "Online Poker Security Ecology Policy", version 20260313, as fetched Oct 26, 2026, <a href="https://ggpoker.com/network/security-ecology-policy/">ggpoker.com</a></li>
+        <li>GGPoker &mdash; "Games &amp; Features Guide" (Jan 15, 2026), <a href="https://ggpoker.com/blog/games-features-guide/">ggpoker.com</a></li>
+        <li>GGPoker &mdash; "Your Strategy Guide to GGPoker's Smart HUD" (Jan 18, 2026), <a href="https://ggpoker.com/blog/your-strategy-guide-to-ggpokers-smart-hud/">ggpoker.com</a></li>
+        <li>PokerNews (Jon Sofen) &mdash; "Is a New Superuser Targeting High-Stakes Online Poker Players?" (Sep 29, 2026), <a href="https://pokernews.com/news/2026/09/superuser-targets-online-poker-players-52500.htm">pokernews.com</a></li>
+        <li>poker.org (Dave Woods) &mdash; "Online poker rocked by fresh hole card scandal as players urged to check PCs" (Sep 30, 2026), <a href="https://www.poker.org/latest-news/online-poker-rocked-by-fresh-hole-card-scandal-as-players-urged-to-check-pcs-aI8xa7r6rg2K/">poker.org</a></li>
+        <li>Jurojin Poker &mdash; "Security Notice: Update Package Incident (June 2025 &ndash; January 2026)" (updated Oct 2, 2026), <a href="https://jurojinpoker.com/security-notice">jurojinpoker.com</a></li>
+        <li>PokerNews (Connor Richards) &mdash; "Superuser Scandal: Poker Sites Were Warned About Suspicious Account" (Oct 2, 2026), <a href="https://pokernews.com/news/2026/10/poker-sites-warned-about-superuser-account-52532.htm">pokernews.com</a></li>
+        <li>PokerNews (Connor Richards) &mdash; "Compromised Poker Software on Superuser Scandal: 'We Are Truly Sorry'" (Oct 9, 2026), <a href="https://www.pokernews.com/news/2026/10/jurojin-speaks-after-superuser-scandal-52575.htm">pokernews.com</a></li>
+        <li>ACR Poker via WebWire &mdash; "ACR Poker Highlights ScreenShield Protection and GTO Wizard Security Efforts" (Oct 6, 2026), <a href="https://www.webwire.com/ViewPressRel.asp?aId=361519">webwire.com</a></li>
+        <li>ACR Poker via WebWire &mdash; "ACR Poker Sets November 4 for Network-Wide ScreenShield Default" (Oct 16, 2026), <a href="https://www.webwire.com/ViewPressRel.asp?aId=362988">webwire.com</a></li>
+        <li>Jurojin Poker on X &mdash; statement on GGPoker's policy (Oct 15, 2026), <a href="https://x.com/JurojinPoker/status/2110843963309695195">x.com</a></li>
+        <li>poker.org (Adam Hampton) &mdash; "GGPoker drops the hammer on all HUDs after superuser scandal" (Oct 16, 2026), <a href="https://www.poker.org/latest-news/ggpoker-drops-the-hammer-on-all-huds-after-superuser-scandal-aiaxn4s3wF4n/">poker.org</a></li>
+        <li>PokerListings (Vasilisa Zyryanova) &mdash; "GGPoker Has Tightened Its Policy on Third-Party Software" (updated Oct 16, 2026), <a href="https://www.pokerlistings.com/news/ggpoker-has-tightened-its-policy-on-third-party-software">pokerlistings.com</a></li>
+        <li>PokerNews (Jon Sofen) &mdash; "Online Poker Players on GGPoker Can No Longer Use a HUD" (Oct 18, 2026), <a href="https://www.pokernews.com/news/2026/10/ggpoker-bans-huds-52622.htm">pokernews.com</a></li>
+        <li>pokerfuse (Zvonimir Potocki) &mdash; "GGPoker Takes Security to the Next Level: Five New Security Measures Introduced" (Oct 18, 2026), <a href="https://pokerfuse.com/latest-news/2026/10/ggpoker-takes-security-next-level-five-new/">pokerfuse.com</a></li>
+        <li>PokerNews España &mdash; "GGPoker anuncia la prohibición de los HUD y otros programas externos" (Oct 20, 2026), <a href="https://es.pokernews.com/noticias/2026/10/ggpoker-prohibe-hud-y-otros-programas-escandalo-superuser-54079.htm">es.pokernews.com</a></li>
+        <li>PokerTracker forum &mdash; "GGPoker ToS - third party software" (staff replies, Jun&ndash;Aug 2024), <a href="https://www.pokertracker.com/forums/viewtopic.php?t=103641">pokertracker.com</a></li>
+      </ul>
+
+      <p class="disclaimer-line">Facts are as published by the named sources on the fetch date, 2026-10-26. The identity of the person behind the remote-access agent and all loss figures are allegations or estimates reported as such; no official finding had been published in the sources as fetched. GGPoker's enforcement details are its own stated plan and may change before December 1. Poker carries real variance and real risk; nothing here is financial or legal advice. Corrections: support@tablelab.app.</p>
+
+      <aside class="author-box">
+        <h3>About the author</h3>
+        <p><strong>Rohit Kaul</strong> is a winning live cash-game player and a data-analytics
+        professional (Master's in Business Analytics, Purdue) who builds the quantitative models behind
+        TableLab &mdash; profitable every year since 2023, across roughly 3,200 hours of tracked live cash.
+        Find him on
+        <a href="https://www.linkedin.com/in/rohit-kaul-a761171a2" rel="me noopener" target="_blank">LinkedIn</a>,
+        <a href="https://www.youtube.com/@rohitkaul1990" rel="me noopener" target="_blank">YouTube</a>, and
+        <a href="https://pokerdb.thehendonmob.com/player.php?a=r&amp;n=877305" rel="me noopener" target="_blank">The Hendon Mob</a>.</p>
+      </aside>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/gto-library">GTO Library</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+</body>
+</html>
