@@ -19,7 +19,7 @@
   <meta name="twitter:description" content="Solver on the broadcast, solver banned in the room. Where PokerStars, GGPoker, the TDA and the WSOP draw the line on solvers, charts, HUDs and your phone.">
   <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
   <meta property="article:published_time" content="2026-08-30">
-  <meta property="article:modified_time" content="2026-10-06">
+  <meta property="article:modified_time" content="2026-10-26">
   <meta name="author" content="Rohit Kaul">
   <meta name="theme-color" content="#111811">
   <script>
@@ -47,7 +47,7 @@
         "headline": "Are Poker Solvers Allowed? Where the Line Is, Online and Live",
         "description": "Whether poker solvers, trainers, trackers, charts and HUDs are allowed, online and live: the exact rule text from PokerStars, GGPoker, GTO Wizard's terms, the 2024 TDA rules and the 2026 WSOP tournament and cash-game rules, the enforcement timeline from 2020 to 2026, and why, on PokerStars' wording and in the Clack case on iPoker, checking a hand after it was played still counts as real-time assistance.",
         "datePublished": "2026-08-30",
-        "dateModified": "2026-10-06",
+        "dateModified": "2026-10-26",
         "author": { "@id": "https://tablelab.app/#rohit" },
         "publisher": { "@id": "https://tablelab.app/#organization" },
         "image": { "@id": "https://tablelab.app/blog/are-poker-solvers-allowed#primaryimage" },
@@ -127,9 +127,9 @@
           { "@type": "Question", "name": "Are poker solvers allowed?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, for study. PokerStars lists solver-class tools as \"prohibited while our software is running\"; GGPoker's policy says every decision should be made free of \"external assistance\"; GTO Wizard's own terms bar use \"during a live poker game.\" Own one, run one, review with one. Just not with a hand in progress." } },
           { "@type": "Question", "name": "Is using a solver cheating?", "acceptedAnswer": { "@type": "Answer", "text": "During a hand, yes. That's real-time assistance, and every major site treats it as cheating; GGPoker's stated penalty is \"PERMANENT BAN, CONFISCATION OF FUNDS.\" After the session, with the client closed, it's how everyone serious studies, and no operator objects to it." } },
           { "@type": "Question", "name": "Can you check a hand in a solver between hands or on a break?", "acceptedAnswer": { "@type": "Answer", "text": "Don't. Thomas Clack said he looked hands up \"after a hand had been played\" and still lost a £40,000 Grosvenor sponsorship after an iPoker suspension in February 2026. The rule keys on the tool being open while the client runs, not on your intent." } },
-          { "@type": "Question", "name": "Are HUDs allowed in 2026?", "acceptedAnswer": { "@type": "Answer", "text": "It depends on the site. PokerStars permits HUDs built only from information \"accumulated through your own play\" and bans datamining; GGPoker and WPT Global prohibit third-party HUDs. Live, there's no HUD at all, so you build reads by hand and write them down." } },
+          { "@type": "Question", "name": "Are HUDs allowed in 2026?", "acceptedAnswer": { "@type": "Answer", "text": "It depends on the site. PokerStars permits HUDs built only from information \"accumulated through your own play\" and bans datamining; GGPoker and WPT Global prohibit third-party HUDs, and from December 1, 2026 GGPoker bans all third-party poker software running beside its client. Live, there's no HUD at all, so you build reads by hand and write them down." } },
           { "@type": "Question", "name": "Can you use your phone at a live poker table?", "acceptedAnswer": { "@type": "Answer", "text": "Under the 2024 TDA rules: not with a live hand (Rule 5C), never resting on the table (5B), and never for strategy tools (5D). The 2026 WSOP goes further: devices removed at the final three tables, and charts, apps, and artificial intelligence banned in the tournament room for players and spectators alike." } },
-          { "@type": "Question", "name": "Is a bankroll tracker app allowed?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. A tracker doesn't touch the hand in progress. Online, PokerStars permits tools that use \"only information that you have accumulated through your own play,\" and GGPoker doesn't flag tools that don't interact with its client during gameplay. Live, log between hands with the phone off the felt." } }
+          { "@type": "Question", "name": "Is a bankroll tracker app allowed?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, with one site-specific caveat. A tracker doesn't touch the hand in progress. Online, PokerStars permits tools that use \"only information that you have accumulated through your own play.\" GGPoker, from December 1, 2026, prohibits any third-party poker software running while its client is open, so a hand tracker there is a closed-client tool only; a results log you type into is not on its list. Live, log between hands with the phone off the felt." } }
         ]
       }
     ]
@@ -245,6 +245,8 @@
 
       <p>Same principle, different wording. PokerStars sorts tools into permitted, prohibited at all times, and permitted-but-not-while-the-client-runs. GGPoker bans RTA, bots, solvers, charts, and third-party HUDs outright, and §2.4 sets the penalty as a permanent ban with funds confiscated. HUD policy is where sites diverge most.</p>
 
+      <div class="callout"><p>Update, October 26, 2026: GGPoker has gone further. On October 15 it announced a ban on all third-party poker software and automation tools, naming PokerTracker 4, Hold'em Manager 3, Hand2Note, Jurojin, Equilab and others, and on October 18 set enforcement for December 1, 2026 (<a href="https://ggpoker.com/blog/new-security-measures-at-ggpoker/">GGPoker</a>; <a href="https://x.com/GGPoker/status/2111830439597916427">GGPoker on X</a>). The safe-harbor sentence quoted below is still on the policy page as of this update, but the blog post explicitly reverses it, so treat any tool running beside the client as prohibited. The trigger, the list, and what still works are in <a href="/blog/ggpoker-bans-third-party-software">our post on the GGPoker third-party software ban</a>. The matrix below keeps the August 30 wording for the record.</p></div>
+
       <p>Here's the matrix, built from the two operators' own pages as published on August 30, 2026. The third column comes from a secondary source and covers HUD stance only.</p>
 
       <div class="compare-wrap">
@@ -258,7 +260,7 @@
             <tr><td><strong>Solver (client open)</strong></td><td>✗</td><td>✗ &mdash; permanent ban, funds confiscated</td><td>&mdash;</td></tr>
             <tr><td><strong>Simple preflop chart during play</strong></td><td>✓ &mdash; unopened pots only</td><td>✗ &mdash; charts of any kind</td><td>&mdash;</td></tr>
             <tr><td><strong>Third-party HUD</strong></td><td>Own-play data only</td><td>✗</td><td>WPT Global ✗ · ACR (WPN) ✓</td></tr>
-            <tr><td><strong>Tracker (post-session)</strong></td><td>✓ &mdash; your own hands only</td><td>✓ &mdash; no interaction during play</td><td>&mdash;</td></tr>
+            <tr><td><strong>Tracker (post-session)</strong></td><td>✓ &mdash; your own hands only</td><td>✓ as of Aug 30; from Dec 1, 2026 it must not run while the client is open (see update above)</td><td>&mdash;</td></tr>
             <tr><td><strong>Datamining</strong></td><td>✗</td><td>Not named; §2.2 bars any outside help</td><td>&mdash;</td></tr>
           </tbody>
         </table>
@@ -266,7 +268,7 @@
 
       <p>*Third column from GipsyTeam's May 2026 HUD survey, a secondary source; check the operator's own page before you play.</p>
 
-      <p>Two GGPoker clauses matter more than the rest. The penalty line, §2.4, is written in capitals: "PERMANENT BAN, CONFISCATION OF FUNDS." It's the only penalty the RTA section names. The safe-harbor line is quieter: a tool that doesn't interact with GGPoker during gameplay won't be flagged. That's the clause a post-session tracker or an offline solver lives under, and it's worth knowing by name.</p>
+      <p>Two GGPoker clauses matter more than the rest. The penalty line, §2.4, is written in capitals: "PERMANENT BAN, CONFISCATION OF FUNDS." It's the only penalty the RTA section names. The safe-harbor line is quieter: a tool that doesn't interact with GGPoker during gameplay won't be flagged. That's the clause a post-session tracker or an offline solver lived under until October 2026; GGPoker's October 15 post says it previously permitted tools that did not affect gameplay and is now tightening that, while the policy page itself had not been revised as of October 26.</p>
 
       <p>On HUDs, the industry splits down the middle. GipsyTeam's May 2026 survey lists PokerStars, 888, WPN, iPoker, and Winamax as permitting HUDs, and GGPoker, WPT Global, and CoinPoker as prohibiting them (<a href="https://www.gipsyteam.com/news/23-05-2026/huds-on-poker-sites">GipsyTeam</a>). It's a useful map, but the operator's page is the territory, and operators edit those pages without announcing it.</p>
 
@@ -435,7 +437,7 @@
         </details>
         <details>
           <summary>Are HUDs allowed in 2026?</summary>
-          <p>It depends on the site. PokerStars permits HUDs built only from hands you played yourself and bans datamining; GGPoker and WPT Global prohibit third-party HUDs (<a href="https://www.gipsyteam.com/news/23-05-2026/huds-on-poker-sites">GipsyTeam</a>). Live, there's no HUD at all, so you build reads by hand and <a href="/blog/how-to-read-players-without-a-hud">write them down</a>.</p>
+          <p>It depends on the site. PokerStars permits HUDs built only from hands you played yourself and bans datamining; GGPoker and WPT Global prohibit third-party HUDs (<a href="https://www.gipsyteam.com/news/23-05-2026/huds-on-poker-sites">GipsyTeam</a>), and from December 1, 2026 GGPoker bans all third-party poker software running beside its client (<a href="/blog/ggpoker-bans-third-party-software">our post on the ban</a>). Live, there's no HUD at all, so you build reads by hand and <a href="/blog/how-to-read-players-without-a-hud">write them down</a>.</p>
         </details>
         <details>
           <summary>Can you use your phone at a live poker table?</summary>
@@ -443,7 +445,7 @@
         </details>
         <details>
           <summary>Is a bankroll tracker app allowed?</summary>
-          <p>Yes. A tracker doesn't touch the hand in progress. Online, PokerStars permits tools that use only data from your own play, and GGPoker doesn't flag tools that don't interact with its client during gameplay. Live, log between hands with the phone off the felt.</p>
+          <p>Yes, with one site-specific caveat. A tracker doesn't touch the hand in progress. Online, PokerStars permits tools that use only data from your own play. GGPoker, from December 1, 2026, prohibits any third-party poker software running while its client is open, so a hand tracker there is a closed-client tool only; a results log you type into is not on its list. Live, log between hands with the phone off the felt.</p>
         </details>
       </section>
 
