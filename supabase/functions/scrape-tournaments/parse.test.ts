@@ -5,7 +5,7 @@
 // "Scraper returned 0 tournaments": PokerNews had added data-gtm-id="…" to every
 // series row and the old exact-string split on '<tr class="parent">' matched nothing.
 import { assertEquals, assert } from "https://deno.land/std@0.168.0/testing/asserts.ts";
-import { COUNTRY_MAP, PARENT_ROW_RE, parseHtml } from "./parse.ts";
+import { PARENT_ROW_RE, parseHtml } from "./parse.ts";
 
 const FIXTURE = Deno.readTextFileSync(
   new URL("./fixtures/pokernews-rows-2026-10-26.html", import.meta.url),
@@ -46,21 +46,40 @@ Deno.test("legacy bare <tr class=\"parent\"> markup still parses (a PokerNews re
   assertEquals(rows.map((r) => r.country), ["France", "Estonia", "USA"]);
 });
 
-Deno.test("row regex is attribute-tolerant but class-exact", () => {
+Deno.test("row regex is attribute-order-independent and class-token-exact", () => {
   assert(PARENT_ROW_RE.test('<tr class="parent">'));
   assert(PARENT_ROW_RE.test('<tr class="parent" data-gtm-id="x">'));
+  assert(PARENT_ROW_RE.test('<tr data-gtm-id="x" class="parent">')); // attributes reordered
   assert(PARENT_ROW_RE.test('<tr class="parent highlighted" data-x="1">'));
+  assert(PARENT_ROW_RE.test('<tr class="series parent">')); // extra leading class
   assert(!PARENT_ROW_RE.test('<tr class="parentx">'));
+  assert(!PARENT_ROW_RE.test('<tr class="parent-row">'));
   assert(!PARENT_ROW_RE.test('<tr class="child">'));
   assert(!PARENT_ROW_RE.test("<tr>"));
+});
+
+Deno.test("cell selectors are class-token-exact (a new 'subtitle' or 'updated' cell can't be mis-picked)", () => {
+  const decoy = FIXTURE.replace(
+    '<td class="title wrap">',
+    '<td class="subtitle">decoy</td><td class="updated">2099-01-01</td><td class="title wrap">',
+  );
+  const [fr] = parseHtml(decoy, URL_);
+  assertEquals(fr.name, "Championnat de France de Poker");
+  assertEquals(fr.start_date, "2026-10-13");
 });
 
 Deno.test("a page with no series rows yields no tournaments (the alert path)", () => {
   assertEquals(parseHtml("<table><tr><td>nothing</td></tr></table>", URL_), []);
 });
 
-Deno.test("unmapped country code drops the row; mapped Baltic codes keep it", () => {
+Deno.test("unmapped country code drops the row; newly mapped codes parse to a country", () => {
   const zz = FIXTURE.replace("flags/fr.svg", "flags/zz.svg");
   assertEquals(parseHtml(zz, URL_).length, 2);
-  for (const code of ["ee", "lt", "lv", "me", "mc"]) assert(code in COUNTRY_MAP, code);
+  const expected: Record<string, string> = {
+    lt: "Lithuania", lv: "Latvia", me: "Montenegro", mc: "Monaco", ge: "Georgia", kh: "Cambodia",
+  };
+  for (const [code, country] of Object.entries(expected)) {
+    const [fr] = parseHtml(FIXTURE.replace("flags/fr.svg", `flags/${code}.svg`), URL_);
+    assertEquals(fr.country, country, code);
+  }
 });

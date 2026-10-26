@@ -1,6 +1,7 @@
 <!-- Trimmed from https://www.pokernews.com/poker-tournaments/ page 1, fetched 2026-10-26.
      Series rows gained a data-gtm-id attribute (first seen on the 2026-10-26 run), which broke the
-     exact-string split in parseHtml. Keep this fixture byte-faithful to the live markup. -->
+     exact-string split in parseHtml. Row contents are unmodified; the rows are re-indented and
+     wrapped in a bare <table> so the parser (not a byte-diff) is what this fixture exercises. -->
 <table>
 <tbody>
 <tr class="parent" data-gtm-id="Championnat de France de Poker">

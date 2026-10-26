@@ -4,7 +4,7 @@
 
 // ── Country code → display name ───────────────────────────────────────────────
 
-export const COUNTRY_MAP: Record<string, string> = {
+const COUNTRY_MAP: Record<string, string> = {
   us: 'USA', gb: 'UK', ca: 'Canada', es: 'Spain', de: 'Germany',
   fr: 'France', mt: 'Malta', au: 'Australia', cz: 'Czech Republic',
   at: 'Austria', be: 'Belgium', cy: 'Cyprus', hr: 'Croatia',
@@ -87,8 +87,18 @@ function shouldSkip(name: string): boolean {
 
 // ── HTML parser (no WASM — pure string matching) ──────────────────────────────
 
-/** Matches a series row open tag, with or without extra attributes. */
-export const PARENT_ROW_RE = /<tr\s+class="parent(?:\s[^"]*)?"[^>]*>/i
+/** Class-token matcher: `token` must appear as a whole word in the class list. */
+function classToken(token: string): string {
+  return String.raw`class="(?:[^"]*\s)?${token}(?:\s[^"]*)?"`
+}
+
+/** Matches a series row open tag: any attribute order, any extra classes, `parent` as a whole token. */
+export const PARENT_ROW_RE = new RegExp(String.raw`<tr\b[^>]*\b${classToken('parent')}[^>]*>`, 'i')
+
+/** `<td class="… token …">…</td>` — token-exact, like PARENT_ROW_RE. */
+function tdWithClass(token: string, flags = 'i'): RegExp {
+  return new RegExp(String.raw`<td[^>]*\b${classToken(token)}[^>]*>([\s\S]*?)</td>`, flags)
+}
 
 export interface TournamentRow {
   name: string
@@ -118,7 +128,7 @@ export function parseHtml(html: string, pageUrl: string): TournamentRow[] {
     const row = rowEnd >= 0 ? seg.slice(0, rowEnd) : seg
 
     // ── Name ─────────────────────────────────────────────────────────────────
-    const titleMatch = row.match(/<td[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/td>/i)
+    const titleMatch = row.match(tdWithClass('title'))
     if (!titleMatch) continue
     const titleHtml = titleMatch[1]
 
@@ -145,13 +155,13 @@ export function parseHtml(html: string, pageUrl: string): TournamentRow[] {
     if (!country) continue
 
     // ── Dates ─────────────────────────────────────────────────────────────────
-    const dateCells = [...row.matchAll(/<td[^>]*class="[^"]*date[^"]*"[^>]*>([\s\S]*?)<\/td>/gi)]
+    const dateCells = [...row.matchAll(tdWithClass('date', 'gi'))]
     const startDate = dateCells[0] ? stripTags(dateCells[0][1]) : ''
     const endDateRaw = dateCells[1] ? stripTags(dateCells[1][1]) : ''
     if (!startDate || !isValidDate(startDate)) continue
 
     // ── Buy-in ────────────────────────────────────────────────────────────────
-    const buyInMatch = row.match(/<td[^>]*class="[^"]*nr[^"]*"[^>]*>([\s\S]*?)<\/td>/i)
+    const buyInMatch = row.match(tdWithClass('nr'))
     const { amount: buyIn, currency } = parseBuyIn(
       buyInMatch ? stripTags(buyInMatch[1]) : '',
     )
