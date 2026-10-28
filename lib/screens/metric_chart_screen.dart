@@ -1,7 +1,7 @@
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../l10n/l10n.dart';
@@ -690,13 +690,13 @@ Widget _periodTable({
 
 /// Show every N-th bottom-axis label so ~48 px separate them: 1 for a chart
 /// that fits every label. Total for ANY [count] (0, 1 → 1) and any [width]
-/// (an unlaid-out 0 width → the sparsest thinning): `num.clamp(lower, upper)`
+/// (an unlaid-out 0 width → the sparsest thinning; an unbounded / NaN width
+/// → every label, since `.floor()` would throw): `num.clamp(lower, upper)`
 /// THROWS when lower > upper, and `.clamp(2, count)` with a single period
 /// bucket (one session, or a lookback leaving one bar) crashed the Stats
 /// chart in layout (crash-issues-15, "Invalid argument(s): 2").
-@visibleForTesting
 int chartLabelEvery(double width, int count) {
-  if (count <= 1) return 1;
+  if (count <= 1 || !width.isFinite) return 1;
   final maxLabels = (width / 48).floor().clamp(2, count);
   return (count / maxLabels).ceil().clamp(1, count);
 }

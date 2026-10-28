@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tablelab/models/session_model.dart';
@@ -31,6 +32,8 @@ void main() {
       expect(chartLabelEvery(360, 1), 1);
       expect(chartLabelEvery(360, 0), 1);
       expect(chartLabelEvery(0, 1), 1);
+      expect(chartLabelEvery(double.infinity, 10), 1);
+      expect(chartLabelEvery(double.nan, 10), 1);
     });
 
     test('shows every label while they fit, then thins to ~48 px apart', () {
@@ -47,7 +50,12 @@ void main() {
   });
 
   group('MetricChartScreen with one period bucket', () {
-    for (final metric in [StatMetric.profit, StatMetric.sessions, StatMetric.hours]) {
+    for (final metric in [
+      StatMetric.profit,
+      StatMetric.sessions,
+      StatMetric.hours,
+      StatMetric.winLoss, // the separate _WinLossChart path
+    ]) {
       testWidgets('$metric renders a single-bar chart without throwing',
           (tester) async {
         await pumpApp(
@@ -62,10 +70,13 @@ void main() {
         );
         await tester.pump();
         expect(tester.takeException(), isNull, reason: '$metric');
+        // Pin the code path: the single bar is CHARTED, not routed to an empty
+        // state (which would silently stop exercising chartLabelEvery).
+        expect(find.byType(BarChart), findsOneWidget, reason: '$metric');
       });
     }
 
-    testWidgets('two sessions in the same week still make one bucket',
+    testWidgets('two sessions in the same month still make one (monthly) bucket',
         (tester) async {
       await pumpApp(
         tester,
@@ -79,6 +90,7 @@ void main() {
       );
       await tester.pump();
       expect(tester.takeException(), isNull);
+      expect(find.byType(BarChart), findsOneWidget);
     });
   });
 }
