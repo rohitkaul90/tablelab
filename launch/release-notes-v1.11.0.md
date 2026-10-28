@@ -8,56 +8,62 @@ Track: Android production, 100% (standing rule since 2026-09-01). iOS: App Store
 
 ### en-US
 ```
-• TableLab now also speaks Japanese, Traditional Chinese, Korean and Latin American Spanish. Pick your language in Settings → Language, or let it follow your phone.
-• New currencies: Japanese yen, New Taiwan dollar and Korean won.
-• Password reset links now work from any device or browser.
-• The feedback sheet has a close button.
-• AI coaching replies stay in English for now.
+• Now also in Japanese, Traditional Chinese, Korean and Latin American Spanish: Settings → Language, or follow your phone.
+• New currencies: Japanese yen, New Taiwan dollar, Korean won.
+• Password reset links work from any device or browser.
+• Fixed a crash when a Stats chart had a single period of data.
+• Every Stats tab stays visible and says what to log when empty.
+• Feedback sheet has a close button. AI coaching replies stay in English for now.
 ```
 
 ### es-ES
 ```
-• TableLab ahora también habla japonés, chino tradicional, coreano y español de Latinoamérica. Elige tu idioma en Ajustes → Idioma o deja que siga al de tu móvil.
+• Ahora también en japonés, chino tradicional, coreano y español latinoamericano (Ajustes → Idioma).
 • Nuevas monedas: yen japonés, dólar taiwanés y won coreano.
-• Los enlaces para restablecer la contraseña ya funcionan desde cualquier dispositivo o navegador.
-• La hoja de comentarios tiene un botón para cerrar.
-• Las respuestas del coaching con IA siguen en inglés por ahora.
+• Restablecer la contraseña funciona desde cualquier dispositivo o navegador.
+• Corregido un cierre cuando una gráfica de Estadísticas tenía un solo periodo.
+• Las pestañas de Estadísticas siguen visibles e indican qué registrar si están vacías.
+• Botón de cerrar en comentarios. El coaching con IA sigue en inglés.
 ```
 
 ### es-419
 ```
-• TableLab ahora también habla japonés, chino tradicional, coreano y español de Latinoamérica. Elige tu idioma en Ajustes → Idioma o deja que siga al de tu celular.
+• Ahora también en japonés, chino tradicional, coreano y español latinoamericano (Ajustes → Idioma).
 • Nuevas monedas: yen japonés, dólar taiwanés y won coreano.
-• Los enlaces para restablecer la contraseña ya funcionan desde cualquier dispositivo o navegador.
-• La hoja de comentarios tiene un botón para cerrar.
-• Las respuestas del coaching con IA siguen en inglés por ahora.
+• Restablecer la contraseña funciona desde cualquier dispositivo o navegador.
+• Corregimos un cierre cuando una gráfica de Estadísticas tenía un solo periodo.
+• Las pestañas de Estadísticas siguen visibles e indican qué registrar si están vacías.
+• Botón de cerrar en comentarios. El coaching con IA sigue en inglés.
 ```
 
 ### fr-FR
 ```
-• TableLab parle désormais aussi japonais, chinois traditionnel, coréen et espagnol d'Amérique latine. Choisis ta langue dans Paramètres → Langue, ou laisse-la suivre celle de ton téléphone.
-• Nouvelles devises : yen japonais, dollar taïwanais et won coréen.
-• Les liens de réinitialisation du mot de passe fonctionnent désormais depuis n'importe quel appareil ou navigateur.
-• La feuille de retour a un bouton Fermer.
-• Les réponses du coaching IA restent en anglais pour l'instant.
+• Désormais en japonais, chinois traditionnel, coréen et espagnol latino-américain (Paramètres → Langue).
+• Nouvelles devises : yen, dollar taïwanais, won coréen.
+• La réinitialisation du mot de passe fonctionne depuis tout appareil ou navigateur.
+• Correction d'un plantage quand un graphique des Stats n'avait qu'une période.
+• Chaque onglet des Stats reste visible et indique quoi enregistrer s'il est vide.
+• Bouton Fermer sur la feuille de retour. Le coaching IA reste en anglais.
 ```
 
 ### it-IT
 ```
-• TableLab ora parla anche giapponese, cinese tradizionale, coreano e spagnolo dell'America Latina. Scegli la lingua in Impostazioni → Lingua, oppure lascia che segua quella del telefono.
-• Nuove valute: yen giapponese, dollaro taiwanese e won coreano.
-• I link per reimpostare la password ora funzionano da qualsiasi dispositivo o browser.
-• La scheda feedback ha un pulsante per chiudere.
-• Le risposte del coaching IA restano in inglese per ora.
+• Ora anche in giapponese, cinese tradizionale, coreano e spagnolo latinoamericano (Impostazioni → Lingua).
+• Nuove valute: yen, dollaro taiwanese, won coreano.
+• Il reset della password funziona da qualsiasi dispositivo o browser.
+• Risolto un crash quando un grafico delle Statistiche aveva un solo periodo.
+• Ogni scheda delle Statistiche resta visibile e indica cosa registrare se è vuota.
+• Pulsante Chiudi nella scheda feedback. Il coaching IA resta in inglese.
 ```
 
 ### nl-NL
 ```
-• TableLab is nu ook beschikbaar in het Japans, Traditioneel Chinees, Koreaans en Latijns-Amerikaans Spaans. Kies je taal via Instellingen → Taal, of laat de app je telefoon volgen.
-• Nieuwe valuta's: Japanse yen, Nieuwe Taiwanese dollar en Koreaanse won.
-• Links om je wachtwoord te resetten werken nu vanaf elk apparaat of elke browser.
-• Het feedbackvenster heeft een sluitknop.
-• Antwoorden van de AI-coaching blijven voorlopig Engels.
+• Nu ook in het Japans, Traditioneel Chinees, Koreaans en Latijns-Amerikaans Spaans (Instellingen → Taal).
+• Nieuwe valuta's: yen, Taiwanese dollar, Koreaanse won.
+• Wachtwoord resetten werkt vanaf elk apparaat of elke browser.
+• Crash opgelost als een Stats-grafiek maar één periode had.
+• Elk Stats-tabblad blijft zichtbaar en zegt wat je moet loggen als het leeg is.
+• Sluitknop in het feedbackvenster. AI-coaching blijft voorlopig Engels.
 ```
 
 ### ja-JP
@@ -67,6 +73,8 @@ Track: Android production, 100% (standing rule since 2026-09-01). iOS: App Store
 • パスワード再設定のリンクが、どの端末・ブラウザからでも使えるようになりました。
 • フィードバック画面に閉じるボタンを追加。
 • AIコーチングの回答は当面英語のままです。
+• 統計のグラフにデータが1期間しかない場合にクラッシュする問題を修正。
+• 統計の各内訳タブは常に表示され、空のときは何を記録すればよいかを案内します。
 ```
 
 ### zh-TW
@@ -76,6 +84,8 @@ Track: Android production, 100% (standing rule since 2026-09-01). iOS: App Store
 • 重設密碼的連結現在可以在任何裝置或瀏覽器開啟。
 • 意見回饋頁面新增關閉按鈕。
 • AI 教練的回覆目前仍為英文。
+• 修正統計圖表只有一個期間的資料時當機的問題。
+• 統計的每個分析分頁都會持續顯示，空白時會說明該記錄什麼。
 ```
 
 ### ko-KR
@@ -85,6 +95,8 @@ Track: Android production, 100% (standing rule since 2026-09-01). iOS: App Store
 • 비밀번호 재설정 링크가 이제 어떤 기기나 브라우저에서도 작동해요.
 • 피드백 화면에 닫기 버튼이 생겼어요.
 • AI 코칭 답변은 당분간 영어로 제공돼요.
+• 통계 그래프에 데이터가 한 기간만 있을 때 앱이 종료되던 문제를 수정했어요.
+• 통계의 모든 분석 탭이 항상 표시되고, 비어 있으면 무엇을 기록할지 알려줘요.
 ```
 
 ## iOS "What's New" (App Store Connect, 1.11.0)
@@ -95,6 +107,8 @@ Same text per language as above. The Sign in with Apple line is NOT needed (it s
 
 - PR #122 — full-tag locale resolution (`kRegionalVariants`: es outside Spain → es_419; a lone shipped variant serves every device variant of its language), preference persisted as a BCP-47 tag, `intlLocaleCode`/`intlLocaleOf` (bare `zh` ARB formats as `zh_TW`), `platformLocaleTag` (`zh` declared as `zh-Hant` on Android/iOS), ARB checker accepts numeric regions, JPY/TWD/KRW currencies, thousands-grouped stakes parsing (`¥1,000/¥2,000`), monotone buy-in band edges.
 - PR #___ — ja / zh (Traditional, Taiwan) / ko / es_419 ARBs (~1,377 keys each, Claude-translated with `tool/l10n/glossary.json` registers + pinned terms; es_419 adapted from es), `locales_config.xml` + `Info.plist` declarations, endonyms, spot-check and overflow tests.
+- #125 Stats metric chart crash on a single period bucket (crash-issues-15); #126 every Stats breakdown tab always visible with a per-tab "what to log" empty state (11 new strings Ã 8 locales)
+- #125 Stats metric chart crash on a single period bucket (crash-issues-15); #126 every Stats breakdown tab always visible with a per-tab "what to log" empty state (11 new strings × 8 locales)
 - Carried from 1.10.x (never shipped on Android): #109 feedback-sheet close button, #117 cross-device password reset (token-hash recovery links), #110 in-app copy naming iOS.
 
 Data Safety: no new permissions or SDKs on Android (`sign_in_with_apple` is iOS-only code; `app_links` was already a transitive dependency). `AndroidManifest.xml` unchanged since 1.9.0. No form change expected — owner to confirm before rollout.
