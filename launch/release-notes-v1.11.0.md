@@ -1,6 +1,6 @@
 # Release notes — v1.11.0 (+20)
 
-Cut 2026-__-__ from `_______` (tag `v1.11.0`, bump via PR #___). Previous production release on Android: v1.9.0+16 (2026-10-16) — builds 17–19 (1.10.0–1.10.2) were iOS-only and never went to Play, so the Android notes also carry their user-facing fixes. iOS: 1.10.2 (19) was the first App Store submission; 1.11.0 (20) is the first update.
+Cut 2026-10-28 (tag `v1.11.0` on the squash-merge of bump PR #127; hash recorded at tag time). Previous production release on Android: v1.9.0+16 (2026-10-16) — builds 17–19 (1.10.0–1.10.2) were iOS-only and never went to Play, so the Android notes also carry their user-facing fixes. iOS: 1.10.2 (19) was the first App Store submission; 1.11.0 (20) is the first update.
 
 Track: Android production, 100% (standing rule since 2026-09-01). iOS: App Store Connect → "+ Version" 1.11.0 → build 20 → submit (never pull 1.10.2 from review).
 
