@@ -261,12 +261,18 @@ class AnalyticsFactor {
   /// stakes or a location name).
   final String Function(AppLocalizations l10n, String key)? labelFn;
 
+  /// What to log before this breakdown has two groups to compare; rendered
+  /// by AnalyticsFactorTab in place of the rows. Every factor has one — the
+  /// tab is always visible.
+  final String emptyMessage;
+
   const AnalyticsFactor({
     required this.id,
     required this.tabLabel,
     required this.title,
     required this.sessions,
     required this.keyFn,
+    required this.emptyMessage,
     this.orderedKeys,
     this.isTournament = false,
     this.naturalCompare,
@@ -308,12 +314,16 @@ String? locationKey(SessionModel s) =>
 List<AnalyticsFactor> analyticsFactors(
     AnalyticsData d, AppLocalizations l10n) {
   final filtered = d.filtered;
-  if (filtered.isEmpty) return const [];
   final mixedTournament = d.showingTournaments && !d.showingCash;
-  return [
-    if (d.showingCash)
-      AnalyticsFactor(
+  // EVERY factor is always listed, with or without data (owner decision
+  // 2026-10-28): the tab strip shows users what Stats can tell them once they
+  // log sessions. A factor with fewer than two groups renders its
+  // emptyMessage (what to log) instead of rows — never a blank tab, and never
+  // a tab that silently disappears.
+  return <AnalyticsFactor>[
+    AnalyticsFactor(
         id: 'stakes',
+        emptyMessage: l10n.statsFactorEmptyStakes,
         tabLabel: l10n.statsFactorStakes,
         title: l10n.statsFactorStakesTitle,
         sessions: d.cashSessions,
@@ -332,9 +342,9 @@ List<AnalyticsFactor> analyticsFactors(
           return a.compareTo(b);
         },
       ),
-    if (d.showingTournaments)
-      AnalyticsFactor(
+    AnalyticsFactor(
         id: 'buyIns',
+        emptyMessage: l10n.statsFactorEmptyBuyIns,
         tabLabel: l10n.statsFactorBuyIns,
         title: l10n.statsFactorBuyInsTitle,
         sessions: d.tSessions,
@@ -347,10 +357,9 @@ List<AnalyticsFactor> analyticsFactors(
         isTournament: true,
       ),
     // Field size — only when enough sessions have entrant counts.
-    if (d.showingTournaments &&
-        d.tSessions.where((s) => (s.totalEntrants ?? 0) > 0).length >= 2)
-      AnalyticsFactor(
+    AnalyticsFactor(
         id: 'fieldSize',
+        emptyMessage: l10n.statsFactorEmptyFieldSize,
         tabLabel: l10n.statsFactorFieldSize,
         title: l10n.statsFactorFieldSizeTitle,
         sessions:
@@ -361,9 +370,9 @@ List<AnalyticsFactor> analyticsFactors(
             fieldSizeBucketLabel(l10n, FieldSizeBucket.values.byName(k)),
         isTournament: true,
       ),
-    if (d.showingCash && d.showingTournaments)
-      AnalyticsFactor(
+    AnalyticsFactor(
         id: 'gameType',
+        emptyMessage: l10n.statsFactorEmptyGameType,
         tabLabel: l10n.statsFactorGameType,
         title: l10n.statsFactorGameTypeTitle,
         sessions: filtered,
@@ -374,6 +383,7 @@ List<AnalyticsFactor> analyticsFactors(
       ),
     AnalyticsFactor(
       id: 'day',
+      emptyMessage: l10n.statsFactorEmptyDay,
       tabLabel: l10n.statsFactorDay,
       title: l10n.statsFactorDayTitle,
       sessions: filtered,
@@ -385,10 +395,9 @@ List<AnalyticsFactor> analyticsFactors(
     ),
     // Time of Day — cash only; less actionable for tournaments. Data-gated:
     // imported sessions often have no start time, and those are skipped.
-    if (d.showingCash &&
-        d.cashSessions.where((s) => timeOfDayKey(s) != null).length >= 2)
-      AnalyticsFactor(
+    AnalyticsFactor(
         id: 'time',
+        emptyMessage: l10n.statsFactorEmptyTime,
         tabLabel: l10n.statsFactorTime,
         title: l10n.statsFactorTimeTitle,
         sessions: d.cashSessions,
@@ -399,9 +408,9 @@ List<AnalyticsFactor> analyticsFactors(
             timeOfDayBucketLabel(l10n, TimeOfDayBucket.values.byName(k)),
       ),
     // Session Length — cash only (tournament duration = finish depth).
-    if (d.showingCash)
-      AnalyticsFactor(
+    AnalyticsFactor(
         id: 'length',
+        emptyMessage: l10n.statsFactorEmptyLength,
         tabLabel: l10n.statsFactorLength,
         title: l10n.statsFactorLengthTitle,
         sessions: d.cashSessions,
@@ -411,9 +420,9 @@ List<AnalyticsFactor> analyticsFactors(
             sessionLengthBucketLabel(l10n, SessionLengthBucket.values.byName(k)),
       ),
     // Table Quality — cash only, when any session is rated.
-    if (d.showingCash && d.cashSessions.any((s) => s.tableQuality != null))
-      AnalyticsFactor(
+    AnalyticsFactor(
         id: 'table',
+        emptyMessage: l10n.statsFactorEmptyTable,
         tabLabel: l10n.statsFactorTable,
         title: l10n.statsFactorTableTitle,
         sessions:
@@ -423,9 +432,9 @@ List<AnalyticsFactor> analyticsFactors(
         labelFn: (l10n, k) =>
             '$k★ ${tableQualityKeyLabel(l10n, int.tryParse(k))}',
       ),
-    if (_hasMultipleLocations(filtered))
-      AnalyticsFactor(
+    AnalyticsFactor(
         id: 'location',
+        emptyMessage: l10n.statsFactorEmptyLocation,
         tabLabel: l10n.statsFactorLocation,
         title: l10n.statsFactorLocationTitle,
         sessions:
@@ -433,9 +442,9 @@ List<AnalyticsFactor> analyticsFactors(
         keyFn: (s) => locationKey(s)!,
         isTournament: mixedTournament,
       ),
-    if (d.hasLiveInView && d.hasOnlineInView)
-      AnalyticsFactor(
+    AnalyticsFactor(
         id: 'venue',
+        emptyMessage: l10n.statsFactorEmptyVenue,
         tabLabel: l10n.statsFactorVenue,
         title: l10n.statsFactorVenueTitle,
         sessions: filtered,
@@ -446,6 +455,10 @@ List<AnalyticsFactor> analyticsFactors(
       ),
   ];
 }
+
+/// Distinct non-empty grouping keys a factor would render as rows.
+int distinctGroupCount(AnalyticsFactor f) =>
+    f.sessions.map(f.keyFn).where((k) => k.isNotEmpty).toSet().length;
 
 // ─── Summary tab ──────────────────────────────────────────────────────────────
 
@@ -592,6 +605,41 @@ class AnalyticsFactorTab extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final t = factor.isTournament;
+    if (distinctGroupCount(factor) < 2) {
+      // Nothing to compare yet: say what to log (and whether the Stats filter
+      // is what is hiding sessions) instead of legend + sort over no rows.
+      final narrowed = data.filtered.length != data.sessions.length;
+      return ListView(
+        padding: statsTabPadding(context, top: 8),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 32, 16, 8),
+            child: Column(
+              children: [
+                Icon(Icons.insights_outlined,
+                    size: 36, color: theme.colorScheme.outline),
+                const SizedBox(height: 12),
+                Text(
+                  factor.emptyMessage,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+                if (narrowed) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.statsFactorFilteredHint,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.outline),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      );
+    }
     return ListView(
       padding: statsTabPadding(context, top: 8),
       children: [
@@ -637,6 +685,7 @@ class AnalyticsFactorTab extends StatelessWidget {
         ),
         _InsightCard(
           title: factor.title,
+          emptyMessage: l10n.statsFactorNeedTwoGroups,
           sessions: factor.sessions,
           keyFn: factor.keyFn,
           orderedKeys: factor.orderedKeys,
@@ -708,15 +757,6 @@ class AnalyticsTipsTab extends StatelessWidget {
     );
   }
 
-}
-
-bool _hasMultipleLocations(List<SessionModel> sessions) {
-  final locs = sessions
-      .map((s) => s.location)
-      .whereType<String>()
-      .where((l) => l.isNotEmpty)
-      .toSet();
-  return locs.length > 1;
 }
 
 // ─── Metric summary (one per row, tappable → full-screen trend chart) ─────────
@@ -1179,6 +1219,11 @@ class _InsightCard extends StatelessWidget {
   /// Localized label for a group key; null = the key is display text.
   final String Function(AppLocalizations l10n, String key)? labelFn;
 
+  /// Shown instead of the card when fewer than two groups exist. Null (the
+  /// flag-gated Overview list) hides the card entirely; the factor tabs pass
+  /// a message, because an empty tab with no explanation reads as a bug.
+  final String? emptyMessage;
+
   const _InsightCard({
     required this.title,
     required this.sessions,
@@ -1189,6 +1234,7 @@ class _InsightCard extends StatelessWidget {
     this.sort = InsightSort.rate,
     this.naturalCompare,
     this.labelFn,
+    this.emptyMessage,
   });
 
   @override
@@ -1199,7 +1245,23 @@ class _InsightCard extends StatelessWidget {
       if (k.isEmpty) continue;
       groups.putIfAbsent(k, () => []).add(s);
     }
-    if (groups.length < 2) return const SizedBox.shrink();
+    if (groups.length < 2) {
+      final msg = emptyMessage;
+      if (msg == null) return const SizedBox.shrink();
+      final theme = Theme.of(context);
+      // Same note style as the Summary tab's statsNoMatch.
+      return Padding(
+        padding: const EdgeInsets.only(top: 24),
+        child: Center(
+          child: Text(
+            msg,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.outline),
+          ),
+        ),
+      );
+    }
 
     final stats =
         groups.map((k, v) => MapEntry(k, _GroupStats.from(v, displayCurrency)));

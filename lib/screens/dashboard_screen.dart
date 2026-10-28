@@ -133,7 +133,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildTabs(BuildContext context, List<SessionModel> sessions) {
     // Everything the tabs render is computed ONCE per build; the factor list
-    // is data-gated, so the tab strip only shows breakdowns that exist.
+    // lists EVERY breakdown; one without two groups shows what to log.
     final homeCurrency =
         ref.watch(profileProvider).valueOrNull?.displayCurrency;
     final l10n = context.l10n;
