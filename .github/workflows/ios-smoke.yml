@@ -16,6 +16,13 @@ on:
       - '.github/workflows/ios-smoke.yml'
   workflow_dispatch:
 
+# One run per PR branch: a newer push (or a base-branch change, which also fires
+# pull_request) supersedes the older ~13-minute macOS job instead of queueing
+# beside it — three copies ran at once on PR #123 before this guard.
+concurrency:
+  group: ios-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   smoke:
     name: Build + launch on simulator
