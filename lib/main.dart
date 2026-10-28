@@ -201,10 +201,13 @@ class _PokerTrackerAppState extends ConsumerState<PokerTrackerApp>
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       // The resolved locale is always one of supportedLocales (see
-      // resolveLocale), so no localeResolutionCallback is needed. The Global*
-      // delegates bundled in localizationsDelegates localize the Material date
-      // and time pickers for free.
+      // resolveLocale). The Global* delegates bundled in localizationsDelegates
+      // localize the Material date/time pickers for free — but they read the
+      // bare `zh` ARB locale as SIMPLIFIED Chinese, so materialLocaleFor
+      // presents it as zh_Hant_TW (the callback result is used verbatim).
       locale: locale,
+      localeResolutionCallback: (device, _) =>
+          materialLocaleFor(device ?? locale),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: const AuthGate(),

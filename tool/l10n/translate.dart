@@ -284,7 +284,7 @@ Rules:
 - Keep capitalisation style: an ALL-CAPS source stays ALL CAPS; a Title Case button stays short.
 - No quotes, no markdown, no explanations, no trailing full stops the source doesn't have.
 - $prevRule
-- Keep these poker terms in English, untranslated: ${keep.join(', ')}.
+- Keep these poker terms in English, untranslated, in the SOURCE string's capitalisation (a Title Case chip "Heads-up" stays "Heads-up", never "heads-up"; "Fold" stays "Fold"): ${keep.join(', ')}.
 - Use exactly these renderings for these words: ${pinned.join('; ')}.
 ''';
 }

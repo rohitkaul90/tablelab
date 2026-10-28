@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tablelab/l10n/l10n.dart' show localeFromLanguageTag;
+import 'package:tablelab/l10n/l10n.dart' show AppLocalizations;
 import 'package:tablelab/models/session_model.dart';
 import 'package:tablelab/providers/providers.dart';
 import 'package:tablelab/screens/log_session_screen.dart';
@@ -32,10 +32,13 @@ void main() {
     expect(find.text('Tournament'), findsOneWidget);
   });
 
-  for (final code in ['es', 'es-419', 'fr', 'it', 'nl', 'ja', 'ko', 'zh']) {
+  // Every non-English ARB, derived so a new locale is covered automatically.
+  for (final locale in AppLocalizations.supportedLocales
+      .where((l) => l.languageCode != 'en')) {
+    final code = locale.toLanguageTag();
     testWidgets('renders in $code on a 360dp phone without overflow',
         (tester) async {
-      await pumpForm(tester, localeFromLanguageTag(code));
+      await pumpForm(tester, locale);
       expect(tester.takeException(), isNull);
       // The English title must be gone — the ARB for this locale is in use.
       expect(find.text('Log Session'), findsNothing);

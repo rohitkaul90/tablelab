@@ -97,3 +97,16 @@ Locale localeFromLanguageTag(String tag) {
 /// those surfaces can't disagree.
 bool isEnglishUi(AppLocalizations l10n) =>
     l10n.localeName.split(RegExp('[_-]')).first == 'en';
+
+/// The locale handed to `MaterialApp` for a UI locale. The Global Material/
+/// Cupertino delegates resolve bare `zh` to SIMPLIFIED chrome (确定/取消, 周三
+/// date-picker headers, Simplified text-selection menu) while the app's own
+/// strings are Traditional, so the bare-`zh` ARB is presented as `zh_Hant_TW`;
+/// `AppLocalizations` still resolves that to the `zh` ARB (language-code
+/// fallback in the generated lookup). Wired as `localeResolutionCallback` in
+/// main.dart and the test harness — the callback's result is used as-is, so
+/// `zh_Hant_TW` need not be in `supportedLocales`.
+Locale materialLocaleFor(Locale ui) => ui == const Locale('zh')
+    ? const Locale.fromSubtags(
+        languageCode: 'zh', scriptCode: 'Hant', countryCode: 'TW')
+    : ui;

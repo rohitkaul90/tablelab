@@ -1,23 +1,21 @@
 {
-  "_comment": "Locked poker glossary for tool/l10n/translate.dart. `keepInEnglish` terms are never translated (standard table vocabulary in every market). `terms` pins the per-locale rendering of words that DO translate so every screen uses the same word. `register` sets the form of address; its keys ARE the target-locale list (ARB suffix: es_419 → app_es_419.arb; Traditional Chinese is the bare `zh` ARB because gen-l10n needs a base file per language — intl/platform mapping lives in lib/l10n/l10n.dart). `previousTranslationRule` overrides, per locale, how an existing target string is treated (es_419 is seeded from app_es.arb and must be ADAPTED, not preserved).",
+  "_comment": "Locked poker glossary for tool/l10n/translate.dart. `keepInEnglish` terms are never translated (standard table vocabulary in every market). `terms` pins the per-locale rendering of words that DO translate so every screen uses the same word. `register` sets the form of address; its keys ARE the target-locale list (ARB suffix: es_419 → app_es_419.arb; Traditional Chinese is the bare `zh` ARB because gen-l10n needs a base file per language — intl/platform mapping lives in lib/l10n/l10n.dart). `previousTranslationRule` (optional, per locale) overrides how an existing target string is treated — a ONE-SHOT tool: add it to seed or repair a locale, run translate.dart, then DELETE it, or the next English change churns reviewer-edited wording (the default rule preserves a reviewed translation). `keepInEnglish` terms take the SOURCE string's capitalisation (a Title Case chip stays `Heads-up`).",
   "register": {
     "es": "informal (tú), neutral Latin/European Spanish",
-    "es_419": "Latin American Spanish (Mexico-neutral): informal tú, `ustedes` for plural (never vosotros), Latin American vocabulary (celular, computadora, registrar, aplicación, ganancia); diverge from European Spanish only where a Latin American player would say it differently",
+    "es_419": "Latin American Spanish (Mexico-neutral): informal tú, `ustedes` for plural (never vosotros), Latin American vocabulary (celular, computadora, registrar, aplicación, ganancia)",
     "fr": "informal (tu)",
     "it": "informal (tu)",
-    "ja": "polite です/ます form; concise UI Japanese; poker terms in katakana as Japanese players use them (フロップ, ターン, リバー, オールイン, レンジ, バンクロール); half-width digits, no excessive honorifics",
-    "ko": "polite-informal 해요체; concise UI Korean; poker terms as Korean players use them (플랍, 턴, 리버, 올인, 레인지, 뱅크롤)",
+    "ja": "polite です/ます form; concise UI Japanese; half-width digits, no excessive honorifics; the keep-in-English poker terms stay in Latin script exactly as listed (Flop, Turn, River, all-in, fold…), never in katakana",
+    "ko": "polite-informal 해요체; concise UI Korean; the keep-in-English poker terms stay in Latin script exactly as listed (Flop, Turn, River, all-in, fold…), never transliterated",
     "nl": "informal (je/jij)",
-    "zh": "Traditional Chinese as used in Taiwan (繁體中文, 台灣用語), informal 你; Taiwanese poker vocabulary (翻牌/轉牌/河牌, 全下, 範圍, 底池, 籌碼); full-width punctuation, half-width digits"
+    "zh": "Traditional Chinese as used in Taiwan (繁體中文, 台灣用語), informal 你; full-width punctuation, half-width digits; the keep-in-English poker terms stay in Latin script exactly as listed (Flop, Turn, River, all-in, fold…), never as 翻牌/轉牌/河牌/全下"
   },
-  "previousTranslationRule": {
-    "es_419": "`previousTranslation` is the European/neutral Spanish rendering, NOT a native Latin American review: reuse it wherever Latin American usage is identical, and change vocabulary, verb forms (ustedes, never vosotros) and idiom wherever a Mexican or Latin American player would say it differently."
-  },
+  "previousTranslationRule": {},
   "keepInEnglish": [
     "fold", "check", "call", "raise", "bet", "all-in", "c-bet", "3-bet", "4-bet", "5-bet",
     "squeeze", "float", "barrel", "donk", "limp", "straddle", "rake",
     "nit", "fish", "TAG", "LAG", "maniac", "calling station",
-    "bankroll", "tilt", "bubble", "showdown", "heads-up", "6-max", "full ring",
+    "tilt", "bubble", "showdown", "heads-up", "6-max", "full ring",
     "SPR", "GTO", "EV", "ITM", "ICM", "ROI", "bb/100", "BB", "bb",
     "Pre-flop", "Flop", "Turn", "River",
     "BTN", "SB", "BB", "UTG", "UTG+1", "UTG+2", "MP", "HJ", "CO", "IP", "OOP",
@@ -25,6 +23,7 @@
     "TableLab", "MagpiQ", "Google Play", "Supabase"
   ],
   "terms": {
+    "Bankroll":     { "es": "bankroll",      "es_419": "bankroll",      "fr": "bankroll",        "it": "bankroll",      "ja": "バンクロール",     "ko": "뱅크롤",     "nl": "bankroll",    "zh": "bankroll" },
     "Tournament":   { "es": "Torneo",        "es_419": "Torneo",        "fr": "Tournoi",         "it": "Torneo",        "ja": "トーナメント",     "ko": "토너먼트",   "nl": "Toernooi",    "zh": "錦標賽" },
     "Tournaments":  { "es": "Torneos",       "es_419": "Torneos",       "fr": "Tournois",        "it": "Tornei",        "ja": "トーナメント",     "ko": "토너먼트",   "nl": "Toernooien",  "zh": "錦標賽" },
     "Cash game":    { "es": "Cash",          "es_419": "Cash",          "fr": "Cash game",       "it": "Cash game",     "ja": "キャッシュゲーム", "ko": "캐시게임",   "nl": "Cashgame",    "zh": "現金桌" },

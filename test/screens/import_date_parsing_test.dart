@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
+import 'package:tablelab/l10n/l10n.dart' show AppLocalizations, intlLocaleCode;
 import 'package:tablelab/screens/import_mapping_screen.dart';
 
 /// Imported CSV/Excel values carry English month names and AM/PM markers no
@@ -7,7 +8,9 @@ import 'package:tablelab/screens/import_mapping_screen.dart';
 /// `Intl.defaultLocale` is a non-English UI language (locale_provider.dart
 /// sets it) — the parsers are pinned to en_US for that reason.
 void main() {
-  for (final uiLocale in ['en', 'es', 'es_419', 'fr', 'it', 'nl', 'ja', 'ko', 'zh_TW']) {
+  // Every shipped UI locale's intl id (zh → zh_TW, es_419), derived so a new
+  // ARB is covered automatically.
+  for (final uiLocale in AppLocalizations.supportedLocales.map(intlLocaleCode)) {
     group('under UI locale $uiLocale', () {
       test('English month names still parse', () {
         Intl.withLocale(uiLocale, () {
