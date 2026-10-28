@@ -21,6 +21,8 @@ Widget wrapApp(
     overrides: overrides,
     child: MaterialApp(
       locale: locale,
+      // Same chrome-locale mapping as PokerTrackerApp (bare zh → zh_Hant_TW).
+      localeResolutionCallback: (device, _) => materialLocaleFor(device ?? locale),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: home,

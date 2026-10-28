@@ -543,9 +543,9 @@ const Map<String, double> _ratesPerUsd = {
   'AUD': 1.59,
   'NZD': 1.73,
   'INR': 84.5,
-  'JPY': 150.0,
+  'JPY': 158.0,
   'TWD': 32.0,
-  'KRW': 1400.0,
+  'KRW': 1470.0,
 };
 
 /// Converts [amount] from [from] currency to [to] currency.

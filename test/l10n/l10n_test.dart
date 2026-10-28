@@ -15,6 +15,8 @@ void main() {
         ),
       );
 
+  materialChromeTests();
+
   testWidgets('defaults to English', (tester) async {
     await pumpApp(tester, probe());
     expect(find.text('Hands|Language'), findsOneWidget);
@@ -26,6 +28,10 @@ void main() {
       'fr': 'Mains|Langue',
       'it': 'Mani|Lingua',
       'nl': 'Handen|Taal',
+      'ja': 'ハンド|言語',
+      'ko': '핸드|언어',
+      'zh': '手牌|語言',
+      'es-419': 'Manos|Idioma',
     };
     for (final e in expected.entries) {
       await pumpApp(tester, probe(), locale: localeFromLanguageTag(e.key));
@@ -81,5 +87,29 @@ void main() {
     expect(ios, platformTags,
         reason:
             'Info.plist CFBundleLocalizations must list exactly the supported locales');
+  });
+}
+
+/// The Material/Cupertino chrome must follow the SCRIPT of the Traditional
+/// Chinese UI, not the bare `zh` ARB locale (which the Global delegates read as
+/// Simplified): date pickers, OK/Cancel, the text-selection menu.
+void materialChromeTests() {
+  testWidgets('bare-zh UI gets Traditional Material chrome', (tester) async {
+    late BuildContext ctx;
+    await pumpApp(
+      tester,
+      Builder(builder: (c) {
+        ctx = c;
+        return Scaffold(body: Text(c.l10n.navHands));
+      }),
+      locale: const Locale('zh'),
+    );
+    expect(find.text('手牌'), findsOneWidget, reason: 'app strings = zh ARB');
+    expect(Localizations.localeOf(ctx).scriptCode, 'Hant');
+    expect(MaterialLocalizations.of(ctx).okButtonLabel, '確定');
+    expect(MaterialLocalizations.of(ctx).cancelButtonLabel, '取消');
+    expect(MaterialLocalizations.of(ctx).pasteButtonLabel, '貼上',
+        reason: 'Simplified would be 粘贴');
+    expect(materialLocaleFor(const Locale('ja')), const Locale('ja'));
   });
 }

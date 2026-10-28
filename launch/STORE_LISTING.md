@@ -86,7 +86,7 @@ FREE & PRIVATE
 • No ads. We never sell your data.
 • Your records are private to your account, protected by row-level security.
 
-Available in English, Spanish, French, Italian and Dutch, on Android and on the web at tablelab.app.
+Available in English, Spanish (Spain and Latin America), French, Italian, Dutch, Japanese, Traditional Chinese and Korean, on Android and on the web at tablelab.app.
 
 Built and operated by MagpiQ. Questions or feedback? support@tablelab.app
 ```
@@ -157,7 +157,7 @@ Free poker bankroll tracker: log cash and tournament sessions, replay hands, run
 The Play full description above, verbatim, with two edits:
 - Under **FREE & PRIVATE** add the bullet `• Sign in with Apple, Google, or email.`
 - The availability line (second-to-last paragraph; keep the closing MagpiQ / support@ line) →
-  `Available in English, Spanish, French, Italian and Dutch, on iPhone, Android and on the web at tablelab.app.`
+  `Available in English, Spanish (Spain and Latin America), French, Italian, Dutch, Japanese, Traditional Chinese and Korean, on iPhone, Android and on the web at tablelab.app.`
 
 ## What's New (first iOS release)
 ```
@@ -234,17 +234,21 @@ cropped) and Claude normalises them with ffmpeg: scale to 1179 wide, pad the top
 image's own top-edge colour (never centre-crop — it clips the right edge). Done 2026-10-21 →
 `~/Downloads/appstore-medium/*.png`.
 
-## Localized listings (es-ES / fr-FR / it-IT / nl-NL)
+## Localized listings (es-ES / fr-FR / it-IT / nl-NL / ja / zh-Hant / ko / es-MX)
 Description + name: reuse `STORE_LISTING_translations.md` with the same two edits as the English
 description, using these lines (the availability line replaces the existing one in each
 translation; the sign-in bullet goes under the "no ads" bullet):
 
 | | Sign-in bullet | Availability line |
 |---|---|---|
-| es | `• Inicia sesión con Apple, Google o tu email.` | `Disponible en español, inglés, francés, italiano y neerlandés, en iPhone, Android y en la web en tablelab.app.` |
-| fr | `• Connexion avec Apple, Google ou par e-mail.` | `Disponible en français, anglais, espagnol, italien et néerlandais, sur iPhone, Android et sur le web à tablelab.app.` |
-| it | `• Accedi con Apple, Google o email.` | `Disponibile in italiano, inglese, spagnolo, francese e olandese, su iPhone, Android e sul web su tablelab.app.` |
-| nl | `• Log in met Apple, Google of e-mail.` | `Beschikbaar in het Nederlands, Engels, Spaans, Frans en Italiaans, op iPhone, Android en op het web via tablelab.app.` |
+| es | `• Inicia sesión con Apple, Google o tu email.` | `Disponible en español (España y Latinoamérica), inglés, francés, italiano, neerlandés, japonés, chino tradicional y coreano, en iPhone, Android y en la web en tablelab.app.` |
+| fr | `• Connexion avec Apple, Google ou par e-mail.` | `Disponible en français, anglais, espagnol (Espagne et Amérique latine), italien, néerlandais, japonais, chinois traditionnel et coréen, sur iPhone, Android et sur le web à tablelab.app.` |
+| it | `• Accedi con Apple, Google o email.` | `Disponibile in italiano, inglese, spagnolo (Spagna e America Latina), francese, olandese, giapponese, cinese tradizionale e coreano, su iPhone, Android e sul web su tablelab.app.` |
+| nl | `• Log in met Apple, Google of e-mail.` | `Beschikbaar in het Nederlands, Engels, Spaans (Spanje en Latijns-Amerika), Frans, Italiaans, Japans, Traditioneel Chinees en Koreaans, op iPhone, Android en op het web via tablelab.app.` |
+| ja | `• Apple、Google、またはメールでサインイン。` | `英語、スペイン語、フランス語、イタリア語、オランダ語、日本語、繁体字中国語、韓国語に対応。iPhone、Android、ウェブ（tablelab.app）で利用できます。` |
+| zh-Hant | `• 使用 Apple、Google 或 email 登入。` | `支援英文、西班牙文、法文、義大利文、荷蘭文、日文、繁體中文與韓文，可在 iPhone、Android 與網頁版 tablelab.app 使用。` |
+| ko | `• Apple, Google 또는 이메일로 로그인.` | `영어, 스페인어, 프랑스어, 이탈리아어, 네덜란드어, 일본어, 중국어(번체), 한국어 지원. iPhone, Android와 웹(tablelab.app)에서 사용할 수 있어요.` |
+| es-MX | `• Inicia sesión con Apple, Google o tu correo.` | `Disponible en español (Latinoamérica y España), inglés, francés, italiano, neerlandés, japonés, chino tradicional y coreano, en iPhone, Android y en la web en tablelab.app.` |
 
 Short fields (poker terms deliberately kept in English):
 
@@ -254,8 +258,18 @@ Short fields (poker terms deliberately kept in English):
 | fr | `Sessions, coaching IA, equity` | `Tracker de bankroll poker gratuit : sessions cash et tournois, replays de mains, calculs d'equity, ICM et variance, et un coaching IA qui te dit quoi corriger.` |
 | it | `Sessioni, coaching IA, equity` | `Tracker di bankroll poker gratuito: registra sessioni cash e tornei, rivedi le mani, calcola equity, ICM e varianza e ricevi coaching con IA.` |
 | nl | `Sessies, AI-coaching en equity` | `Gratis poker bankroll tracker: log cash- en toernooisessies, speel handen opnieuw af, bereken equity, ICM en variantie en krijg AI-coaching.` |
+| ja | `セッション、AIコーチング、エクイティ` | `無料のポーカーバンクロールトラッカー：キャッシュとトーナメントのセッションを記録、ハンドをリプレイ、エクイティ・ICM・分散を計算、AIコーチングで改善点がわかる。` |
+| zh-Hant | `場次、AI 教練與勝率` | `免費撲克 bankroll 追蹤：記錄現金桌與錦標賽場次、重播手牌、計算勝率、ICM 與變異數，並由 AI 教練告訴你該修正什麼。` |
+| ko | `세션, AI 코칭, 에퀴티` | `무료 포커 뱅크롤 트래커: 캐시게임과 토너먼트 세션을 기록하고, 핸드를 리플레이하고, 에퀴티·ICM·분산을 계산하고, AI 코칭으로 고칠 점을 확인하세요.` |
+| es-MX | `Sesiones, coaching IA y equity` | `Tracker de bankroll de póker gratis: registra sesiones de cash y torneos, reproduce manos, calcula equity, ICM y varianza y recibe coaching con IA.` |
 
 Keywords per locale (≤100): es `bankroll,manos,historial,ICM,odds,calculadora,diario,registro,estudio,GTO,solver,cash,torneo,stats` ·
 fr `bankroll,mains,historique,ICM,cotes,calculateur,journal,suivi,étude,GTO,solver,cash,tournoi,stats` ·
 it `bankroll,mani,storico,ICM,odds,calcolatore,diario,registro,studio,GTO,solver,cash,torneo,stats` ·
-nl `bankroll,handen,historie,ICM,odds,calculator,dagboek,logboek,studie,GTO,solver,cash,toernooi,stats`.
+nl `bankroll,handen,historie,ICM,odds,calculator,dagboek,logboek,studie,GTO,solver,cash,toernooi,stats` ·
+ja `ポーカー,バンクロール,収支,ハンド,ICM,オッズ,計算機,記録,GTO,ソルバー,トーナメント,キャッシュ,統計` ·
+zh-Hant `撲克,德州撲克,bankroll,收支,手牌,ICM,賠率,計算機,記錄,GTO,solver,錦標賽,現金桌,統計` ·
+ko `포커,홀덤,뱅크롤,수익,핸드,ICM,오즈,계산기,기록,GTO,솔버,토너먼트,캐시게임,통계` ·
+es-MX same as es.
+
+App Store Connect has no es-419 locale — use **Spanish (Mexico)** for the Latin American text (Play uses `es-419`). Name + full description for the four new languages: `STORE_LISTING_translations.md` (the iPhone availability line above replaces the Android one; the sign-in bullet goes under the "no ads" bullet).

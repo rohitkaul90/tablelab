@@ -13,7 +13,7 @@ void main() {
   for (final locale in AppLocalizations.supportedLocales) {
     final l10n = lookupAppLocalizations(locale);
 
-    testWidgets('variance calculator in ${locale.languageCode} at 360×800',
+    testWidgets('variance calculator in ${locale.toLanguageTag()} at 360×800',
         (tester) async {
       await pumpApp(
         tester,
@@ -26,7 +26,7 @@ void main() {
       expect(find.text(l10n.varianceCalculate), findsOneWidget);
     });
 
-    testWidgets('ICM calculator in ${locale.languageCode} at 360×800',
+    testWidgets('ICM calculator in ${locale.toLanguageTag()} at 360×800',
         (tester) async {
       await pumpApp(
         tester,

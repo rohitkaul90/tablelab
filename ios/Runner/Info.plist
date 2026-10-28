@@ -67,6 +67,10 @@
 			<string>fr</string>
 			<string>it</string>
 			<string>nl</string>
+			<string>ja</string>
+			<string>ko</string>
+			<string>zh-Hant</string>
+			<string>es-419</string>
 		</array>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
