@@ -3803,6 +3803,28 @@
   "@statsFactorNeedTwoGroups": {
     "description": "Empty state inside a Stats breakdown tab (Day / Time / Table quality / Stakes…) when every logged session lands in the same group, so there is nothing to compare side by side. The tab stays visible; this text explains why the card is empty."
   },
+  "statsFactorEmptyStakes": "Log cash sessions at two or more different stakes to compare them here.",
+  "@statsFactorEmptyStakes": { "description": "Empty state of the Stats → Stakes tab: what the user must log before the breakdown has two groups to compare. The tab is always visible so users discover what Stats can show." },
+  "statsFactorEmptyBuyIns": "Log tournaments at two or more different buy-in levels to compare them here.",
+  "@statsFactorEmptyBuyIns": { "description": "Empty state of the Stats → Buy-ins tab (tournament buy-in bands)." },
+  "statsFactorEmptyFieldSize": "Add the number of entrants to two or more tournaments, with different field sizes, to compare them here.",
+  "@statsFactorEmptyFieldSize": { "description": "Empty state of the Stats → Field Size tab; entrants is an optional field on tournament sessions." },
+  "statsFactorEmptyGameType": "Log both cash sessions and tournaments to compare them side by side.",
+  "@statsFactorEmptyGameType": { "description": "Empty state of the Stats → Game Type tab (cash vs tournament)." },
+  "statsFactorEmptyDay": "Log sessions on two or more different days of the week to compare them here.",
+  "@statsFactorEmptyDay": { "description": "Empty state of the Stats → Day tab (profit by weekday). Two dates on the same weekday count as one group." },
+  "statsFactorEmptyTime": "Log cash sessions with a start time in two or more different parts of the day (morning, afternoon, evening, late night) to compare them here.",
+  "@statsFactorEmptyTime": { "description": "Empty state of the Stats → Time tab (time-of-day bands); sessions without a start time are not counted." },
+  "statsFactorEmptyLength": "Log cash sessions of two or more different lengths (under 2 h, 2–4 h, 4–6 h, over 6 h) to compare them here.",
+  "@statsFactorEmptyLength": { "description": "Empty state of the Stats → Length tab (session-length bands)." },
+  "statsFactorEmptyTable": "Rate the table quality on two or more cash sessions, with different ratings, to compare them here.",
+  "@statsFactorEmptyTable": { "description": "Empty state of the Stats → Table tab (table-quality star rating, 1–5)." },
+  "statsFactorEmptyLocation": "Log sessions at two or more different locations to compare them here.",
+  "@statsFactorEmptyLocation": { "description": "Empty state of the Stats → Location tab." },
+  "statsFactorEmptyVenue": "Log both live and online sessions to compare them here.",
+  "@statsFactorEmptyVenue": { "description": "Empty state of the Stats → Live/Online tab." },
+  "statsFactorFilteredHint": "Your current filters are hiding some sessions. Clear them to see more here.",
+  "@statsFactorFilteredHint": { "description": "Second line under a Stats breakdown's empty state, shown only when the Stats filter (date, country, venue, location, game type) excludes sessions that exist." },
   "statsCash": "Cash",
   "@statsCash": {
     "description": "Short game-type label for cash games (column header, filter chip)."
