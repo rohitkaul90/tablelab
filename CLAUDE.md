@@ -286,6 +286,8 @@ All models are plain immutable classes — no code generation.
 
 **Compact `+` FABs** — the Stats/Sessions/Reads/Hands tabs all use a plain `FloatingActionButton(child: Icon(Icons.add), tooltip: …)` with a **unique `heroTag`** (`fab_dashboard`/`fab_sessions`/`fab_reads`/…), not `.extended` with a label — the wide labeled FAB ate too much space. Duplicate/absent heroTags throw on a screen that shows two FABs or during a hero transition, so always set one.
 
+**`num.clamp(lower, upper)` THROWS when lower > upper (crash-issues-15)** — it is not a no-op: `x.clamp(2, count)` with `count == 1` raised `Invalid argument(s): 2` inside the Stats metric chart's LayoutBuilder on every open of a metric whose data made ONE period bucket (a single logged session, or a lookback leaving one bar — a single bar is a supported state). Any clamp whose bounds come from data (`keys.length`, `count - 1`) needs the degenerate case handled first (`chartLabelEvery` in `metric_chart_screen.dart`, unit + single-bucket widget tests in `test/screens/metric_chart_screen_test.dart`).
+
 **fl_chart on Windows** — always set `barTouchData: BarTouchData(enabled: false)` and `lineTouchData: const LineTouchData(enabled: false)` on every chart. Default enabled state throws `RangeError` on Windows when mouse nears edge.
 
 **SegmentedButton rows wrap on phones** — Material 3 adds a checkmark icon to the selected segment, widening it; a 3–4-segment row then overflows to a second line after selection. Set `showSelectedIcon: false` on multi-segment rows (selection still reads via the fill color). Hit on Quick Hand's street selector.
