@@ -67,6 +67,9 @@ String currencySymbol(String currency) {
     case 'AUD': return 'A\$';
     case 'NZD': return 'NZ\$';
     case 'INR': return '₹';
+    case 'JPY': return '¥';
+    case 'TWD': return 'NT\$';
+    case 'KRW': return '₩';
     default: return '\$';
   }
 }
@@ -80,6 +83,9 @@ String? currencyFromCountry(String? country) {
     case 'australia': return 'AUD';
     case 'new zealand': return 'NZD';
     case 'india': return 'INR';
+    case 'japan': return 'JPY';
+    case 'taiwan': return 'TWD';
+    case 'south korea': case 'korea': return 'KRW';
     case 'france': case 'germany': case 'spain': case 'italy':
     case 'netherlands': case 'belgium': case 'czech republic':
     case 'monaco': case 'europe': return 'EUR';
@@ -496,7 +502,8 @@ double? calcTournamentStdDevBuyIns(List<SessionModel> sessions,
 
 // ─── Currency Conversion ──────────────────────────────────────────────────────
 
-// Approximate exchange rates (1 USD = X units). Updated May 2026.
+// Approximate exchange rates (1 USD = X units). Updated Oct 2026 (JPY/TWD/KRW
+// added for the ja/zh-Hant/ko UI round; display-only "≈" conversion).
 const Map<String, double> _ratesPerUsd = {
   'USD': 1.0,
   'CAD': 1.38,
@@ -505,6 +512,9 @@ const Map<String, double> _ratesPerUsd = {
   'AUD': 1.59,
   'NZD': 1.73,
   'INR': 84.5,
+  'JPY': 150.0,
+  'TWD': 32.0,
+  'KRW': 1400.0,
 };
 
 /// Converts [amount] from [from] currency to [to] currency.

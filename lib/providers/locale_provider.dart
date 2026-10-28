@@ -21,10 +21,14 @@ class LocaleNotifier extends StateNotifier<Locale?> {
 
   /// The stored preference (`null` = system). Public so `main()` can resolve
   /// the startup locale before the provider container exists.
+  ///
+  /// Stored as a BCP-47 language tag (`zh-Hant`, `es-419`, `fr`) — the bare
+  /// language codes written by builds before the script/region locales still
+  /// parse to the same `Locale`.
   static Locale? read(SharedPreferences prefs) {
     final stored = prefs.getString(_localeKey);
     if (stored == null || stored == _systemValue) return null;
-    final locale = Locale(stored);
+    final locale = localeFromLanguageTag(stored);
     return AppLocalizations.supportedLocales.contains(locale) ? locale : null;
   }
 
@@ -34,7 +38,7 @@ class LocaleNotifier extends StateNotifier<Locale?> {
     if (locale == state) return;
     await applyIntlLocale(resolveLocale(locale, _deviceLocales()));
     state = locale;
-    await _prefs.setString(_localeKey, locale?.languageCode ?? _systemValue);
+    await _prefs.setString(_localeKey, locale?.toLanguageTag() ?? _systemValue);
   }
 }
 
@@ -54,8 +58,8 @@ List<Locale> _deviceLocales() =>
     WidgetsBinding.instance.platformDispatcher.locales;
 
 /// Pure resolution rule (unit-tested): `preference` wins; otherwise the first
-/// of `deviceLocales` whose language code is supported (`fr-CA` → `fr`);
-/// otherwise `en`.
+/// of `deviceLocales` whose language is supported, picking the best variant
+/// of that language via [matchSupportedLocale]; otherwise `en`.
 Locale resolveLocale(
   Locale? preference,
   List<Locale> deviceLocales, {
@@ -63,18 +67,76 @@ Locale resolveLocale(
 }) {
   if (preference != null) return preference;
   for (final device in deviceLocales) {
-    for (final s in supported) {
-      if (s.languageCode == device.languageCode) return s;
-    }
+    final match = matchSupportedLocale(device, supported);
+    if (match != null) return match;
   }
   return const Locale('en');
 }
+
+/// The best supported variant of [device]'s language, or `null` when the
+/// language isn't shipped at all. Among the supported locales that share the
+/// language code:
+///  1. same script wins (`zh-Hant-HK` → `zh_Hant`);
+///  2. then same country (`es-ES` → `es`, were `es_ES` ever shipped);
+///  3. Spanish outside Spain is Latin American (`es-MX`/`es-US`/`es-AR` →
+///     `es_419`; bare `es` and `es-ES` → `es`);
+///  4. otherwise the base locale (no script/country), else the first one —
+///     so a lone `zh_Hant` serves every `zh` device, Simplified included
+///     (readable, and far better than English; add `zh_Hans` when installs
+///     justify it).
+Locale? matchSupportedLocale(Locale device, List<Locale> supported) {
+  final sameLanguage =
+      supported.where((s) => s.languageCode == device.languageCode).toList();
+  if (sameLanguage.isEmpty) return null;
+  if (sameLanguage.length == 1) return sameLanguage.first;
+
+  final script = device.scriptCode;
+  if (script != null) {
+    for (final s in sameLanguage) {
+      if (s.scriptCode == script) return s;
+    }
+  }
+  final country = device.countryCode;
+  if (country != null) {
+    for (final s in sameLanguage) {
+      if (s.countryCode == country) return s;
+    }
+    if (device.languageCode == 'es' && country != 'ES') {
+      for (final s in sameLanguage) {
+        if (s.countryCode == kLatinAmericaRegion) return s;
+      }
+    }
+  }
+  for (final s in sameLanguage) {
+    if (s.scriptCode == null && s.countryCode == null) return s;
+  }
+  return sameLanguage.first;
+}
+
+/// UN M.49 region code for Latin America & the Caribbean — the `es_419`
+/// locale's "country".
+const kLatinAmericaRegion = '419';
 
 /// Loads intl's date symbols for [locale] and makes it the default for every
 /// bare `NumberFormat`/`DateFormat` in the app (helpers.dart formats through
 /// `Intl.defaultLocale`). Called at startup and on every language change.
 Future<void> applyIntlLocale(Locale locale) async {
-  final code = locale.languageCode;
+  final code = intlLocaleCode(locale);
   await initializeDateFormatting(code);
   Intl.defaultLocale = code;
+}
+
+/// The intl locale id that carries [locale]'s number/date symbols. intl ships
+/// no `zh_Hant` data, so Traditional Chinese formats as Taiwan (`zh_TW`);
+/// `es_419` exists as-is; plain languages use their bare code (`fr`, not
+/// `fr_CA` — the UI locale is already a supported one, never a device
+/// variant).
+String intlLocaleCode(Locale locale) {
+  const overrides = {'zh_Hant': 'zh_TW'};
+  final tag = locale.toString();
+  if (overrides.containsKey(tag)) return overrides[tag]!;
+  final country = locale.countryCode;
+  return country == null
+      ? locale.languageCode
+      : '${locale.languageCode}_$country';
 }

@@ -14,10 +14,12 @@ extension L10nX on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
 }
 
-/// Native-language names for the language picker. Deliberately NOT localized —
-/// a user who can't read the current language must still find their own.
-/// Keep in sync with the `app_*.arb` files and
-/// `android/app/src/main/res/xml/locales_config.xml`.
+/// Native-language names for the language picker, keyed by BCP-47 language
+/// tag (`Locale.toLanguageTag()`: `zh-Hant`, `es-419`). Deliberately NOT
+/// localized — a user who can't read the current language must still find
+/// their own. Keep in sync with the `app_*.arb` files,
+/// `android/app/src/main/res/xml/locales_config.xml` and
+/// `ios/Runner/Info.plist` `CFBundleLocalizations` (test-enforced).
 const Map<String, String> kLocaleEndonyms = {
   'en': 'English',
   'es': 'Español',
@@ -26,10 +28,29 @@ const Map<String, String> kLocaleEndonyms = {
   'nl': 'Nederlands',
 };
 
-/// Display name for a locale in the picker (endonym, falling back to the code
+/// Display name for a locale in the picker (endonym, falling back to the tag
 /// for a locale newer than this build knows).
 String localeEndonym(Locale locale) =>
-    kLocaleEndonyms[locale.languageCode] ?? locale.toLanguageTag();
+    kLocaleEndonyms[locale.toLanguageTag()] ?? locale.toLanguageTag();
+
+/// Parses a BCP-47 / POSIX tag (`zh-Hant`, `es_419`, `fr`, `zh-Hant-TW`)
+/// back into a [Locale]: a 4-letter subtag is the script, a 2-letter or
+/// 3-digit one the region. Pure; used for the persisted language preference.
+Locale localeFromLanguageTag(String tag) {
+  final parts = tag.split(RegExp('[_-]'));
+  final language = parts.first;
+  String? script;
+  String? country;
+  for (final p in parts.skip(1)) {
+    if (p.length == 4 && script == null) {
+      script = p;
+    } else if ((p.length == 2 || p.length == 3) && country == null) {
+      country = p;
+    }
+  }
+  return Locale.fromSubtags(
+      languageCode: language, scriptCode: script, countryCode: country);
+}
 
 /// Whether the UI is English. The single test for "show English-only content
 /// as-is" (AI disclaimer note, raw server errors, legal-document notice) so

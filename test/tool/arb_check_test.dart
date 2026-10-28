@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../tool/l10n/arb_check.dart';
+import '../../tool/l10n/check_arb.dart' show loadArbDirectory;
 
 void main() {
   group('placeholdersOf', () {
@@ -126,6 +129,26 @@ void main() {
       final problems = checkArb(
           template: template, targets: {'es': es}, state: freshState(es));
       expect(problems.single, contains('@@locale must be "es"'));
+    });
+  });
+
+  group('loadArbDirectory', () {
+    test('picks up script and numeric-region locale files, skips non-ARBs',
+        () {
+      final dir = Directory.systemTemp.createTempSync('arb_dir_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      void write(String name, String locale) => File('${dir.path}/$name')
+          .writeAsStringSync('{"@@locale": "$locale", "k": "v"}');
+      write('app_en.arb', 'en');
+      write('app_fr.arb', 'fr');
+      write('app_zh_Hant.arb', 'zh_Hant');
+      write('app_es_419.arb', 'es_419');
+      write('app_en.arb.bak', 'en');
+      File('${dir.path}/notes.txt').writeAsStringSync('x');
+
+      final files = loadArbDirectory(dir);
+      expect(files.targets.keys.toSet(), {'fr', 'zh_Hant', 'es_419'});
+      expect(files.template['@@locale'], 'en');
     });
   });
 }

@@ -350,6 +350,9 @@ void main() {
 
     test('returns NZ\$ for NZD', () {
       expect(currencySymbol('NZD'), equals(r'NZ$'));
+      expect(currencySymbol('JPY'), equals('¥'));
+      expect(currencySymbol('TWD'), equals(r'NT$'));
+      expect(currencySymbol('KRW'), equals('₩'));
     });
 
     test('defaults to dollar sign for unknown currency', () {
@@ -472,6 +475,9 @@ void main() {
       expect(currencyFromCountry('Australia'), equals('AUD'));
       expect(currencyFromCountry('New Zealand'), equals('NZD'));
       expect(currencyFromCountry('India'), equals('INR'));
+      expect(currencyFromCountry('Japan'), equals('JPY'));
+      expect(currencyFromCountry('Taiwan'), equals('TWD'));
+      expect(currencyFromCountry('South Korea'), equals('KRW'));
       expect(currencyFromCountry('France'), equals('EUR'));
       expect(currencyFromCountry('Germany'), equals('EUR'));
     });
