@@ -310,7 +310,7 @@ List<AnalyticsFactor> analyticsFactors(
   final filtered = d.filtered;
   if (filtered.isEmpty) return const [];
   final mixedTournament = d.showingTournaments && !d.showingCash;
-  return [
+  final all = <AnalyticsFactor>[
     if (d.showingCash)
       AnalyticsFactor(
         id: 'stakes',
@@ -445,7 +445,18 @@ List<AnalyticsFactor> analyticsFactors(
         isTournament: mixedTournament,
       ),
   ];
+  // A tab exists only when it has something to compare: at least two distinct
+  // non-empty groups after the Stats filter. Location and Venue were already
+  // gated this way; Day / Time / Table / Stakes / Length were gated on "has
+  // data" and shipped a BLANK tab for a new account whose two sessions fell on
+  // the same weekday (device QA 2026-10-28). _InsightCard keeps its own
+  // fewer-than-two guard (with emptyMessage) purely as a safety net.
+  return [for (final f in all) if (distinctGroupCount(f) >= 2) f];
 }
+
+/// Distinct non-empty grouping keys a factor would render as rows.
+int distinctGroupCount(AnalyticsFactor f) =>
+    f.sessions.map(f.keyFn).where((k) => k.isNotEmpty).toSet().length;
 
 // ─── Summary tab ──────────────────────────────────────────────────────────────
 
@@ -1210,13 +1221,16 @@ class _InsightCard extends StatelessWidget {
       final msg = emptyMessage;
       if (msg == null) return const SizedBox.shrink();
       final theme = Theme.of(context);
+      // Same note style as the Summary tab's statsNoMatch.
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
-        child: Text(
-          msg,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(color: theme.colorScheme.outline),
+        padding: const EdgeInsets.only(top: 24),
+        child: Center(
+          child: Text(
+            msg,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.outline),
+          ),
         ),
       );
     }

@@ -834,7 +834,7 @@
   "statsShowAllGameTypes": "Afficher tous les types de jeu",
   "statsNoSessionsYet": "Aucune session pour l'instant — enregistre ta première pour remplir tout ça.",
   "statsNoMatch": "Aucune session ne correspond à ces filtres.",
-  "statsFactorNeedTwoGroups": "Pas encore assez pour comparer. Cette analyse a besoin de sessions réparties dans au moins deux groupes différents, par exemple deux jours de la semaine différents.",
+  "statsFactorNeedTwoGroups": "Pas encore assez pour comparer. Cette analyse a besoin de sessions réparties dans au moins deux groupes différents.",
   "statsCash": "Cash",
   "statsTournament": "Tournoi",
   "statsTournaments": "Tournois",

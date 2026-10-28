@@ -834,7 +834,7 @@
   "statsShowAllGameTypes": "顯示所有遊戲類型",
   "statsNoSessionsYet": "還沒有場次——記錄第一場就能看到數據。",
   "statsNoMatch": "沒有符合篩選條件的場次。",
-  "statsFactorNeedTwoGroups": "資料還不夠比較。這項分析需要至少落在兩個不同分組的場次，例如星期中的兩個不同日子。",
+  "statsFactorNeedTwoGroups": "資料還不夠比較。這項分析需要至少落在兩個不同分組的場次。",
   "statsCash": "現金桌",
   "statsTournament": "錦標賽",
   "statsTournaments": "錦標賽",

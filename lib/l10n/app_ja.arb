@@ -834,7 +834,7 @@
   "statsShowAllGameTypes": "すべてのゲーム種別を表示",
   "statsNoSessionsYet": "セッションはまだありません。最初の1件を記録しましょう。",
   "statsNoMatch": "条件に一致するセッションはありません。",
-  "statsFactorNeedTwoGroups": "まだ比較できるデータがありません。この内訳には、少なくとも2つの異なるグループに分かれるセッションが必要です（例: 異なる2つの曜日）。",
+  "statsFactorNeedTwoGroups": "まだ比較できるデータがありません。この内訳には、少なくとも2つの異なるグループに分かれるセッションが必要です。",
   "statsCash": "キャッシュ",
   "statsTournament": "トーナメント",
   "statsTournaments": "トーナメント",

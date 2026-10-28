@@ -834,7 +834,7 @@
   "statsShowAllGameTypes": "Alle speltypes tonen",
   "statsNoSessionsYet": "Nog geen sessies — log je eerste om dit te vullen.",
   "statsNoMatch": "Geen sessies voor deze filters.",
-  "statsFactorNeedTwoGroups": "Nog niet genoeg om te vergelijken. Voor dit overzicht heb je sessies in minstens twee verschillende groepen nodig, bijvoorbeeld op twee verschillende weekdagen.",
+  "statsFactorNeedTwoGroups": "Nog niet genoeg om te vergelijken. Voor dit overzicht heb je sessies in minstens twee verschillende groepen nodig.",
   "statsCash": "Cash",
   "statsTournament": "Toernooi",
   "statsTournaments": "Toernooien",
