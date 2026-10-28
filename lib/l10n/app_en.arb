@@ -3799,6 +3799,10 @@
   "@statsNoMatch": {
     "description": "Empty state when the active filters exclude every session."
   },
+  "statsFactorNeedTwoGroups": "Not enough to compare yet. This breakdown needs sessions that fall into at least two different groups, for example two different days of the week.",
+  "@statsFactorNeedTwoGroups": {
+    "description": "Empty state inside a Stats breakdown tab (Day / Time / Table quality / Stakes…) when every logged session lands in the same group, so there is nothing to compare side by side. The tab stays visible; this text explains why the card is empty."
+  },
   "statsCash": "Cash",
   "@statsCash": {
     "description": "Short game-type label for cash games (column header, filter chip)."

@@ -637,6 +637,7 @@ class AnalyticsFactorTab extends StatelessWidget {
         ),
         _InsightCard(
           title: factor.title,
+          emptyMessage: l10n.statsFactorNeedTwoGroups,
           sessions: factor.sessions,
           keyFn: factor.keyFn,
           orderedKeys: factor.orderedKeys,
@@ -1179,6 +1180,11 @@ class _InsightCard extends StatelessWidget {
   /// Localized label for a group key; null = the key is display text.
   final String Function(AppLocalizations l10n, String key)? labelFn;
 
+  /// Shown instead of the card when fewer than two groups exist. Null (the
+  /// flag-gated Overview list) hides the card entirely; the factor tabs pass
+  /// a message, because an empty tab with no explanation reads as a bug.
+  final String? emptyMessage;
+
   const _InsightCard({
     required this.title,
     required this.sessions,
@@ -1189,6 +1195,7 @@ class _InsightCard extends StatelessWidget {
     this.sort = InsightSort.rate,
     this.naturalCompare,
     this.labelFn,
+    this.emptyMessage,
   });
 
   @override
@@ -1199,7 +1206,20 @@ class _InsightCard extends StatelessWidget {
       if (k.isEmpty) continue;
       groups.putIfAbsent(k, () => []).add(s);
     }
-    if (groups.length < 2) return const SizedBox.shrink();
+    if (groups.length < 2) {
+      final msg = emptyMessage;
+      if (msg == null) return const SizedBox.shrink();
+      final theme = Theme.of(context);
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+        child: Text(
+          msg,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: theme.colorScheme.outline),
+        ),
+      );
+    }
 
     final stats =
         groups.map((k, v) => MapEntry(k, _GroupStats.from(v, displayCurrency)));
