@@ -530,7 +530,7 @@ class _NoteTile extends StatelessWidget {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 60) return l10n.timeAgoMinutes(diff.inMinutes);
     if (diff.inHours < 24) return l10n.timeAgoHours(diff.inHours);
-    return DateFormat.yMd(l10n.localeName).format(dt);
+    return DateFormat.yMd(intlLocaleOf(l10n)).format(dt);
   }
 }
 

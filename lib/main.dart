@@ -139,7 +139,7 @@ void main() async {
         language: resolveLocale(
           LocaleNotifier.read(prefs),
           WidgetsBinding.instance.platformDispatcher.locales,
-        ).languageCode,
+        ).toLanguageTag(),
       );
     } else if (event == AuthChangeEvent.signedOut) {
       AnalyticsService.reset();

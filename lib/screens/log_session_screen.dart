@@ -14,11 +14,11 @@ import '../widgets/star_rating_widget.dart';
 /// Session stakes presets and supported currencies. Public so the live
 /// recorder's start form reuses the exact same lists (single source of truth).
 const kStakeOptions = ['1/2', '1/3', '2/5', '5/10', '10/20', '25/50', 'Other'];
-const kCurrencies = ['CAD', 'USD', 'GBP', 'EUR', 'AUD', 'NZD', 'INR'];
+const kCurrencies = ['CAD', 'USD', 'GBP', 'EUR', 'AUD', 'NZD', 'INR', 'JPY', 'TWD', 'KRW'];
 const _countries = [
   'Canada', 'USA', 'United Kingdom', 'Australia', 'New Zealand',
   'India', 'France', 'Germany', 'Spain', 'Italy', 'Netherlands', 'Belgium',
-  'Czech Republic', 'Monaco', 'Online',
+  'Czech Republic', 'Monaco', 'Japan', 'Taiwan', 'South Korea', 'Online',
 ];
 
 class LogSessionScreen extends ConsumerStatefulWidget {

@@ -67,6 +67,9 @@ String currencySymbol(String currency) {
     case 'AUD': return 'A\$';
     case 'NZD': return 'NZ\$';
     case 'INR': return '₹';
+    case 'JPY': return '¥';
+    case 'TWD': return 'NT\$';
+    case 'KRW': return '₩';
     default: return '\$';
   }
 }
@@ -80,6 +83,9 @@ String? currencyFromCountry(String? country) {
     case 'australia': return 'AUD';
     case 'new zealand': return 'NZD';
     case 'india': return 'INR';
+    case 'japan': return 'JPY';
+    case 'taiwan': return 'TWD';
+    case 'south korea': case 'korea': return 'KRW';
     case 'france': case 'germany': case 'spain': case 'italy':
     case 'netherlands': case 'belgium': case 'czech republic':
     case 'monaco': case 'europe': return 'EUR';
@@ -149,15 +155,36 @@ double roundBandEdge(double v) {
   return best;
 }
 
+/// Smallest "round" amount ({1, 2, 2.5, 5} × 10ⁿ) strictly above [v].
+double roundBandEdgeAbove(double v) {
+  if (v <= 0) return 1;
+  var p = 1.0;
+  while (p * 10 <= v) {
+    p *= 10;
+  }
+  for (final base in [p, p * 10]) {
+    for (final m in const [1.0, 2.0, 2.5, 5.0]) {
+      if (base * m > v) return base * m;
+    }
+  }
+  return p * 100;
+}
+
 /// The four band edges expressed in [displayCurrency]: the USD reference
-/// edges converted and rounded, kept strictly increasing.
+/// edges converted and rounded, kept strictly increasing with at least a
+/// 1.5× step. Rounding each edge on its own can snap neighbours in opposite
+/// directions (JPY: 15,000→20,000 up, 30,000→25,000 down → a sliver band
+/// next to a huge one), so an edge that lands too close to the previous one
+/// moves up to the next round amount instead.
 List<double> buyInBandEdges(String displayCurrency) {
   final edges = <double>[];
   for (final usd in kBuyInBucketEdgesUsd) {
     var e = displayCurrency == 'USD'
         ? usd
         : roundBandEdge(convertCurrency(usd, 'USD', displayCurrency));
-    if (edges.isNotEmpty && e <= edges.last) e = edges.last * 2;
+    if (edges.isNotEmpty && e < edges.last * 1.5) {
+      e = roundBandEdgeAbove(edges.last * 1.5);
+    }
     edges.add(e);
   }
   return edges;
@@ -330,7 +357,14 @@ int? parseTableSize(String raw) {
 /// Returns null if the format is unrecognisable.
 /// Big-blind regex token: a number with optional decimal (`.` or `,`) and an
 /// optional `k` (thousands) suffix.
-final _bbNumber = RegExp(r'(\d+(?:[.,]\d+)?)(k)?');
+// A number token: thousands-grouped (`1,000`, `12,500.5`) OR a plain
+// integer/decimal with `.` or a European `,` decimal (`2,5`). The grouped
+// form wins only when every comma is followed by exactly three digits, so
+// `2,5/5` still reads 2.5 while `¥1,000/¥2,000` (JPY/KRW stakes are
+// routinely written with separators) reads 1000/2000.
+final _bbNumber =
+    RegExp(r'(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)(k)?');
+final _thousandsGrouped = RegExp(r'^\d{1,3}(?:,\d{3})+(?:\.\d+)?$');
 
 /// Parses the big blind (in the stakes' own currency units) from a stakes
 /// string, tolerant of the formats manual entry and imports produce:
@@ -344,7 +378,10 @@ double? parseBBFromStakes(String stakes) => parseBlindsFromStakes(stakes)?.$2;
 List<double> _stakesNumbers(String lower) {
   final nums = <double>[];
   for (final m in _bbNumber.allMatches(lower)) {
-    var v = double.tryParse(m.group(1)!.replaceAll(',', '.'));
+    final raw = m.group(1)!;
+    var v = double.tryParse(_thousandsGrouped.hasMatch(raw)
+        ? raw.replaceAll(',', '')
+        : raw.replaceAll(',', '.'));
     if (v == null) continue;
     if (m.group(2) == 'k') v *= 1000;
     nums.add(v);
@@ -496,7 +533,8 @@ double? calcTournamentStdDevBuyIns(List<SessionModel> sessions,
 
 // ─── Currency Conversion ──────────────────────────────────────────────────────
 
-// Approximate exchange rates (1 USD = X units). Updated May 2026.
+// Approximate exchange rates (1 USD = X units). Updated Oct 2026 (JPY/TWD/KRW
+// added for the ja/zh-Hant/ko UI round; display-only "≈" conversion).
 const Map<String, double> _ratesPerUsd = {
   'USD': 1.0,
   'CAD': 1.38,
@@ -505,6 +543,9 @@ const Map<String, double> _ratesPerUsd = {
   'AUD': 1.59,
   'NZD': 1.73,
   'INR': 84.5,
+  'JPY': 150.0,
+  'TWD': 32.0,
+  'KRW': 1400.0,
 };
 
 /// Converts [amount] from [from] currency to [to] currency.

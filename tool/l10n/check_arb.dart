@@ -56,7 +56,7 @@ ArbFiles loadArbDirectory(Directory dir) {
   }
   final template = _readJson(templateFile);
   final targets = <String, Map<String, dynamic>>{};
-  final re = RegExp(r'^app_([a-z]{2,3}(?:_[A-Za-z]{2,4})*)\.arb$');
+  final re = RegExp(r'^app_([a-z]{2,3}(?:_[A-Za-z0-9]{2,4})*)\.arb$');
   for (final f in dir.listSync().whereType<File>()) {
     final name = f.uri.pathSegments.last;
     final m = re.firstMatch(name);

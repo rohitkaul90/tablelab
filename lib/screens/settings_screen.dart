@@ -183,8 +183,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   await ref.read(localeProvider.notifier).set(loc);
                   if (!mounted) return;
                   AnalyticsService.languageChanged(
-                    language: loc?.languageCode ?? 'system',
-                    resolved: ref.read(resolvedLocaleProvider).languageCode,
+                    language: loc?.toLanguageTag() ?? 'system',
+                    resolved: ref.read(resolvedLocaleProvider).toLanguageTag(),
                   );
                 },
               ),

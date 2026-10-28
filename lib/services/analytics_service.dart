@@ -20,7 +20,7 @@ class AnalyticsService {
     String userId, {
     String? email,
     String? signupMethod, // 'email' | 'google' | 'apple' — from user.appMetadata['provider']
-    String? language, // resolved UI language code ('en' | 'es' | …)
+    String? language, // resolved UI language tag ('en' | 'es' | 'zh-Hant' | …)
   }) async {
     if (!_analyticsSupported) return;
     await Posthog().identify(
@@ -334,7 +334,7 @@ class AnalyticsService {
     );
   }
 
-  /// `language` = the chosen option ('system' | 'en' | 'es' | …); `resolved` =
+  /// `language` = the chosen option ('system' | 'en' | 'es-419' | …); `resolved` =
   /// the language the UI actually renders in after the change. The `$set`
   /// block updates the `language` person property in the same event so the
   /// cohort stays current without a re-identify.

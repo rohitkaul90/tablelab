@@ -6,7 +6,7 @@
 import 'package:intl/intl.dart';
 
 import '../utils/helpers.dart';
-import 'generated/app_localizations.dart';
+import 'l10n.dart';
 
 /// Label for a buy-in band, with the rounded [displayCurrency] edges from
 /// `buyInBandEdges` ("€50–€100", "< ₹5,000") — the same edges the sessions
@@ -65,7 +65,7 @@ String sessionLengthBucketLabel(AppLocalizations l10n, SessionLengthBucket b) =>
 String weekdayShortLabel(AppLocalizations l10n, int weekday) {
   // 2024-01-01 is a Monday; offsetting from it yields any weekday.
   return safeDateFormat(
-      (loc) => DateFormat.E(loc), l10n.localeName, DateTime(2024, 1, weekday));
+      (loc) => DateFormat.E(loc), intlLocaleOf(l10n), DateTime(2024, 1, weekday));
 }
 
 /// Formats [d] with [build] in [locale], falling back to en_US when the

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:intl/intl.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../l10n/l10n.dart' show intlLocaleOf;
 import '../l10n/labels.dart' show safeDateFormat, venueLabel;
 import 'session_model.dart';
 import '../data/poker_rooms.dart' show isOnlineSession;
@@ -126,10 +127,10 @@ class StatsFilter {
   // Month + day in the UI language (intl symbols are loaded by
   // applyIntlLocale before any frame renders): "Jan 5" / "5 janv.".
   static String _fmtDate(AppLocalizations l10n, DateTime d) =>
-      safeDateFormat((loc) => DateFormat.MMMd(loc), l10n.localeName, d);
+      safeDateFormat((loc) => DateFormat.MMMd(loc), intlLocaleOf(l10n), d);
 
   static String _fmtDateYear(AppLocalizations l10n, DateTime d) =>
-      safeDateFormat((loc) => DateFormat.yMMMd(loc), l10n.localeName, d);
+      safeDateFormat((loc) => DateFormat.yMMMd(loc), intlLocaleOf(l10n), d);
 
   /// Short label for the active date filter, or null when "all time".
   String? dateLabel(AppLocalizations l10n) {
