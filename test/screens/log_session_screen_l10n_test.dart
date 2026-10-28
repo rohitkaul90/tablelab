@@ -31,10 +31,10 @@ void main() {
     expect(find.text('Tournament'), findsOneWidget);
   });
 
-  for (final code in ['es', 'fr', 'it', 'nl']) {
+  for (final code in ['es', 'es-419', 'fr', 'it', 'nl', 'ja', 'ko', 'zh-Hant']) {
     testWidgets('renders in $code on a 360dp phone without overflow',
         (tester) async {
-      await pumpForm(tester, Locale(code));
+      await pumpForm(tester, localeFromLanguageTag(code));
       expect(tester.takeException(), isNull);
       // The English title must be gone — the ARB for this locale is in use.
       expect(find.text('Log Session'), findsNothing);

@@ -7,7 +7,7 @@ import 'package:tablelab/screens/import_mapping_screen.dart';
 /// `Intl.defaultLocale` is a non-English UI language (locale_provider.dart
 /// sets it) — the parsers are pinned to en_US for that reason.
 void main() {
-  for (final uiLocale in ['en', 'es', 'fr', 'nl']) {
+  for (final uiLocale in ['en', 'es', 'es_419', 'fr', 'it', 'nl', 'ja', 'ko', 'zh_TW']) {
     group('under UI locale $uiLocale', () {
       test('English month names still parse', () {
         Intl.withLocale(uiLocale, () {

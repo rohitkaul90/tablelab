@@ -86,7 +86,7 @@ FREE & PRIVATE
 • No ads. We never sell your data.
 • Your records are private to your account, protected by row-level security.
 
-Available in English, Spanish, French, Italian and Dutch, on Android and on the web at tablelab.app.
+Available in English, Spanish (Spain and Latin America), French, Italian, Dutch, Japanese, Traditional Chinese and Korean, on Android and on the web at tablelab.app.
 
 Built and operated by MagpiQ. Questions or feedback? support@tablelab.app
 ```
@@ -157,7 +157,7 @@ Free poker bankroll tracker: log cash and tournament sessions, replay hands, run
 The Play full description above, verbatim, with two edits:
 - Under **FREE & PRIVATE** add the bullet `• Sign in with Apple, Google, or email.`
 - The availability line (second-to-last paragraph; keep the closing MagpiQ / support@ line) →
-  `Available in English, Spanish, French, Italian and Dutch, on iPhone, Android and on the web at tablelab.app.`
+  `Available in English, Spanish (Spain and Latin America), French, Italian, Dutch, Japanese, Traditional Chinese and Korean, on iPhone, Android and on the web at tablelab.app.`
 
 ## What's New (first iOS release)
 ```
@@ -234,17 +234,17 @@ cropped) and Claude normalises them with ffmpeg: scale to 1179 wide, pad the top
 image's own top-edge colour (never centre-crop — it clips the right edge). Done 2026-10-21 →
 `~/Downloads/appstore-medium/*.png`.
 
-## Localized listings (es-ES / fr-FR / it-IT / nl-NL)
+## Localized listings (es-ES / fr-FR / it-IT / nl-NL / ja / zh-Hant / ko / es-MX)
 Description + name: reuse `STORE_LISTING_translations.md` with the same two edits as the English
 description, using these lines (the availability line replaces the existing one in each
 translation; the sign-in bullet goes under the "no ads" bullet):
 
 | | Sign-in bullet | Availability line |
 |---|---|---|
-| es | `• Inicia sesión con Apple, Google o tu email.` | `Disponible en español, inglés, francés, italiano y neerlandés, en iPhone, Android y en la web en tablelab.app.` |
-| fr | `• Connexion avec Apple, Google ou par e-mail.` | `Disponible en français, anglais, espagnol, italien et néerlandais, sur iPhone, Android et sur le web à tablelab.app.` |
-| it | `• Accedi con Apple, Google o email.` | `Disponibile in italiano, inglese, spagnolo, francese e olandese, su iPhone, Android e sul web su tablelab.app.` |
-| nl | `• Log in met Apple, Google of e-mail.` | `Beschikbaar in het Nederlands, Engels, Spaans, Frans en Italiaans, op iPhone, Android en op het web via tablelab.app.` |
+| es | `• Inicia sesión con Apple, Google o tu email.` | `Disponible en español (España y Latinoamérica), inglés, francés, italiano, neerlandés, japonés, chino tradicional y coreano, en iPhone, Android y en la web en tablelab.app.` |
+| fr | `• Connexion avec Apple, Google ou par e-mail.` | `Disponible en français, anglais, espagnol (Espagne et Amérique latine), italien, néerlandais, japonais, chinois traditionnel et coréen, sur iPhone, Android et sur le web à tablelab.app.` |
+| it | `• Accedi con Apple, Google o email.` | `Disponibile in italiano, inglese, spagnolo (Spagna e America Latina), francese, olandese, giapponese, cinese tradizionale e coreano, su iPhone, Android e sul web su tablelab.app.` |
+| nl | `• Log in met Apple, Google of e-mail.` | `Beschikbaar in het Nederlands, Engels, Spaans (Spanje en Latijns-Amerika), Frans, Italiaans, Japans, Traditioneel Chinees en Koreaans, op iPhone, Android en op het web via tablelab.app.` |
 
 Short fields (poker terms deliberately kept in English):
 

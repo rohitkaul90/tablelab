@@ -26,6 +26,10 @@ void main() {
       'fr': 'Mains|Langue',
       'it': 'Mani|Lingua',
       'nl': 'Handen|Taal',
+      'ja': 'ハンド|言語',
+      'ko': '핸드|언어',
+      'zh-Hant': '手牌|語言',
+      'es-419': 'Manos|Idioma',
     };
     for (final e in expected.entries) {
       await pumpApp(tester, probe(), locale: localeFromLanguageTag(e.key));

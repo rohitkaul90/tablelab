@@ -254,6 +254,14 @@ String _systemPrompt(
     for (final e in terms.entries)
       if ((e.value as Map)[locale] != null) '${e.key} → ${(e.value as Map)[locale]}',
   ];
+  // A locale may override the default previousTranslation rule (glossary
+  // `previousTranslationRule`): es_419 is seeded from the European Spanish
+  // ARB and must ADAPT it, not preserve it.
+  final prevRule =
+      ((glossary['previousTranslationRule'] as Map?)?[locale] as String?) ??
+          '`previousTranslation`, when present, was reviewed by a native '
+              'speaker: keep its wording and change only what the new English '
+              'requires.';
   final language = const {
         'es': 'Spanish',
         'fr': 'French',
@@ -261,7 +269,8 @@ String _systemPrompt(
         'nl': 'Dutch',
         'ja': 'Japanese',
         'ko': 'Korean',
-        'zh': 'Traditional Chinese (Taiwan)',
+        'zh_Hant': 'Traditional Chinese (Taiwan)',
+        'es_419': 'Latin American Spanish',
       }[locale] ??
       locale;
   return '''
@@ -274,7 +283,7 @@ Rules:
 - Keep the translation within about 130% of the English length; these render in buttons, tabs and table cells.
 - Keep capitalisation style: an ALL-CAPS source stays ALL CAPS; a Title Case button stays short.
 - No quotes, no markdown, no explanations, no trailing full stops the source doesn't have.
-- `previousTranslation`, when present, was reviewed by a native speaker: keep its wording and change only what the new English requires.
+- $prevRule
 - Keep these poker terms in English, untranslated: ${keep.join(', ')}.
 - Use exactly these renderings for these words: ${pinned.join('; ')}.
 ''';

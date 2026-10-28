@@ -21,10 +21,14 @@ extension L10nX on BuildContext {
 /// declarations use [platformLocaleTag] (test-enforced in l10n_test.dart).
 const Map<String, String> kLocaleEndonyms = {
   'en': 'English',
-  'es': 'Español',
+  'es': 'Español (España)',
+  'es-419': 'Español (Latinoamérica)',
   'fr': 'Français',
   'it': 'Italiano',
+  'ja': '日本語',
+  'ko': '한국어',
   'nl': 'Nederlands',
+  'zh-Hant': '繁體中文',
 };
 
 /// Display name for a locale in the picker (endonym, falling back to the tag

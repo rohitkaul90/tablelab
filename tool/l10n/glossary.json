@@ -1,10 +1,17 @@
 {
-  "_comment": "Locked poker glossary for tool/l10n/translate.dart. `keepInEnglish` terms are never translated (standard table vocabulary in every market). `terms` pins the per-locale rendering of words that DO translate so every screen uses the same word. `register` sets the form of address.",
+  "_comment": "Locked poker glossary for tool/l10n/translate.dart. `keepInEnglish` terms are never translated (standard table vocabulary in every market). `terms` pins the per-locale rendering of words that DO translate so every screen uses the same word. `register` sets the form of address; its keys ARE the target-locale list (ARB suffix: zh_Hant → app_zh_Hant.arb). `previousTranslationRule` overrides, per locale, how an existing target string is treated (es_419 is seeded from app_es.arb and must be ADAPTED, not preserved).",
   "register": {
     "es": "informal (tú), neutral Latin/European Spanish",
+    "es_419": "Latin American Spanish (Mexico-neutral): informal tú, `ustedes` for plural (never vosotros), Latin American vocabulary (celular, computadora, registrar, aplicación, ganancia); diverge from European Spanish only where a Latin American player would say it differently",
     "fr": "informal (tu)",
     "it": "informal (tu)",
-    "nl": "informal (je/jij)"
+    "ja": "polite です/ます form; concise UI Japanese; poker terms in katakana as Japanese players use them (フロップ, ターン, リバー, オールイン, レンジ, バンクロール); half-width digits, no excessive honorifics",
+    "ko": "polite-informal 해요체; concise UI Korean; poker terms as Korean players use them (플랍, 턴, 리버, 올인, 레인지, 뱅크롤)",
+    "nl": "informal (je/jij)",
+    "zh_Hant": "Traditional Chinese as used in Taiwan (繁體中文, 台灣用語), informal 你; Taiwanese poker vocabulary (翻牌/轉牌/河牌, 全下, 範圍, 底池, 籌碼); full-width punctuation, half-width digits"
+  },
+  "previousTranslationRule": {
+    "es_419": "`previousTranslation` is the European/neutral Spanish rendering, NOT a native Latin American review: reuse it wherever Latin American usage is identical, and change vocabulary, verb forms (ustedes, never vosotros) and idiom wherever a Mexican or Latin American player would say it differently."
   },
   "keepInEnglish": [
     "fold", "check", "call", "raise", "bet", "all-in", "c-bet", "3-bet", "4-bet", "5-bet",
@@ -18,29 +25,29 @@
     "TableLab", "MagpiQ", "Google Play", "Supabase"
   ],
   "terms": {
-    "Tournament":   { "es": "Torneo",        "fr": "Tournoi",         "it": "Torneo",        "nl": "Toernooi" },
-    "Tournaments":  { "es": "Torneos",       "fr": "Tournois",        "it": "Tornei",        "nl": "Toernooien" },
-    "Cash game":    { "es": "Cash",          "fr": "Cash game",       "it": "Cash game",     "nl": "Cashgame" },
-    "Session":      { "es": "Sesión",        "fr": "Session",         "it": "Sessione",      "nl": "Sessie" },
-    "Sessions":     { "es": "Sesiones",      "fr": "Sessions",        "it": "Sessioni",      "nl": "Sessies" },
-    "Hand":         { "es": "Mano",          "fr": "Main",            "it": "Mano",          "nl": "Hand" },
-    "Hands":        { "es": "Manos",         "fr": "Mains",           "it": "Mani",          "nl": "Handen" },
-    "Reads":        { "es": "Lecturas",      "fr": "Lectures",        "it": "Letture",       "nl": "Reads" },
-    "Read":         { "es": "Lectura",       "fr": "Lecture",         "it": "Lettura",       "nl": "Read" },
-    "Stakes":       { "es": "Ciegas",        "fr": "Blindes",         "it": "Bui",           "nl": "Blinds" },
-    "Buy-in":       { "es": "Buy-in",        "fr": "Buy-in",          "it": "Buy-in",        "nl": "Buy-in" },
-    "Cash-out":     { "es": "Cash-out",      "fr": "Cash-out",        "it": "Cash-out",      "nl": "Cash-out" },
-    "Stats":        { "es": "Estadísticas",  "fr": "Stats",           "it": "Statistiche",   "nl": "Stats" },
-    "Profit":       { "es": "Beneficio",     "fr": "Gain",            "it": "Profitto",      "nl": "Winst" },
-    "Study":        { "es": "Estudio",       "fr": "Étude",           "it": "Studio",        "nl": "Studie" },
-    "Live":         { "es": "Presencial",    "fr": "Live",            "it": "Live",          "nl": "Live" },
-    "Online":       { "es": "Online",        "fr": "En ligne",        "it": "Online",        "nl": "Online" },
-    "Hero":         { "es": "Hero",          "fr": "Hero",            "it": "Hero",          "nl": "Hero" },
-    "Villain":      { "es": "Villano",       "fr": "Vilain",          "it": "Villain",       "nl": "Villain" },
-    "Position":     { "es": "Posición",      "fr": "Position",        "it": "Posizione",     "nl": "Positie" },
-    "Range":        { "es": "Rango",         "fr": "Range",           "it": "Range",         "nl": "Range" },
-    "Equity":       { "es": "Equity",        "fr": "Équité",          "it": "Equity",        "nl": "Equity" },
-    "Pot odds":     { "es": "Pot odds",      "fr": "Cote du pot",     "it": "Pot odds",      "nl": "Pot odds" },
-    "Coaching":     { "es": "Coaching",      "fr": "Coaching",        "it": "Coaching",      "nl": "Coaching" }
+    "Tournament":   { "es": "Torneo",        "es_419": "Torneo",        "fr": "Tournoi",         "it": "Torneo",        "ja": "トーナメント",     "ko": "토너먼트",   "nl": "Toernooi",    "zh_Hant": "錦標賽" },
+    "Tournaments":  { "es": "Torneos",       "es_419": "Torneos",       "fr": "Tournois",        "it": "Tornei",        "ja": "トーナメント",     "ko": "토너먼트",   "nl": "Toernooien",  "zh_Hant": "錦標賽" },
+    "Cash game":    { "es": "Cash",          "es_419": "Cash",          "fr": "Cash game",       "it": "Cash game",     "ja": "キャッシュゲーム", "ko": "캐시게임",   "nl": "Cashgame",    "zh_Hant": "現金桌" },
+    "Session":      { "es": "Sesión",        "es_419": "Sesión",        "fr": "Session",         "it": "Sessione",      "ja": "セッション",       "ko": "세션",       "nl": "Sessie",      "zh_Hant": "場次" },
+    "Sessions":     { "es": "Sesiones",      "es_419": "Sesiones",      "fr": "Sessions",        "it": "Sessioni",      "ja": "セッション",       "ko": "세션",       "nl": "Sessies",     "zh_Hant": "場次" },
+    "Hand":         { "es": "Mano",          "es_419": "Mano",          "fr": "Main",            "it": "Mano",          "ja": "ハンド",           "ko": "핸드",       "nl": "Hand",        "zh_Hant": "手牌" },
+    "Hands":        { "es": "Manos",         "es_419": "Manos",         "fr": "Mains",           "it": "Mani",          "ja": "ハンド",           "ko": "핸드",       "nl": "Handen",      "zh_Hant": "手牌" },
+    "Reads":        { "es": "Lecturas",      "es_419": "Lecturas",      "fr": "Lectures",        "it": "Letture",       "ja": "リード",           "ko": "리드",       "nl": "Reads",       "zh_Hant": "讀牌" },
+    "Read":         { "es": "Lectura",       "es_419": "Lectura",       "fr": "Lecture",         "it": "Lettura",       "ja": "リード",           "ko": "리드",       "nl": "Read",        "zh_Hant": "讀牌" },
+    "Stakes":       { "es": "Ciegas",        "es_419": "Ciegas",        "fr": "Blindes",         "it": "Bui",           "ja": "ブラインド",       "ko": "블라인드",   "nl": "Blinds",      "zh_Hant": "盲注" },
+    "Buy-in":       { "es": "Buy-in",        "es_419": "Buy-in",        "fr": "Buy-in",          "it": "Buy-in",        "ja": "バイイン",         "ko": "바이인",     "nl": "Buy-in",      "zh_Hant": "買入" },
+    "Cash-out":     { "es": "Cash-out",      "es_419": "Cash-out",      "fr": "Cash-out",        "it": "Cash-out",      "ja": "キャッシュアウト", "ko": "캐시아웃",   "nl": "Cash-out",    "zh_Hant": "兌現" },
+    "Stats":        { "es": "Estadísticas",  "es_419": "Estadísticas",  "fr": "Stats",           "it": "Statistiche",   "ja": "統計",             "ko": "통계",       "nl": "Stats",       "zh_Hant": "統計" },
+    "Profit":       { "es": "Beneficio",     "es_419": "Ganancia",      "fr": "Gain",            "it": "Profitto",      "ja": "収支",             "ko": "수익",       "nl": "Winst",       "zh_Hant": "盈利" },
+    "Study":        { "es": "Estudio",       "es_419": "Estudio",       "fr": "Étude",           "it": "Studio",        "ja": "学習",             "ko": "학습",       "nl": "Studie",      "zh_Hant": "學習" },
+    "Live":         { "es": "Presencial",    "es_419": "En vivo",       "fr": "Live",            "it": "Live",          "ja": "ライブ",           "ko": "라이브",     "nl": "Live",        "zh_Hant": "現場" },
+    "Online":       { "es": "Online",        "es_419": "Online",        "fr": "En ligne",        "it": "Online",        "ja": "オンライン",       "ko": "온라인",     "nl": "Online",      "zh_Hant": "線上" },
+    "Hero":         { "es": "Hero",          "es_419": "Hero",          "fr": "Hero",            "it": "Hero",          "ja": "ヒーロー",         "ko": "히어로",     "nl": "Hero",        "zh_Hant": "Hero" },
+    "Villain":      { "es": "Villano",       "es_419": "Villano",       "fr": "Vilain",          "it": "Villain",       "ja": "相手",             "ko": "상대",       "nl": "Villain",     "zh_Hant": "對手" },
+    "Position":     { "es": "Posición",      "es_419": "Posición",      "fr": "Position",        "it": "Posizione",     "ja": "ポジション",       "ko": "포지션",     "nl": "Positie",     "zh_Hant": "位置" },
+    "Range":        { "es": "Rango",         "es_419": "Rango",         "fr": "Range",           "it": "Range",         "ja": "レンジ",           "ko": "레인지",     "nl": "Range",       "zh_Hant": "範圍" },
+    "Equity":       { "es": "Equity",        "es_419": "Equity",        "fr": "Équité",          "it": "Equity",        "ja": "エクイティ",       "ko": "에퀴티",     "nl": "Equity",      "zh_Hant": "勝率" },
+    "Pot odds":     { "es": "Pot odds",      "es_419": "Pot odds",      "fr": "Cote du pot",     "it": "Pot odds",      "ja": "ポットオッズ",     "ko": "팟 오즈",    "nl": "Pot odds",    "zh_Hant": "底池賠率" },
+    "Coaching":     { "es": "Coaching",      "es_419": "Coaching",      "fr": "Coaching",        "it": "Coaching",      "ja": "コーチング",       "ko": "코칭",       "nl": "Coaching",    "zh_Hant": "教練" }
   }
 }
