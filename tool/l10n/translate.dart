@@ -269,7 +269,7 @@ String _systemPrompt(
         'nl': 'Dutch',
         'ja': 'Japanese',
         'ko': 'Korean',
-        'zh_Hant': 'Traditional Chinese (Taiwan)',
+        'zh': 'Traditional Chinese (Taiwan)',
         'es_419': 'Latin American Spanish',
       }[locale] ??
       locale;

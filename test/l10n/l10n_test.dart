@@ -28,7 +28,7 @@ void main() {
       'nl': 'Handen|Taal',
       'ja': 'ハンド|言語',
       'ko': '핸드|언어',
-      'zh-Hant': '手牌|語言',
+      'zh': '手牌|語言',
       'es-419': 'Manos|Idioma',
     };
     for (final e in expected.entries) {

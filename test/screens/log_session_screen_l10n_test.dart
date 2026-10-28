@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tablelab/l10n/l10n.dart' show localeFromLanguageTag;
 import 'package:tablelab/models/session_model.dart';
 import 'package:tablelab/providers/providers.dart';
 import 'package:tablelab/screens/log_session_screen.dart';
@@ -31,7 +32,7 @@ void main() {
     expect(find.text('Tournament'), findsOneWidget);
   });
 
-  for (final code in ['es', 'es-419', 'fr', 'it', 'nl', 'ja', 'ko', 'zh-Hant']) {
+  for (final code in ['es', 'es-419', 'fr', 'it', 'nl', 'ja', 'ko', 'zh']) {
     testWidgets('renders in $code on a 360dp phone without overflow',
         (tester) async {
       await pumpForm(tester, localeFromLanguageTag(code));

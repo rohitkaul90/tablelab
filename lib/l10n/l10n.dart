@@ -28,7 +28,7 @@ const Map<String, String> kLocaleEndonyms = {
   'ja': '日本語',
   'ko': '한국어',
   'nl': 'Nederlands',
-  'zh-Hant': '繁體中文',
+  'zh': '繁體中文',
 };
 
 /// Display name for a locale in the picker (endonym, falling back to the tag
