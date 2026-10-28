@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tablelab/l10n/l10n.dart';
@@ -15,6 +16,7 @@ void main() {
     return SharedPreferences.getInstance();
   }
 
+  const zh = Locale('zh');
   const zhHant = Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant');
   const es419 = Locale('es', '419');
 
@@ -55,7 +57,9 @@ void main() {
   });
 
   group('matchSupportedLocale — script and region variants', () {
-    // The phase-3 set: one Chinese (Traditional) and two Spanish variants.
+    // The phase-3 set as gen-l10n allows it: Traditional Chinese is the bare
+    // `zh` base ARB (a script variant needs a base file), Spanish ships twice.
+    // Sorted like AppLocalizations.supportedLocales (gen-l10n sorts).
     const supported = [
       Locale('en'),
       Locale('es'),
@@ -63,45 +67,47 @@ void main() {
       Locale('fr'),
       Locale('ja'),
       Locale('ko'),
-      zhHant,
+      zh,
     ];
 
     Locale resolve(Locale device) =>
         resolveLocale(null, [device], supported: supported);
 
-    test('any Chinese device gets Traditional Chinese (the only zh shipped)', () {
-      expect(resolve(const Locale('zh', 'TW')), zhHant);
+    test('any Chinese device gets the one shipped Chinese (Traditional)', () {
+      expect(resolve(const Locale('zh', 'TW')), zh);
       expect(
         resolve(const Locale.fromSubtags(
             languageCode: 'zh', scriptCode: 'Hant', countryCode: 'HK')),
-        zhHant,
+        zh,
       );
       expect(
         resolve(const Locale.fromSubtags(
             languageCode: 'zh', scriptCode: 'Hans', countryCode: 'CN')),
-        zhHant,
+        zh,
       );
-      expect(resolve(const Locale('zh')), zhHant);
+      expect(resolve(zh), zh);
     });
 
-    test('a matching script wins once two scripts are shipped', () {
-      const zhHans = Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans');
-      final both = [...supported, zhHans];
+    test('with a second script shipped, script then region table decide', () {
+      // Hypothetical future: base `zh` = Simplified, `zh_Hant` = Traditional.
+      final both = [...supported, zhHant];
+      Locale r(Locale d) => resolveLocale(null, [d], supported: both);
       expect(
-        resolveLocale(
-            null,
-            const [
-              Locale.fromSubtags(
-                  languageCode: 'zh', scriptCode: 'Hans', countryCode: 'SG')
-            ],
-            supported: both),
-        zhHans,
-      );
-      expect(
-        resolveLocale(null, const [Locale('zh', 'TW')], supported: both),
+        r(const Locale.fromSubtags(
+            languageCode: 'zh', scriptCode: 'Hant', countryCode: 'HK')),
         zhHant,
-        reason: 'no script on the device → the first zh entry (Hant)',
+        reason: 'script match',
       );
+      expect(
+        r(const Locale.fromSubtags(
+            languageCode: 'zh', scriptCode: 'Hans', countryCode: 'SG')),
+        zh,
+        reason: 'no Hans entry → base',
+      );
+      expect(r(const Locale('zh', 'TW')), zhHant, reason: 'TW → Hant table');
+      expect(r(const Locale('zh', 'MO')), zhHant, reason: 'MO → Hant table');
+      expect(r(const Locale('zh', 'CN')), zh, reason: 'CN not in table → base');
+      expect(r(zh), zh, reason: 'no region → base');
     });
 
     test('Spanish outside Spain is Latin American', () {
@@ -112,6 +118,7 @@ void main() {
 
     test('Spain and bare Spanish stay European Spanish', () {
       expect(resolve(const Locale('es', 'ES')), const Locale('es'));
+      expect(resolve(const Locale('es', 'EA')), const Locale('es'));
       expect(resolve(const Locale('es')), const Locale('es'));
     });
 
@@ -145,6 +152,16 @@ void main() {
       );
     });
 
+    test('normalises case and tolerates an empty tag', () {
+      expect(localeFromLanguageTag('ZH-hant-tw'),
+          localeFromLanguageTag('zh-Hant-TW'));
+      expect(localeFromLanguageTag('fr-ca'), const Locale('fr', 'CA'));
+      expect(localeFromLanguageTag(''), const Locale('und'));
+      expect(localeFromLanguageTag('-'), const Locale('und'));
+      expect(AppLocalizations.supportedLocales.contains(const Locale('und')),
+          isFalse);
+    });
+
     test('round-trips Locale.toLanguageTag()', () {
       for (final l in [const Locale('en'), zhHant, es419, const Locale('fr', 'CA')]) {
         expect(localeFromLanguageTag(l.toLanguageTag()), l);
@@ -152,26 +169,44 @@ void main() {
     });
   });
 
-  group('intlLocaleCode', () {
-    test('maps the UI locale to an intl locale that has symbol data', () {
+  group('intlLocaleCode / platformLocaleTag', () {
+    test('maps the UI locale to an intl locale that has symbol data',
+        () async {
+      await initializeDateFormatting();
       expect(intlLocaleCode(const Locale('en')), 'en');
       expect(intlLocaleCode(const Locale('nl')), 'nl');
       expect(intlLocaleCode(const Locale('ja')), 'ja');
-      expect(intlLocaleCode(zhHant), 'zh_TW');
+      expect(intlLocaleCode(zh), 'zh_TW');
       expect(intlLocaleCode(es419), 'es_419');
+      for (final l in [const Locale('ja'), const Locale('ko'), zh, es419]) {
+        expect(DateFormat.localeExists(intlLocaleCode(l)), isTrue,
+            reason: '$l');
+      }
     });
 
-    test('every phase-3 intl locale loads date symbols and formats', () async {
+    test('the bare zh ARB is declared as zh-Hant on the platforms', () {
+      expect(platformLocaleTag(zh), 'zh-Hant');
+      expect(platformLocaleTag(es419), 'es-419');
+      expect(platformLocaleTag(const Locale('nl')), 'nl');
+    });
+
+    test('applyIntlLocale formats with the mapped symbols, not the bare code',
+        () async {
       final before = Intl.defaultLocale;
       addTearDown(() => Intl.defaultLocale = before);
-      final d = DateTime(2026, 10, 28);
-      for (final l in [const Locale('ja'), const Locale('ko'), zhHant, es419]) {
-        await applyIntlLocale(l);
-        expect(Intl.defaultLocale, intlLocaleCode(l));
-        // Throws if the symbols were not loaded for Intl.defaultLocale.
-        expect(DateFormat.yMMMd().format(d), isNotEmpty, reason: '$l');
-        expect(NumberFormat('#,##0').format(1234), '1,234', reason: '$l');
-      }
+      final wed = DateTime(2026, 10, 28); // a Wednesday
+      // Traditional-script weekday (週三); intl's bare `zh` would give 周三.
+      await applyIntlLocale(zh);
+      expect(Intl.defaultLocale, 'zh_TW');
+      expect(DateFormat.E().format(wed), '週三');
+      await applyIntlLocale(const Locale('ja'));
+      expect(DateFormat.E().format(wed), '水');
+      await applyIntlLocale(const Locale('ko'));
+      expect(DateFormat.E().format(wed), '수');
+      await applyIntlLocale(es419);
+      expect(Intl.defaultLocale, 'es_419');
+      expect(DateFormat.E().format(wed), 'mié');
+      expect(NumberFormat('#,##0').format(1234), '1,234');
     });
   });
 
@@ -187,11 +222,11 @@ void main() {
       );
     });
 
-    test('"system" and unknown stored values both mean follow the device',
+    test('"system", unknown and empty stored values all mean follow the device',
         () async {
       expect(LocaleNotifier(await prefsWith({'locale': 'system'})).state, isNull);
       expect(LocaleNotifier(await prefsWith({'locale': 'xx'})).state, isNull);
-      // A tag this build does not ship is ignored, not crashed on.
+      expect(LocaleNotifier(await prefsWith({'locale': ''})).state, isNull);
       expect(LocaleNotifier(await prefsWith({'locale': 'zh-Hant-XX'})).state,
           isNull);
     });
@@ -215,17 +250,18 @@ void main() {
       expect(LocaleNotifier(prefs).state, isNull);
     });
 
-    test('a script/region locale persists as its language tag', () async {
+    test('a region locale persists as its language tag', () async {
       final prefs = await prefsWith({});
       final notifier = LocaleNotifier(prefs);
       final before = Intl.defaultLocale;
       addTearDown(() => Intl.defaultLocale = before);
-      await notifier.set(zhHant);
-      expect(prefs.getString('locale'), 'zh-Hant');
+      await notifier.set(es419);
+      expect(prefs.getString('locale'), 'es-419');
+      expect(Intl.defaultLocale, 'es_419');
       // Reads back once the ARB ships; until then it is filtered to System.
       expect(
         LocaleNotifier(prefs).state,
-        AppLocalizations.supportedLocales.contains(zhHant) ? zhHant : isNull,
+        AppLocalizations.supportedLocales.contains(es419) ? es419 : isNull,
       );
     });
 

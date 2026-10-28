@@ -155,15 +155,36 @@ double roundBandEdge(double v) {
   return best;
 }
 
+/// Smallest "round" amount ({1, 2, 2.5, 5} × 10ⁿ) strictly above [v].
+double roundBandEdgeAbove(double v) {
+  if (v <= 0) return 1;
+  var p = 1.0;
+  while (p * 10 <= v) {
+    p *= 10;
+  }
+  for (final base in [p, p * 10]) {
+    for (final m in const [1.0, 2.0, 2.5, 5.0]) {
+      if (base * m > v) return base * m;
+    }
+  }
+  return p * 100;
+}
+
 /// The four band edges expressed in [displayCurrency]: the USD reference
-/// edges converted and rounded, kept strictly increasing.
+/// edges converted and rounded, kept strictly increasing with at least a
+/// 1.5× step. Rounding each edge on its own can snap neighbours in opposite
+/// directions (JPY: 15,000→20,000 up, 30,000→25,000 down → a sliver band
+/// next to a huge one), so an edge that lands too close to the previous one
+/// moves up to the next round amount instead.
 List<double> buyInBandEdges(String displayCurrency) {
   final edges = <double>[];
   for (final usd in kBuyInBucketEdgesUsd) {
     var e = displayCurrency == 'USD'
         ? usd
         : roundBandEdge(convertCurrency(usd, 'USD', displayCurrency));
-    if (edges.isNotEmpty && e <= edges.last) e = edges.last * 2;
+    if (edges.isNotEmpty && e < edges.last * 1.5) {
+      e = roundBandEdgeAbove(edges.last * 1.5);
+    }
     edges.add(e);
   }
   return edges;
@@ -336,7 +357,14 @@ int? parseTableSize(String raw) {
 /// Returns null if the format is unrecognisable.
 /// Big-blind regex token: a number with optional decimal (`.` or `,`) and an
 /// optional `k` (thousands) suffix.
-final _bbNumber = RegExp(r'(\d+(?:[.,]\d+)?)(k)?');
+// A number token: thousands-grouped (`1,000`, `12,500.5`) OR a plain
+// integer/decimal with `.` or a European `,` decimal (`2,5`). The grouped
+// form wins only when every comma is followed by exactly three digits, so
+// `2,5/5` still reads 2.5 while `¥1,000/¥2,000` (JPY/KRW stakes are
+// routinely written with separators) reads 1000/2000.
+final _bbNumber =
+    RegExp(r'(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)(k)?');
+final _thousandsGrouped = RegExp(r'^\d{1,3}(?:,\d{3})+(?:\.\d+)?$');
 
 /// Parses the big blind (in the stakes' own currency units) from a stakes
 /// string, tolerant of the formats manual entry and imports produce:
@@ -350,7 +378,10 @@ double? parseBBFromStakes(String stakes) => parseBlindsFromStakes(stakes)?.$2;
 List<double> _stakesNumbers(String lower) {
   final nums = <double>[];
   for (final m in _bbNumber.allMatches(lower)) {
-    var v = double.tryParse(m.group(1)!.replaceAll(',', '.'));
+    final raw = m.group(1)!;
+    var v = double.tryParse(_thousandsGrouped.hasMatch(raw)
+        ? raw.replaceAll(',', '')
+        : raw.replaceAll(',', '.'));
     if (v == null) continue;
     if (m.group(2) == 'k') v *= 1000;
     nums.add(v);

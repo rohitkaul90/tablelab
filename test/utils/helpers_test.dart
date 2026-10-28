@@ -159,6 +159,12 @@ void main() {
       expect(parseBBFromStakes('1k/2k'), equals(2000.0));
       expect(parseBBFromStakes('2,5/5'), equals(5.0));
       expect(parseBBFromStakes('1/2,5'), equals(2.5));
+      // Thousands separators (JPY/KRW stakes) are grouping, not decimals.
+      expect(parseBBFromStakes('¥1,000/¥2,000'), equals(2000.0));
+      expect(parseBBFromStakes('₩1,000/₩2,000'), equals(2000.0));
+      expect(parseBBFromStakes('2,500/5,000'), equals(5000.0));
+      expect(parseBBFromStakes('12,500.5/25,000'), equals(25000.0));
+      expect(parseBlindsFromStakes('¥1,000/¥2,000'), equals((1000.0, 2000.0)));
     });
 
     test('parses online cap notation (NLxxx → BB = number/100)', () {
@@ -912,10 +918,11 @@ void analyticsKeyTests() {
 
     test('band edges are round numbers in the display currency', () {
       expect(buyInBandEdges('USD'), [50, 100, 200, 500]);
-      for (final c in ['EUR', 'GBP', 'CAD', 'INR', 'AUD']) {
+      for (final c in supportedDisplayCurrencies) {
         final e = buyInBandEdges(c);
         for (var i = 1; i < e.length; i++) {
-          expect(e[i], greaterThan(e[i - 1]), reason: c);
+          expect(e[i], greaterThanOrEqualTo(e[i - 1] * 1.5),
+              reason: ' edges  keep a ≥1.5× step');
         }
         for (final x in e) {
           expect(roundBandEdge(x), x, reason: '$c edge $x is round');
@@ -925,6 +932,13 @@ void analyticsKeyTests() {
       expect(roundBandEdge(92), 100);
       expect(roundBandEdge(185), 200);
       expect(roundBandEdge(4150), 5000);
+      // Per-edge rounding snapped 15,000→20,000 up and 30,000→25,000 down
+      // at the JPY rate (a sliver band beside a huge one); the monotone step
+      // pushes the third edge up to the next round amount instead.
+      expect(buyInBandEdges('JPY'), [10000, 20000, 50000, 100000]);
+      expect(roundBandEdgeAbove(30000), 50000);
+      expect(roundBandEdgeAbove(7500), 10000);
+      expect(roundBandEdgeAbove(50000), 100000);
     });
 
     test('buyInBucketOfSession classifies against display-currency edges', () {

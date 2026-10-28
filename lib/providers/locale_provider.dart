@@ -73,17 +73,40 @@ Locale resolveLocale(
   return const Locale('en');
 }
 
+/// Region → variant fallbacks for languages shipped in more than one
+/// variant, consulted when the device locale has no script and no
+/// exact-country match. `'*'` is the wildcard region. Each language PR that
+/// adds a variant adds one entry here instead of a resolver special case.
+///
+/// - `es`: Spain (and its EA/IC territories) stays `es`; every other region
+///   (MX, AR, CO, US, …) is Latin American Spanish.
+/// - `zh`: only meaningful once a second script ships alongside the base
+///   `zh` ARB (today = Traditional, see [platformLocaleTag]): TW/HK/MO would
+///   read the Traditional variant, the rest the base.
+const Map<String, Map<String, Locale>> kRegionalVariants = {
+  'es': {
+    '*': Locale('es', '419'),
+    'ES': Locale('es'),
+    'EA': Locale('es'),
+    'IC': Locale('es'),
+  },
+  'zh': {
+    'TW': Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+    'HK': Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+    'MO': Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+  },
+};
+
 /// The best supported variant of [device]'s language, or `null` when the
 /// language isn't shipped at all. Among the supported locales that share the
 /// language code:
-///  1. same script wins (`zh-Hant-HK` → `zh_Hant`);
-///  2. then same country (`es-ES` → `es`, were `es_ES` ever shipped);
-///  3. Spanish outside Spain is Latin American (`es-MX`/`es-US`/`es-AR` →
-///     `es_419`; bare `es` and `es-ES` → `es`);
-///  4. otherwise the base locale (no script/country), else the first one —
-///     so a lone `zh_Hant` serves every `zh` device, Simplified included
-///     (readable, and far better than English; add `zh_Hans` when installs
-///     justify it).
+///  1. a single shipped variant serves every device variant (so the bare
+///     `zh` Traditional ARB serves zh-TW, zh-Hant-HK AND zh-Hans-CN —
+///     readable, and far better than English);
+///  2. same script wins (`zh-Hant-HK` → `zh_Hant`);
+///  3. then same country (`es-ES` → `es_ES`, were it ever shipped);
+///  4. then the [kRegionalVariants] table (`es-MX` → `es_419`);
+///  5. otherwise the base locale (no script/country), else the first one.
 Locale? matchSupportedLocale(Locale device, List<Locale> supported) {
   final sameLanguage =
       supported.where((s) => s.languageCode == device.languageCode).toList();
@@ -101,11 +124,13 @@ Locale? matchSupportedLocale(Locale device, List<Locale> supported) {
     for (final s in sameLanguage) {
       if (s.countryCode == country) return s;
     }
-    if (device.languageCode == 'es' && country != 'ES') {
-      for (final s in sameLanguage) {
-        if (s.countryCode == kLatinAmericaRegion) return s;
-      }
-    }
+  }
+  // The region table only applies to a device locale that HAS a region: a
+  // bare `es` is the base language, not the wildcard variant.
+  final table = country == null ? null : kRegionalVariants[device.languageCode];
+  if (table != null) {
+    final variant = table[country] ?? table['*'];
+    if (variant != null && sameLanguage.contains(variant)) return variant;
   }
   for (final s in sameLanguage) {
     if (s.scriptCode == null && s.countryCode == null) return s;
@@ -113,30 +138,13 @@ Locale? matchSupportedLocale(Locale device, List<Locale> supported) {
   return sameLanguage.first;
 }
 
-/// UN M.49 region code for Latin America & the Caribbean — the `es_419`
-/// locale's "country".
-const kLatinAmericaRegion = '419';
-
 /// Loads intl's date symbols for [locale] and makes it the default for every
 /// bare `NumberFormat`/`DateFormat` in the app (helpers.dart formats through
 /// `Intl.defaultLocale`). Called at startup and on every language change.
+/// The locale → intl id mapping lives in [intlLocaleCode] (l10n.dart) so the
+/// explicit-locale DateFormat sites use the same one.
 Future<void> applyIntlLocale(Locale locale) async {
   final code = intlLocaleCode(locale);
   await initializeDateFormatting(code);
   Intl.defaultLocale = code;
-}
-
-/// The intl locale id that carries [locale]'s number/date symbols. intl ships
-/// no `zh_Hant` data, so Traditional Chinese formats as Taiwan (`zh_TW`);
-/// `es_419` exists as-is; plain languages use their bare code (`fr`, not
-/// `fr_CA` — the UI locale is already a supported one, never a device
-/// variant).
-String intlLocaleCode(Locale locale) {
-  const overrides = {'zh_Hant': 'zh_TW'};
-  final tag = locale.toString();
-  if (overrides.containsKey(tag)) return overrides[tag]!;
-  final country = locale.countryCode;
-  return country == null
-      ? locale.languageCode
-      : '${locale.languageCode}_$country';
 }

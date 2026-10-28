@@ -56,11 +56,14 @@ void main() {
     // ARBs — a new locale that forgets it is silently absent from OS settings.
     final xml = File('android/app/src/main/res/xml/locales_config.xml')
         .readAsStringSync();
+    final platformTags = AppLocalizations.supportedLocales
+        .map(platformLocaleTag)
+        .toSet();
     final android = RegExp(r'android:name="([^"]+)"')
         .allMatches(xml)
         .map((m) => m.group(1)!)
         .toSet();
-    expect(android, tags,
+    expect(android, platformTags,
         reason: 'locales_config.xml must list exactly the supported locales');
 
     // iOS: the App Store "Languages" line and the per-app language setting
@@ -75,7 +78,7 @@ void main() {
         .allMatches(block!.group(1)!)
         .map((m) => m.group(1)!)
         .toSet();
-    expect(ios, tags,
+    expect(ios, platformTags,
         reason:
             'Info.plist CFBundleLocalizations must list exactly the supported locales');
   });
