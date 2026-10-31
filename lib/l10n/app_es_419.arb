@@ -1155,7 +1155,7 @@
   "studyStackDepth": "PROFUNDIDAD",
   "studyDepthNote": "La profundidad es aproximada: los packs se resuelven por rango de SPR. El modo Torneo usa rangos preflop con ICM; los packs postflop resueltos son solo para Cash.",
   "studyTournamentNote": "El modo Torneo usa rangos preflop con ICM. Por ahora, los packs postflop resueltos son solo para Cash.",
-  "studyFooter": "Del Flop al river · resuelto a ≤0.5% de explotabilidad en boards representativos",
+  "studyFooter": "Del flop al river · resuelto a ≤0.5% de explotabilidad en boards representativos",
   "studyOpeningRange": "rango de apertura",
   "studyVsOpen": "vs el open de {position}",
   "studyVs3Bet": "vs el 3-bet de {position}",

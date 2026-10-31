@@ -45,7 +45,7 @@ COACHING DE PÓKER CON IA
 • Una generosa cuota diaria gratuita.
 
 ESTUDIA ESTRATEGIAS DE SOLVER
-• Pestaña Estudio: explora una biblioteca de más de 26.000 spots calculados por solver para los enfrentamientos preflop más comunes, calle por calle.
+• Pestaña Estudio (beta): explora una biblioteca de más de 26.000 spots calculados por solver para los enfrentamientos preflop más comunes, calle por calle.
 • Busca cualquier flop, turn y river exactos y mira con qué frecuencia cada mano apuesta, pasa, iguala o sube.
 • Cuadrícula de estrategia, gráficos de equity y vistas por tipo de mano: el mismo marco que usa tu coaching con IA.
 
@@ -103,7 +103,7 @@ COACHING POKER PAR IA
 • Un quota quotidien gratuit généreux.
 
 ÉTUDIE LES STRATÉGIES DE SOLVER
-• Onglet Étude : parcours une bibliothèque de plus de 26 000 spots calculés par solver pour les confrontations préflop courantes, street par street.
+• Onglet Étude (bêta) : parcours une bibliothèque de plus de 26 000 spots calculés par solver pour les confrontations préflop courantes, street par street.
 • Cherche n'importe quel flop, turn et river exacts et vois à quelle fréquence chaque main mise, checke, suit ou relance.
 • Grille de stratégie, graphiques d'équité et vues par type de main : le même cadre que ton coaching IA.
 
@@ -161,7 +161,7 @@ COACHING DI POKER CON IA
 • Una generosa quota giornaliera gratuita.
 
 STUDIA LE STRATEGIE DEI SOLVER
-• Scheda Studio: sfoglia una libreria di oltre 26.000 spot calcolati dal solver per gli scontri preflop più comuni, street per street.
+• Scheda Studio (beta): sfoglia una libreria di oltre 26.000 spot calcolati dal solver per gli scontri preflop più comuni, street per street.
 • Cerca qualsiasi flop, turn e river esatti e guarda con che frequenza ogni mano punta, fa check, chiama o rilancia.
 • Griglia della strategia, grafici di equity e viste per tipo di mano: lo stesso schema usato dal tuo coaching IA.
 
@@ -219,7 +219,7 @@ AI-POKERCOACHING
 • Een royale gratis dagelijkse limiet.
 
 BESTUDEER SOLVERSTRATEGIEËN
-• Tab Studie: blader door een bibliotheek van meer dan 26.000 door solvers berekende spots voor veelvoorkomende preflop-situaties, street voor street.
+• Tab Studie (bèta): blader door een bibliotheek van meer dan 26.000 door solvers berekende spots voor veelvoorkomende preflop-situaties, street voor street.
 • Zoek elke exacte flop, turn en river en zie hoe vaak elke hand bet, checkt, callt of raiset.
 • Strategieraster, equity-grafieken en handklasse-weergaven: hetzelfde kader dat je AI-coaching gebruikt.
 
@@ -277,7 +277,7 @@ AIポーカーコーチング
 • 毎日たっぷりの無料枠。
 
 ソルバー戦略を学習
-• 学習タブ：よくあるプリフロップの対戦について、ソルバーで計算した26,000以上のスポットをストリートごとに閲覧。
+• 学習タブ（ベータ）：よくあるプリフロップの対戦について、ソルバーで計算した26,000以上のスポットをストリートごとに閲覧。
 • 任意のフロップ、ターン、リバーを指定して、各ハンドがベット、チェック、コール、レイズする頻度を確認。
 • 戦略グリッド、エクイティチャート、ハンドクラス表示：AIコーチングと同じフレームワークです。
 
@@ -335,7 +335,7 @@ AI 撲克教練
 • 每日免費額度充足。
 
 研究 solver 策略
-• 學習分頁：瀏覽超過 26,000 個由 solver 計算的常見翻前對局，逐街呈現。
+• 學習分頁（beta）：瀏覽超過 26,000 個由 solver 計算的常見翻前對局，逐街呈現。
 • 搜尋任何指定的翻牌、轉牌、河牌，查看每手牌下注、過牌、跟注或加注的頻率。
 • 策略格、勝率圖與手牌分類檢視：與 AI 教練使用相同的框架。
 
@@ -393,7 +393,7 @@ AI 포커 코칭
 • 넉넉한 무료 일일 사용량.
 
 솔버 전략 학습
-• 학습 탭: 흔한 프리플랍 상황에 대해 솔버로 계산한 26,000개 이상의 스팟을 스트리트별로 살펴보세요.
+• 학습 탭(베타): 흔한 프리플랍 상황에 대해 솔버로 계산한 26,000개 이상의 스팟을 스트리트별로 살펴보세요.
 • 원하는 플랍, 턴, 리버를 검색해 각 핸드가 얼마나 자주 벳, 체크, 콜, 레이즈하는지 확인.
 • 전략 그리드, 에퀴티 차트, 핸드 클래스 보기: AI 코칭과 같은 프레임워크예요.
 
@@ -453,7 +453,7 @@ COACHING DE PÓKER CON IA
 • Una generosa cuota diaria gratis.
 
 ESTUDIA ESTRATEGIAS DE SOLVER
-• Pestaña Estudio: explora una biblioteca de más de 26,000 spots calculados por solver para los enfrentamientos preflop más comunes, calle por calle.
+• Pestaña Estudio (beta): explora una biblioteca de más de 26,000 spots calculados por solver para los enfrentamientos preflop más comunes, calle por calle.
 • Busca cualquier flop, turn y river exactos y mira con qué frecuencia cada mano apuesta, pasa, paga o sube.
 • Cuadrícula de estrategia, gráficas de equity y vistas por tipo de mano: el mismo marco que usa tu coaching con IA.
 

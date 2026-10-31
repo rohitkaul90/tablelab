@@ -48,6 +48,10 @@ AI coaching) while staying readable — Play weights the short description heavi
 
 ## Full description (≤4000 chars — this draft ≈1,550)
 
+**"(beta)" stays in the PLAY copy until an Android release ships the beta-label removal** (1.11.1+21 is
+iOS-only; Play production is 1.11.0+20, whose build still shows the BETA badge). The App Store copy
+drops it — see the App Store section.
+
 ```
 Track your poker. Fix your leaks.
 
@@ -71,7 +75,7 @@ AI POKER COACHING
 • A generous free daily allowance.
 
 STUDY SOLVER STRATEGIES
-• Study tab — browse a library of 26,000+ solver-computed spots for common preflop battles, street by street.
+• Study tab (beta) — browse a library of 26,000+ solver-computed spots for common preflop battles, street by street.
 • Search any exact flop, turn, and river and see how often each hand bets, checks, calls, or raises.
 • Strategy grid, equity charts, and hand-class views — the same framework your AI coaching uses.
 

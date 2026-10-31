@@ -266,26 +266,18 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     // ABOVE the Theme(data: AppTheme.dark) wrapper, so the ambient scheme
     // would flip the icon to light-mode colors on this always-dark screen.
     final scheme = AppTheme.dark.colorScheme;
-    // The glyph stays small, but the tappable area is padded out to the
-    // ~48dp minimum; Tooltip + Semantics make the affordance discoverable.
+    // IconButton supplies the 48dp minimum hit target, the tooltip and the
+    // button semantics; the glyph itself stays small next to the title.
     return Semantics(
-      button: true,
       label: context.l10n.studyInfoSemantics,
-      child: Tooltip(
-        message: context.l10n.studyInfoTooltip,
-        child: InkWell(
-          onTap: () => _showStudyInfo(context),
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            child: Icon(
-              Icons.info_outline,
-              size: 18,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
+      child: IconButton(
+        icon: Icon(
+          Icons.info_outline,
+          size: 18,
+          color: scheme.onSurfaceVariant,
         ),
+        tooltip: context.l10n.studyInfoTooltip,
+        onPressed: () => _showStudyInfo(context),
       ),
     );
   }

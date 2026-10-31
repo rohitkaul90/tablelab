@@ -1155,7 +1155,7 @@
   "studyStackDepth": "STACK EFFECTIF",
   "studyDepthNote": "La profondeur de stack est approximative — les packs sont solvés par tranche de SPR. Le mode Tournoi utilise des ranges preflop adaptées à l'ICM ; les packs postflop solvés sont réservés au cash.",
   "studyTournamentNote": "Le mode Tournoi utilise des ranges preflop adaptées à l'ICM. Les packs postflop solvés sont réservés au cash pour l'instant.",
-  "studyFooter": "Du Flop à la river · solvé à ≤0,5 % d'exploitabilité sur des boards représentatifs",
+  "studyFooter": "Du flop à la river · solvé à ≤0,5 % d'exploitabilité sur des boards représentatifs",
   "studyOpeningRange": "range d'open",
   "studyVsOpen": "face à l'open {position}",
   "studyVs3Bet": "face au 3-bet {position}",
