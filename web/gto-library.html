@@ -89,7 +89,7 @@
         "mainEntity": [
           { "@type": "Question", "name": "What is GTO poker strategy?", "acceptedAnswer": { "@type": "Answer", "text": "GTO (game-theory optimal) strategy is the equilibrium solution to a poker spot: a mix of bets, checks, calls, raises, and folds for every hand such that no opponent strategy can exploit it. Solvers compute these equilibria numerically. Studying GTO output tells you the baseline — how often each hand in your range wants to take each action — which you can then deviate from to exploit real opponents." } },
           { "@type": "Question", "name": "Is the TableLab GTO library really free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The library is part of the free TableLab app — the web app at tablelab.app and the Android app on Google Play. There is no paywall on the Study tab, no locked scenarios, and no credit card. Comparable precomputed-solution products are paid subscriptions." } },
-          { "@type": "Question", "name": "How accurate are the solutions?", "acceptedAnswer": { "@type": "Answer", "text": "Every spot is solved with TexasSolver, a CFR solver used under a commercial license, to an exploitability of at most 0.5% of the pot. That means a theoretically perfect opponent could gain no more than half a percent of the pot per hand against the computed strategy — a standard precision target for practical GTO study. The in-app footer labels the library Beta, flop to river." } },
+          { "@type": "Question", "name": "How accurate are the solutions?", "acceptedAnswer": { "@type": "Answer", "text": "Every spot is solved with TexasSolver, a CFR solver used under a commercial license, to an exploitability of at most 0.5% of the pot. That means a theoretically perfect opponent could gain no more than half a percent of the pot per hand against the computed strategy — a standard precision target for practical GTO study. The in-app footer labels the library flop to river." } },
           { "@type": "Question", "name": "Why do the suits in the library sometimes differ from my actual hand?", "acceptedAnswer": { "@type": "Answer", "text": "Boards are stored in canonical suit-isomorphic form. Suits have no inherent value in hold'em, so A♠7♥2♦ and A♥7♦2♣ play identically — the 22,100 raw flops collapse to 1,755 strategically distinct ones. The library solves each distinct flop once and represents it with one canonical suit assignment; map your hand's suits onto the canonical board and the strategy is exactly the same." } },
           { "@type": "Question", "name": "Does the GTO library work on mobile?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The library lives in the TableLab app's Study tab, which runs on Android via Google Play and in any modern browser at tablelab.app — the same solved spots, streamed on demand, on both platforms." } },
           { "@type": "Question", "name": "Can it solve my exact custom spot?", "acceptedAnswer": { "@type": "Answer", "text": "No — it is a precomputed library, not an on-demand solver. Solutions exist for five specific preflop lines with standard open sizes, across three stack-depth buckets per scenario. If your spot came from a different preflop line or a non-standard size, the nearest library spot is a reference point, not an exact answer; a custom tree needs a full solver." } }
@@ -294,9 +294,9 @@
         hand.</li>
         <li><strong>≤0.5% exploitability, not perfection.</strong> Solutions are converged to a
         tight practical threshold, not a mathematical zero.</li>
-        <li><strong>Beta, flop to river.</strong> The in-app library carries a "Beta · flop to
-        river" footer: postflop is solved in full; preflop ranges come from standard charts, not
-        a preflop solve.</li>
+        <li><strong>Flop to river.</strong> The in-app library carries a "Flop to river"
+        footer: postflop is solved in full; preflop ranges come from standard charts, not a
+        preflop solve.</li>
         <li><strong>Not an on-demand solver.</strong> You browse precomputed solutions; the app
         does not solve arbitrary custom trees.</li>
       </ul>
@@ -331,7 +331,7 @@
           license, to an exploitability of at most 0.5% of the pot. That means a theoretically
           perfect opponent could gain no more than half a percent of the pot per hand against
           the computed strategy — a standard precision target for practical GTO study. The
-          in-app footer labels the library Beta, flop to river.</p>
+          in-app footer labels the library flop to river.</p>
         </details>
         <details>
           <summary>Why do the suits in the library sometimes differ from my actual hand?</summary>

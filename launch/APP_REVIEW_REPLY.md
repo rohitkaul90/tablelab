@@ -126,3 +126,78 @@ Check before sending
   it via an unlisted link instead and reference the link in both block A and block B.
 - Name the file `tablelab-ios-review.mp4` (Photos exports `.mov`; App Store Connect accepts
   either — keep the name consistent with block A or edit the name there).
+
+---
+
+# Round 3 — 2026-10-31: 1.10.2 (19) rejected again (2.2 / 2.3.10 / 2.3.6)
+
+Apple's message (submission `249d6273-…`, reviewed on an iPad Air 11-inch M3 — the iPhone-only build
+runs in compatibility mode, not a finding):
+
+- **2.2 Performance – Beta Testing**: "features intended to support beta testing" = the Study tab's
+  `BETA` bottom-nav badge, the "BETA" title chip + "Study is in beta" dialog, and the
+  "Beta · flop to river" footer (+ "Study tab (beta)" in the description).
+- **2.3.10 Accurate Metadata**: "Revise the app's description to remove Android references" — every
+  description ended "on iPhone, Android and on the web"; What's New said "syncs across iPhone,
+  Android and the web".
+- **2.3.6 Accurate Metadata**: "select Frequent for Simulated Gambling" (was None / 4+). Frequent
+  computes to **18+** in the questionnaire. Apple's note also carries the boilerplate "apps with
+  gambling services must be submitted by an organization, not by an individual" — TableLab has no
+  gambling services; the reply says so plainly. If Apple nevertheless treats it as one, that is an
+  account-type question (Organization needs a D-U-N-S), not a code fix.
+
+Owner decisions 2026-10-31: accept Frequent (18+); keep the "strategies are refined over time"
+disclosure behind an info icon with no beta wording; fix build **1.11.1 (+21)**, iOS only (Play
+stays on 1.11.0+20).
+
+Order of operations in App Store Connect (owner, irreversible clicks), after `v1.11.1` has built
+and build 21 shows in TestFlight:
+
+1. App Information → Age Ratings → Edit → Step 6 → Simulated Gambling = **Frequent** (Contests
+   None, Gambling No, Loot Boxes No unchanged) → Step 7 shows 18+ → Save.
+2. App Store → the "1.10.2 Rejected" version page → Version `1.11.1`; Build → 21.
+3. Description in all nine locales (`STORE_LISTING.md` §App Store): the Study bullet without
+   "(beta)" and the availability line without "Android". Add the four new localizations
+   (Japanese, Chinese (Traditional), Korean, Spanish (Mexico)) from `STORE_LISTING_translations.md`
+   with the same two edits.
+4. What's New: `launch/release-notes-v1.11.1.md` per language (no Android mention).
+5. App Review Information → Notes: block B v2 below. Demo account unchanged — log in with it on
+   the iPhone first.
+6. App Review page → Reply to App Review: block D. Then **Resubmit to App Review**. Manual release.
+
+## D. Reply text (round 3)
+
+```
+Thank you for the review. All three items are addressed in the new build and metadata now submitted (version 1.11.1, build 21).
+
+Guideline 2.2 – Beta Testing
+The "BETA" label on the Study tab (bottom-navigation badge, title chip and footer) has been removed from the app. Study is a finished, fully available feature; the label only flagged that its strategy charts are refined over time. That note now lives behind a plain info icon with no beta or testing wording. The app contains no TestFlight, testing or trial functionality.
+
+Guideline 2.3.10 – Accurate Metadata
+All references to Android have been removed from the description and the What's New text in every language.
+
+Guideline 2.3.6 – Accurate Metadata
+The Age Rating questionnaire now has "Simulated Gambling" set to "Frequent", as requested (resulting rating 18+). On the second point in your note: TableLab offers no gambling services. Nothing is played or wagered in the app, no funds are held or transferred, and it connects to no poker operator or betting service; users log results of games they played elsewhere and study strategy charts. It is submitted by an individual developer on that basis.
+
+Please let us know if anything else is needed.
+```
+
+## B v2. Notes field (replaces block B; ≤ 4000 chars)
+
+```
+TableLab is a results tracker and study tool for poker players. It offers no gambling services: nothing can be played or wagered in the app, no funds are held or transferred, and it connects to no poker operator or betting service. Users log sessions they played elsewhere, record hands, review statistics, study solver-computed strategy charts, and request AI-generated coaching. The Age Rating declares frequent simulated gambling, as App Review asked on 2026-10-31, because the app's subject matter is poker.
+
+ACCESS: Sign-in is required. Use the demo account above (email + password; it already contains sessions and hands). New accounts can also be created with email (confirmation link), Google, or Sign in with Apple. The demo account uses email.
+
+FEATURES: Stats tab (bankroll/statistics), Sessions tab (+ = Start live or Log past), Hands tab (+ = Quick or Full hand; hand menu = AI Coaching / replayer), Reads tab (private opponent notes), Study tab (strategy charts downloaded from our own server; the info icon next to its title explains that the charts are refined over time), side menu = Tools (Equity/ICM/Variance calculators), Tournament Calendar, Settings, Help, Data & Privacy. "Delete account" in Settings removes all server data and revokes the Sign in with Apple authorization. Optional CSV/Excel import under Settings > Data.
+
+USER CONTENT: nothing a user enters is visible to other users (no sharing, no feed, no messaging), so there is no reporting/blocking mechanism.
+
+EXTERNAL SERVICES: Supabase (auth incl. Google + Apple providers, Postgres DB, Edge Functions; on AWS), Anthropic Claude API (AI coaching, only when the user taps Analyse, via our Edge Function), Firebase Crashlytics (crashes), PostHog (usage analytics, no tracking), Cloudflare R2 at packs.tablelab.app (our strategy chart files), PokerNews (source of the tournament calendar listings, declared under Content Rights), Resend (account emails), tablelab.app (confirmation page, privacy, terms). No payment processor, no ads.
+
+REGIONS: identical features and content everywhere; UI in English, Spanish (Spain and Latin America), French, Italian, Dutch, Japanese, Traditional Chinese and Korean following the device language; AI coaching text is English.
+
+IN-APP PURCHASES: none. The app is fully free.
+
+REVIEW HISTORY: 1.10.1 received Guideline 2.1 "Information Needed" (answered with a device screen recording and these notes); 1.10.2 received 2.2 / 2.3.10 / 2.3.6 — this build removes the beta label, the metadata no longer mentions Android, and the age rating is set to frequent simulated gambling.
+```

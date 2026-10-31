@@ -5435,21 +5435,21 @@
   "@studySettings": {
     "description": "Tooltip / title of the Study settings sheet."
   },
-  "studyBetaSemantics": "Study beta information",
-  "@studyBetaSemantics": {
-    "description": "Screen-reader label of the BETA chip."
+  "studyInfoSemantics": "About Study's strategies",
+  "@studyInfoSemantics": {
+    "description": "Screen-reader label of the info icon next to the Study title."
   },
-  "studyBetaTooltip": "Study is in beta — tap for details",
-  "@studyBetaTooltip": {
-    "description": "Tooltip on the BETA chip."
+  "studyInfoTooltip": "About Study's strategies — tap for details",
+  "@studyInfoTooltip": {
+    "description": "Tooltip on the info icon next to the Study title."
   },
-  "studyBetaTitle": "Study is in beta",
-  "@studyBetaTitle": {
-    "description": "Title of the beta explainer dialog."
+  "studyInfoTitle": "About Study's strategies",
+  "@studyInfoTitle": {
+    "description": "Title of the Study strategies explainer dialog."
   },
-  "studyBetaBody": "The solved strategies behind Study are still being calibrated — we are refining the preflop ranges the solutions are built on and re-solving spots as they improve.\n\nFrequencies and strategies shown here can change between updates and should be treated as a study aid, not a definitive answer. The rest of the app (sessions, stats, hands) is unaffected.",
-  "@studyBetaBody": {
-    "description": "Body of the beta explainer dialog; keep the paragraph break."
+  "studyInfoBody": "Study's strategies come from our own solver runs and are refined over time — we keep improving the preflop ranges the solutions are built on and re-solve spots as they improve.\n\nFrequencies and strategies shown here can change between updates and should be treated as a study aid, not a definitive answer. The rest of the app (sessions, stats, hands) is unaffected.",
+  "@studyInfoBody": {
+    "description": "Body of the Study strategies explainer dialog; keep the paragraph break."
   },
   "studyExit": "Exit",
   "@studyExit": {
@@ -5471,7 +5471,7 @@
   "@studyTournamentNote": {
     "description": "Note in Study settings when no depth selector is shown (keep ICM)."
   },
-  "studyFooter": "Beta · flop to river · solved to ≤0.5% exploitability on representative boards",
+  "studyFooter": "Flop to river · solved to ≤0.5% exploitability on representative boards",
   "@studyFooter": {
     "description": "Small footer describing the solved data."
   },
