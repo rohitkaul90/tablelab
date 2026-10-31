@@ -167,6 +167,8 @@ and build 21 shows in TestFlight:
 
 ## D. Reply text (round 3)
 
+**SENT 2026-10-31 12:39 (as below; 1,177 chars).** Note: a first App Store version has NO What's New field, and ASC had only the English (U.S.) localization (es/fr/it/nl were never added there — Play only), so the Android line lived in ONE description. Owner chose English-only for this resubmission; add localizations later as a metadata-only update.
+
 ```
 Thank you for the review. All three items are addressed in the new build and metadata now submitted (version 1.11.1, build 21).
 
@@ -174,7 +176,7 @@ Guideline 2.2 – Beta Testing
 The "BETA" label on the Study tab (bottom-navigation badge, title chip and footer) has been removed from the app. Study is a finished, fully available feature; the label only flagged that its strategy charts are refined over time. That note now lives behind a plain info icon with no beta or testing wording. The app contains no TestFlight, testing or trial functionality.
 
 Guideline 2.3.10 – Accurate Metadata
-All references to Android have been removed from the description and the What's New text in every language.
+All references to Android have been removed from the app's description.
 
 Guideline 2.3.6 – Accurate Metadata
 The Age Rating questionnaire now has "Simulated Gambling" set to "Frequent", as requested (resulting rating 18+). On the second point in your note: TableLab offers no gambling services. Nothing is played or wagered in the app, no funds are held or transferred, and it connects to no poker operator or betting service; users log results of games they played elsewhere and study strategy charts. It is submitted by an individual developer on that basis.
@@ -183,6 +185,8 @@ Please let us know if anything else is needed.
 ```
 
 ## B v2. Notes field (replaces block B; ≤ 4000 chars)
+
+**SAVED in ASC 2026-10-31** (2,592 chars). Also saved the same day: Age Rating = Frequent simulated gambling → 18+ (Brazil A18, Korea 19+, 17+ on iOS < 26); English description without Android/"(beta)"; version 1.10.2 → 1.11.1 with build 21. Owner pressed Resubmit.
 
 ```
 TableLab is a results tracker and study tool for poker players. It offers no gambling services: nothing can be played or wagered in the app, no funds are held or transferred, and it connects to no poker operator or betting service. Users log sessions they played elsewhere, record hands, review statistics, study solver-computed strategy charts, and request AI-generated coaching. The Age Rating declares frequent simulated gambling, as App Review asked on 2026-10-31, because the app's subject matter is poker.
