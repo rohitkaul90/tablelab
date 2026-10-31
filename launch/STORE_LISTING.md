@@ -71,7 +71,7 @@ AI POKER COACHING
 • A generous free daily allowance.
 
 STUDY SOLVER STRATEGIES
-• Study tab (beta) — browse a library of 26,000+ solver-computed spots for common preflop battles, street by street.
+• Study tab — browse a library of 26,000+ solver-computed spots for common preflop battles, street by street.
 • Search any exact flop, turn, and river and see how often each hand bets, checks, calls, or raises.
 • Strategy grid, equity charts, and hand-class views — the same framework your AI coaching uses.
 
@@ -157,11 +157,13 @@ Free poker bankroll tracker: log cash and tournament sessions, replay hands, run
 The Play full description above, verbatim, with two edits:
 - Under **FREE & PRIVATE** add the bullet `• Sign in with Apple, Google, or email.`
 - The availability line (second-to-last paragraph; keep the closing MagpiQ / support@ line) →
-  `Available in English, Spanish (Spain and Latin America), French, Italian, Dutch, Japanese, Traditional Chinese and Korean, on iPhone, Android and on the web at tablelab.app.`
+  `Available in English, Spanish (Spain and Latin America), French, Italian, Dutch, Japanese, Traditional Chinese and Korean, on iPhone and on the web at tablelab.app.`
+- The Study bullet drops its "(beta)" — `• Study tab — browse a library of 26,000+ …` (App Review 2.2, 2026-10-31).
+- **No Android mention anywhere in the description or What's New** (App Review 2.3.10, 2026-10-31).
 
 ## What's New (first iOS release)
 ```
-TableLab is now on iPhone: bankroll tracking, hand replays, equity/ICM/variance calculators, a solver-computed study library and AI coaching, with Sign in with Apple. Your account syncs across iPhone, Android and the web.
+TableLab is now on iPhone: bankroll tracking, hand replays, equity/ICM/variance calculators, a solver-computed study library and AI coaching, with Sign in with Apple. Your account syncs with the web app at tablelab.app.
 ```
 
 ## URLs
@@ -179,16 +181,17 @@ Apple's revised questionnaire (mandatory since 31 Jan 2026; tiers 4+/9+/13+/16+/
 items than the old one. One consistent story everywhere, including the review notes below:
 **TableLab contains no gambling, real or simulated — it is a results log and study tool for a
 game people play elsewhere.**
-- Simulated gambling: **None** (nothing is played or wagered in the app). Real-money gambling /
-  lotteries: **No**. Contests: **No**.
+- Simulated gambling: **Frequent** — set on App Review's instruction (2026-10-31 rejection under
+  2.3.6: "since the app includes frequent simulated gambling, you must select Frequent"); the
+  questionnaire then computes **18+**. Real-money gambling / lotteries: **No**. Contests: **No**.
 - Violence, horror, sexual/mature themes, profanity, alcohol/tobacco/drugs references: **None**.
 - Medical/wellness or health-related content: **No**. Unrestricted web access: **No**.
   In-app parental controls / age assurance: **No**. Messaging or user-generated content shown to
   others: **No** (reads/notes are private to the account). Advertising: **No**.
-- Expected result **4+**. If App Review pushes back on the poker subject matter, accept their
-  request to raise simulated gambling to "Infrequent or mild" (→ 13+) rather than argue; nothing
-  else in the listing depends on the tier. Keep the Play IARC answers consistent with whatever
-  Apple settles on.
+- Result **18+** (was 4+ with Simulated gambling = None on the first two submissions; Apple
+  rejected that). Nothing else in the listing depends on the tier. Play's IARC rating is a
+  different body and was NOT changed (owner decision 2026-10-31); the review notes must not
+  claim "no simulated gambling" any more — they say no gambling SERVICES.
 
 ## App Privacy (must agree with `ios/Runner/PrivacyInfo.xcprivacy`)
 Data collected, all **Linked to you**, none **Used to track you**:
@@ -223,6 +226,10 @@ when the user taps Analyse (disclosed in the policy's AI section).
   regulated-industry status and an IAP overview. The reply text, the Notes text and the recording
   runbook live in `launch/APP_REVIEW_REPLY.md`. For a NEW app record in future, attach the
   recording and the full notes at first submission to skip this round.
+- **Second rejection 2026-10-31 (1.10.2 build 19)**: 2.2 Beta Testing (the Study tab's BETA
+  badge/chip/footer), 2.3.10 (Android in the description + What's New), 2.3.6 (age rating →
+  Frequent simulated gambling). Fix = 1.11.1 (+21) with the beta wording removed + the metadata
+  edits above; reply + notes in `launch/APP_REVIEW_REPLY.md` round 3.
 - Contact: your name, phone, and `support@tablelab.app`.
 
 ## Screenshots
@@ -241,14 +248,29 @@ translation; the sign-in bullet goes under the "no ads" bullet):
 
 | | Sign-in bullet | Availability line |
 |---|---|---|
-| es | `• Inicia sesión con Apple, Google o tu email.` | `Disponible en español (España y Latinoamérica), inglés, francés, italiano, neerlandés, japonés, chino tradicional y coreano, en iPhone, Android y en la web en tablelab.app.` |
-| fr | `• Connexion avec Apple, Google ou par e-mail.` | `Disponible en français, anglais, espagnol (Espagne et Amérique latine), italien, néerlandais, japonais, chinois traditionnel et coréen, sur iPhone, Android et sur le web à tablelab.app.` |
-| it | `• Accedi con Apple, Google o email.` | `Disponibile in italiano, inglese, spagnolo (Spagna e America Latina), francese, olandese, giapponese, cinese tradizionale e coreano, su iPhone, Android e sul web su tablelab.app.` |
-| nl | `• Log in met Apple, Google of e-mail.` | `Beschikbaar in het Nederlands, Engels, Spaans (Spanje en Latijns-Amerika), Frans, Italiaans, Japans, Traditioneel Chinees en Koreaans, op iPhone, Android en op het web via tablelab.app.` |
-| ja | `• Apple、Google、またはメールでサインイン。` | `英語、スペイン語、フランス語、イタリア語、オランダ語、日本語、繁体字中国語、韓国語に対応。iPhone、Android、ウェブ（tablelab.app）で利用できます。` |
-| zh-Hant | `• 使用 Apple、Google 或 email 登入。` | `支援英文、西班牙文、法文、義大利文、荷蘭文、日文、繁體中文與韓文，可在 iPhone、Android 與網頁版 tablelab.app 使用。` |
-| ko | `• Apple, Google 또는 이메일로 로그인.` | `영어, 스페인어, 프랑스어, 이탈리아어, 네덜란드어, 일본어, 중국어(번체), 한국어 지원. iPhone, Android와 웹(tablelab.app)에서 사용할 수 있어요.` |
-| es-MX | `• Inicia sesión con Apple, Google o tu correo.` | `Disponible en español (Latinoamérica y España), inglés, francés, italiano, neerlandés, japonés, chino tradicional y coreano, en iPhone, Android y en la web en tablelab.app.` |
+| es | `• Inicia sesión con Apple, Google o tu email.` | `Disponible en español (España y Latinoamérica), inglés, francés, italiano, neerlandés, japonés, chino tradicional y coreano, en iPhone y en la web en tablelab.app.` |
+| fr | `• Connexion avec Apple, Google ou par e-mail.` | `Disponible en français, anglais, espagnol (Espagne et Amérique latine), italien, néerlandais, japonais, chinois traditionnel et coréen, sur iPhone et sur le web à tablelab.app.` |
+| it | `• Accedi con Apple, Google o email.` | `Disponibile in italiano, inglese, spagnolo (Spagna e America Latina), francese, olandese, giapponese, cinese tradizionale e coreano, su iPhone e sul web su tablelab.app.` |
+| nl | `• Log in met Apple, Google of e-mail.` | `Beschikbaar in het Nederlands, Engels, Spaans (Spanje en Latijns-Amerika), Frans, Italiaans, Japans, Traditioneel Chinees en Koreaans, op iPhone en op het web via tablelab.app.` |
+| ja | `• Apple、Google、またはメールでサインイン。` | `英語、スペイン語、フランス語、イタリア語、オランダ語、日本語、繁体字中国語、韓国語に対応。iPhone とウェブ（tablelab.app）で利用できます。` |
+| zh-Hant | `• 使用 Apple、Google 或 email 登入。` | `支援英文、西班牙文、法文、義大利文、荷蘭文、日文、繁體中文與韓文，可在 iPhone 與網頁版 tablelab.app 使用。` |
+| ko | `• Apple, Google 또는 이메일로 로그인.` | `영어, 스페인어, 프랑스어, 이탈리아어, 네덜란드어, 일본어, 중국어(번체), 한국어 지원. iPhone과 웹(tablelab.app)에서 사용할 수 있어요.` |
+| es-MX | `• Inicia sesión con Apple, Google o tu correo.` | `Disponible en español (Latinoamérica y España), inglés, francés, italiano, neerlandés, japonés, chino tradicional y coreano, en iPhone y en la web en tablelab.app.` |
+
+Study bullet without "(beta)" per language (App Review 2.2 — paste over the existing bullet):
+
+| | Study bullet (App Store) |
+|---|---|
+| es / es-MX | `• Pestaña Estudio: explora una biblioteca de más de 26.000 spots calculados por solver para los enfrentamientos preflop más comunes, calle por calle.` (es-MX: `26,000`) |
+| fr | `• Onglet Étude : parcours une bibliothèque de plus de 26 000 spots calculés par solver pour les confrontations préflop courantes, street par street.` |
+| it | `• Scheda Studio: sfoglia una libreria di oltre 26.000 spot calcolati dal solver per gli scontri preflop più comuni, street per street.` |
+| nl | `• Tab Studie: blader door een bibliotheek van meer dan 26.000 door solvers berekende spots voor veelvoorkomende preflop-situaties, street voor street.` |
+| ja | `• 学習タブ：よくあるプリフロップの対戦について、ソルバーで計算した26,000以上のスポットをストリートごとに閲覧。` |
+| zh-Hant | `• 學習分頁：瀏覽超過 26,000 個由 solver 計算的常見翻前對局，逐街呈現。` |
+| ko | `• 학습 탭: 흔한 프리플랍 상황에 대해 솔버로 계산한 26,000개 이상의 스팟을 스트리트별로 살펴보세요.` |
+
+The tail of each sentence must match the Play translation in `STORE_LISTING_translations.md` (only the
+"(beta)" parenthetical is removed there); the table above is the reference wording.
 
 Short fields (poker terms deliberately kept in English):
 
@@ -272,4 +294,4 @@ zh-Hant `撲克,德州撲克,bankroll,收支,手牌,ICM,賠率,計算機,記錄,
 ko `포커,홀덤,뱅크롤,수익,핸드,ICM,오즈,계산기,기록,GTO,솔버,토너먼트,캐시게임,통계` ·
 es-MX same as es.
 
-App Store Connect has no es-419 locale — use **Spanish (Mexico)** for the Latin American text (Play uses `es-419`). Name + full description for the four new languages: `STORE_LISTING_translations.md` (the iPhone availability line above replaces the Android one; the sign-in bullet goes under the "no ads" bullet).
+App Store Connect has no es-419 locale — use **Spanish (Mexico)** for the Latin American text (Play uses `es-419`). Name + full description for the four new languages: `STORE_LISTING_translations.md` (the iPhone availability line above replaces the Android one; the sign-in bullet goes under the "no ads" bullet; drop "(beta)" from the Study bullet in every language — see the table below).

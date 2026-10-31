@@ -210,7 +210,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    _betaChip(context),
+                    _infoChip(context),
                   ],
                 ),
                 actions: [
@@ -255,45 +255,34 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
-  /// Small tappable "BETA" pill next to the title. Study's solved ranges are
-  /// still being calibrated (preflop-range migration in progress), so the
-  /// frequencies shown can change between releases — the chip discloses that
-  /// without burying the screen under a banner. Remove together with the
-  /// bottom-nav Badge (main.dart) when Study leaves beta.
-  Widget _betaChip(BuildContext context) {
+  /// Small tappable info icon next to the title. Study's solved strategies
+  /// are refined over time (preflop-range migration in progress), so the
+  /// frequencies shown can change between releases — the icon opens a short
+  /// explainer without burying the screen under a banner. Deliberately NOT a
+  /// "BETA" label: App Review rejected 1.10.2 under Guideline 2.2 (beta
+  /// testing) for exactly that wording (2026-10-31).
+  Widget _infoChip(BuildContext context) {
     // AppTheme.dark directly, NOT Theme.of(context): this State's context sits
     // ABOVE the Theme(data: AppTheme.dark) wrapper, so the ambient scheme
-    // would flip the chip to light-mode colors on this always-dark screen.
+    // would flip the icon to light-mode colors on this always-dark screen.
     final scheme = AppTheme.dark.colorScheme;
-    // The visual pill stays small, but the tappable area is padded out to the
+    // The glyph stays small, but the tappable area is padded out to the
     // ~48dp minimum; Tooltip + Semantics make the affordance discoverable.
     return Semantics(
       button: true,
-      label: context.l10n.studyBetaSemantics,
+      label: context.l10n.studyInfoSemantics,
       child: Tooltip(
-        message: context.l10n.studyBetaTooltip,
+        message: context.l10n.studyInfoTooltip,
         child: InkWell(
-          onTap: () => _showBetaInfo(context),
-          borderRadius: BorderRadius.circular(14),
+          onTap: () => _showStudyInfo(context),
+          borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding:
-                const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
-            child: Container(
-              decoration: BoxDecoration(
-                color: scheme.tertiaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              child: Text(
-                'BETA',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
-                  color: scheme.onTertiaryContainer,
-                ),
-              ),
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            child: Icon(
+              Icons.info_outline,
+              size: 18,
+              color: scheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -301,7 +290,7 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
     );
   }
 
-  void _showBetaInfo(BuildContext context) {
+  void _showStudyInfo(BuildContext context) {
     showDialog<void>(
       context: context,
       // Dialog routes inherit from the root navigator, not this screen's
@@ -310,8 +299,8 @@ class _GtoExplorerScreenState extends ConsumerState<GtoExplorerScreen> {
       builder: (ctx) => Theme(
         data: AppTheme.dark,
         child: AlertDialog(
-          title: Text(ctx.l10n.studyBetaTitle),
-          content: Text(ctx.l10n.studyBetaBody),
+          title: Text(ctx.l10n.studyInfoTitle),
+          content: Text(ctx.l10n.studyInfoBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
