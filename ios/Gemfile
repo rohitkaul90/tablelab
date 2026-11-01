@@ -2,5 +2,5 @@ source "https://rubygems.org"
 
 # Majors pinned; the exact resolve is recorded in Gemfile.lock (committed from the
 # first green CI run's artifact — there is no local Ruby on the Windows dev box).
-gem "fastlane", "~> 2.220"
+gem "fastlane", "~> 2.241"
 gem "cocoapods", "~> 1.15"
