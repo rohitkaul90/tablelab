@@ -205,3 +205,89 @@ IN-APP PURCHASES: none. The app is fully free.
 
 REVIEW HISTORY: 1.10.1 received Guideline 2.1 "Information Needed" (answered with a device screen recording and these notes); 1.10.2 received 2.2 / 2.3.10 / 2.3.6 — this build removes the beta label, the metadata no longer mentions Android, and the age rating is set to frequent simulated gambling.
 ```
+
+---
+
+# Round 4 — 2026-11-02: 1.11.1 (21) blocked by the simulated-gambling / individual-account gate
+
+Apple's AUTOMATED message on submission `249d6273-…` (status shown as 2.3.6 Accurate Metadata):
+
+> The current submission cannot be reviewed because the app's rating in App Store Connect indicates
+> it includes simulated gambling and the app has been submitted by an individual developer.
+> If the app does not include simulated gambling content, revise the app's rating in App Store
+> Connect to accurately reflect the available content and resubmit the app for review.
+> If the app does include simulated gambling, you must enroll as an organization before
+> resubmitting or transfer the app to a different account that is enrolled as an organization.
+
+This is a catch-22 created by round 3: the human reviewer required Frequent Simulated Gambling, and
+that rating trips an automated gate for individual accounts. MagpiQ is a sole proprietorship, which
+Apple does not accept as an organization, so the organization route means incorporating first.
+
+**Owner decision 2026-11-02: dispute first.** Set Simulated Gambling back to **None** (the notice's
+own first option), explain in detail, and book a Meet with Apple App Review appointment. Incorporating
+is the fallback only. No code change; same build 1.11.1 (21).
+
+Order of operations in App Store Connect (owner):
+
+1. App Information → Age Ratings → Edit → Simulated Gambling = **None** (Contests None, Gambling No,
+   Loot Boxes No unchanged) → Save. The rating drops back from 18+.
+2. Submission page → Reply to App Review with block C4 below.
+3. Version 1.11.1 → App Review Information → Notes: replace the first paragraph and the REVIEW HISTORY
+   paragraph of B v2 with the two paragraphs in block D4.
+4. Resubmit to App Review.
+5. Request an App Review Appointment (developer.apple.com → Meet with Apple → App Review; Tue/Thu
+   slots), topic: "conflicting direction on Simulated Gambling for an individual account" (see the
+   one-line ask under block C4).
+
+**Rule while on an individual account: Simulated Gambling stays None.** Any other value blocks every
+submission at the automated gate.
+
+## C4. Reply to App Review
+
+```
+Hello,
+
+Thank you for the notice. We want to resolve this the right way, because it conflicts with the previous review.
+
+On 31 October, App Review (Guideline 2.3.6) asked us to set Simulated Gambling to "Frequent". We did, and today's automated notice says an app rated for simulated gambling cannot be submitted by an individual developer.
+
+TableLab does not contain simulated gambling. There is no playable game in the app: users cannot play poker hands against the app, a computer opponent, or other users. There are no chips, credits, coins or other virtual currency, no wagers or stakes of any kind, no prizes, no win or lose outcomes and nothing randomised for play.
+
+What the app does:
+- Sessions and Stats: a diary where players record the results of games they played elsewhere, with charts of those results.
+- Hands: players type in a hand they played and can replay it step by step, like annotating a chess game.
+- Tools: equity, ICM and variance calculators (mathematics on numbers the user enters).
+- Study: static strategy charts computed in advance.
+- AI coaching: written feedback on a hand the user recorded.
+
+It is comparable to a chess-opening trainer or a sports statistics tracker: the subject is poker, but no gambling, real or simulated, takes place in the app.
+
+So, as the automated notice instructs when an app does not include simulated gambling content, we have set Simulated Gambling to "None" and resubmitted. If App Review still considers a specific screen to be simulated gambling, please tell us which one and we will address it directly.
+
+Thank you.
+```
+
+One-line ask for the Meet with Apple request: "A reviewer asked us to rate Simulated Gambling as
+Frequent, and an automated check then blocked the submission because we are an individual developer.
+TableLab is a poker results tracker and study tool with no playable game or virtual currency. We'd
+like guidance on the correct rating."
+
+## D4. Notes field changes (apply to the B v2 text)
+
+Replace the first paragraph with:
+
+```
+TableLab is a results tracker and study tool for poker players. It contains no gambling, real or simulated: there is no playable game, no virtual currency, chips or credits, no wagers and no prizes, nothing is randomised for play, no funds are held or transferred, and it connects to no poker operator or betting service. Users log sessions they played elsewhere, record and replay hands they played, review statistics, use maths calculators, study precomputed strategy charts, and request AI-generated coaching on their own hands.
+```
+
+Replace the REVIEW HISTORY paragraph with:
+
+```
+REVIEW HISTORY: 1.10.1 received Guideline 2.1 "Information Needed" (answered with a device screen recording and these notes). 1.10.2 received 2.2 / 2.3.10 / 2.3.6: this build removes the beta label and the metadata no longer mentions Android. Round 3 also asked for Frequent Simulated Gambling; an automated check then blocked 1.11.1 because an individual developer cannot submit an app with that rating. Because the app contains no simulated gambling content, the rating is set to None, following that notice's instructions; see our reply in Resolution Center.
+```
+
+## Fallback
+
+If App Review re-rejects on 2.3.6 after the reply and the appointment: appeal to the App Review
+Board. If that fails, incorporate MagpiQ, get a D-U-N-S number, ask Apple Developer Support to
+convert the membership to Organization (keeps the same app record), then set Frequent again.
