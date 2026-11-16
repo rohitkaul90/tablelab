@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poker Tournament Rake: EPT Buy-In Cut Explained — TableLab</title>
+  <meta name="description" content="The EPT Main Event drops to €5,000 in 2027 and the WSOP Paradise Super Main guarantee falls to $50M. How much of a tournament buy-in is rake, by buy-in level.">
+  <link rel="canonical" href="https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts">
+  <meta property="og:title" content="The EPT Cut Its Buy-In and WSOP Paradise Cut Its Guarantee. Where Does a Tournament Buy-In Go?">
+  <meta property="og:description" content="The EPT Main Event drops to €5,000 and the WSOP Paradise Super Main guarantee to $50M. What the cuts are, what is still unpublished, and how much of any tournament buy-in is rake.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts">
+  <meta property="og:site_name" content="TableLab">
+  <meta property="og:image" content="https://tablelab.app/og-cover.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="The EPT Cut Its Buy-In. Where Does a Tournament Buy-In Go?">
+  <meta name="twitter:description" content="€5,300 becomes €5,000 on the EPT and $60M becomes $50M at WSOP Paradise. How much of a tournament buy-in is rake, from $500 events to $100K high rollers.">
+  <meta name="twitter:image" content="https://tablelab.app/og-cover.png">
+  <meta property="article:published_time" content="2026-11-16">
+  <meta property="article:modified_time" content="2026-11-16">
+  <meta name="author" content="Rohit Kaul">
+  <meta name="theme-color" content="#111811">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <link rel="stylesheet" href="/site.css?v=2e84643698">
+  <script src="/site.js?v=302dfa2fc7" defer></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts#article",
+        "headline": "The EPT Cut Its Buy-In and WSOP Paradise Cut Its Guarantee. Where Does a Tournament Buy-In Go?",
+        "description": "PokerStars cut the European Poker Tour Main Event buy-in from €5,300 to €5,000 for 2027, and WSOP Paradise lowered its Super Main Event guarantee from $60 million to $50 million for December 2026. We set out what each change is, what has and has not been published about fees, how much of a live tournament buy-in is rake at each buy-in level, and what edge a player needs to cover it.",
+        "datePublished": "2026-11-16",
+        "dateModified": "2026-11-16",
+        "author": {
+          "@id": "https://tablelab.app/#rohit"
+        },
+        "publisher": {
+          "@id": "https://tablelab.app/#organization"
+        },
+        "image": {
+          "@id": "https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts#primaryimage"
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts"
+        },
+        "isPartOf": {
+          "@id": "https://tablelab.app/blog#blog"
+        },
+        "wordCount": 3245,
+        "keywords": [
+          "poker tournament rake",
+          "EPT buy-in 2027",
+          "EPT Main Event 5000",
+          "WSOP Paradise 2026 Super Main Event",
+          "tournament buy-in fees",
+          "poker tournament guarantee overlay",
+          "live tournament ROI"
+        ],
+        "articleSection": "Poker News"
+      },
+      {
+        "@type": "Blog",
+        "@id": "https://tablelab.app/blog#blog",
+        "name": "The TableLab Blog",
+        "url": "https://tablelab.app/blog/",
+        "publisher": {
+          "@id": "https://tablelab.app/#organization"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://tablelab.app/#organization",
+        "name": "MagpiQ",
+        "url": "https://tablelab.app",
+        "sameAs": [
+          "https://magpiq.com",
+          "https://www.youtube.com/channel/UCaslEsv-BMGKuOY4ssKQqVQ"
+        ],
+        "description": "Independent software studio based in Ontario, Canada — maker of TableLab.",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://tablelab.app/icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "support@tablelab.app",
+          "contactType": "customer support"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": "https://tablelab.app/#rohit",
+        "name": "Rohit Kaul",
+        "givenName": "Rohit",
+        "description": "Live cash-game poker player and data-analytics professional; maker of TableLab. Around 20 years playing poker, focused on live cash as a winning player, with over a decade building quantitative models in Python.",
+        "jobTitle": "Founder",
+        "worksFor": {
+          "@id": "https://tablelab.app/#organization"
+        },
+        "knowsAbout": [
+          "Poker strategy",
+          "Cash game poker",
+          "Game theory optimal (GTO) poker",
+          "Poker bankroll management",
+          "Data analytics",
+          "Quantitative modeling"
+        ],
+        "alumniOf": [
+          {
+            "@type": "CollegeOrUniversity",
+            "name": "Purdue University"
+          },
+          {
+            "@type": "CollegeOrUniversity",
+            "name": "University of Mumbai"
+          }
+        ],
+        "sameAs": [
+          "https://www.linkedin.com/in/rohit-kaul-a761171a2",
+          "https://x.com/RohitKaul90",
+          "https://www.youtube.com/@rohitkaul1990",
+          "https://pokerdb.thehendonmob.com/player.php?a=r&n=877305",
+          "https://cardplayerlifestyle.com/authors/rohit-kaul/"
+        ]
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts#primaryimage",
+        "url": "https://tablelab.app/og-cover.png",
+        "width": 2400,
+        "height": 1260
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://tablelab.app"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://tablelab.app/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "EPT Buy-In Cut, WSOP Paradise Guarantee Cut, and Tournament Rake",
+            "item": "https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://tablelab.app/blog/poker-tournament-rake-buy-in-cuts#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How much is the EPT Main Event buy-in in 2027?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The European Poker Tour Main Event costs €5,000 from the 2027 season, down from €5,300, which PokerNews describes as the first change to that price in over 15 years. EPT Prague in December 2026 stays at €5,300. PokerStars has not yet published how the new €5,000 splits between prize pool and fees (PokerNews; TightPoker)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How much of a poker tournament buy-in is rake?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It depends on the buy-in. Card Player's September 2026 comparison puts total rake at 17% for the $500 WSOP Colossus, 12% for a $1,000 WSOP event, 8.49% for the €5,300 EPT Prague Main Event and 7% for the $10,000 WSOP Main Event. The 2026 WSOP $100,000 High Roller withheld 4%, from PokerNews entry and prize-pool figures."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the WSOP Paradise 2026 Super Main Event guarantee?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "$50 million, for a tournament starting December 10, 2026 at Baha Mar in the Bahamas. The 2025 edition carried a $60 million guarantee and drew 2,891 entries for a $72,275,000 prize pool. WSOP.com bills the 2026 event as a $25K tournament and lists the buy-in at $26,000 (WSOP.com; PokerNews)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does a tournament guarantee mean the prize pool will be that big?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A guarantee is a floor, not a forecast. If entries do not cover it, the organizer pays the difference, which is called an overlay. If entries exceed it, the guarantee has no effect on the pool. An overlay is money the organizer adds, so it offsets the rake for everyone who entered. Read the event's terms as well: WSOP Paradise says guaranteed events are paid out after its cost percentage is deducted."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What edge do you need to beat tournament rake?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "To break even you have to win back more than an average share of the prize pool by rake divided by one minus rake. At 17% rake that is 20.5% better than the field average; at 8.49% it is 9.3%; at 4% it is 4.2%. This is arithmetic on the published rake figures, not a measured result."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Google Analytics 4 (G-H4D9DBVXDD) with Consent Mode v2.
+       Consent DEFAULTS TO DENIED, so nothing is stored before the visitor chooses.
+       A previously granted choice is restored from localStorage *here*, before
+       gtag('config') runs - doing it from site.js would be too late, because the
+       first page_view would already have gone out unconsented. The banner UI and
+       the update-on-click live in site.js / site.css. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H4D9DBVXDD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    var tlConsent = null;
+    try { tlConsent = localStorage.getItem('tl-consent'); } catch (e) { /* private mode */ }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: tlConsent === 'granted' ? 'granted' : 'denied'
+    });
+    gtag('js', new Date());
+    gtag('config', 'G-H4D9DBVXDD');
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="/about"><span class="dot"></span>TableLab</a>
+    <nav class="site-nav">
+      <a class="link" href="/blog/">Blog</a>
+      <a class="link" href="/gto-library">GTO Library</a>
+      <a class="link" href="/about">About</a>
+            <details class="nav-dropdown">
+        <summary>Tools<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <nav aria-label="Free poker calculators">
+          <a href="/variance-calculator">Variance Calculator</a>
+          <a href="/icm-calculator">ICM Calculator</a>
+        </nav>
+      </details>
+      <details class="nav-menu">
+        <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+        <nav aria-label="Site menu"></nav>
+      </details>
+      <button class="theme-toggle" type="button" aria-label="Switch between dark and light theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <a class="btn btn-primary" href="/">Open App</a>
+    </nav>
+  </header>
+
+    <main>
+    <article class="article">
+
+      <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / EPT Buy-In Cut, WSOP Paradise Guarantee Cut, and Tournament Rake</div>
+
+      <h1>The EPT Cut Its Buy-In and WSOP Paradise Cut Its Guarantee. Where Does a Tournament Buy-In Go?</h1>
+      <p class="byline">By Rohit Kaul · November 16, 2026 · 10 min read</p>
+
+      <div class="hero-banner">
+        <svg viewBox="0 0 1200 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two price cuts for the season ahead. The EPT Main Event drops from 5,300 euros to 5,000 euros for 2027, and the WSOP Paradise Super Main Event guarantee drops from 60 million dollars to 50 million dollars. What a tournament buy-in pays for: prize pool, house fee and staff charge.">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0d130d"/>
+              <stop offset="1" stop-color="#16201a"/>
+            </linearGradient>
+          </defs>
+          <rect width="1200" height="380" fill="url(#bg)"/>
+          <rect x="0" y="0" width="6" height="380" fill="#4CAF50"/>
+          <text x="70" y="86" fill="#81C784" font-size="22" letter-spacing="3" font-family="sans-serif">POKER NEWS</text>
+          <text x="68" y="170" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">€5,300 becomes €5,000.</text>
+          <text x="68" y="242" fill="#ffffff" font-size="58" font-weight="700" font-family="sans-serif">$60M becomes $50M.</text>
+          <text x="70" y="300" fill="#b0bec5" font-size="26" font-family="sans-serif">Two tours, two cuts for the season ahead. Here&rsquo;s where a buy-in goes.</text>
+          <rect x="70" y="324" width="560" height="40" rx="8" fill="rgba(76,175,80,0.14)" stroke="#4CAF50" stroke-opacity="0.5"/>
+          <text x="86" y="351" fill="#81C784" font-size="20" font-weight="700" font-family="sans-serif">prize pool · house fee · staff charge &mdash; from 4% to 17%</text>
+        </svg>
+      </div>
+
+      <p>On November 10, PokerStars published its 2027 live schedule and cut the European Poker Tour Main Event buy-in from €5,300 to €5,000, which PokerNews describes as the first change to that price in over 15 years (<a href="https://www.pokernews.com/news/2026/11/pokerstars-reveals-2027-ept-schedule-buy-in-changes-52777.htm">PokerNews</a>). In just over two weeks, WSOP Paradise opens at a new venue with a Super Main Event guarantee of $50 million, down from the $60 million it advertised last year (<a href="https://www.wsop.com/news/2026-wsop-paradise/">WSOP.com</a>; <a href="https://www.pokernews.com/news/2026/04/wsop-paradise-2026-moving-to-baha-mar-bahamas-51021.htm">PokerNews</a>).</p>
+
+      <p>One tour lowered what a seat costs. The other lowered what it promises to pay. Neither announcement says much about the number that decides whether a tournament is worth entering, which is how much of your buy-in reaches the prize pool. The published figures on that are below, after the two changes.</p>
+
+      <div class="tldr">
+        <p><strong>TL;DR:</strong> The EPT Main Event costs €5,000 from 2027, down from €5,300; EPT Prague this December stays at €5,300. Today that €5,300 is €4,850 to the prize pool, €300 house fee and €150 staff charge, which is 8.49% rake. PokerStars has not published the split of the new €5,000, so nobody yet knows whether the €300 came out of fees or out of the prize pool. WSOP Paradise (December 2&ndash;17, Baha Mar) guarantees $50 million for its Super Main Event after guaranteeing $60 million in 2025, when 2,891 entries built a $72.3 million pool; the new guarantee is covered by 2,000 entries if $25,000 per entry reaches the pool, as it did in 2025. Across live poker, rake runs from about 4% at a $100,000 high roller to 17% at a $500 event. To break even you have to beat the field by rake divided by one minus rake: 4.2% at the top, 20.5% at the bottom.</p>
+      </div>
+
+      <h2>What did PokerStars change for the 2027 EPT?</h2>
+
+      <p>Three prices, announced together. The EPT Main Event goes from €5,300 to €5,000. Every PokerStars Open Main Event becomes €1,250; until now it was €1,650 at EPT stops and €1,100 at standalone regional festivals such as Campione and Namur. The PokerStars Open High Roller at EPT festivals is set at €2,500 (<a href="https://www.pokernews.com/news/2026/11/pokerstars-reveals-2027-ept-schedule-buy-in-changes-52777.htm">PokerNews</a>).</p>
+
+      <p>So this is a cut at the top and a mix below it. A player who only ever entered the PokerStars Open at a regional stop will pay €150 more in 2027. Cedric Billot, PokerStars' Associate Director of Live Events, gave two reasons in the announcement: players had said the PokerStars Open at EPT stops had become too expensive, and one price per event, with what he called a clean €5,000 for the Main Event, makes the tour easier to follow. The schedule also adds an exchange: four PokerStars Open entries can be swapped for one EPT Main Event entry, and four times €1,250 is exactly €5,000 (<a href="https://www.pokernews.com/news/2026/11/pokerstars-reveals-2027-ept-schedule-buy-in-changes-52777.htm">PokerNews</a>).</p>
+
+      <p>The new prices start with the 2027 season. EPT Prague, which runs December 2&ndash;13 this year, keeps the €5,300 Main Event (<a href="https://www.tightpoker.com/news/pokerstars-release-2027-european-poker-tour-schedule/">TightPoker</a>; <a href="https://www.pokerstarslive.com/ept/">PokerStars Live</a>). The 2027 tour has five EPT stops: Paris, Monte-Carlo, Barcelona, Malta and Prague.</p>
+
+      <h2>Did the €300 come out of the fees or out of the prize pool?</h2>
+
+      <p>Nobody outside PokerStars knows yet. The current €5,300 is not €5,000 plus a €300 fee, as the number suggests. PokerNews published the breakdown for EPT Prague: €4,850 goes to the prize pool, €300 is the house fee and €150 is a staff charge. That is €450 of rake, or 8.49% of what the player pays. The same article says the breakdown for the new buy-ins has not been released (<a href="https://www.pokernews.com/news/2026/11/pokerstars-reveals-2027-ept-schedule-buy-in-changes-52777.htm">PokerNews</a>).</p>
+
+      <p>Until it is, there are three ways the new €5,000 could be built. PokerStars has said none of this; the rows are arithmetic on the published Prague split.</p>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption>Three possible splits of a €5,000 buy-in, against today's published €5,300. Illustration only; the real split is unpublished.</caption>
+          <thead>
+            <tr><th>Scenario</th><th>To the prize pool</th><th>Fees</th><th>Rake share</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Today: €5,300</strong> (published)</td><td>€4,850</td><td>€450</td><td>8.49%</td></tr>
+            <tr><td><strong>Prize pool held</strong></td><td>€4,850</td><td>€150</td><td>3.0%</td></tr>
+            <tr><td><strong>Same rake share</strong></td><td>about €4,575</td><td>about €425</td><td>8.49%</td></tr>
+            <tr><td><strong>Fees held</strong></td><td>€4,550</td><td>€450</td><td>9.0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>In the first scenario the player keeps €300 and the pool is untouched. In the other two the player pays €300 less and plays for about €275 to €300 less per entry, which is close to a wash for anyone who expects to win their share back. The cheaper seat still matters for a bankroll, since the same roll covers a few more entries. It just isn't a better deal per euro unless the rake share falls below 8.49%.</p>
+
+      <div class="callout"><p>Our read: judge the EPT change when the first 2027 festival schedule is published with its fee breakdown. The headline price moved. Whether the value moved depends on a line that hasn't been printed yet.</p></div>
+
+      <h2>What changed at WSOP Paradise?</h2>
+
+      <p>The venue, the size of the schedule and the headline guarantee. WSOP Paradise 2026 runs December 2&ndash;17 at Baha Mar in Nassau after three years at Atlantis, with 20 bracelet events, up from 15, and $120 million in total guarantees (<a href="https://www.wsop.com/news/2026-wsop-paradise/">WSOP.com</a>; <a href="https://www.pokernews.com/news/2026/08/the-2026-wsop-paradise-schedule-120m-guaranteed-52183.htm">PokerNews</a>). The Super Main Event starts December 10 with $50 million guaranteed.</p>
+
+      <p>Last year the same event advertised $60 million, drew 2,891 entries and built a prize pool of $72,275,000, which is exactly 2,891 times $25,000 (<a href="https://www.pokernews.com/news/2026/04/wsop-paradise-2026-moving-to-baha-mar-bahamas-51021.htm">PokerNews</a>; <a href="https://www.pokernews.com/news/2025/12/wsop-paradise-super-main-event-surpasses-guarantee-50224.htm">PokerNews</a>). The year before, the first $25,000 Super Main guaranteed $50 million and drew 1,978 entries (<a href="https://en.wikipedia.org/wiki/2024_World_Series_of_Poker_Paradise">Wikipedia</a>). At $25,000 each that is $49.45 million in buy-ins, just short of the guarantee. We did not find the 2024 final prize pool in the sources we fetched, so we state the entries and leave the pool out.</p>
+
+      <figure>
+        <svg viewBox="0 0 580 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bar chart of the WSOP Paradise Super Main Event guarantee against the buy-ins it collected. 2024: 50 million dollar guarantee, 1,978 entries, 49.45 million dollars in buy-ins at 25,000 dollars each. 2025: 60 million dollar guarantee, 2,891 entries, 72.28 million dollar prize pool. 2026: 50 million dollar guarantee, entries not yet known; 2,000 entries are needed to cover it." style="max-width:100%;height:auto">
+          <text x="20" y="22" fill="#eceff1" font-size="14">WSOP Paradise Super Main: guarantee vs buy-ins collected ($M)</text>
+          <g font-family="sans-serif">
+            <line x1="50" y1="210" x2="560" y2="210" stroke="#546e7a" stroke-width="1.5"/>
+            <!-- scale: 1.875 px per $1M -->
+            <rect x="85" y="116.2" width="50" height="93.8" rx="3" fill="none" stroke="#81C784" stroke-width="2"/>
+            <rect x="145" y="117.3" width="50" height="92.7" rx="3" fill="#4CAF50"/>
+            <text x="110" y="108" text-anchor="middle" fill="#a5d6a7" font-size="11">50</text>
+            <text x="170" y="108" text-anchor="middle" fill="#eceff1" font-size="11">49.45</text>
+            <text x="140" y="228" text-anchor="middle" fill="#cfd8dc" font-size="12">2024</text>
+            <text x="140" y="243" text-anchor="middle" fill="#90a4ae" font-size="10">1,978 entries</text>
+
+            <rect x="245" y="97.5" width="50" height="112.5" rx="3" fill="none" stroke="#81C784" stroke-width="2"/>
+            <rect x="305" y="74.5" width="50" height="135.5" rx="3" fill="#4CAF50"/>
+            <text x="270" y="89" text-anchor="middle" fill="#a5d6a7" font-size="11">60</text>
+            <text x="330" y="66" text-anchor="middle" fill="#eceff1" font-size="11">72.28</text>
+            <text x="300" y="228" text-anchor="middle" fill="#cfd8dc" font-size="12">2025</text>
+            <text x="300" y="243" text-anchor="middle" fill="#90a4ae" font-size="10">2,891 entries</text>
+
+            <rect x="405" y="116.2" width="50" height="93.8" rx="3" fill="none" stroke="#81C784" stroke-width="2"/>
+            <rect x="465" y="116.2" width="50" height="93.8" rx="3" fill="none" stroke="#90a4ae" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <text x="430" y="108" text-anchor="middle" fill="#a5d6a7" font-size="11">50</text>
+            <text x="490" y="168" text-anchor="middle" fill="#90a4ae" font-size="16">?</text>
+            <text x="460" y="228" text-anchor="middle" fill="#cfd8dc" font-size="12">2026</text>
+            <text x="460" y="243" text-anchor="middle" fill="#90a4ae" font-size="10">needs 2,000 entries</text>
+          </g>
+          <g font-family="sans-serif" font-size="10" fill="#90a4ae">
+            <rect x="50" y="34" width="12" height="10" fill="none" stroke="#81C784" stroke-width="2"/><text x="68" y="43">advertised guarantee</text>
+            <rect x="190" y="34" width="12" height="10" fill="#4CAF50"/><text x="208" y="43">entries × $25,000</text>
+          </g>
+          <text x="20" y="262" fill="#78909c" font-size="9.5">Sources: PokerNews (2025, 2026), Wikipedia (2024 entries), WSOP.com (2026). 2024 bar is entries × buy-in, not a published pool.</text>
+        </svg>
+        <figcaption>The 2026 guarantee is back at the level the 2024 field fell just short of, and well under what 2025 collected.</figcaption>
+      </figure>
+
+      <p>The WSOP's page gives no reason for the lower figure, and we won't supply one. The numbers do show how much room it leaves. At $25,000 a seat, $50 million is 2,000 entries, about 69% of last year's field. The field would have to shrink by close to a third before the guarantee came into play.</p>
+
+      <p>Check two things on the official page before you book. WSOP.com bills the Super Main as a $25K event and lists the buy-in in its schedule as $26,000. The same pattern runs down the page: the mystery bounty is headlined at $2.5K and listed at $2,750, and several $5,000 events are listed at $5,300, while PokerNews and pokerfuse report the round figures (<a href="https://www.wsop.com/news/2026-wsop-paradise/">WSOP.com</a>; <a href="https://pokerfuse.com/latest-news/2026/8/wsop-paradise-2026-reveals-20-event-schedule/">pokerfuse</a>). That reads like an entry fee on top of the advertised price, though the page doesn't label it as one. The page also says up to 5% of all buy-ins is withheld for staff and operational costs, and that guaranteed events are paid out after that percentage is deducted from the prize pool. Last year's pool matched entries times $25,000 to the dollar, so ask the tournament desk how both lines apply this year.</p>
+
+      <p>Elsewhere on the schedule, the $250,000 WSOP Pro-Am on December 5 guarantees $10 million, with professionals registering themselves and amateurs applying to a committee, and the $10,000 GGMillion$ championship guarantees $20 million the same day (<a href="https://www.wsop.com/news/2026-wsop-paradise/">WSOP.com</a>).</p>
+
+      <h2>How much of a poker tournament buy-in is rake?</h2>
+
+      <p>Between about 4% and 17% of what you pay, and the share falls as the buy-in rises. Card Player compared the total rake at the same events in 2015, 2019 and 2025&ndash;26: the $500 WSOP Colossus takes 17%, a $1,000 WSOP event 12%, a $5,000 WSOP event 8%, the $10,000 WSOP Main Event 7% and the $10,400 WPT World Championship 5.77% (<a href="https://www.cardplayer.com/poker-news/1745515-live-poker-tournament-rake-is-going-up-but-mostly-at-smaller-stakes">Card Player</a>). Rake here means everything that doesn't reach the prize pool: the house's entry fee plus whatever is held back for dealers and staff.</p>
+
+      <p>We added two rows from this summer's results. The $1,500 six-handed event drew 1,840 entries for a $2,442,600 pool, which is $1,327.50 per entry, or 11.5% withheld. The $100,000 High Roller drew 115 entries for $11,040,000, which is $96,000 per entry, or 4% (<a href="https://www.pokernews.com/tours/wsop/2026-wsop/event-13-nlh/">PokerNews</a>; <a href="https://www.pokernews.com/tours/wsop/2026-wsop/event-36-high-roller/">PokerNews</a>). Those two percentages are our division of published figures.</p>
+
+      <figure>
+        <svg viewBox="0 0 580 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Horizontal bar chart of total rake as a share of the amount paid, by event. 500 dollar WSOP Colossus 17 percent. 1,000 dollar WSOP event 12 percent. 1,500 dollar WSOP event 11.5 percent. 5,300 euro EPT Prague Main Event 8.49 percent. 5,000 dollar WSOP event 8 percent. 10,000 dollar WSOP Main Event 7 percent. 10,400 dollar WPT World Championship 5.77 percent. 100,000 dollar WSOP High Roller 4 percent." style="max-width:100%;height:auto">
+          <text x="20" y="22" fill="#eceff1" font-size="14">Share of the buy-in that never reaches the prize pool</text>
+          <g font-family="sans-serif" font-size="11.5">
+            <g fill="#cfd8dc" text-anchor="end">
+              <text x="200" y="58">$500 WSOP Colossus</text>
+              <text x="200" y="86">$1,000 WSOP event</text>
+              <text x="200" y="114">$1,500 WSOP event</text>
+              <text x="200" y="142">€5,300 EPT Prague Main</text>
+              <text x="200" y="170">$5,000 WSOP event</text>
+              <text x="200" y="198">$10,000 WSOP Main Event</text>
+              <text x="200" y="226">$10,400 WPT Championship</text>
+              <text x="200" y="254">$100,000 WSOP High Roller</text>
+            </g>
+            <!-- scale: 17.65 px per 1% -->
+            <rect x="210" y="45" width="300" height="18" rx="3" fill="#ef5350"/>
+            <rect x="210" y="73" width="212" height="18" rx="3" fill="#ffb74d"/>
+            <rect x="210" y="101" width="203" height="18" rx="3" fill="#ffb74d"/>
+            <rect x="210" y="129" width="150" height="18" rx="3" fill="#64b5f6"/>
+            <rect x="210" y="157" width="141" height="18" rx="3" fill="#64b5f6"/>
+            <rect x="210" y="185" width="124" height="18" rx="3" fill="#64b5f6"/>
+            <rect x="210" y="213" width="102" height="18" rx="3" fill="#4CAF50"/>
+            <rect x="210" y="241" width="71" height="18" rx="3" fill="#4CAF50"/>
+            <g fill="#eceff1">
+              <text x="516" y="58">17%</text>
+              <text x="428" y="86">12%</text>
+              <text x="419" y="114">11.5%</text>
+              <text x="366" y="142">8.49%</text>
+              <text x="357" y="170">8%</text>
+              <text x="340" y="198">7%</text>
+              <text x="318" y="226">5.77%</text>
+              <text x="287" y="254">4%</text>
+            </g>
+          </g>
+          <text x="20" y="288" fill="#78909c" font-size="9.5">Sources: Card Player (Sep 15, 2026); $1,500 and $100,000 rows computed from PokerNews 2026 WSOP entries and prize pools.</text>
+        </svg>
+        <figcaption>A $500 entry gives up more than four times the share that a $100,000 entry does.</figcaption>
+      </figure>
+
+      <p>The direction over time is uneven. In Card Player's comparison the Colossus went from 11.5% in 2015 to 17%, and the WSOP Main Event from just under 6% to 7%, while EPT Prague stayed at 8.49% in all three periods and the WPT World Championship fell from 6.73% to 5.77%. Across the whole 2026 WSOP, players paid $517 million in buy-ins and received $469.9 million in prizes; by its count $47.3 million went to fees, $33.1 million of it kept by the WSOP and $14.2 million paid to dealers and staff (<a href="https://pokerfuse.com/latest-news/2026/7/heres-how-much-2026-wsop-generated-prize-money/">pokerfuse</a>). That is about 9% of everything paid in, by our division.</p>
+
+      <p>How you state the percentage changes how it sounds. When the 2026 WSOP opened with a $550 event split $456.50 to the pool and $93.50 in fees, one player called it 20.5% and another corrected it to 17%; PokerListings reported the exchange between David Lappin and Lian Liu (<a href="https://www.pokerlistings.com/news/wsop-2026-started-with-minor-scandals-debates">PokerListings</a>). Both are right. $93.50 is 17% of the $550 paid and 20.5% of the $456.50 that gets played for. The second number is the one that describes your hurdle.</p>
+
+      <h2>What edge do you need to cover the rake?</h2>
+
+      <p>You need to win back more than an average share of the prize pool by rake divided by one minus rake. Averaged across the field, each entry gets back its share of the pool, which is less than it cost, and most entries get back nothing. The gap is the hurdle. At 17% rake it is the same 20.5% as in the argument above.</p>
+
+      <div class="compare-wrap">
+        <table class="compare">
+          <caption>How much more prize money than an average share of the pool a player must win, over the long run, at each rake level. Our arithmetic on the published rake figures.</caption>
+          <thead>
+            <tr><th>Event</th><th>Rake</th><th>To break even</th><th>To net a 20% ROI</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>$500 WSOP Colossus</strong></td><td>17%</td><td>+20.5%</td><td>+44.6%</td></tr>
+            <tr><td><strong>$1,000 WSOP event</strong></td><td>12%</td><td>+13.6%</td><td>+36.4%</td></tr>
+            <tr><td><strong>€5,300 EPT Prague Main</strong></td><td>8.49%</td><td>+9.3%</td><td>+31.1%</td></tr>
+            <tr><td><strong>$10,000 WSOP Main Event</strong></td><td>7%</td><td>+7.5%</td><td>+29.0%</td></tr>
+            <tr><td><strong>$100,000 WSOP High Roller</strong></td><td>4%</td><td>+4.2%</td><td>+25.0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The last column is measured against the money that reached the pool, so a 20% ROI on what you paid needs a 44.6% better-than-average return on the pool at a $500 event. It uses 20% because that is the figure Mo Nuwwarah, writing in PokerNews about a year of small-stakes live tournaments, gave as what is generally considered a pretty good return; his own year came to 32% on $78,745 in buy-ins (<a href="https://www.pokernews.com/strategy/us-small-stakes-live-poker-tournament-grind-36506.htm">PokerNews</a>). It is a rule of thumb, not a study. An older Hendon Mob analysis by Alex Rousso put good live players at 50% to 100%, from 666 entries by 20 top English players, and flagged its own sample as small and biased toward survivors (<a href="https://www.thehendonmob.com/?p=2303">The Hendon Mob</a>). Published ROI figures for live tournaments are thin and mostly self-selected, so treat any single number with suspicion, including these.</p>
+
+      <p>The table says the cheapest tournaments are the hardest to beat on price, even though their fields are the softest. Soft fields may more than make up the difference. But a 20% return at a $500 event means winning 45% more prize money than an average share, and that is before the travel, the hotel and the re-entries that the result has to pay for as well.</p>
+
+      <h2>What does this mean for a live player's bankroll?</h2>
+
+      <p>Measure results against the full amount you pay, count every re-entry as a new entry, and plan the trip around the swings.</p>
+
+      <ul>
+        <li><strong>Log the full amount you paid.</strong> A €5,300 entry is €5,300 of your money, whatever the prize pool received. Your ROI should be measured on the full amount, fee included, or it will flatter you by the rake. Flights, hotels and food belong in a separate expense line so that your results and your costs can each be read on their own.</li>
+        <li><strong>Count re-entries as entries.</strong> Three bullets at next year's EPT Main Event is €15,000, which is €900 less than three bullets this year. That saving is real. It is also small next to the decision to fire the third bullet at all.</li>
+        <li><strong>Size the trip against the swings, not the guarantee.</strong> A big guarantee tells you the prize pool will be large. It tells you nothing about how often you cash. In fields of thousands, <a href="/blog/poker-tournament-variance">long losing stretches are the normal result for winning players</a>, and you can put your own buy-in, field size and ROI into the <a href="/variance-calculator">variance calculator</a> to see the range before you book.</li>
+      </ul>
+
+      <p>The attendance picture is mixed, which is one more reason not to read too much into a single price. The 2026 WSOP set a record with 251,899 total entries while its prize money fell from $481.7 million to $469.9 million (<a href="https://pokerfuse.com/latest-news/2026/7/heres-how-much-2026-wsop-generated-prize-money/">pokerfuse</a>). Its Main Event drew 9,208, down from 9,735 (<a href="https://www.pokernews.com/prediction-markets/news/2026/07/why-did-the-wsop-main-event-not-reach-10-000-entrants-51890.htm">PokerNews</a>). In February the $10,000 Los Angeles Poker Classic Main Event drew 50 entries, against 145 the year before and 546 in 2019 (<a href="https://www.pokernews.com/news/2026/02/lapc-main-event-attendance-decline-50669.htm">PokerNews</a>). Card Player's comparison found rake rising mostly at the smaller buy-ins.</p>
+
+      <p>If you are weighing a trip, the questions that matter are in <a href="/blog/poker-bankroll-management">the bankroll guide</a>, and the question of who ends up with the money in the biggest games is in <a href="/blog/who-makes-money-in-high-stakes-poker">our post on high-stakes economics</a>. Final-table deals are a separate calculation; the <a href="/icm-calculator">ICM calculator</a> handles that one.</p>
+
+      <div class="callout"><p>Where TableLab sits: it is a results log. You enter the buy-in you paid, the cash-out, and expenses on their own line, and it works out ROI on the total you paid in. It cannot tell you whether a given tournament is a good price. It can tell you what your own results have been at each buy-in level, which is the only ROI figure with your name on it.</p></div>
+
+      <h2>What to watch next</h2>
+
+      <p>The fee breakdown on the first 2027 EPT festival schedule, which settles the question in the table above. The Super Main Event entry count after December 10, and whether the final prize pool is entries times $25,000 as it was last year. We will update this post after WSOP Paradise ends on December 17.</p>
+
+      <section class="faq">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>How much is the EPT Main Event buy-in in 2027?</summary>
+          <p>The European Poker Tour Main Event costs €5,000 from the 2027 season, down from €5,300, which PokerNews describes as the first change to that price in over 15 years. EPT Prague in December 2026 stays at €5,300. PokerStars has not yet published how the new €5,000 splits between prize pool and fees (<a href="https://www.pokernews.com/news/2026/11/pokerstars-reveals-2027-ept-schedule-buy-in-changes-52777.htm">PokerNews</a>; <a href="https://www.tightpoker.com/news/pokerstars-release-2027-european-poker-tour-schedule/">TightPoker</a>).</p>
+        </details>
+        <details>
+          <summary>How much of a poker tournament buy-in is rake?</summary>
+          <p>It depends on the buy-in. <a href="https://www.cardplayer.com/poker-news/1745515-live-poker-tournament-rake-is-going-up-but-mostly-at-smaller-stakes">Card Player&#39;s September 2026 comparison</a> puts total rake at 17% for the $500 WSOP Colossus, 12% for a $1,000 WSOP event, 8.49% for the €5,300 EPT Prague Main Event and 7% for the $10,000 WSOP Main Event. The 2026 WSOP $100,000 High Roller withheld 4%, from PokerNews entry and prize-pool figures.</p>
+        </details>
+        <details>
+          <summary>What is the WSOP Paradise 2026 Super Main Event guarantee?</summary>
+          <p>$50 million, for a tournament starting December 10, 2026 at Baha Mar in the Bahamas. The 2025 edition carried a $60 million guarantee and drew 2,891 entries for a $72,275,000 prize pool. WSOP.com bills the 2026 event as a $25K tournament and lists the buy-in at $26,000 (<a href="https://www.wsop.com/news/2026-wsop-paradise/">WSOP.com</a>; <a href="https://www.pokernews.com/news/2026/04/wsop-paradise-2026-moving-to-baha-mar-bahamas-51021.htm">PokerNews</a>).</p>
+        </details>
+        <details>
+          <summary>Does a tournament guarantee mean the prize pool will be that big?</summary>
+          <p>A guarantee is a floor, not a forecast. If entries do not cover it, the organizer pays the difference, which is called an overlay. If entries exceed it, the guarantee has no effect on the pool. An overlay is money the organizer adds, so it offsets the rake for everyone who entered. Read the event's terms as well: WSOP Paradise says guaranteed events are paid out after its cost percentage is deducted.</p>
+        </details>
+        <details>
+          <summary>What edge do you need to beat tournament rake?</summary>
+          <p>To break even you have to win back more than an average share of the prize pool by rake divided by one minus rake. At 17% rake that is 20.5% better than the field average; at 8.49% it is 9.3%; at 4% it is 4.2%. This is arithmetic on the published rake figures, not a measured result.</p>
+        </details>
+      </section>
+
+      <h2>The bottom line</h2>
+
+      <p>The EPT made its seat €300 cheaper and has not yet said which part of the price got smaller. WSOP Paradise promised $10 million less and needs 2,000 entries, 69% of last year's field, to cover it. Neither headline number is the one to watch. Look for the line that says how much of your entry is played for, compare it across the events you are choosing between, and measure your own results against the full amount you paid.</p>
+
+      <p>Log the full buy-in, the cash-out and the trip's expenses, and let the record tell you which buy-in levels have paid you. <a href="/">Start logging your sessions</a>.</p>
+
+      <h3>Sources</h3>
+      <ul class="sources">
+        <li>PokerNews (Will Shillibier) &mdash; "PokerStars Unveils Full 2027 EPT Schedule; Reduces Main Event Buy-In to €5,000" (Nov 10, 2026, updated Nov 12), <a href="https://www.pokernews.com/news/2026/11/pokerstars-reveals-2027-ept-schedule-buy-in-changes-52777.htm">pokernews.com</a></li>
+        <li>TightPoker (Paul Seaton) &mdash; "PokerStars Release 2027 European Poker Tour Schedule" (Nov 13, 2026), <a href="https://www.tightpoker.com/news/pokerstars-release-2027-european-poker-tour-schedule/">tightpoker.com</a></li>
+        <li>PokerStars Live &mdash; EPT schedule page, as fetched Nov 16, 2026, <a href="https://www.pokerstarslive.com/ept/">pokerstarslive.com</a></li>
+        <li>WSOP.com &mdash; 2026 WSOP Paradise page (schedule, Pro-Am, Paradise Parlay, withholding terms), as fetched Nov 16, 2026, <a href="https://www.wsop.com/news/2026-wsop-paradise/">wsop.com</a></li>
+        <li>PokerNews &mdash; "The 2026 WSOP Paradise Schedule Boasts 20 Bracelets and $120M in Guarantees" (Aug 20, 2026, updated Aug 24), <a href="https://www.pokernews.com/news/2026/08/the-2026-wsop-paradise-schedule-120m-guaranteed-52183.htm">pokernews.com</a></li>
+        <li>pokerfuse &mdash; "WSOP Paradise 2026 Reveals 20-Event Schedule and $120M in Guarantees" (Aug 20, 2026), <a href="https://pokerfuse.com/latest-news/2026/8/wsop-paradise-2026-reveals-20-event-schedule/">pokerfuse.com</a></li>
+        <li>PokerNews (Eliot Thomas) &mdash; "WSOP Announces Next Chapter For WSOP Paradise With Venue Change" (Apr 10, 2026), <a href="https://www.pokernews.com/news/2026/04/wsop-paradise-2026-moving-to-baha-mar-bahamas-51021.htm">pokernews.com</a></li>
+        <li>PokerNews (Will Shillibier) &mdash; "WSOP Paradise Super Main Event Prize Pool Surpasses $72 Million" (Dec 15, 2025), <a href="https://www.pokernews.com/news/2025/12/wsop-paradise-super-main-event-surpasses-guarantee-50224.htm">pokernews.com</a></li>
+        <li>Wikipedia &mdash; 2024 World Series of Poker Paradise (Super Main Event guarantee and entries), as fetched Nov 16, 2026, <a href="https://en.wikipedia.org/wiki/2024_World_Series_of_Poker_Paradise">wikipedia.org</a></li>
+        <li>Card Player (Mo Nuwwarah) &mdash; "Live Poker Tournament Rake Is Going Up, But Mostly At Smaller Stakes" (Sep 15, 2026), <a href="https://www.cardplayer.com/poker-news/1745515-live-poker-tournament-rake-is-going-up-but-mostly-at-smaller-stakes">cardplayer.com</a></li>
+        <li>PokerNews &mdash; 2026 WSOP Event #13, $1,500 No-Limit Hold'em 6-Handed (entries and prize pool), <a href="https://www.pokernews.com/tours/wsop/2026-wsop/event-13-nlh/">pokernews.com</a></li>
+        <li>PokerNews &mdash; 2026 WSOP Event #36, $100,000 High Roller (entries and prize pool), <a href="https://www.pokernews.com/tours/wsop/2026-wsop/event-36-high-roller/">pokernews.com</a></li>
+        <li>pokerfuse (Anuj Arora) &mdash; report on 2026 WSOP buy-ins, prize money and fees (Jul 17, 2026), <a href="https://pokerfuse.com/latest-news/2026/7/heres-how-much-2026-wsop-generated-prize-money/">pokerfuse.com</a></li>
+        <li>PokerListings (Vasilisa Zyryanova) &mdash; report on the 2026 WSOP Event #1 fee debate (updated May 28, 2026), <a href="https://www.pokerlistings.com/news/wsop-2026-started-with-minor-scandals-debates">pokerlistings.com</a></li>
+        <li>PokerNews (Tanner Lux) &mdash; analysis of the 2026 WSOP Main Event field (Jul 14, 2026), <a href="https://www.pokernews.com/prediction-markets/news/2026/07/why-did-the-wsop-main-event-not-reach-10-000-entrants-51890.htm">pokernews.com</a></li>
+        <li>PokerNews (Jon Sofen) &mdash; report on the 2026 LAPC Main Event attendance (Feb 23, 2026), <a href="https://www.pokernews.com/news/2026/02/lapc-main-event-attendance-decline-50669.htm">pokernews.com</a></li>
+        <li>PokerNews (Mo Nuwwarah) &mdash; a year of small-stakes live tournaments, with results (Jan 31, 2020), <a href="https://www.pokernews.com/strategy/us-small-stakes-live-poker-tournament-grind-36506.htm">pokernews.com</a></li>
+        <li>The Hendon Mob (Alex Rousso) &mdash; live tournament ROI analysis, first published in Bluff Europe (Jul 12, 2012), <a href="https://www.thehendonmob.com/?p=2303">thehendonmob.com</a></li>
+      </ul>
+
+      <p class="disclaimer-line">Facts are as published by the named sources on the fetch date, 2026-11-16. The split of the 2027 EPT buy-ins had not been published at that date; the three scenarios shown are illustrations, not PokerStars figures. Percentages marked as ours are simple division of published entries and prize pools. Schedules, buy-ins and terms can change; check the organizer's own page before you travel. Poker carries real variance and real risk; nothing here is financial advice. Corrections: support@tablelab.app.</p>
+
+      <aside class="author-box">
+        <h3>About the author</h3>
+        <p><strong>Rohit Kaul</strong> is a winning live cash-game player and a data-analytics
+        professional (Master's in Business Analytics, Purdue) who builds the quantitative models behind
+        TableLab &mdash; profitable every year since 2023, across roughly 3,200 hours of tracked live cash.
+        Find him on
+        <a href="https://www.linkedin.com/in/rohit-kaul-a761171a2" rel="me noopener" target="_blank">LinkedIn</a>,
+        <a href="https://www.youtube.com/@rohitkaul1990" rel="me noopener" target="_blank">YouTube</a>, and
+        <a href="https://pokerdb.thehendonmob.com/player.php?a=r&amp;n=877305" rel="me noopener" target="_blank">The Hendon Mob</a>.</p>
+      </aside>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <div class="links">
+        <a href="/">Open App</a>
+        <a href="/blog/">Blog</a>
+        <a href="/about">About</a>
+        <a href="/variance-calculator">Variance Calculator</a>
+        <a href="/icm-calculator">ICM Calculator</a>
+        <a href="/gto-library">GTO Library</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:support@tablelab.app">Contact</a>
+      </div>
+      <span class="copy">© 2026 MagpiQ</span>
+    </div>
+  </footer>
+
+</body>
+</html>
